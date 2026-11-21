@@ -21,6 +21,7 @@ import shutil
 import statistics
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -825,11 +826,19 @@ def cmd_length(args):
 TAG_RE = re.compile(r'\[([^\[\]]{1,160})\]')
 TAGS_FILE = ROOT / 'data' / 'elevenlabs-audio-tags.json'
 TTS_MODELS = ('eleven_v4', 'eleven_v4_turbo')   # the user's standing rule: these two models only
-# A planned pause up to this long is the voice's own gap between lines (already inside the measured per-line
-# overhead): nothing to realise. Longer ones are realised by a pause tag or by a hold in the edit (pause_via).
+# The older pause form (`pause_after_s`): up to this long it was taken as the voice's own gap (nothing realised);
+# longer, it was silence ADDED ON TOP of that gap. Kept so older scripts read as they were written and reviewed.
 NATURAL_PAUSE_MAX_S = 1.0
 # Natural gap per script line before this run's voice is measured (eleven_v4 here, 2026-11-19: 0.36-0.42 s).
 DEFAULT_LINE_OVERHEAD_S = 0.4
+# The silence after one line before this voice is measured, for a planned pause's estimate only (one eleven_v4
+# narrator, 2026-11-21, from the audio: median 0.61 s, 0.19-0.79 s line to line). Once recorded, each line's own gap
+# is used.
+DEFAULT_NATURAL_GAP_S = 0.6
+# What a planned pause has to say besides its length (03): what it is for, what the viewer sees while it lasts, what
+# the sound does. Required of every planned pause, read by the cold reader, and carried into the edit.
+PAUSE_TEXT_FIELDS = (('pause_purpose', 'needs_its_story_purpose'), ('pause_picture', 'needs_its_picture'),
+                     ('pause_sound', 'needs_its_sound'))
 
 
 def strip_tags(text):
@@ -900,51 +909,285 @@ def is_pause_tag(inner):
     return classify_tag(inner).get('category') == 'pause'
 
 
+def _pause_tags_around(lines, i):
+    """The pause tags at line i's end and at the next line's start: where a performed pause sits."""
+    here = str(lines[i].get('text') or '').rstrip()
+    after = str(lines[i + 1].get('text') or '').lstrip() if i + 1 < len(lines) else ''
+    ends = [m.group(1) for m in (re.search(r'\[([^\[\]]+)\]\s*$', here), re.match(r'\s*\[([^\[\]]+)\]', after)) if m]
+    return [x for x in ends if is_pause_tag(x)]
+
+
 def script_pause_plan(lines):
-    """Each planned pause longer than a natural line gap and how it is realised: 'tag' (a pause tag at this
-    line's end or the next line's start: costs the tag's measured time inside the narration) or 'edit' (a hold:
-    the narration is split there and the picture held; adds pause_after_s to the edit, not to the narration)."""
+    """Each planned pause, how it is realised and what it is for. A pause is a proposal until the voice is measured
+    (hold-decide), so the script says the experience it wants, never a length to insert mechanically:
+    - `pause_total_s`: the WHOLE silence the viewer hears after the line, the voice's own gap included. The edit adds
+      only the difference between it and the gap the voice really left there (measured), never the whole of it.
+    - `pause_via`: 'edit' (a hold the edit adds: exact, free, adjustable) or 'tag' (a pause tag at this line's end or
+      the next line's start, performed by the voice: costs its measured time inside the narration).
+    - `pause_purpose`, `pause_picture`, `pause_sound`: what it is for, what the viewer sees while it lasts (what changes
+      on screen, or why one frame holds), what the sound does (the bed goes on, drops out, one story-world sound).
+    The older form, `pause_after_s`, is read as it was written and reviewed: over 1 s, silence ADDED ON TOP of the
+    voice's own gap; up to 1 s, nothing to realise (`form` 'added')."""
     plan, issues = [], []
     for i, row in enumerate(lines):
         lid = str(row.get('id') or f'L{i+1:03d}')
-        try:
-            p = float(row.get('pause_after_s') or 0)
-        except (TypeError, ValueError):
-            issues.append(f'pause_after_s_invalid:{lid}')
-            continue
         via = str(row.get('pause_via') or '').strip().lower()
         if via and via not in ('natural', 'tag', 'edit'):
             issues.append(f'pause_via_invalid:{lid}')
             continue
-        if p <= NATURAL_PAUSE_MAX_S and via in ('', 'natural'):
+        has_total = row.get('pause_total_s') not in (None, '')
+        try:
+            total = float(row['pause_total_s']) if has_total else None
+            after = float(row.get('pause_after_s') or 0)
+        except (TypeError, ValueError):
+            issues.append(f'pause_seconds_invalid:{lid}')
             continue
-        if via in ('', 'natural'):
-            issues.append(f'pause_{lid}_over_{NATURAL_PAUSE_MAX_S:g}s_needs_pause_via_tag_or_edit')
+        if has_total and after:
+            issues.append(f'pause_{lid}_has_both_pause_total_s_and_pause_after_s:write_only_pause_total_s')
             continue
-        if via == 'tag':
-            here = str(row.get('text') or '').rstrip()
-            after = str(lines[i + 1].get('text') or '').lstrip() if i + 1 < len(lines) else ''
-            ends = [m.group(1) for m in (re.search(r'\[([^\[\]]+)\]\s*$', here), re.match(r'\s*\[([^\[\]]+)\]', after)) if m]
-            if not any(is_pause_tag(x) for x in ends):
-                issues.append(f'pause_{lid}_via_tag_but_no_pause_tag_at_this_line_end_or_next_line_start')
-        # A silence the story wants says what it is for: what the viewer takes in, feels or sees while it lasts. A
-        # held moment is a creative choice, never runtime; the cold reader sees every one (review-packet).
-        if n_words(row.get('pause_purpose')) < MIN_NOTE_WORDS:
-            issues.append(f'pause_{lid}_needs_its_story_purpose')
-        plan.append({'line': lid, 'index': i + 1, 'pause_after_s': p, 'via': via,
-                     'purpose': str(row.get('pause_purpose') or '').strip() or None})
+        if has_total:
+            if total <= 0:
+                issues.append(f'pause_total_s_invalid:{lid}')
+                continue
+            if via not in ('tag', 'edit'):
+                issues.append(f'pause_{lid}_needs_pause_via_edit_or_tag')
+                continue
+            form, seconds = 'total', total
+        else:
+            if after <= NATURAL_PAUSE_MAX_S and via in ('', 'natural'):
+                continue
+            if via in ('', 'natural'):
+                issues.append(f'pause_{lid}_over_{NATURAL_PAUSE_MAX_S:g}s_needs_pause_via_tag_or_edit')
+                continue
+            form, seconds = 'added', after
+        tags_here = _pause_tags_around(lines, i)
+        if via == 'tag' and not tags_here:
+            issues.append(f'pause_{lid}_via_tag_but_no_pause_tag_at_this_line_end_or_next_line_start')
+        if via == 'edit' and tags_here:
+            # One silence, realised once: a pause tag the voice performs and a hold the edit adds would stack.
+            issues.append(f'pause_{lid}_is_an_edit_hold_and_a_pause_tag_at_once:choose_one')
+        # A silence the story wants says what it is for, what is on screen while it lasts and what the sound does. A
+        # written reason is not an approval: the length is decided against the recorded voice and the picture.
+        for field, issue in PAUSE_TEXT_FIELDS:
+            if n_words(row.get(field)) < MIN_NOTE_WORDS:
+                issues.append(f'pause_{lid}_{issue}')
+        plan.append({'line': lid, 'index': i + 1, 'via': via, 'form': form, 'seconds': seconds,
+                     'total_s': seconds if form == 'total' else None,
+                     'added_s': seconds if form == 'added' else None,
+                     'purpose': str(row.get('pause_purpose') or '').strip() or None,
+                     'picture': str(row.get('pause_picture') or '').strip() or None,
+                     'sound': str(row.get('pause_sound') or '').strip() or None})
     return plan, issues
 
 
 def hold_snapshot(lines):
-    """Every realised pause (longer than a natural line gap, by a pause tag or an edit hold) as the script's cold
-    reader is shown it: {line: [seconds, via]}."""
-    return {p['line']: [round(p['pause_after_s'], 2), p['via']] for p in script_pause_plan(lines)[0]}
+    """Every planned pause as the script's cold reader is shown it: {line: [seconds, via]} (seconds as written:
+    the whole silence for pause_total_s, the added silence for the older pause_after_s)."""
+    return {p['line']: [round(p['seconds'], 2), p['via']] for p in script_pause_plan(lines)[0]}
 
 
-def edit_holds_s(lines):
+def planned_added_s(p, gap_s=None):
+    """The silence the edit adds for one planned pause before it is decided: the older form as written; the whole-
+    silence form less the voice's gap there (measured, else the voice's usual gap, else DEFAULT_NATURAL_GAP_S). A
+    performed pause (via tag) adds nothing in the edit."""
+    if p['via'] != 'edit':
+        return 0.0
+    if p['form'] == 'added':
+        return float(p['added_s'])
+    return max(0.0, float(p['total_s']) - float(DEFAULT_NATURAL_GAP_S if gap_s is None else gap_s))
+
+
+def edit_holds_s(lines, gaps=None):
+    """The silence the planned edit holds add, before any is decided (gaps: {line index: the voice's gap there})."""
     plan, _ = script_pause_plan(lines)
-    return round(sum(p['pause_after_s'] for p in plan if p['via'] == 'edit'), 2)
+    return round(sum(planned_added_s(p, (gaps or {}).get(p['index'])) for p in plan), 2)
+
+
+# ---------------------------------------------------------------- held silences: proposed, measured, decided
+# A planned pause is a proposal. Its length is decided twice, each time on evidence the script stage could not have:
+# after the narration is recorded (`hold-decide --stage narration`: the gap the voice really left at that line, the
+# voice's own rhythm around it, a listening preview) and once the pictures exist (`--stage picture`: the shot on screen
+# while it lasts). Each decision names the whole silence wanted (or no hold) and why; the edit adds only the difference
+# with the measured gap. Decisions live in 40-plans/video-NN/holds.json (every earlier one kept in its history), apart
+# from the reviewed script, so a measured adjustment never re-opens the script read; the final watch review sees the
+# silences as they are in the cut. Code gathers and checks the process; which length serves the moment is the
+# director's call, never a formula's.
+HOLD_STAGES = ('narration', 'picture')
+HOLD_VERIFY_TOL_S = 0.06       # an inserted silence measured in the edit's narration lands this close to the decision
+
+
+def holds_path(rd, video):
+    return video_dir(rd, video) / 'holds.json'
+
+
+def hold_decisions(rd, video):
+    d = read_json(holds_path(rd, video))
+    return {'decisions': d.get('decisions') or {}, 'history': d.get('history') or []}
+
+
+def line_times_state(rd, video):
+    """line-times.json, whether it still describes the recorded parts, and each part's current fingerprint."""
+    n = int(video)
+    folder = rd / '50-audio' / f'video-{n:02d}'
+    lt = read_json(folder / 'line-times.json')
+    manifest = read_json(folder / 'manifest.json')
+    prints = {int(c['id']): quick_fingerprint(folder / c['file']) for c in manifest.get('chunks') or []
+              if c.get('id') is not None and (folder / c.get('file', '__missing__')).is_file()}
+    current = bool(lt.get('parts')) and all(p.get('fingerprint') == prints.get(int(p.get('id'))) for p in lt['parts'])
+    return lt, current, prints
+
+
+def measured_gap(rows, index, nlines):
+    """The silence the voice left after one line, as narration-measure read it from the audio (Whisper's gap on an
+    older measurement). rows: {line index: line-times row}. None when the line is not recorded yet; natural_gap_s None
+    when the next line is not (the silence after a line exists only once both sides are recorded)."""
+    r = rows.get(index)
+    if not r:
+        return None
+    nx = rows.get(index + 1)
+    parts = {str(r.get('part')): None}
+    if nx:
+        parts[str(nx.get('part'))] = None
+    if 'gap_after_s' in r:
+        return {'natural_gap_s': r.get('gap_after_s'), 'basis': r.get('gap_basis') or 'audio',
+                'span_s': r.get('gap_span_s'), 'parts': parts}
+    if nx and nx.get('start_s') is not None and r.get('end_s') is not None:
+        return {'natural_gap_s': round(max(0.0, nx['start_s'] - r['end_s']), 3), 'basis': 'whisper',
+                'span_s': [r['end_s'], nx['start_s']], 'parts': parts}
+    return {'natural_gap_s': None, 'basis': 'unknown', 'span_s': None, 'parts': parts}
+
+
+def voice_gap_profile(lt):
+    """How long this voice pauses between lines, from the audio: the yardstick a held silence is set against."""
+    gs = [float(r['gap_after_s']) for r in lt.get('lines') or []
+          if r.get('gap_basis') == 'audio' and r.get('gap_after_s') is not None and not r.get('gap_is_tail')]
+    if not gs:
+        return {}
+    q = sorted(gs)
+    pick = lambda f: q[min(len(q) - 1, max(0, int(round(f * (len(q) - 1)))))]
+    return {'lines': len(gs), 'median_s': round(statistics.median(gs), 2), 'p10_s': round(pick(.1), 2),
+            'p90_s': round(pick(.9), 2), 'shortest_s': round(q[0], 2), 'longest_s': round(q[-1], 2)}
+
+
+def _line_beats(vd):
+    out = {}
+    for b in read_json(vd / 'beat-map.json').get('beats') or []:
+        try:
+            for k in range(int(b['line_start']), int(b['line_end']) + 1):
+                out[k] = str(b.get('id'))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
+def hold_shot(rd, video, index):
+    """The shot on screen while the silence after line `index` lasts (a hold belongs to the shot before the cut), the
+    shot after it when the cut falls there, and the still each one shows now (callbacks show the shot they reuse)."""
+    n = int(video)
+    shots = read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []
+    lines = read_json(video_dir(rd, n) / 'script.json').get('lines') or []
+    pos = {str(r.get('id') or f'L{i + 1:03d}'): i + 1 for i, r in enumerate(lines)}
+    prov = read_json(artifact_path(rd, n, 'stills')).get('images') or {}
+    latest = {}
+    for path, rec in prov.items():
+        sid = str(rec.get('shot_id'))
+        if Path(path).is_file() and str(rec.get('made_at') or '') >= str((latest.get(sid) or ('', None))[0]):
+            latest[sid] = (str(rec.get('made_at') or ''), path)
+    by_id = {str(s.get('id')): s for s in shots}
+
+    def still_of(s):
+        src = str(s.get('reuses') or s.get('id'))
+        hit = latest.get(src)
+        return ({'still': hit[1], 'still_fingerprint': quick_fingerprint(Path(hit[1]))} if hit else
+                {'still': None, 'still_fingerprint': None})
+    for k, s in enumerate(shots):
+        a, b = pos.get(str(s.get('line_start'))), pos.get(str(s.get('line_end')))
+        if a is None or b is None or not a <= index <= b:
+            continue
+        out = {'shot_id': str(s.get('id')), 'new_thing': s.get('new_thing'), **still_of(s)}
+        if index == b and k + 1 < len(shots):
+            nxt = shots[k + 1]
+            out['next_shot'] = {'shot_id': str(nxt.get('id')), **still_of(by_id.get(str(nxt.get('id'))) or nxt)}
+        return out
+    return None
+
+
+def hold_facts(rd, video, lines=None):
+    """Every planned pause (script.json) and every decided hold (holds.json): the proposal, the gap the voice really
+    left there (once both sides are recorded), the decision in force and whether it still stands (the part it was
+    decided on unchanged), and the silence the edit adds: decided, or estimated while provisional. Gathers and
+    calculates; it never judges a hold."""
+    n = int(video)
+    vd = video_dir(rd, n)
+    if lines is None:
+        lines = read_json(vd / 'script.json').get('lines') or []
+    plan, _ = script_pause_plan(lines)
+    by_line = {p['line']: p for p in plan}
+    index = {str(r.get('id') or f'L{i + 1:03d}'): i + 1 for i, r in enumerate(lines)}
+    lt, current, prints = line_times_state(rd, n)
+    rows = {int(r['index']): r for r in lt.get('lines') or []} if current else {}
+    prof = voice_gap_profile(lt) if current else {}
+    usual = prof.get('median_s') or (voice_measurement(rd, n) or {}).get('natural_gap_s')
+    decs = hold_decisions(rd, n)['decisions']
+    beats = _line_beats(vd)
+    out = []
+    for lid in sorted(set(by_line) | set(decs), key=lambda x: (index.get(x) or 10 ** 6, x)):
+        i, p, d = index.get(lid), by_line.get(lid), decs.get(lid)
+        if i is None:
+            out.append({'line': lid, 'status': 'line_not_in_script', 'added_s': 0.0, 'decision': d})
+            continue
+        g = measured_gap(rows, i, len(lines))
+        text = strip_tags(lines[i - 1].get('text') or '')
+        after = strip_tags(lines[i].get('text') or '') if i < len(lines) else ''
+        row = {'line': lid, 'index': i, 'beat': beats.get(i), 'words_before': text[-90:], 'words_after': after[:70],
+               'proposal': ({k: p[k] for k in ('form', 'seconds', 'via', 'purpose', 'picture', 'sound')} if p else None),
+               'natural_gap_s': g.get('natural_gap_s') if g else None, 'gap_basis': g.get('basis') if g else 'not_recorded',
+               'status': 'provisional', 'decision': None}
+        if d:
+            fresh = bool(d.get('parts')) and all(prints.get(int(k)) == v for k, v in (d.get('parts') or {}).items())
+            if fresh:
+                row.update({'status': f'decided_{d.get("stage")}', 'decision': d, 'added_s': float(d.get('added_s') or 0),
+                            'added_is_estimate': False, 'total_s': d.get('total_s'),
+                            'natural_gap_s': d.get('natural_gap_s')})
+            else:
+                row.update({'status': 'stale', 'decision': d,
+                            'why_stale': 'the part this line sits in was re-recorded after the decision'})
+        if row['status'] in ('provisional', 'stale'):
+            gap = row['natural_gap_s'] if row['natural_gap_s'] is not None else usual
+            row['added_s'] = round(planned_added_s(p, gap), 2) if p else 0.0
+            row['added_is_estimate'] = True
+            row['estimate_from'] = ('this line\'s measured gap' if row['natural_gap_s'] is not None else
+                                    'the voice\'s usual gap' if usual else f'{DEFAULT_NATURAL_GAP_S:g} s before any voice')
+            if p and p['form'] == 'added':
+                row['estimate_from'] = 'the older pause_after_s: added on top of the voice\'s gap, as written'
+        out.append(row)
+    return {'holds': out, 'voice_gaps': prof, 'line_times_current': current,
+            'added_s': round(sum(h.get('added_s') or 0 for h in out), 2),
+            'undecided': [h['line'] for h in out if h['status'] in ('provisional', 'stale')],
+            'decided_narration': [h['line'] for h in out if h['status'] == 'decided_narration'],
+            'decided_picture': [h['line'] for h in out if h['status'] == 'decided_picture']}
+
+
+def hold_decisions_sha(rd, video):
+    """What the edit plan was timed from: the silence decided at every line (whole and added). A confirmation with the
+    picture that keeps the length changes nothing in the edit, so it asks for no new retime."""
+    decs = hold_decisions(rd, video)['decisions']
+    return canonical_sha({k: [v.get('total_s'), v.get('added_s')] for k, v in sorted(decs.items())})
+
+
+def hold_signals(plan):
+    """Facts about the planned pauses as a set, for the director to read (never a verdict): lengths that step up or
+    down in film order, or are all alike, can mean the length came from a pattern or a position instead of the moment."""
+    secs = [round(float(p['seconds']), 2) for p in plan]
+    out = []
+    if len(secs) >= 3:
+        if all(b > a for a, b in zip(secs, secs[1:])) or all(b < a for a, b in zip(secs, secs[1:])):
+            out.append('the planned pauses ' + ('grow' if secs[-1] > secs[0] else 'shrink') + ' steadily through the film ('
+                       + ', '.join(f'{s:g}' for s in secs) + ' s): check that each length comes from its own moment, '
+                       'not from its place in the film')
+        elif len(set(secs)) == 1:
+            out.append(f'every planned pause is {secs[0]:g} s: check that each length comes from its own moment')
+    return out
 
 
 # Words that may break 02's content rules. A hit is not a verdict (a word can be plain, unavoidable fact): it
@@ -2843,7 +3086,11 @@ def plan_facts(rd, video):
     issues += markup_issues
     pron = pronunciation_facts(rd, video, lines)
     issues += pron['issues']
-    holds = round(sum(p['pause_after_s'] for p in pause_plan if p['via'] == 'edit'), 2)
+    # The silence the edit holds add: decided ones as decided (whole silence less the voice's measured gap there),
+    # provisional ones estimated the same way. Never the proposal's whole length on top of the voice's own gap.
+    hf = hold_facts(rd, video, lines) if lines else {'holds': [], 'added_s': 0.0, 'voice_gaps': {}, 'undecided': [],
+                                                     'decided_narration': [], 'decided_picture': []}
+    holds = hf['added_s']
     review = vd / 'editorial-review.md'
     review_text = review.read_text(encoding='utf-8', errors='replace') if review.exists() else ''
     flags, flag_issues = content_flags(lines, review_text, excluded_themes(rd, video))
@@ -2885,8 +3132,9 @@ def plan_facts(rd, video):
         issues.append('script_missing_narration_pace')
     target = lock['target_length_s']
     # Narration = spoken words at a pace + the voice's natural gap after every line + what the tags add.
-    # A pause the story wants longer than that gap exists only if it is realised (pause_via): a tag (inside
-    # the narration) or an edit hold (added on top of it). Planned pauses are never sent to ElevenLabs.
+    # A pause the story wants longer than the voice's own gap there exists only if it is realised (pause_via): a tag
+    # (inside the narration) or an edit hold, which adds only the difference between the whole silence wanted and the
+    # gap the voice left (`holds`). Planned pauses are never sent to ElevenLabs.
     early_narr = (words * 60 / pace + DEFAULT_LINE_OVERHEAD_S * len(lines) + tag_s) if pace else 0
     forecast = round(early_narr + holds, 2) if pace else 0
     real_narr = real = None
@@ -2899,26 +3147,39 @@ def plan_facts(rd, video):
             issues.append('real_forecast_outside_export_tolerance')
     elif pace and abs(forecast - target) > max(10, .08 * target):
         issues.append('script_forecast_misses_locked_length_by_over_8pct')
-    # Held silence never stands in for story. The length check above counts the holds; this shows how much of the
-    # locked runtime the words alone fill, next to how the comparable narrators pause. When holds carry runtime, the
-    # cold reader has seen every one (review-packet shows them; a later change to them needs a new read).
+    # Held silence never stands in for story, and never makes the length. The content is the narration with the voice's
+    # own gaps and its delivery tags; the silence is what the edit holds add plus what pause tags perform. When the
+    # content alone falls short of the window and the silence is what reaches it, the length is being padded: blocked.
+    # The answer is the story (more substance, or an authorised length revision), never longer silences.
     band = max(4, target * lock.get('tolerance_export_pct', .025)) if real is not None else max(10, .08 * target)
-    content_s = real_narr if real_narr is not None else (round(early_narr, 2) if pace else None)
+    pause_tag_s = round(sum(tag_cost_s(t['tag'], measured.get('tag_costs_s')) for t in tags
+                            if t.get('category') == 'pause'), 2)
+    narr = real_narr if real_narr is not None else (round(early_narr, 2) if pace else None)
+    content_s = round(narr - pause_tag_s, 2) if narr is not None else None
     carried = round(max(0.0, (target - band) - content_s), 1) if content_s is not None else None
+    if carried and content_s + pause_tag_s + holds >= target - band:
+        issues.append(f'runtime_reached_with_held_silence:{carried:g}s:the_words_alone_fall_short_of_the_length')
     ref_pp = [p for p in (lock.get('reference_pause_profiles') or {}).values() if p]
     edit_holds = [p for p in pause_plan if p['via'] == 'edit']
     holds_info = {'edit_holds': len(edit_holds), 'edit_holds_s': holds,
-                  'tag_pauses': sum(1 for p in pause_plan if p['via'] == 'tag'),
+                  'tag_pauses': sum(1 for p in pause_plan if p['via'] == 'tag'), 'pause_tag_s': pause_tag_s,
                   'share_of_runtime': round(holds / target, 3) if target else None,
                   'content_forecast_s': content_s, 'runtime_carried_by_holds_s': carried,
-                  'longest_hold_s': max((p['pause_after_s'] for p in edit_holds), default=0),
+                  'longest_added_s': max((h.get('added_s') or 0 for h in hf['holds']), default=0),
+                  'undecided': hf['undecided'], 'decided_after_narration': hf['decided_narration'],
+                  'decided_with_picture': hf['decided_picture'], 'voice_gaps': hf['voice_gaps'],
+                  'each': [{k: h.get(k) for k in ('line', 'beat', 'status', 'natural_gap_s', 'added_s',
+                                                   'added_is_estimate', 'total_s')} for h in hf['holds']],
                   'references_longest_pause_s': max((p.get('longest_pause_s') or 0 for p in ref_pp), default=None),
                   'references_pauses_1_5s_plus_per_min': round(statistics.mean(
                       [p['pauses_1_5s_plus_per_min'] for p in ref_pp if p.get('pauses_1_5s_plus_per_min') is not None]), 2)
                   if any(p.get('pauses_1_5s_plus_per_min') is not None for p in ref_pp) else None}
-    if carried:
-        warnings.append(f'{carried:.0f} s of the locked runtime is carried by held silence ({holds:.0f} s of edit holds '
-                        f'in {len(edit_holds)} places): each one has to earn its moment, and the cold reader is shown them all')
+    older = [p['line'] for p in pause_plan if p['form'] == 'added']
+    if older:
+        warnings.append('pauses in the older form (pause_after_s: silence added on top of the voice\'s own gap): '
+                        + ','.join(older) + '. Each is decided against the recorded voice (holds, hold-decide) before '
+                        'the edit; a new script writes pause_total_s, the whole silence wanted')
+    warnings += hold_signals(pause_plan)
     pp = lock.get('pace_profile') or {}
     density = {'script_words': words, 'words_per_runtime_minute': round(words / (target / 60)) if target else None,
                'references_overall_wpm': pp.get('overall_wpm'), 'references_runtime_wpm': pp.get('runtime_wpm'),
@@ -3038,8 +3299,9 @@ def _split_long_beat(lines, sizes, lo, hi, target, hard_max):
             break
         near = [x for x in options if abs(x[1] - goal) <= 0.25 * target] or \
             [min(options, key=lambda x: abs(x[1] - goal))]
-        j = max(near, key=lambda x: (float(lines[x[0] - 1].get('pause_after_s') or 0) > NATURAL_PAUSE_MAX_S,
-                                     float(lines[x[0] - 1].get('pause_after_s') or 0) > 0, -abs(x[1] - goal)))[0]
+        pause_len = lambda row: float(row.get('pause_total_s') or row.get('pause_after_s') or 0)   # either form
+        j = max(near, key=lambda x: (pause_len(lines[x[0] - 1]) > NATURAL_PAUSE_MAX_S,
+                                     pause_len(lines[x[0] - 1]) > 0, -abs(x[1] - goal)))[0]
         pieces.append((start, j))
         start = j + 1
     pieces.append((start, hi))
@@ -4828,8 +5090,14 @@ def audio_facts(rd, video):
         else:
             warnings.append('line-times.json describes an earlier recording: run narration-measure on these parts')
     # The picture can't be shorter than the narration, and export-check holds the export to its own (tighter)
-    # window: narration plus the planned edit holds must already fit it, or the export can never pass.
-    holds = edit_holds_s(script_lines)
+    # window: narration plus the silence the edit holds add must already fit it, or the export can never pass. A hold
+    # adds what was decided against the voice's measured gap there (estimated the same way while still provisional);
+    # a join that already carries a hold gets no seam hold on top.
+    hf = hold_facts(rd, video, script_lines)
+    holds = hf['added_s']
+    held_lines = {h['line'] for h in hf['holds']}
+    if lt and seam_s:
+        seam_s = sum(float(s.get('seam_hold_s') or 0) for s in lt.get('seams') or [] if s.get('after_line') not in held_lines)
     window = None
     if target and duration:
         tol_e = max(4, target * lock.get('tolerance_export_pct', .025))
@@ -4898,6 +5166,26 @@ def timeline_facts(rd, video):
             issues.append('edit_plan_outdated_rerun_retime_shots')
         if not media_current(dlock, 'edit', (plan.get('direction') or {}).get('production_rev')):
             issues.append('edit_plan_made_for_an_earlier_direction')
+        # The held silences: timed from the decisions in force, and each one decided again with its picture (the shot
+        # on screen while it lasts, as that shot's still is now). A decision written down before the picture existed
+        # is a proposal the picture can overturn.
+        hf = hold_facts(rd, n, lines)
+        if (plan.get('hold_decisions_sha256') is not None or hf['holds']) and \
+                plan.get('hold_decisions_sha256') != hold_decisions_sha(rd, n):
+            issues.append('edit_plan_outdated_holds_changed_rerun_retime_shots')
+        not_with_picture = [h['line'] for h in hf['holds'] if h.get('index') and h['status'] != 'decided_picture']
+        if not_with_picture:
+            issues.append('holds_not_decided_with_their_picture:' + ','.join(not_with_picture))
+        gone = [h['line'] for h in hf['holds'] if h['status'] == 'line_not_in_script']
+        if gone:
+            warnings.append('hold decisions for lines the script no longer has (ignored): ' + ','.join(gone))
+        for h in hf['holds']:
+            if h['status'] == 'decided_picture':
+                seen_pic = (h.get('decision') or {}).get('picture') or {}
+                now_pic = hold_shot(rd, n, h['index']) or {}
+                if (seen_pic.get('shot_id'), seen_pic.get('still_fingerprint')) != \
+                        (now_pic.get('shot_id'), now_pic.get('still_fingerprint')):
+                    issues.append(f'hold_{h["line"]}_decided_with_another_picture')
     cursor, seen = 0.0, {}
     for i, clip in enumerate(seq, 1):
         try:
@@ -5687,8 +5975,34 @@ def cmd_narration_measure(args):
             if any(seq == around[x:x + len(seq)] for x in range(len(around) - len(seq) + 1)):
                 repeats.append({'at_s': round(heard_tokens[run[0]][1], 2), 'heard': ' '.join(seq)})
         run = []
+    # The silence after each line, read from the audio itself (av_tools.line_gaps: the quiet run around Whisper's
+    # boundary; Whisper alone places a line's ends to within about 0.2 s). It is what a held silence is decided
+    # against (hold-decide) and what the edit adds to (retime-shots), never an average: lines differ.
+    tmpdir, joined, gap_error, audio_gaps = tempfile.mkdtemp(prefix='narration-measure-'), None, None, {}
+    files = [folder / c['file'] for c in sorted(chunks, key=lambda x: x['id'])
+             if c['id'] <= max(x['id'] for x in use) and (folder / c['file']).is_file()]
+    try:
+        av = _av()
+        joined = av.concat_audio(files, Path(tmpdir) / 'narration.wav')
+        g = av.line_gaps(joined, [{'index': li, 'start_s': rows[li]['start_s'], 'end_s': rows[li]['end_s']}
+                                  for li in order], last_index=len(lines))
+        audio_gaps = {int(x['index']): x for x in g['gaps']}
+    except (RuntimeError, ValueError, OSError, ImportError, KeyError) as exc:
+        gap_error = f'{type(exc).__name__}: {str(exc)[:200]}'
+    for li in order:
+        x = audio_gaps.get(li)
+        if x:
+            rows[li].update({'gap_after_s': x['gap_s'], 'gap_span_s': x['span_s'], 'gap_basis': x['basis']})
+            if x.get('last_line'):
+                rows[li]['gap_is_tail'] = True
+    part_ends = {int(c['line_end']) for c in chunks}
+    between = [float(rows[li]['gap_after_s']) for li in order if rows[li].get('gap_basis') == 'audio'
+               and rows[li].get('gap_after_s') is not None and not rows[li].get('gap_is_tail') and li not in part_ends]
+    natural_audio = statistics.median(between) if between else None
     # The joins: the gap between the parts against the voice's own gap between lines, the pace on each side, and
-    # any words said twice across it. A join shorter than the natural gap gets a seam hold in the edit (retime-shots).
+    # any words said twice across it. A join shorter than the natural gap gets a seam hold in the edit (retime-shots),
+    # unless the line before it carries a planned or decided hold (that silence is decided as a whole: never stacked).
+    held = {p['line'] for p in script_pause_plan(lines)[0]} | set(hold_decisions(rd, n)['decisions'])
     seams, by_index = [], {r['index']: r for r in rows.values()}
     ordered_parts = sorted(use, key=lambda x: x['id'])
     for a_c, b_c in zip(ordered_parts, ordered_parts[1:]):
@@ -5697,9 +6011,12 @@ def cmd_narration_measure(args):
         last, first = by_index.get(int(a_c['line_end'])), by_index.get(int(b_c['line_start']))
         if not last or not first or last['end_s'] is None or first['start_s'] is None:
             continue
-        gap = round(first['start_s'] - last['end_s'], 3)
-        planned = str(lines[int(a_c['line_end']) - 1].get('pause_via') or '').lower() in ('tag', 'edit')
-        hold = round(natural_gap - gap, 2) if (not planned and natural_gap - gap >= 0.08) else 0.0
+        if last.get('gap_basis') == 'audio' and last.get('gap_after_s') is not None and natural_audio is not None:
+            gap, natural_here = round(float(last['gap_after_s']), 3), natural_audio
+        else:
+            gap, natural_here = round(first['start_s'] - last['end_s'], 3), natural_gap
+        planned = str(last['id']) in held
+        hold = round(natural_here - gap, 2) if (not planned and natural_here - gap >= 0.08) else 0.0
         def side(lo_i, hi_i):
             rs = [by_index[x] for x in range(lo_i, hi_i + 1) if x in by_index and by_index[x]['start_s'] is not None]
             w = sum(count_words(lines[r['index'] - 1].get('text') or '') for r in rs)
@@ -5709,7 +6026,7 @@ def cmd_narration_measure(args):
         before_tok = [h for h, a, b, u in heard_tokens if b <= t][-3:]
         after_tok = [h for h, a, b, u in heard_tokens if a >= t][:3]
         seams.append({'after_part': a_c['id'], 'after_line': last['id'], 'at_s': round(t, 3), 'gap_s': gap,
-                      'natural_gap_s': round(natural_gap, 3), 'seam_hold_s': hold,
+                      'natural_gap_s': round(natural_here, 3), 'seam_hold_s': hold,
                       'wpm_before': side(int(a_c['line_end']) - 7, int(a_c['line_end'])),
                       'wpm_after': side(int(b_c['line_start']), int(b_c['line_start']) + 7),
                       'repeated_words': before_tok if before_tok and before_tok == after_tok else None})
@@ -5758,19 +6075,14 @@ def cmd_narration_measure(args):
     if not args.no_delivery:
         try:
             av = _av()
-            import tempfile
-            top = max(c['id'] for c in use)
-            files = [folder / c['file'] for c in sorted(chunks, key=lambda x: x['id'])
-                     if c['id'] <= top and (folder / c['file']).is_file()]
             spans = {}
             for b in beat_rows:
                 spans[str(b['id'])] = (b['start_s'], b['end_s'])
             for s in seams:
                 spans[f'seam_{s["after_part"]}_before'] = (max(0.0, s['at_s'] - 20), s['at_s'])
                 spans[f'seam_{s["after_part"]}_after'] = (s['at_s'], s['at_s'] + 20)
-            with tempfile.TemporaryDirectory() as tmp:
-                wav = av.concat_audio(files, Path(tmp) / 'narration.wav')
-                delivery = av.delivery(f'video-{n:02d} narration', wav, all_words, spans=spans, segments=all_segments)
+            wav = joined if joined is not None else av.concat_audio(files, Path(tmpdir) / 'narration.wav')
+            delivery = av.delivery(f'video-{n:02d} narration', wav, all_words, spans=spans, segments=all_segments)
             for b in read_json(vd / 'beat-map.json').get('beats') or []:
                 k = str(b.get('id'))
                 if k in (delivery.get('spans') or {}):
@@ -5787,15 +6099,18 @@ def cmd_narration_measure(args):
             write_json(folder / 'delivery.json', delivery)
         except (RuntimeError, ValueError, OSError, ImportError, KeyError) as exc:
             delivery_error = f'{type(exc).__name__}: {str(exc)[:200]}'
+    shutil.rmtree(tmpdir, ignore_errors=True)
     for r in rows.values():
         # each comparable token's [start, end] on the narration (None where Whisper did not hear it): the captions'
         # word times
         r['word_times'] = [None if x is None else [round(x[0], 3), round(x[1], 3)] for x in (r.pop('_tok', None) or [])]
+    gaps_now = voice_gap_profile({'lines': list(rows.values())})
     out = {'video': n, 'complete': complete, 'script_sha256': script_hash(lines) if complete else None,
            'narration_file': str(folder / 'narration.wav') if complete else None, 'parts': per_part,
            'duration_s': round(tot_dur, 2), 'words': int(tot_words), 'speech_s': round(tot_speech, 2), 'wpm': wpm,
            'script_words': script_words, 'forecast_wpm': forecast_wpm, 'overall_wpm': overall_wpm,
            'natural_line_gap_median_s': round(natural_gap, 3), 'per_line_overhead_s': per_line,
+           'line_gaps_from_audio': gaps_now, 'line_gaps_error': gap_error,
            'alignment_match_ratio': round(ratio_all, 3), 'tags_measured': measured_tags,
            'unheard_lines': unheard, 'rechecked_lines': rechecks, 'tags_read_aloud': read_aloud,
            'possible_repeats': repeats, 'seams': seams, 'beats': beat_rows, 'pronunciation_heard': pron_heard,
@@ -5828,6 +6143,7 @@ def cmd_narration_measure(args):
                           'wpm': wpm, 'words': int(tot_words), 'script_words': script_words,
                           'forecast_wpm': forecast_wpm, 'overall_wpm': overall_wpm, 'speech_s': round(tot_speech, 2),
                           'duration_s': round(tot_dur, 2), 'lines': nlines, 'per_line_overhead_s': per_line,
+                          'natural_gap_s': gaps_now.get('median_s') or round(natural_gap, 3),
                           'tag_costs_s': tag_costs, 'parts': [p['id'] for p in per_part], 'measured_at': now(),
                           'method': out['method']}
         for k in ('measured_wpm', 'measured_overhead_s', 'measured_overhead_lines', 'measured_wpm_source'):
@@ -5851,6 +6167,7 @@ def cmd_narration_measure(args):
           'wpm': wpm, 'forecast_wpm': forecast_wpm, 'overall_wpm': overall_wpm, 'words': int(tot_words),
           'script_words': script_words, 'duration_s': round(tot_dur, 2), 'per_line_overhead_s': per_line,
           'natural_line_gap_median_s': round(natural_gap, 3), 'tags_measured': measured_tags,
+          'line_gaps_from_audio': gaps_now, 'line_gaps_error': gap_error,
           'unheard_lines': unheard, 'rechecked_lines': rechecks, 'tags_read_aloud': read_aloud, 'seams': seams,
           'beats': beat_rows, 'pronunciation_heard': pron_heard, 'pause_profile': profile,
           'references': {v: {'wpm': (lock.get('per_ref_wpm') or {}).get(v), **p}
@@ -5867,7 +6184,9 @@ def cmd_narration_measure(args):
                        if delivery else {'error': delivery_error} if delivery_error else None),
           'next': ('Listen where flagged; a line still not heard is re-recorded (tts --rerecord-parts N --reason) or '
                    'confirmed by the user (--confirm Lnnn --reason). ' if issues else '') +
-                  'plan-check (real_forecast_s against the export window); when complete: retime-shots.'},
+                  'plan-check (real_forecast_s against the export window); holds (each planned pause next to the gap '
+                  'the voice really left there) and hold-decide for every pause whose lines are recorded; when '
+                  'complete: retime-shots.'},
          0 if not issues else 2)
 
 
@@ -5902,12 +6221,223 @@ def cmd_pace_profile(args):
                   'slower narrator is not a duller one.'})
 
 
+def _narration_source(rd, video, tmpdir):
+    """The recorded narration as one file on line-times' clock: narration.wav once it is complete, else the recorded
+    parts joined in order (as narration-measure joins them)."""
+    n = int(video)
+    folder = rd / '50-audio' / f'video-{n:02d}'
+    if (folder / 'narration.wav').is_file() and read_json(folder / 'line-times.json').get('complete'):
+        return folder / 'narration.wav'
+    chunks = read_json(folder / 'manifest.json').get('chunks') or []
+    files = [folder / c['file'] for c in sorted(chunks, key=lambda x: x['id']) if (folder / c['file']).is_file()]
+    if not files:
+        error('No recorded narration to preview.')
+    return _av().concat_audio(files, Path(tmpdir) / 'narration.wav')
+
+
+def hold_previews(rd, video, lines, lid, totals):
+    """Short local previews of one held silence at several whole lengths (the voice's own gap among them): the words
+    around it, the silence, and, once the stills exist, the shot(s) on screen as the edit would cut them. For the
+    user's ears and the director's comparison; a preview shows a still without CapCut's moves, captions or music."""
+    n = int(video)
+    index = {str(r.get('id') or f'L{i + 1:03d}'): i + 1 for i, r in enumerate(lines)}
+    if lid not in index:
+        error('--preview names a line the script does not have.', lid)
+    i = index[lid]
+    lt, current, _ = line_times_state(rd, n)
+    if not current:
+        error('line-times.json does not describe the recorded parts: run narration-measure first.')
+    rows = {int(r['index']): r for r in lt.get('lines') or []}
+    g = measured_gap(rows, i, len(lines))
+    if not g or g['natural_gap_s'] is None:
+        error('A preview needs this line and the next recorded and measured.', lid)
+    natural = float(g['natural_gap_s'])
+    r = rows[i]
+    span = g.get('span_s') if g.get('basis') == 'audio' else None
+    at = (span[0] + span[1]) / 2 if span else (r['end_s'] + (rows[i + 1]['start_s'] if i + 1 in rows else r['end_s'])) / 2
+    last = i == len(lines)
+    prev_r, next_r = rows.get(i - 1) or r, rows.get(i + 1)
+    start = max(0.0, max(prev_r['start_s'], r['end_s'] - 15.0) - 0.3)
+    end = (min(next_r['end_s'], (next_r['start_s'] or 0) + 10.0) + 0.4) if next_r else None
+    wanted = sorted({round(float(x), 2) for x in str(totals or '').replace(';', ',').split(',') if x.strip()})
+    if any(x <= 0 for x in wanted):
+        error('--totals are whole silences in seconds, each above 0.')
+    variants = [('voice-gap', natural, 0.0)] + [(f'total-{x:.2f}s', x, round(max(0.0, x - natural), 3)) for x in wanted]
+    out_dir = rd / '70-edit' / f'video-{n:02d}' / 'hold-previews' / lid
+    out_dir.mkdir(parents=True, exist_ok=True)
+    shot = hold_shot(rd, n, i)
+    made = []
+    with tempfile.TemporaryDirectory() as tmp:
+        src = _narration_source(rd, n, tmp)
+        dur = probe(src)['duration_s']
+        end = dur if end is None or last else min(end, dur)
+        at = dur if last else at
+        for label, total, add in variants:
+            wav = out_dir / f'{label}.wav'
+            filt = [f'[0:a]atrim=start={start:.3f}:end={at:.3f},asetpts=PTS-STARTPTS[a]',
+                    f'anullsrc=r=44100:cl=stereo,atrim=duration={max(add, 0.001):.3f}[s]']
+            labels = '[a][s]'
+            if at < end - 0.01:
+                filt.append(f'[0:a]atrim=start={at:.3f}:end={end:.3f},asetpts=PTS-STARTPTS[b]')
+                labels += '[b]'
+            filt.append(f'{labels}concat=n={len(labels) // 3}:v=0:a=1,aresample=44100[out]')
+            run_cmd(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', str(src), '-filter_complex',
+                     ';'.join(filt), '-map', '[out]', '-ac', '2', '-c:a', 'pcm_s16le', str(wav)])
+            item = {'variant': label, 'whole_silence_s': round(natural + add, 2), 'added_s': add, 'audio': str(wav),
+                    'silence_centre_s': round((at - start) + add / 2, 3)}
+            stills = []
+            if shot and shot.get('still'):
+                cut = (at - start) + add                  # the hold stays on the shot before the cut
+                if shot.get('next_shot', {}).get('still'):
+                    stills = [(shot['still'], cut), (shot['next_shot']['still'], max(0.1, (end - start) + add - cut))]
+                else:
+                    stills = [(shot['still'], (end - start) + add)]
+            if stills:
+                mp4 = out_dir / f'{label}.mp4'
+                cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y']
+                for path, d in stills:
+                    cmd += ['-loop', '1', '-t', f'{d:.3f}', '-i', str(path)]
+                cmd += ['-i', str(wav), '-filter_complex',
+                        ''.join(f'[{k}:v]scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2,'
+                                f'setsar=1,fps=30[v{k}];' for k in range(len(stills))) +
+                        ''.join(f'[v{k}]' for k in range(len(stills))) + f'concat=n={len(stills)}:v=1:a=0[v]',
+                        '-map', '[v]', '-map', f'{len(stills)}:a', '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+                        '-c:a', 'aac', '-b:a', '160k', '-shortest', str(mp4)]
+                run_cmd(cmd)
+                item['video'] = str(mp4)
+            made.append(item)
+    words_before = strip_tags(lines[i - 1].get('text') or '')
+    words_after = strip_tags(lines[i].get('text') or '') if i < len(lines) else '(the end of the narration)'
+    guide = [f'# Held silence after {lid}: listening previews', '',
+             f'Before: "{words_before}"', f'After: "{words_after}"', '',
+             f'The voice\'s own gap here: {natural:.2f} s ({g.get("basis")}). Each file is the same moment with a '
+             'different whole silence after the line; nothing else differs.', '']
+    guide += [f'- {m["variant"]}: about {m["whole_silence_s"]:.2f} s of silence -> {m.get("video") or m["audio"]}' for m in made]
+    guide += ['', 'Listen for: does the line land, or does the silence wait for nothing? Does the next line still feel '
+              'connected? Would you want the voice to go on sooner?',
+              'Previews show the still only: no camera moves, captions, transitions or music.' if shot and shot.get('still')
+              else 'Audio only: the picture for this moment does not exist yet.']
+    (out_dir / 'index.md').write_text('\n'.join(guide) + '\n', encoding='utf-8')
+    return {'line': lid, 'natural_gap_s': natural, 'gap_basis': g.get('basis'), 'folder': str(out_dir),
+            'guide': str(out_dir / 'index.md'), 'variants': made,
+            'picture': bool(shot and shot.get('still')),
+            'limits': 'A preview is the recorded voice with the silence set as named, over the shot\'s still when it '
+                      'exists: no camera moves, captions, transitions or music. No agent here can hear it; the '
+                      'user\'s ears decide what it sounds like.'}
+
+
+def cmd_holds(args):
+    """Every planned pause next to what the recorded voice really did there (gathers; free): the proposal, the gap the
+    voice left after that line (from the audio), this voice's own range of gaps, the words around it, the shot on
+    screen and its still once they exist, and the decision in force. With --preview LINE --totals a,b: short local
+    previews of that moment at each whole silence, the voice's own gap among them. Nothing is decided here."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    lines = read_json(vd / 'script.json', required=True).get('lines') or []
+    hf = hold_facts(rd, n, lines)
+    for h in hf['holds']:
+        if h.get('index'):
+            sh = hold_shot(rd, n, h['index'])
+            if sh:
+                h['on_screen'] = sh
+    plan = read_json(artifact_path(rd, n, 'edit'))
+    out = {'ok': True, 'video': n, 'holds': hf['holds'], 'voice_gaps': hf['voice_gaps'],
+           'line_times_current': hf['line_times_current'], 'added_s': hf['added_s'],
+           'undecided': hf['undecided'], 'decided_after_narration': hf['decided_narration'],
+           'decided_with_picture': hf['decided_picture'],
+           'edit_plan_timed_from_these_decisions': (plan.get('hold_decisions_sha256') == hold_decisions_sha(rd, n))
+           if plan else None,
+           'reading': 'A planned pause is a proposal. For each: does the voice\'s own gap here already give the moment '
+                      'what it needs? What does the viewer see and hear while it lasts, and would they wait, or want '
+                      'the voice to go on? Decide the WHOLE silence (or no hold) with hold-decide; the edit adds only '
+                      'the difference with the measured gap. No quota, no formula, no length copied from a reference.',
+           'next': 'hold-decide --line Lnnn --stage narration (--total S | --no-hold) --reason "..." for every pause '
+                   'whose line and the next are recorded; after the stills exist, again with --stage picture.'}
+    if args.preview:
+        out['preview'] = hold_previews(rd, n, lines, args.preview.strip(), args.totals)
+    emit(out)
+
+
+def cmd_hold_decide(args):
+    """Decide one held silence on evidence: the WHOLE silence wanted after the line (--total, the voice's own gap
+    included) or none (--no-hold), at a stage: 'narration' (the voice is recorded and measured there) or 'picture'
+    (the shot on screen has its still). The edit adds only the difference with the gap the voice really left; a
+    decision does not touch the reviewed script, and every earlier decision is kept in the file's history."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    lines = read_json(vd / 'script.json', required=True).get('lines') or []
+    index = {str(r.get('id') or f'L{i + 1:03d}'): i + 1 for i, r in enumerate(lines)}
+    lid = args.line.strip()
+    if lid not in index:
+        error('--line names a line the script does not have.', lid)
+    if (args.total is None) == (not args.no_hold):
+        error('Give the whole silence wanted after the line (--total S: the voice\'s own gap included) or --no-hold.')
+    if args.total is not None and args.total <= 0:
+        error('--total is the whole silence in seconds, above 0 (--no-hold for none).')
+    if n_words(args.reason) < MIN_NOTE_WORDS:
+        error('Say why this length serves this moment (--reason): what the viewer takes in, what the picture and the '
+              'sound do, why not shorter or longer.')
+    i = index[lid]
+    lt, current, prints = line_times_state(rd, n)
+    if not current:
+        error('line-times.json does not describe the recorded parts: run narration-measure on them first.')
+    rows = {int(r['index']): r for r in lt.get('lines') or []}
+    g = measured_gap(rows, i, len(lines))
+    if not g or g['natural_gap_s'] is None:
+        error('The silence after this line exists only once this line and the next are recorded and measured '
+              '(narration-measure): decide it then.', lid)
+    natural = float(g['natural_gap_s'])
+    total = None if args.no_hold else round(float(args.total), 3)
+    added = 0.0 if total is None else round(max(0.0, total - natural), 3)
+    p = {x['line']: x for x in script_pause_plan(lines)[0]}.get(lid)
+    rec = {'line': lid, 'index': i, 'beat': _line_beats(vd).get(i), 'stage': args.stage, 'total_s': total,
+           'no_hold': total is None, 'natural_gap_s': natural, 'gap_basis': g.get('basis'),
+           'gap_span_s': g.get('span_s'), 'added_s': added, 'resulting_gap_s': round(natural + added, 3),
+           'outcome': ('no added silence: the voice\'s own gap' if total is None else
+                       'the voice\'s own gap already gives it: nothing added' if added == 0 else
+                       f'adds {added:g} s to the voice\'s {natural:g} s'),
+           'reason': args.reason.strip(), 'listened': (args.listened or '').strip() or None, 'decided_at': now(),
+           'parts': {k: prints.get(int(k)) for k in (g.get('parts') or {}) if k.isdigit()},
+           'proposal': ({k: p[k] for k in ('form', 'seconds', 'via', 'purpose', 'picture', 'sound')} if p else None),
+           'voice_gaps': voice_gap_profile(lt)}
+    if args.stage == 'picture':
+        sh = hold_shot(rd, n, i)
+        if not sh or not sh.get('still'):
+            error('The picture stage decides with the picture: the shot on screen during this silence has no still yet.',
+                  {'line': lid, 'shot': sh})
+        rec['picture'] = sh
+    pv = rd / '70-edit' / f'video-{n:02d}' / 'hold-previews' / lid
+    if pv.is_dir():
+        rec['previews'] = sorted(str(x) for x in pv.iterdir() if x.suffix in ('.wav', '.mp4'))
+    data = read_json(holds_path(rd, n))
+    decisions, history = data.get('decisions') or {}, data.get('history') or []
+    before = decisions.get(lid)
+    if before:
+        history.append({**before, 'superseded_at': now()})
+    decisions[lid] = rec
+    write_json(holds_path(rd, n), {'video': n, 'decisions': decisions, 'history': history,
+                                   'how': 'hold-decide: the whole silence after a line (the voice\'s own gap included) '
+                                          'or none, decided after the narration and again with the picture; the edit '
+                                          'adds only the difference with the measured gap (retime-shots).'})
+    plan = read_json(artifact_path(rd, n, 'edit'))
+    emit({'ok': True, 'decision': rec, 'replaced': before,
+          'next': ('retime-shots: the edit plan was timed from other decisions. ' if plan and
+                   plan.get('hold_decisions_sha256') != hold_decisions_sha(rd, n) else '') +
+                  ('The picture stage confirms it with the shot on screen once the stills exist (--stage picture).'
+                   if args.stage == 'narration' else 'Rebuild the CapCut project from the new edit plan if it changed.')})
+
+
 def cmd_retime_shots(args):
     """Time every shot to the real narration: each cut falls in the silence between the last line of one shot
-    and the first line of the next; an edit hold (pause_via "edit") is inserted at its line and belongs to the
-    shot before it. Rewrites shot-plan.json's start_s/end_s (the planned values kept once as planned_*), writes
-    70-edit/video-NN/edit-plan.json, and with --render-narration the narration with its holds
-    (50-audio/video-NN/narration-edit.wav) -- the audio file the CapCut project uses."""
+    and the first line of the next. Only DECIDED holds are inserted (hold-decide: a planned pause is a proposal until
+    the voice is measured): each adds the difference between the whole silence decided and the gap the voice really
+    left there (measured in narration.wav itself), placed in the middle of that silence so no word is touched, and
+    belongs to the shot before it. The result is verified in narration-edit.wav with the same measure, and refused when
+    the silence is what brings the edit up to the length. Rewrites shot-plan.json's start_s/end_s (the planned values
+    kept once as planned_*), writes 70-edit/video-NN/edit-plan.json and, whenever there are holds, the narration with its
+    holds (50-audio/video-NN/narration-edit.wav) -- the audio file the CapCut project uses."""
     rd, st = run_folder(args)
     n = int(args.video)
     vd = video_dir(rd, n)
@@ -5939,23 +6469,68 @@ def cmd_retime_shots(args):
     index = {str(r.get('id')): i + 1 for i, r in enumerate(lines)}
     times = {r['index']: r for r in lt['lines']}
     dur = gate['duration_s']
-    holds = []
-    for p in script_pause_plan(lines)[0]:
-        if p['via'] == 'edit':
-            i = p['index']
+    # Every planned pause is decided against the recorded voice before the edit is timed: its length was a proposal
+    # written before any voice existed. Nothing is inserted from a pre-recording estimate.
+    hf = hold_facts(rd, n, lines)
+    if hf['undecided']:
+        error('Every planned pause is decided against the recorded voice before the edit is timed (its length was a '
+              'proposal): read `holds`, preview where it helps, then hold-decide each one (--stage narration).',
+              {'undecided': hf['undecided'], 'stale': [h['line'] for h in hf['holds'] if h['status'] == 'stale']})
+    decided = [h for h in hf['holds'] if h['status'].startswith('decided_')]
+    nar = folder / 'narration.wav'
+    gmap, av = {}, None
+    if decided:
+        av = _av()
+        gmap = {int(x['index']): x for x in av.line_gaps(nar, [{'index': r['index'], 'start_s': r['start_s'],
+                                                                'end_s': r['end_s']} for r in lt['lines']],
+                                                       last_index=len(lines))['gaps']}
+    holds, pauses, notes = [], [], []
+    for h in decided:
+        i, d = h['index'], h['decision']
+        g = gmap.get(i) or {}
+        natural = float(g['gap_s']) if g.get('gap_s') is not None else float(d.get('natural_gap_s') or 0)
+        total_s = d.get('total_s')
+        added = 0.0 if total_s is None else round(max(0.0, float(total_s) - natural), 3)
+        if g.get('basis') == 'audio' and g.get('span_s'):
+            at = dur if i == len(lines) else (g['span_s'][0] + g['span_s'][1]) / 2     # inside the voice's own silence
+        else:
             at = (times[i]['end_s'] + times[i + 1]['start_s']) / 2 if i < len(lines) else dur
-            holds.append({'after_line': p['line'], 'at_audio_s': round(at, 3), 'hold_s': p['pause_after_s'],
-                          'kind': 'script', 'purpose': p.get('purpose')})
+            notes.append(f'{h["line"]}: no clear silence found in the audio after it; the hold sits at Whisper\'s '
+                         'boundary: listen there')
+        if d.get('natural_gap_s') is not None and abs(float(d['natural_gap_s']) - natural) > 0.1:
+            notes.append(f'{h["line"]}: the gap measured in narration.wav ({natural:.2f} s) differs from the one the '
+                         f'decision read ({float(d["natural_gap_s"]):.2f} s); the decided whole silence is kept')
+        rec = {'after_line': h['line'], 'index': i, 'at_audio_s': round(at, 3), 'hold_s': added, 'kind': 'script',
+               'purpose': (h.get('proposal') or {}).get('purpose') or d.get('reason'), 'total_s': total_s,
+               'natural_gap_s': round(natural, 3), 'gap_basis': g.get('basis') or d.get('gap_basis'),
+               'stage': d.get('stage'), 'decided_at': d.get('decided_at'),
+               'expected_gap_s': round(natural + added, 3)}
+        pauses.append(rec)
+        if added > 0:
+            holds.append(rec)
     # A join between recorded parts that came out shorter than the voice's own gap between lines (narration-measure)
-    # gets back exactly the missing fraction of a second: continuity, never padding (capped at the natural gap).
+    # gets back exactly the missing fraction of a second: continuity, never padding (capped at the natural gap). A join
+    # whose line carries a decided pause gets none: that silence was decided as a whole.
+    held_lines = {h['line'] for h in hf['holds']}
+    seam_s = 0.0
     if not args.no_seam_holds:
         for s in lt.get('seams') or []:
-            if float(s.get('seam_hold_s') or 0) > 0:
+            if float(s.get('seam_hold_s') or 0) > 0 and s.get('after_line') not in held_lines:
                 holds.append({'after_line': s.get('after_line'), 'at_audio_s': round(float(s['at_s']), 3),
                               'hold_s': round(float(s['seam_hold_s']), 2), 'kind': 'seam',
                               'purpose': 'restores the voice\'s natural gap at the join between two recorded parts'})
+                seam_s += round(float(s['seam_hold_s']), 2)
     holds.sort(key=lambda h: h['at_audio_s'])
     total = round(dur + sum(h['hold_s'] for h in holds), 3)
+    # The length is reached by the narration, never by the silence added to it.
+    tol0 = max(4, lock['target_length_s'] * lock.get('tolerance_export_pct', .025))
+    win_lo = lock['target_length_s'] - tol0
+    held_s = round(sum(h['hold_s'] for h in holds if h['kind'] == 'script'), 3)
+    if dur + seam_s < win_lo <= total:
+        error('The edit reaches the locked length only with the held silence: the narration ends '
+              f'{win_lo - dur - seam_s:.1f} s short of the export window. The answer is the story (more substance in '
+              'the parts to re-record, or an authorised length revision), never longer silences.',
+              {'narration_s': dur, 'held_silence_s': held_s, 'export_window_from_s': round(win_lo, 2)})
     ranges, cursor = [], 0
     for s in shots:
         a, b = index.get(str(s.get('line_start'))), index.get(str(s.get('line_end')))
@@ -5966,10 +6541,16 @@ def cmd_retime_shots(args):
         cursor = b
     if cursor != len(lines):
         error('The shots do not cover every script line.', {'last_line_covered': cursor, 'lines': len(lines)})
-    out_shots, start, notes = [], 0.0, []
+    out_shots, start = [], 0.0
+    hold_at = {int(h['index']): h['at_audio_s'] for h in pauses}
     for k, (s, (a, b)) in enumerate(zip(shots, ranges)):
         if k + 1 < len(shots):
-            split = (times[b]['end_s'] + times[b + 1]['start_s']) / 2
+            # The cut sits in the silence after the shot's last line: where its hold is, when it has one (the hold stays
+            # on the shot before), else in the middle of the measured silence, else at Whisper's boundary.
+            g = gmap.get(b) or {}
+            split = (hold_at[b] if b in hold_at else
+                     (g['span_s'][0] + g['span_s'][1]) / 2 if g.get('basis') == 'audio' and g.get('span_s') else
+                     (times[b]['end_s'] + times[b + 1]['start_s']) / 2)
             end = split + sum(h['hold_s'] for h in holds if h['at_audio_s'] <= split + 1e-6)
         else:
             end = total
@@ -5990,8 +6571,6 @@ def cmd_retime_shots(args):
         b = str(s['beat_id'])
         lo, hi = beat_spans.get(b, (s['start_s'], s['end_s']))
         beat_spans[b] = (min(lo, s['start_s']), max(hi, s['end_s']))
-    plan['timed_to'] = {'narration': str(folder / 'narration.wav'), 'edit_duration_s': total, 'retimed_at': now()}
-    write_json(plan_path, plan)
     tol = max(4, lock['target_length_s'] * lock.get('tolerance_export_pct', .025))
     edit_audio = None
     if holds:      # the CapCut project uses the narration with its holds: always written when there are any
@@ -6010,6 +6589,32 @@ def cmd_retime_shots(args):
                  '-filter_complex', ';'.join(filt), '-map', '[out]', '-ar', '44100', '-ac', '2',
                  '-c:a', 'pcm_s16le', str(outp)])
         edit_audio = {'file': str(outp), 'duration_s': probe(outp)['duration_s']}
+        # The silences as they really are in the file the project will carry, read with the yardstick that decided
+        # them: the voice's own gap plus what was added, at the place decided, and nothing added anywhere else.
+        if abs(edit_audio['duration_s'] - total) > 0.05:
+            error('narration-edit.wav is not the narration plus the decided holds: its length differs.',
+                  {'expected_s': total, 'got_s': edit_audio['duration_s']})
+        script_holds = [h for h in holds if h['kind'] == 'script']
+        if script_holds:
+            av = av or _av()
+            centres, shift = {}, 0.0
+            for h in holds:
+                if h['kind'] == 'script':
+                    centres[h['after_line']] = h['at_audio_s'] + shift + h['hold_s'] / 2
+                shift += h['hold_s']
+            runs = av.silences_at(outp, [centres[h['after_line']] for h in script_holds], search_s=0.1)
+            wrong = []
+            for h, run in zip(script_holds, runs):
+                got = round(run[1] - run[0], 3) if run else None
+                expect = h['expected_gap_s'] if h.get('gap_basis') == 'audio' else h['hold_s']
+                h['resulting_gap_s'] = got
+                if got is None or abs(got - expect) > HOLD_VERIFY_TOL_S:
+                    wrong.append({'line': h['after_line'], 'expected_s': expect, 'measured_s': got})
+            if wrong:
+                error('The edit\'s narration does not carry the silences that were decided (measured in '
+                      'narration-edit.wav): nothing was written to the shot plan or the edit plan.', wrong)
+    plan['timed_to'] = {'narration': str(folder / 'narration.wav'), 'edit_duration_s': total, 'retimed_at': now()}
+    write_json(plan_path, plan)
     # The one audio file the CapCut project must carry, at 0 s, at speed 1, untrimmed (timeline-check), and that the
     # export must contain (export-check): its fingerprint ties the cut to this exact approved narration.
     nf = Path(edit_audio['file']) if edit_audio else folder / 'narration.wav'
@@ -6027,16 +6632,21 @@ def cmd_retime_shots(args):
                                **{k: chosen_treatment_of(read_json(vd / 'direction.json')).get(k) for k in
                                   ('visual_language', 'sound', 'audiovisual_relationship', 'structure_and_pace')}},
                  'shot_structure_sha256': shot_structure_sha(shots), 'script_sha256': script_hash(lines),
+                 # Every decided pause and what it became (added, or nothing: the voice's own gap), and the decisions
+                 # this plan was timed from (timeline-check: a later decision means a new retime).
+                 'pauses': pauses, 'hold_decisions_sha256': hold_decisions_sha(rd, n), 'voice_gaps': hf['voice_gaps'],
                  'beats': [{'id': b, 'start_s': round(a, 2), 'end_s': round(z, 2), **beat_dir.get(b, {})}
                            for b, (a, z) in beat_spans.items()],
                  'shots': out_shots, 'notes': notes, 'made_at': now()}
     write_json(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json', edit_plan)
     emit({'ok': True, 'edit_plan': str(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json'),
           'shot_plan': str(plan_path), 'shots': len(out_shots), 'edit_duration_s': total, 'holds': holds,
-          'within_export_window': edit_plan['within_export_window'], 'edit_narration': edit_audio,
+          'pauses': pauses, 'within_export_window': edit_plan['within_export_window'], 'edit_narration': edit_audio,
           'narration_for_edit': narration_for_edit, 'notes': notes,
           'next': 'Put narration_for_edit.file in the CapCut project at 0 s, speed 1, untrimmed; name the project in '
-                  'timeline.json (capcut_draft) so timeline-check reads the narration from CapCut itself.'})
+                  'timeline.json (capcut_draft) so timeline-check reads the narration from CapCut itself. With the '
+                  'stills made, look at each held silence with its shot (holds --preview) and confirm or change it '
+                  '(hold-decide --stage picture); a changed decision is retimed before the project is rebuilt.'})
 
 
 def _av():
@@ -6421,9 +7031,10 @@ Read it all the way through as someone who clicked the title and is listening. B
 say what works as plainly as what does not. Refer to line ids.
 
 Words in [square brackets] are delivery directions the voice receives but never says. A line followed by
-"(the picture holds N s in silence)" is followed by that silence while the picture stays on screen. Judge both as
-part of what you would hear: does each direction help, or push the narration into theatre; does each silence earn
-its moment, or pad the runtime?
+"(silence: ...)" is followed by about that much silence in all, the voice's own short gap included, with what you
+would see and hear while it lasts. The lengths are proposals, not yet fitted to the recorded voice. Judge both as
+part of what you would hear: does each direction help, or push the narration into theatre; would you want each
+silence, or would you be waiting for the voice to go on?
 
 Think about:
 1. What the video promised, and whether it delivered.
@@ -6437,8 +7048,11 @@ Think about:
    where the material invites it; or a reader of facts; or someone straining for drama.
 7. Lines hard to follow by ear: number pile-ups, very long sentences, tangled grammar, jargon.
 8. The ending: does it land; is anything after the payoff too long or too short.
-9. The delivery directions and the silences: where they help, where they are theatre or filler, where a silence
-   holds a moment the story has not earned.
+9. The delivery directions and the silences: where they help, where they are theatre or filler. For each silence:
+   does it feel needed, or does it delay the next thing you want to know? Would you become impatient? Does it help
+   the joke, the reveal or the feeling, or would the line land as well with the voice going straight on? Does it make
+   the narrator sound unnaturally slow? Would a first-time viewer understand why it is there? A silence you would
+   cut or shorten is a finding.
 
 Then list findings (at most 12), each concrete enough to act on. Severity "major": a viewer would likely stop
 watching, lose the thread or stop trusting the video there (a long sag, a confusing stretch, a contradiction, a
@@ -6509,6 +7123,10 @@ Judge it against what each part was meant to feel like (listed below), not again
 6. The first minute and the ending.
 7. Anything on screen or in the words that breaks the house rules, however it is carried: said outright,
    paraphrased or implied, or only shown in a picture.
+8. The held silences listed below (the voice stops; the picture stays). For each, from the words around it, the
+   shot on screen and its length: would it feel like a moment worth the wait, or dead air? Would you become
+   impatient there? Does it help the line before it land, or delay what comes next? You cannot hear it or see motion
+   inside a shot, so say what you can judge and what you cannot. A silence you would cut or shorten is a finding.
 
 Findings (at most 12), each with "at" as "mm:ss-mm:ss", severity "major" (a viewer would likely leave, get lost
 or stop trusting it there) or "minor", the problem, why it matters to a viewer, and a suggestion.
@@ -6570,18 +7188,22 @@ def cmd_review_packet(args):
         snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
         holds = hold_snapshot(lines)
         text = _fill(SCRIPT_BRIEF, TITLE=title, MINUTES=minutes, HOUSE_RULES=house_rules(rd, n), OUT=out_path)
-        held = sum(v[0] for v in holds.values() if v[1] == 'edit')
-        refs_pp = [p for p in (lock.get('reference_pause_profiles') or {}).values() if p]
-        longest = max((p.get('longest_pause_s') or 0 for p in refs_pp), default=0)
-        text += (f'Held silences in this script: {len(holds)} ({held:g} s where the picture holds with no voice, '
-                 f'{round(100 * held / lock["target_length_s"], 1)}% of the runtime).'
-                 + (f' The comparable narrators\' longest pause is about {longest:g} s.' if longest else '') + '\n\n')
+        # What the reader is shown is the silence a viewer would hear: the whole of it, the voice's own gap included
+        # (an older added-on-top value is shown with that gap added), with what is on screen and in the sound. No
+        # reference pause length is shown: a length is set by its own moment, not matched to another film's.
+        pp = {p['line']: p for p in script_pause_plan(lines)[0]}
+        gap = (voice_measurement(rd, n) or {}).get('natural_gap_s') or DEFAULT_NATURAL_GAP_S
+        whole = {lid: (p['seconds'] if p['form'] == 'total' or p['via'] == 'tag' else p['seconds'] + gap)
+                 for lid, p in pp.items()}
+        text += (f'Silences in this script: {len(pp)}, about {sum(whole.values()):.0f} s in all. A narrator\'s own '
+                 f'gap between two lines is about {gap:.1f} s; a silence longer than that is a held moment.\n\n')
         for lid, t in snapshot.items():
             text += f'{lid} {t}\n'
-            if lid in holds:
-                s, via = holds[lid]
-                text += (f'      (the picture holds {s:g} s in silence)\n' if via == 'edit'
-                         else f'      (the voice pauses here, about {s:g} s)\n')
+            if lid in pp:
+                p = pp[lid]
+                how = 'the voice pauses' if p['via'] == 'tag' else 'the voice stops, the picture stays'
+                text += (f'      (silence: about {whole[lid]:.1f} s in all, {how}. On screen: '
+                         f'{p.get("picture") or "not described"}. Sound: {p.get("sound") or "not described"}.)\n')
         meta.update({'subject_sha256': script_hash(lines), 'subject_snapshot': snapshot, 'holds_snapshot': holds})
     elif kind == 'treatment':
         df = direction_facts(rd, n)
@@ -6630,6 +7252,23 @@ def cmd_review_packet(args):
         for b in beats:
             a_s, b_s = spans.get(str(b.get('id')), (b.get('start_s'), b.get('end_s')))
             text += f'- {_mmss(a_s)}-{_mmss(b_s)}: {b.get("experience") or b.get("narrative_job")} (pace: {b.get("pace") or "-"})\n'
+        # The silences as they are in this cut (the edit plan the project was built from): where, how long in all,
+        # and the words on each side. Not the director's reasons: the reviewer judges them fresh.
+        script_lines = read_json(vd / 'script.json').get('lines') or []
+        line_text = {str(r.get('id') or f'L{i + 1:03d}'): strip_tags(r.get('text') or '') for i, r in enumerate(script_lines)}
+        order_ids = list(line_text)
+        shift, held_rows = 0.0, []
+        for h in sorted(plan.get('holds') or [], key=lambda x: x['at_audio_s']):
+            if h.get('kind') == 'script':
+                lid = str(h.get('after_line'))
+                k = order_ids.index(lid) if lid in order_ids else -1
+                after = line_text[order_ids[k + 1]] if 0 <= k < len(order_ids) - 1 else '(the end)'
+                held_rows.append(f'- {_mmss(h["at_audio_s"] + shift)}: about '
+                                 f'{h.get("resulting_gap_s") or h.get("expected_gap_s") or h["hold_s"]:.1f} s with no '
+                                 f'voice, after "...{line_text.get(lid, "")[-70:]}", before "{after[:60]}..."')
+            shift += float(h.get('hold_s') or 0)
+        text += ('\n## Held silences in this cut\n' + ('\n'.join(held_rows) if held_rows else
+                 '- none: every pause is the voice\'s own') + '\n')
         text += '\n## Watch sheets, in order\n' + '\n'.join(f'- {p}' for p in prof.get('sheets') or []) + '\n'
         if prof.get('shot_sheets'):
             text += ('\n## Shot sheets: every shot once, in order\n' +
@@ -6844,8 +7483,12 @@ def cmd_status(args):
             continue
         plan = plan_facts(rd, i)
         audio = audio_facts(rd, i)
+        hf = hold_facts(rd, i)
         videos[str(i)] = {'target_s': read_json(vd/'length-lock.json').get('target_length_s'),
                           'plan_ready': plan['ready'], 'audio_ready': audio['ready'],
+                          'holds': {'planned_or_decided': len(hf['holds']), 'provisional': hf['undecided'],
+                                    'decided_after_narration': hf['decided_narration'],
+                                    'decided_with_picture': hf['decided_picture'], 'added_s': hf['added_s']},
                           'creative': {**(plan.get('creative') or {}),
                                        'reviews': {k: len(review_records(vd, k)) for k in REVIEW_MAX_ROUNDS}},
                           'issues': list(dict.fromkeys(plan['issues'] + audio['issues'])),
@@ -7020,7 +7663,23 @@ def main():
     p = sub.add_parser('pace-profile', help='Pace and pauses of the references (and the measured narration)')
     p.add_argument('--run', required=True); p.add_argument('--refs', default=''); p.add_argument('--video', type=int)
     p.set_defaults(func=cmd_pace_profile)
-    p = sub.add_parser('retime-shots', help='Time the shot plan to the real narration and its edit holds')
+    p = sub.add_parser('holds', help='Every planned pause next to the gap the recorded voice really left there; '
+                       '--preview Lnnn --totals a,b renders listening (and, with stills, watching) previews')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--preview', default='', help='A line whose held silence to preview (Lnnn)')
+    p.add_argument('--totals', default='', help='Whole silences to preview, in seconds (the voice\'s own gap is always '
+                   'one of the previews): 1.2,2.0')
+    p.set_defaults(func=cmd_holds)
+    p = sub.add_parser('hold-decide', help='Decide one held silence on evidence: the whole silence after a line, or none')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--line', required=True); p.add_argument('--stage', required=True, choices=HOLD_STAGES)
+    p.add_argument('--total', type=float, default=None, help='The WHOLE silence after the line, in seconds, the '
+                   'voice\'s own gap included (the edit adds only the difference)')
+    p.add_argument('--no-hold', action='store_true', help='No added silence: the voice\'s own gap stays as recorded')
+    p.add_argument('--reason', required=True, help='Why this length serves this moment')
+    p.add_argument('--listened', default='', help='The user\'s own words, when they listened to the previews')
+    p.set_defaults(func=cmd_hold_decide)
+    p = sub.add_parser('retime-shots', help='Time the shot plan to the real narration and its decided holds')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--render-narration', action='store_true', help='Kept for older notes: narration-edit.wav is '
                    'always written when the edit has holds (it is the audio the CapCut project uses)')

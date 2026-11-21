@@ -78,13 +78,23 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RU
 python "$HOME/.claude/static-studio/scripts/static_core.py" audio-check --run "RUN" --video 1
 python "$HOME/.claude/static-studio/scripts/static_core.py" narration-measure --run "RUN" --video 1   # line times, every line heard
 #   narration-measure ... --confirm L105 --reason "the user listened at 07:01 and heard the line"
+# Every planned pause next to the gap the voice really left there; previews of one moment for the user's ears:
+python "$HOME/.claude/static-studio/scripts/static_core.py" holds --run "RUN" --video 1
+python "$HOME/.claude/static-studio/scripts/static_core.py" holds --run "RUN" --video 1 --preview L042 --totals 1.1,1.8
+# Each one decided: the WHOLE silence after the line (the voice's own gap included), or --no-hold, and why.
+python "$HOME/.claude/static-studio/scripts/static_core.py" hold-decide --run "RUN" --video 1 --line L042 \
+  --stage narration --total 1.4 --reason "the map finishes drawing the route; longer and the next line waits"
 python "$HOME/.claude/static-studio/scripts/static_core.py" shot-check --run "RUN" --video 1   # before stills; retime-shots refuses a failing plan
 # The same gate the image and music workers run before they load anything (free), and the direction each item carries out:
 python "$HOME/.claude/static-studio/scripts/static_core.py" media-check --job "RUN/60-visuals/video-01/stills-job.json" --kind stills
 # After a meaningful direction change (direction-lock --revise lists outdated_now): update each piece, or keep it on record:
 python "$HOME/.claude/static-studio/scripts/static_core.py" direction-reapprove --run "RUN" --video 1 \
   --artifact shot-plan --reason "why it still serves the locked treatment"
-python "$HOME/.claude/static-studio/scripts/static_core.py" retime-shots --run "RUN" --video 1
+python "$HOME/.claude/static-studio/scripts/static_core.py" retime-shots --run "RUN" --video 1   # only decided holds
+# With the stills: each held silence decided again with its shot (holds --preview shows the still); a changed
+# length is retimed before the project is built.
+python "$HOME/.claude/static-studio/scripts/static_core.py" hold-decide --run "RUN" --video 1 --line L042 \
+  --stage picture --total 1.4 --reason "the route is still being drawn for the whole silence; it holds"
 # Agent makes/records CapCut project (edit-plan narration_for_edit at 0 s, speed 1, untrimmed; stills at the retimed
 # shot times) and writes project-derived timeline.json, naming the project in capcut_draft.
 python "$HOME/.claude/static-studio/scripts/static_core.py" timeline-check --run "RUN" --video 1
@@ -181,17 +191,20 @@ Minimal `40-plans/video-01/blueprint.json`:
   "pace_wpm": 190,
   "lines": [
     {"id": "L001", "text": "Start with a meaningful, specific opening line."},
-    {"id": "L002", "text": "A turn the story wants to land.", "pause_after_s": 2, "pause_via": "tag",
-     "pause_purpose": "the cost of the decision lands before anyone speaks again"},
-    {"id": "L003", "text": "[pause] The next line opens after it, as the review decided.",
+    {"id": "L002", "text": "A turn the story wants to land. [pause]", "pause_total_s": 1.5, "pause_via": "tag",
+     "pause_purpose": "the narrator weighs the cost before going on: a hesitation in the telling",
+     "pause_picture": "the same map, the crossing circled", "pause_sound": "the bed goes on, quieter"},
+    {"id": "L003", "text": "The next line opens after it, as the review decided.",
      "note": "for the team only: never sent, never spoken"},
-    {"id": "L004", "text": "The closing line.", "pause_after_s": 4, "pause_via": "edit",
-     "pause_purpose": "the last picture stays while the ending settles"}
+    {"id": "L004", "text": "The closing line.", "pause_total_s": 3.0, "pause_via": "edit",
+     "pause_purpose": "the last picture stays while the ending settles",
+     "pause_picture": "the opening room again, now empty: the change the film was about",
+     "pause_sound": "the bed resolves on its last phrase, then the end"}
   ]
 }
 ```
 
-`pace_wpm` above (190) is an example number, not a universal default. Write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then the voice's real one (`60-voice/video-NN/voice-lock.json` → `measured.wpm`) once its first part is measured. The two genuinely differ: on one run the references measured 195–206 WPM and the voice 186–187. `text` is sent exactly as written, inline tags included, and tags are not counted as words; it holds nothing else (no SSML, braces, asterisks, stage directions in parentheses, notes in brackets or IPA). `pause_after_s` up to 1 s needs nothing, since the voice's own gap gives it. A longer one names `pause_via` (`"tag"`: a pause tag at this line's end or the next line's start; `"edit"`: a hold inserted by `retime-shots`) and its `pause_purpose`. Each kept tag gets a line under "Delivery and tags" in `editorial-review.md` (plan-check checks it), and each `content_flags` hit gets one under "Content flags".
+`pace_wpm` above (190) is an example number, not a universal default. So are the pause lengths: each is set by its own moment and decided again on the recorded voice and the picture, never copied. Write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then the voice's real one (`60-voice/video-NN/voice-lock.json` → `measured.wpm`) once its first part is measured. The two genuinely differ: on one run the references measured 195–206 WPM and the voice 186–187. `text` is sent exactly as written, inline tags included, and tags are not counted as words; it holds nothing else (no SSML, braces, asterisks, stage directions in parentheses, notes in brackets or IPA). `pause_after_s` up to 1 s needs nothing, since the voice's own gap gives it. A longer one names `pause_via` (`"tag"`: a pause tag at this line's end or the next line's start; `"edit"`: a hold inserted by `retime-shots`) and its `pause_purpose`. Each kept tag gets a line under "Delivery and tags" in `editorial-review.md` (plan-check checks it), and each `content_flags` hit gets one under "Content flags".
 
 `40-plans/video-01/pronunciation.json` (optional; only the words the voice may say wrong):
 
@@ -293,14 +306,16 @@ A variant left blank takes the voice lock's voice, model and settings; `tags` is
 - `complete`, `script_sha256` (stale once the script changes), `parts[]` (offset, duration, fingerprint, words, speech, WPM, alignment);
 - `wpm` (while speaking), `overall_wpm` (pauses included), `per_line_overhead_s`, `natural_line_gap_median_s`, `tags_measured[]` (line, tag, gap, excess), `pause_profile` (the same keys `pace-profile` gives for the references);
 - `unheard_lines` (lines still missing after their own window was heard again), `rechecked_lines[]`, `tags_read_aloud[]`, `possible_repeats[]`, `seams[]` (each join: gap, natural gap, `seam_hold_s`, pace, level and pitch range on each side, words heard twice), `beats[]` (pace while speaking and overall, longest gap, numbers per minute, tags, what the beat asked for), `pronunciation_heard[]`;
-- `lines[]`: `{id, index, part, start_s, end_s, matched_words, words, word_times, heard_on_recheck?, interpolated?}`; `word_times` is each comparable token's `[start_s, end_s]` on the narration (`null` where Whisper did not hear it): what the captions are timed by.
+- `lines[]`: `{id, index, part, start_s, end_s, matched_words, words, word_times, gap_after_s, gap_span_s, gap_basis, gap_is_tail?, heard_on_recheck?, interpolated?}`; `gap_after_s` is the silence after the line read from the audio (`gap_basis` `audio`; `whisper` when no quiet run was found; `unknown`, with `null`, while the next line is not recorded); `line_gaps_from_audio` sums them up (median, p10, p90, shortest, longest); `word_times` is each comparable token's `[start_s, end_s]` on the narration (`null` where Whisper did not hear it): what the captions are timed by.
 
 `70-edit/video-01/captions.json` (from `captions-plan`): `{video, captions: "on"|"off", style: "luckiest-guy"|"montserrat-highlight", box_color?, box_color_why?, language, fps, words: [{w, s, e, line, timing}], timing_evidence: {whisper, shared, between, words, whisper_share}, holds_applied, made_from: {script_sha256, narration_for_edit_sha256, line_times_measured_at, edit_plan_made_at}}`. `w` is the word as the caption shows it (the script's spelling and punctuation), `s`/`e` its time on the edit's timeline; `timing` says where the time came from: `whisper` (its own word time), `shared` (a number written over two words, its time split by length) or `between` (no time from Whisper: placed between its timed neighbours by length). `captions-built.json` beside it records the last build (draft, canvas, size, tracks, texts, the read-back). `state.json` holds the choice: `captions` (`on`/`off`), `caption_style`, `captions_chosen_at`, and `captions_history[]` when the user changed it.
+
+`40-plans/video-01/holds.json` (from `hold-decide`): `{video, decisions: {Lnnn: {...}}, history: [...]}`. Each decision: `line`, `beat`, `stage` (`narration` or `picture`), `total_s` (the whole silence; `null` with `no_hold`), `natural_gap_s` and `gap_basis` (the voice's gap there, from the audio), `added_s`, `resulting_gap_s`, `outcome`, `reason`, `listened` (the user's words, when they heard the previews), `previews` (the files rendered for it), `parts` (the fingerprint of each recorded part it was decided on: re-recorded, it no longer stands), `proposal` (what the script planned), `voice_gaps`, and at the picture stage `picture` (the shot on screen, its still and that still's fingerprint). A replaced decision moves to `history` with `superseded_at`.
 
 `50-audio/video-01/listening-confirmations.json` holds the user's listening confirmations (`--confirm`), each tied to the part it was heard in.
 
 `70-edit/video-01/edit-plan.json` (from `retime-shots`) contains:
-- `narration_duration_s` and `holds[]` (`after_line`, `at_audio_s`, `hold_s`, `kind`: `script` with its `purpose`, or `seam`);
+- `narration_duration_s` and `holds[]`: each silence inserted (`after_line`, `at_audio_s`: inside the voice's own silence, `hold_s`: what was added, `kind`: `script` with its `purpose`, `total_s` decided, `natural_gap_s`, `expected_gap_s`, `resulting_gap_s` measured in `narration-edit.wav`, `stage`; or `seam`); `pauses[]`: every decided pause and what it became (`hold_s` 0 when the voice's own gap already gives it, or no hold was decided); `hold_decisions_sha256` (a later decision asks for a new retime); `voice_gaps`;
 - `edit_duration_s`, `edit_narration` (`narration-edit.wav` and its probed duration), `narration_for_edit` (the file the project must carry, its `sha256` and duration), `export_window_s`, `within_export_window`;
 - `shots[]` (`id`, `beat_id`, `start_s`, `end_s`, `duration_s`, and `direction`: its beat's `experience`, `visual_intent`, `sound_direction`, `pace`) and `notes` (shots the real timing made very short or long);
 - `beats[]` (each beat's span in the edit, with its direction) and `direction` (the locked treatment's `visual_language`, `sound`, `audiovisual_relationship` and `structure_and_pace`, its `treatment` id and the `production_rev` it follows);

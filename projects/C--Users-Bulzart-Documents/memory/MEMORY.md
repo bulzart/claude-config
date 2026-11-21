@@ -114,5 +114,7 @@
 - [create-clips: Whisper on the GPU](create-clips-gpu-whisper.md) — user 2026-11-21: cuda float16 incl. the recorder; kept while recording, yields to GPU leases / low VRAM; `cc.py gpu`
 - [create-clips: music removed on evidence only](create-clips-music-isolation.md) — long videos only: identity + claim-risk index per interval, only outcome A removes (Demucs, then SAM); never "safe"
 - [SAM Audio Base installed](sam-audio-base-install.md) — 2026-11-21: Documents\AI\sam-audio venv; streamed loader (Windows commit), shims, 10 s windows; escalation only, measured vs Demucs
+- [Local neural fingerprint](local-neural-fingerprint.md) — 2026-11-21: LAION open weights + local index (music-index); names only indexed songs; under-talk limit measured
 - [create-clips: Shorts never touch music](create-clips-shorts-never-touch-music.md) — user 2026-11-21: a short's audio stays exactly as recorded; no identification, risk analysis or separation
 - [create-clips: no detached judges](create-clips-no-detached-judges.md) — user 2026-11-21: no blind/pairwise judges, second planners or compare-builds; context checks + validators
+- [create-video: held silences](create-video-held-silences.md) — user 2026-11-21: pause_total_s = whole silence, decided on the recorded voice then with the picture (holds, hold-decide); no quota/formula/padding

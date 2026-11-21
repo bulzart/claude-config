@@ -26,6 +26,5 @@ both streamer speech and the song's singer is not successful separation"); the f
 residue). Gate now -40 dB (-18 left a sung song 21 dB down).
 
 **How to apply:** removal = Demucs first, then SAM Audio Base ([[sam-audio-base-install]]) for spans Demucs fails (not duration/sync faults); neither
-passes = UNRESOLVED, original kept. A SAM removal always asks for a listen. Thresholds provisional (no verified outcomes). Recognition service off until
-the user authorises (AudD/ACRCloud; AcoustID is non-commercial only). Validation register with labelled fixtures:
+passes = UNRESOLVED, original kept. A SAM removal always asks for a listen. Thresholds provisional (no verified outcomes). Hosted recognition is OFF in code for good (the user, 2026-11-21); identification adds the local neural fingerprint ([[local-neural-fingerprint]]). Labelled fixtures never count unless CC_ALLOW_FIXTURES=1 (tests only). Validation register with labelled fixtures:
 `...\validation\longform-20261120\caseoh\30-assets\music\validation-evidence.json` (never the real `data/music-evidence.json`).

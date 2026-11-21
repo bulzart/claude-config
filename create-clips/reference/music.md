@@ -14,16 +14,10 @@ only:
   kept footage is followed to where the music ends, so a short and a long video that share a song analyse and clean it once.
   Measured on a GTA stream (2026-11-21): a song alone scores about 0.54, talk over a song 0.53, talk alone 0.42, a shootout 0.47 (threshold 0.50). It
   hears music; it does not know whose. A game's own score or a menu theme can show up as music: that only puts a line in the list.
-- **Recognition service** (the user, 2026-11-21: no catalogue to build by hand): an interval the local fingerprints do not know is sent to a
-  broad-catalogue service, ONLY when the user authorised it: `config.json -> music.recognition` `provider` (`acrcloud` or `audd`) and `allow_upload: true`,
-  the keys in environment variables (ACRCLOUD_HOST, ACRCLOUD_ACCESS_KEY, ACRCLOUD_ACCESS_SECRET, or AUDD_API_TOKEN), never in a file. Off by default
-  (`T music-evidence` shows the state and why). Two 12 s windows per interval, the ones with the least speech; at most `max_queries_per_run` (60) new
-  queries a run; every answer cached by the clip's own samples (`data/music-ident-cache.json`). Confidence: ACRCloud's score (high at 90, or 70 with two
-  windows agreeing), AudD's two windows agreeing; two windows naming two recordings stay medium. The recording is kept by its ISRC (else the service's id,
-  else artist + title with its version words: live, remix, remaster, cover, ...). A high-confidence recording is LEARNED into the local fingerprints, so it
-  is recognised offline and at no cost the next time it plays, in any run. Prices (2026-11): AudD $2-5 per 1,000 requests (300 free), uploads the clip;
-  ACRCloud a 14-day trial, then pay per recognition (prices in its console). A local catalogue of commercial songs does not exist: without a service
-  only recordings heard before (claims, learned) are recognised.
+- **No hosted recognition** (the user, 2026-11-21: "Do not use ShazamIO, Shazam's recognition service, AudD, ACRCloud, hosted AcoustID lookup,
+  hosted MVSep inference, commercial music-recognition APIs"): identification is local and open-weight. The ACRCloud / AudD adapters stay in the code,
+  unreachable whatever the config says (`cc_songid.service_state` is always off). No audio, fingerprint or embedding leaves this PC.
+
 - **Recognition** (local, always): every interval is matched against the fingerprints of the claimed and the learned recordings (landmark fingerprints,
   the method of Shazam and audfprint, kept in `data/music-index/`). A match is the same recording, at the same place in it; no title is needed.
   Measured on the caseoh stream (10 s pieces of a radio song with a singer): recognised clean 3 of 3, under his talk with the song 6 dB louder 3 of 3,
@@ -31,6 +25,22 @@ only:
   3 of 3 clean; no false match on another song, his talk, a shootout or his laugh (highest stray score 1 against a threshold of 12). It only knows
   recordings someone registered: an unknown song stays "not identified". Part of a song that was not in the claimed audio is not recognised either
   (the claim's reference is taken from the whole song occurrence around the claimed part, up to 8 minutes, to cover as much of it as there is).
+- **Neural fingerprint** (local, open weights; `scripts/nafp.py` in `C:\Users\Bulzart\Documents\AI\audio-fp\.venv`): LAION's
+  `laion/neural-audio-fingerprint` (Apache-2.0, 80.3 M parameters, checkpoint 321,329,282 bytes, SHA-256 checked) turns every 1 s of 16 kHz audio into a
+  128-number fingerprint; a music interval the landmark fingerprints did not name is queried against the LOCAL REFERENCE INDEX (`data/nafp-index/`:
+  `cc.py music-index`). **It names a song only when that song's reference recording is in the index; otherwise UNKNOWN.** The production index starts
+  empty: no commercial song can be named until a reference is added (the user's own files, a stream stretch where an identified song plays alone, openly
+  licensed music; never downloaded commercial recordings). Levels: 0.90 with two consistent windows = strong (90, 95 with four), 0.80 = fair (80: alone
+  below 85, a second method is needed); the same method group as the landmark fingerprints (one reference audio: never counted twice). Cached per
+  interval and index version (`30-assets/music/neural-fp.json`). Measured 2026-11-21 (`C:\Users\Bulzart\Documents\stream-clips\validation\fingerprint-bench-20261121`:
+  8 references (5 ACE-Step tracks made on this PC, 3 stream songs), 110 queries, never the indexed files themselves): clean 5 s 16/16, 2-3 s 16/16, MP3
+  64 kbps 8/8, -20 dB 8/8, 3 % faster 3/3, 6 % faster 1/3 (a sped-up upload is mostly another recording), the song 6 dB over his talk 8/8 at 0.80, as
+  loud as his talk 1/8, 6 dB under it 0/8 at every setting, the -6 dB mixes separated first by Demucs 0/9 and by SAM 0/9 (2/9 at 0.75): separating
+  before fingerprinting does not rescue a song buried under talk; not-indexed songs, his talk, game sound, TTS and sound effects 13/13 UNKNOWN; no false
+  or wrong match at any setting tried (highest score of a wrong recording 0.70). Load 0.7-0.8 s, 0.6-0.7 GB of GPU memory, seconds per interval. The
+  thresholds come from this one small set: provisional. The real stream: the stretch of the test edit inside an indexed stream reference was named
+  (171 windows, identity 95, outcome C: no claim evidence), the stretch before it (not indexed) stayed UNKNOWN.
+
 - **Analysis** (temporary audio, never the output): an interval no fingerprint knows is split once into voices and accompaniment by Demucs
   (`30-assets/music/analysis/`, cached); the accompaniment is matched against the local fingerprints (the song without his voice over it); Whisper
   medium hears the voices for LYRIC FRAGMENTS (no voice-activity filter and no no-speech threshold: they drop singing; the voices brought to -20 dBFS;
@@ -67,7 +77,11 @@ only:
   Audio Base** (Meta, `scripts/sam_separate.py` in its own environment, one model load for all such spans, a GPU lease of 10 GB that waits for a
   CapCut export, the memory guard): "man speaking" kept through a stereo mask (SAM's keep/drop ratio applied to the ORIGINAL stereo audio: its phase
   and stereo picture stay, nothing generated is heard directly), the same gate, verified again; only a pass is used. A wrong length or offset is a
-  fault, never escalated. Neither passes: `UNRESOLVED`, the original audio stays, both attempts recorded.
+  fault, never escalated. Neither passes: `UNRESOLVED`, the original audio stays, both attempts recorded. SAM runs in full precision; stopped for
+  memory (it needs about 11-12 GB of committed memory: GPU memory counts on Windows), it retries ONCE in bfloat16 (measured 2026-11-21: 5.3 GB of GPU
+  memory instead of 8.3, but 4-5 dB less of the song removed under his talk: -15.9 against -20.1 dB, still more than Demucs's -13.0), and its line
+  says so. Where nobody speaks the gate makes the span quiet, game sound and reactions far from his words included: no method tested removed the song
+  there while keeping them (the trade-off is written in each removed line).
 - **Measured 2026-11-21** (`C:\Users\Bulzart\Documents\stream-clips\validation\separation-bench-20261121`, controlled mixes of real stream audio,
   the song 6 dB under him; "music left" = the song's energy left beyond the wanted sound, lower is better; listening files in `listen\`):
   talk over a SUNG song: Demucs -13 dB (the voice band, where the singer sits: -10), his words 0.64 (Whisper recall; the mix 0.77); SAM "man
@@ -95,7 +109,15 @@ only:
   the singer check by its method (measured above, not per span), so its line always asks for a listen.
 - **Models** (2026-11-21): Hybrid Demucs (in use, first), SAM Audio Base (in use, the escalation). Tried, not adopted: MERL MRX (MIT, 122 MB: about
   3 dB more song removed under his words, 15 dB less between them, 4x slower); Demucs v4 htdemucs_ft (MIT code, about 0.8 GB of GPU memory: speech
-  +0.2 dB, the song slightly less removed, 8x slower; config `music.model` `htdemucs_ft`). SAM Audio Small and Large are not installed (Base fits).
+  +0.2 dB, the song slightly less removed, 8x slower; config `music.model` `htdemucs_ft`); **DBS-TIGER-DnR** (JusperLee, Apache-2.0, 1.0 M parameters,
+  4.1 MB, speech / music / effects; installed in `C:\Users\Bulzart\Documents\AI\dnr-sep\.venv`, 1.2 GB of GPU memory, about 14 s per minute):
+  talk over a sung song: the song -22.9 dB (voice band -19.5) run per channel, his words 0.59; a laugh kept (-6.9 dB lost against Demucs -8.2, SAM's
+  "man speaking" loses the laugh: -0.3); BUT game sound under a song kept no better than SAM's "music playing" removal while removing LESS song (-12.8
+  against -15.9 dB), and on the real stream the singer stayed audible before his words (-4.8 to -9 dB against SAM's -65): not adopted. MVSep's DnR v3
+  Mel-Band RoFormer: its weights are not published (mvsep.com/algorithms/64 offers it hosted only); not used. SAM Audio Small and Large are not
+  installed. The second fingerprint model (nmfp-triplet, AGPLv3) was not tested: the measured failure is the song buried under talk, which separation
+  did not fix either; its licence would need the user's decision first.
+
 - **Licence:** Demucs's code is MIT; its weights were trained partly on MUSDB18, a non-commercial dataset, and carry no licence of their own (the user
   decides about a monetized channel). SAM Audio's weights: the SAM License, accepted by the user with their Hugging Face access.
 
@@ -115,7 +137,9 @@ fragments, the stream's words about a song, the times to look at. The agent, for
    at 0.65+ 75, one 60, 0.58+ 45; measured on one real case, provisional), `T music-evidence --meta "Artist - Title"` (MusicBrainz, free, text only:
    versions, ISRCs, lengths, remixes, DJ mixes), and items it finds with `--add-id --rid <rid> --kind <kind> --run RUN --rec A-B --detail "..."
    --source <where>` (his words naming it: spoken_mention; a title on screen: onscreen_title with the frame time; a soundtrack listing of that very
-   recording: soundtrack_listing). A candidate the evidence contradicts gets its items too: the scores record the contradiction.
+   recording: soundtrack_listing). A candidate the evidence contradicts gets its items too: the scores record the contradiction. Once a song is identified at 85+ and a stretch of the stream plays it WITHOUT his talk, add that stretch to the local index (`T music-index
+   --from-run RUN --rec A-B --id <short id> --title "..." --artist "..." --license "the user's stream recording"`): from then on it is recognised
+   acoustically wherever that recording plays again.
 2. *Risk* (only for a recording identified at 85+): reports of YouTube Content ID claims, blocks or restrictions that NAME THIS RECORDING and version,
    the rights holder's own statements, a licence or clearance for YouTube: `T music-evidence --add-risk --rid <rid> --kind <kind> --summary "..."
    --source <URL> --quality verified|credible|unverified [--specific] [--origin <the original source when sites copy one another>] [--date]
@@ -139,8 +163,10 @@ fragments, the stream's words about a song, the times to look at. The agent, for
   outcome A changes the audio.
 - Never use the analysis audio (the temporary separation) as the output. Never say a video or a song is safe, cleared or claim-free; never call the
   risk index a probability.
-- Never use a paid recognition service or send audio anywhere without the user's yes (`music.recognition.allow_upload` is that yes). The lyrics
-  check and MusicBrainz send text only.
+- Never use a hosted or paid recognition service, never send audio, fingerprints or embeddings anywhere (the user, 2026-11-21). The lyrics check and
+  MusicBrainz send text only. Never fill the index with downloaded commercial recordings; never name a song the index does not hold.
+- Never let test evidence count: items and claims labelled FIXTURE (or added by validation / test) are ignored outside a test that sets
+  CC_ALLOW_FIXTURES=1; validation runs use their own register file (CC_MUSIC_EVIDENCE), never `data/music-evidence.json`.
 - Never run `T music` for a short, never add a music mute or a cleaned lane to a short: shorts keep their audio exactly as recorded.
 - Never replace a whole clip's sound when a span is the problem; never hand over cleaned audio that failed its check; never install SAM Audio Large or
   download model weights during a run.

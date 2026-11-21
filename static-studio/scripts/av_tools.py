@@ -799,6 +799,139 @@ def _load_mono(path):
     return y
 
 
+# ---------------------------------------------------------------- the silence between two lines, from the audio itself
+# Whisper's word times place a line's end and the next line's start to within about 0.2 s (measured 2026-11-21 on a
+# 35-line Eleven v4 part: the medians agree within 0.01 s, single lines differ by up to 0.2 s). A held silence is
+# measured where it really is: frames more than QUIET_UNDER_DB under the narration's speech level (its 90th-percentile
+# frame) are quiet, and the gap is the quiet run around Whisper's boundary. On that part, 35 dB matched Whisper's
+# median gap within 0.01 s (30 dB: +0.01, 40 dB: -0.03, 45 dB: -0.05). A breath or a click inside a gap (a short stretch
+# that stays well under speech) does not split it. The same measure reads the narration before and after a hold is
+# inserted, so the edit's silences are verified with the yardstick that decided them.
+GAP_HOP_S = 0.01
+QUIET_UNDER_DB = 35.0
+BRIDGE_MAX_S = 0.12         # a non-quiet stretch this short inside a gap ...
+BRIDGE_UNDER_DB = 25.0      # ... that stays this far under the speech level is a breath or a click, not a word
+GAP_SEARCH_S = 0.4          # how far from Whisper's boundary the silence may lie
+
+
+def level_frames(y):
+    """Loudness in dB of every 10 ms of a mono 16 kHz signal (20 ms windows)."""
+    np, _, _ = _audio_deps()
+    hop = int(SR * GAP_HOP_S)
+    win = 2 * hop
+    if len(y) < win:
+        return np.full(1, -140.0)
+    c = np.concatenate(([0.0], np.cumsum(np.asarray(y, dtype='float64') ** 2)))
+    starts = np.arange(0, len(y) - win + 1, hop)
+    power = (c[starts + win] - c[starts]) / win
+    return 20 * np.log10(np.sqrt(np.maximum(power, 0)) + 1e-7)
+
+
+def speech_level(levels):
+    """The narration's speech level: its 90th-percentile 10 ms frame (the voice, not the silences)."""
+    np, _, _ = _audio_deps()
+    return float(np.percentile(levels, 90)) if len(levels) else 0.0
+
+
+def quiet_run(levels, ref_db, t_s, duration_s=None, search_s=GAP_SEARCH_S):
+    """The silence around time t_s: the run of quiet 10 ms frames nearest to it (within search_s), widened across
+    breath- or click-short stretches that stay well under speech. (start_s, end_s), or None when nothing near t_s is
+    quiet. A run that reaches the last frame ends at duration_s (the file's own end)."""
+    n = len(levels)
+    if not n:
+        return None
+    quiet = levels < ref_db - QUIET_UNDER_DB
+    low = levels < ref_db - BRIDGE_UNDER_DB
+    i = min(n - 1, max(0, int(round(t_s / GAP_HOP_S))))
+    k = int(round(search_s / GAP_HOP_S))
+    near = [j for j in range(max(0, i - k), min(n, i + k + 1)) if quiet[j]]
+    if not near:
+        return None
+    j = min(near, key=lambda x: (abs(x - i), x))
+    a = b = j
+    bridge = int(round(BRIDGE_MAX_S / GAP_HOP_S))
+    while True:
+        while a > 0 and quiet[a - 1]:
+            a -= 1
+        m = a - 1          # a short low stretch, then quiet again: still the same silence
+        while m >= 0 and not quiet[m] and low[m] and a - m <= bridge:
+            m -= 1
+        if m >= 0 and quiet[m] and a - m - 1 <= bridge and m < a - 1:
+            a = m
+            continue
+        break
+    while True:
+        while b < n - 1 and quiet[b + 1]:
+            b += 1
+        m = b + 1
+        while m < n and not quiet[m] and low[m] and m - b <= bridge:
+            m += 1
+        if m < n and quiet[m] and m - b - 1 <= bridge and m > b + 1:
+            b = m
+            continue
+        break
+    start = (a + 0.5) * GAP_HOP_S
+    end = (b + 1.5) * GAP_HOP_S
+    if b >= n - 1 and duration_s is not None:
+        end = float(duration_s)
+    if a == 0:
+        start = 0.0
+    return (round(start, 3), round(end, 3))
+
+
+def line_gaps(wav, rows, last_index=None):
+    """The silence after each line as the audio has it. rows: [{'index', 'start_s', 'end_s'}] in narration order, on
+    the file's clock (Whisper's times); last_index: the script's last line. For each line: {'index', 'gap_s', 'span_s':
+    [start, end], 'basis'}: 'audio' (the quiet run around Whisper's boundary, or the quiet tail after the script's last
+    line) or 'whisper' (no quiet run near the boundary: Whisper's own gap is all there is). A line whose next line is not
+    in this audio yet (its part not recorded) has gap_s None and basis 'unknown': the silence after it exists only once
+    both sides are recorded."""
+    y = _load_mono(wav)
+    levels = level_frames(y)
+    ref = speech_level(levels)
+    dur = len(y) / SR
+    out = []
+    order = [r for r in rows if r.get('start_s') is not None and r.get('end_s') is not None]
+    for r, nx in zip(order, order[1:] + [None]):
+        if nx is not None and int(nx['index']) != int(r['index']) + 1:
+            nx = 'gap'
+        if nx == 'gap' or (nx is None and last_index is not None and int(r['index']) != int(last_index)):
+            out.append({'index': r['index'], 'gap_s': None, 'span_s': None, 'basis': 'unknown'})
+            continue
+        if nx is None:      # after the script's last line: the quiet tail of the file, if it has one
+            run = quiet_run(levels, ref, dur, duration_s=dur, search_s=0.05)
+            run = run if run and run[1] >= dur - GAP_HOP_S else None
+            span = [run[0], round(dur, 3)] if run else [round(min(float(r['end_s']), dur), 3), round(dur, 3)]
+            out.append({'index': r['index'], 'gap_s': round(max(0.0, span[1] - span[0]), 3), 'span_s': span,
+                        'basis': 'audio' if run else 'whisper', 'last_line': True})
+            continue
+        mid = (float(r['end_s']) + float(nx['start_s'])) / 2
+        run = quiet_run(levels, ref, mid, duration_s=dur)
+        if run:
+            out.append({'index': r['index'], 'gap_s': round(run[1] - run[0], 3), 'span_s': list(run), 'basis': 'audio'})
+        else:
+            out.append({'index': r['index'], 'gap_s': round(max(0.0, float(nx['start_s']) - float(r['end_s'])), 3),
+                        'span_s': [round(float(r['end_s']), 3), round(float(nx['start_s']), 3)], 'basis': 'whisper'})
+    return {'speech_level_db': round(ref, 1), 'quiet_under_db': QUIET_UNDER_DB, 'duration_s': round(dur, 3),
+            'gaps': out}
+
+
+def silence_at(wav, t_s, search_s=GAP_SEARCH_S):
+    """The quiet run around one moment of a file (the check that an inserted hold is where it was decided, as long as
+    decided): (start_s, end_s) or None."""
+    y = _load_mono(wav)
+    levels = level_frames(y)
+    return quiet_run(levels, speech_level(levels), t_s, duration_s=len(y) / SR, search_s=search_s)
+
+
+def silences_at(wav, times, search_s=GAP_SEARCH_S):
+    """silence_at for several moments of one file, loading it once."""
+    y = _load_mono(wav)
+    levels = level_frames(y)
+    ref = speech_level(levels)
+    return [quiet_run(levels, ref, t, duration_s=len(y) / SR, search_s=search_s) for t in times]
+
+
 def _envelope(y):
     """Loudness per 20 ms (dB) of a pre-emphasised signal: speech stands out over a low music bed."""
     np, _, _ = _audio_deps()

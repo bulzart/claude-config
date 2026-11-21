@@ -91,6 +91,8 @@ def main():
     S = M.songid
     S.EVIDENCE, S.CACHE = tmp / "music-evidence.json", tmp / "music-ident-cache.json"      # never the real register or cache
     S.LYR_CACHE, S.MB_CACHE = tmp / "lyrics-check-cache.json", tmp / "musicbrainz-cache.json"
+    os.environ["CC_ALLOW_FIXTURES"] = "1"                 # these tests use labelled fixtures; ordinary runs ignore them
+    os.environ["CC_NAFP_INDEX"] = str(tmp / "nafp-none")      # never the real reference index
     real_rec = S.rec_settings
     S.rec_settings = lambda: {**S.REC_DEFAULTS}                                           # no service unless a test sets one
     try:
@@ -396,71 +398,80 @@ def main():
         (out_l / "edl.json").write_text(json.dumps(plain), encoding="utf-8")
 
         S.EVIDENCE.unlink(missing_ok=True)                 # the service part starts from an empty register
-        # ---------------------------------------------------------------- the recognition service (a stand-in: nothing is sent anywhere here)
-        import numpy as np
-        st0 = S.service_state({**S.REC_DEFAULTS})
-        st1 = S.service_state({**S.REC_DEFAULTS, "provider": "audd"})
-        old_tok = os.environ.pop("AUDD_API_TOKEN", None)
-        st2 = S.service_state({**S.REC_DEFAULTS, "provider": "audd", "allow_upload": True})
-        os.environ["AUDD_API_TOKEN"] = "test-token-not-real"
-        st3 = S.service_state({**S.REC_DEFAULTS, "provider": "audd", "allow_upload": True})
-        check(not st0["active"] and not st1["active"] and "not authorised" in st1["why"] and not st2["active"] and "keys" in st2["why"] and st3["active"],
-              "the service is asked only when set, authorised by the user (allow_upload) and its key is in the environment: " + " | ".join(str(x["why"]) for x in (st0, st1, st2)))
+        # ---------------------------------------------------------------- hosted recognition is never used (the user, 2026-11-21: local open weights only)
         calls = []
-
-        def fake_audd(wav, cfg_):
-            calls.append(len(wav))
-            return {"found": True, "title": "Test Tone (Live)", "artist": "Lab", "label": "Lab Records", "isrc": "TEST00000001", "score": None}
         real_q = dict(S.QUERY)
-        S.QUERY["audd"] = fake_audd
-        rcfg = {**S.REC_DEFAULTS, "provider": "audd", "allow_upload": True}
-        yint = M.span_audio(run, M.load_chunks(run), 30, 80, 16000, 1)[0]
-        bud = {"queries": 0, "cache_hits": 0, "max": 60}
-        idr = S.identify_interval(yint, 16000, [[1.0, 6.0]], rcfg, bud)
-        check(idr["confidence"] == "high" and idr["windows_matched"] == 2 and idr["rid"] == "isrc:TEST00000001" and idr["version"] == "live" and len(calls) == 2,
-              "two windows agree on one recording: high confidence, kept at recording level (ISRC, the live version): " + json.dumps({k: idr.get(k) for k in ("rid", "version", "confidence", "evidence")}))
-        ws = [a_["window_s"] for a_ in idr["answers"]]
-        check(all(w_[0] >= 6.0 or w_[1] <= 1.0 for w_ in ws), "the windows sent are the ones with the least speech (none overlaps the words at 1-6 s): " + json.dumps(ws))
-        bud2 = {"queries": 0, "cache_hits": 0, "max": 60}
-        S.identify_interval(yint, 16000, [[1.0, 6.0]], rcfg, bud2)
-        check(len(calls) == 2 and bud2["cache_hits"] == 2 and bud2["queries"] == 0, "asked again: every answer comes from the cache, nothing is sent")
-        bud3 = {"queries": 0, "cache_hits": 0, "max": 0}
-        idr3 = S.identify_interval(yint[16000:], 16000, [], rcfg, bud3)
-        check(len(calls) == 2 and all(a_.get("skipped") for a_ in idr3["answers"]), "the run's query budget used up: nothing more is sent")
-
-        def fake_two(wav, cfg_):
-            calls.append(len(wav))
-            return {"found": True, "title": "Song " + str(len(calls)), "artist": "Somebody", "score": None}
-        S.QUERY["audd"] = fake_two
-        idr4 = S.identify_interval(yint[8000:], 16000, [], rcfg, {"queries": 0, "cache_hits": 0, "max": 60})
-        check(idr4["confidence"] == "medium" and idr4["other_recordings"], "two windows name two recordings: not settled (medium), the other one listed")
-        # the whole step: an unknown interval is recognised by the service, learned into the local fingerprints, then known offline
-        S.QUERY["audd"] = fake_audd
-        S.rec_settings = lambda: rcfg
-        M.INDEX_DIR = tmp / "music-index-2"
-        for f in (adir / "fingerprint-matches.json", adir / "recognition.json", adir / "separated.json"):
+        S.QUERY["audd"] = S.QUERY["acrcloud"] = lambda wav, cfg_: calls.append(len(wav)) or {"found": True, "title": "X", "artist": "Y"}
+        old_tok = os.environ.get("AUDD_API_TOKEN")
+        os.environ["AUDD_API_TOKEN"] = "test-token-not-real"
+        st = [S.service_state({**S.REC_DEFAULTS, "provider": p_, "allow_upload": True}) for p_ in ("audd", "acrcloud", "none")]
+        S.rec_settings = lambda: {**S.REC_DEFAULTS, "provider": "audd", "allow_upload": True}
+        for f in (adir / "fingerprint-matches.json", adir / "recognition.json", adir / "separated.json", adir / "neural-fp.json"):
             f.unlink(missing_ok=True)
         (out_l / "edl.json").write_text(json.dumps(plain), encoding="utf-8")
-        S.CACHE.unlink(missing_ok=True)
-        n0 = len(calls)
         r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
-        mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
-        check(mj["identified"] and mj["identified"]["by"] == "audd" and mj["identified"]["rid"] == "isrc:TEST00000001" and mj["outcome"] == "C"
-              and mj["research"] == "risk" and mj["action"] == "keep" and r["recognition"]["learned"] and len(calls) > n0,
-              "an unknown song: the service names it (identity 92), it is learned into the local fingerprints, no risk evidence yet (C, left as it is, "
-              "research: risk): " + json.dumps(r["recognition"])[:160])
-        n1 = len(calls)
-        S.rec_settings = lambda: {**S.REC_DEFAULTS}                    # the service off: the learned fingerprint still knows the song
-        (adir / "fingerprint-matches.json").unlink(missing_ok=True)
-        r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
-        mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
-        check(len(calls) == n1 and mj["identified"] and mj["identified"]["by"] == "fingerprint" and mj["identified"]["rid"] == "isrc:TEST00000001",
-              "the next time it plays it is recognised offline by the learned fingerprint, nothing sent: " + str(mj["identified"]["evidence"])[:120])
+        check(not any(x["active"] for x in st) and "not used" in st[0]["why"] and not calls and not r["recognition"]["service"]["active"],
+              "a recognition service is never asked, even when the config names one, allows uploads and its key is set: " + st[0]["why"][:80])
         S.QUERY.update(real_q)
+        S.rec_settings = lambda: {**S.REC_DEFAULTS}
         if old_tok is None:
             os.environ.pop("AUDD_API_TOKEN", None)
         else:
             os.environ["AUDD_API_TOKEN"] = old_tok
+
+        # ---------------------------------------------------------------- labelled fixtures never count outside a test that allows them
+        rid_f = S.ensure_recording({"title": "Fixture Song", "artist": "Lab"})
+        S.add_risk_evidence(rid_f, "documented_enforcement", "VALIDATION FIXTURE (not real evidence)", "https://fixture.invalid/a", "credible", True, by="validation")
+        S.add_id_evidence(rid_f, "onscreen_title", "VALIDATION FIXTURE: display", "fixture", run=run.name, rec=[30, 80], by="validation")
+        rec_f = S.record_of(rid_f)
+        os.environ.pop("CC_ALLOW_FIXTURES", None)
+        guarded = (S.risk_items(rec_f), S.interval_items(rec_f, run.name, 30, 80),
+                   M.claim_items({"title": "Test Tone", "artist": "Lab", "confidence": "high"},
+                                 [{"id": "M009", "title": "Test Tone", "artist": "Lab", "status": "claimed", "evidence": "TEST FIXTURE ONLY"}]))
+        os.environ["CC_ALLOW_FIXTURES"] = "1"
+        allowed = (S.risk_items(rec_f), S.interval_items(rec_f, run.name, 30, 80))
+        check(guarded == ([], [], []) and len(allowed[0]) == 1 and len(allowed[1]) == 1 and rec_f["risk_evidence"][0].get("fixture"),
+              "fixture evidence and fixture claims are ignored in ordinary runs (and marked as fixtures when added); a test can allow them")
+        S.EVIDENCE.unlink(missing_ok=True)                 # the fixture recording above must not compete with the next checks
+
+        # ---------------------------------------------------------------- the local neural fingerprint index (LAION open weights), when installed
+        nfp_ready = M.nafp_ready({**M.settings(), "nafp": {**M.nafp_settings(M.settings()), "index": str(tmp / "nafp-empty")}})
+        check(not nfp_ready["ok"] and ("empty" in nfp_ready["why"] or "not" in nfp_ready["why"]),
+              "an empty reference index names nothing: " + nfp_ready["why"][:80])
+        ns = M.nafp_settings(M.settings())
+        if Path(ns["python"] or "x").is_file() and (Path(ns["model_dir"] or "x") / "model.pt").is_file():
+            os.environ["CC_NAFP_INDEX"] = str(tmp / "nafp-index")
+            env3 = {**os.environ}
+            add = subprocess.run([PY, str(CC), "music-index", "--from-run", str(run), "--rec", "28-84", "--id", "test-song", "--title", "Test Tone",
+                                  "--artist", "Lab", "--license", "generated by this test", "--provenance", "the test run"], capture_output=True, text=True,
+                                 encoding="utf-8", env=env3)
+            ra = json.loads([ln for ln in add.stdout.splitlines() if ln.startswith("{")][-1])
+            again = subprocess.run([PY, str(CC), "music-index", "--from-run", str(run), "--rec", "28-84", "--id", "test-song-2", "--title", "Same"],
+                                   capture_output=True, text=True, encoding="utf-8", env=env3)
+            rb = json.loads([ln for ln in again.stdout.splitlines() if ln.startswith("{")][-1])
+            check(ra.get("ok") and ra.get("recordings") == 1 and any(x_.get("skipped") for x_ in rb.get("results") or []),
+                  "music-index adds a stretch of a run as a reference; the same audio again is not fingerprinted twice")
+            for f in (adir / "fingerprint-matches.json", adir / "neural-fp.json", adir / "separated.json"):
+                f.unlink(missing_ok=True)
+            M.INDEX_DIR = tmp / "music-index-nfp"                  # no landmark fingerprints: the neural index is the only acoustic method here
+            (out_l / "edl.json").write_text(json.dumps(plain), encoding="utf-8")
+            r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+            mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+            check(mj["identified"] and mj["identified"]["by"] == "neural-fp" and mj["identified"]["title"] == "Test Tone" and mj["id_score"] >= 85
+                  and r["neural_fingerprint"]["named"] == 1,
+                  f"the music interval is named by the local neural fingerprint (identity {mj['id_score']}): " + str(mj["identified"].get("evidence"))[:110])
+            r2 = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+            check((r2["neural_fingerprint"].get("query") is None), "asked again with the same index: from the cache, the model is not loaded")
+            subprocess.run([PY, str(CC), "music-index", "--remove", "test-song"], capture_output=True, text=True, encoding="utf-8", env=env3)
+            (adir / "neural-fp.json").unlink(missing_ok=True)
+            r3 = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+            mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+            check(not mj["identified"] or mj["identified"].get("by") != "neural-fp",
+                  "the reference taken out of the index: the same music is no longer named (UNKNOWN), nothing invented")
+            os.environ.pop("CC_NAFP_INDEX", None)
+        else:
+            print("skip the real neural fingerprint: not installed")
+        S.EVIDENCE.unlink(missing_ok=True)
 
         # ---------------------------------------------------------------- the two scores (no audio)
         I = lambda kind, s, g, vs=False: {"kind": kind, "strength": s, "group": g, "version_specific": vs}     # noqa: E731

@@ -183,7 +183,24 @@ These are craft principles. Each one says when it applies.
   don't matter, an artificial cliffhanger at every turn. `writing_signals` counts some of it (questions in a row,
   exclamations, words in capitals, how often the text directs the voice); the cold read hears the rest.
 - **End when it's over.** Answer the promise, then stop soon. A long tail of statistics after the emotional payoff
-  empties the room.
+  empties the room. The same goes for the last silence: it lasts as long as the final picture and the sound need to
+  resolve, not a fixed number of seconds of nothing.
+- **Silence is a tool, not an ingredient.** The narrator's own rhythm comes first: the breath and the short gap after
+  each line already give most moments their time. Hold a silence only where the viewer needs time the voice does not
+  give, and judge it in its scene, not by its sentence:
+  - *the story*: does the viewer need a moment to take in a revelation, anticipate what comes, feel a consequence, or
+    follow a turn? A line that sounds important is not, by itself, a reason.
+  - *the picture*: what is on screen while it lasts, and does it keep giving (a reveal still building, a map line being
+    drawn, a face, a resolved final composition)? A still frame can carry a pause; pointless motion added to disguise
+    one cannot. The picture can also go on revealing under the next line, which often serves better than stopping.
+  - *the sound*: the voice stopping does not have to stop everything; a bed that goes on, drops out, or gives way to one
+    story-world sound (wind over an empty field) is a choice. Music or effects never cover dead air.
+  - *the rhythm around it*: does it make the line before land and the next one more wanted, or does it delay
+    information, break momentum, slow a deadpan joke into waiting for a laugh, or stall the opening hook?
+  The same length can be right in one scene and dead air in another. No quota, no escalation, no length per kind of
+  moment, nothing copied from a reference, never runtime. A length written in the script is a proposal: it is decided
+  on the recorded voice (its real gap there, a listening preview) and again with the picture (05, `holds`,
+  `hold-decide`).
 - **Delivery comes from the writing.** In TTS the voice and its settings set the character; the text sets the
   performance: punctuation, sentence length, line breaks, a question, direct address, and now and then a delivery
   tag where the register changes (05's catalogue). After the calibration part, `narration-measure` writes

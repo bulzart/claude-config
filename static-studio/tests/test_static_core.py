@@ -36,6 +36,12 @@ def save(path, d):
     path.write_text(json.dumps(d), encoding='utf-8')
 
 
+# What every planned pause has to say besides its length (03): what it is for, what is seen, what is heard.
+HELD = {'pause_purpose': 'the viewer looks at the map for a while',
+        'pause_picture': 'the map of the valley with the new road drawn in',
+        'pause_sound': 'the low pulse of the bed goes on'}
+
+
 class StaticStudioTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -330,7 +336,9 @@ class StaticStudioTests(unittest.TestCase):
         save(d/'manifest.json',{**specs,'status':'complete','finished_parts':[c['id'] for c in specs['chunks']]})
         script=json.loads((vd/'script.json').read_text())
         script['lines'][-1].update({'pause_after_s':5,'pause_via':'edit',
-                                    'pause_purpose':'the last picture stays while the ending settles'})
+                                    'pause_purpose':'the last picture stays while the ending settles',
+                                    'pause_picture':'the empty road at dusk, the last light going',
+                                    'pause_sound':'the bed resolves on its last chord'})
         save(vd/'script.json',script)
         res=cli('audio-check','--run',self.run,'--video',1,expected=2)
         self.assertNotIn('narration_duration_outside_locked_tolerance',res['issues'])
@@ -896,7 +904,9 @@ class StaticStudioTests(unittest.TestCase):
         script=json.loads((vd/'script.json').read_text())
         script['lines'][0]['text']='[curious] Somewhere near Hagaru the road narrows, '+script['lines'][0]['text']
         script['lines'][12]['text']+=' [pause]'
-        script['lines'][12].update({'pause_after_s':2,'pause_via':'tag','pause_purpose':'the cost of the choice lands first'})
+        script['lines'][12].update({'pause_after_s':2,'pause_via':'tag','pause_purpose':'the cost of the choice lands first',
+                                    'pause_picture':'the map stays on the crossing they chose',
+                                    'pause_sound':'the low pulse goes on under it'})
         save(vd/'script.json',script)
         save(vd/'pronunciation.json',{'terms':[{'term':'Hagaru','say':'/həˈɡɑːruː/','how':'ipa','confidence':'likely',
                                                 'source':'the standard Korean romanisation of the town name'}]})
@@ -1086,50 +1096,78 @@ class StaticStudioTests(unittest.TestCase):
             l.update({'pause_after_s':3.2,'pause_via':'edit'})
         save(vd/'script.json',script)
         res=cli('plan-check','--run',self.run,'--video',1,expected=2)
-        self.assertIn('pause_L001_needs_its_story_purpose',res['issues'])          # every hold says what it is for
+        for need in ('story_purpose','picture','sound'):                           # every hold says what it is for,
+            self.assertIn(f'pause_L001_needs_its_{need}',res['issues'])            # what is seen and what is heard
         for l in script['lines'][:-1]:
-            l['pause_purpose']='the viewer looks at the map for a while'
+            l.update(HELD)
         save(vd/'script.json',script)
         res=cli('plan-check','--run',self.run,'--video',1,expected=2)
         self.assertTrue(any(x.startswith('holds_changed_after_the_script_read') for x in res['issues']))   # the reader never saw them
         self.assertGreater(res['holds']['runtime_carried_by_holds_s'],100)
-        # Only a fresh read that is shown every hold can see past it; the packet puts each silence in front of the reader.
+        self.assertTrue(any(x.startswith('runtime_reached_with_held_silence') for x in res['issues']))
+        # The packet puts each silence in front of the reader as a viewer would hear it: the whole of it, with what is
+        # seen and heard, and no other film's pause length to measure it against.
         packet=cli('review-packet','--run',self.run,'--video',1,'--kind','script')
         text=Path(packet['packet']).read_text(encoding='utf-8')
-        self.assertIn('(the picture holds 3.2 s in silence)',text)
-        self.assertIn('Held silences in this script: 51',text)
+        self.assertIn('(silence: about 3.8 s in all, the voice stops, the picture stays. On screen: '+HELD['pause_picture'],text)
+        self.assertIn('Silences in this script: 51',text)
+        self.assertNotIn('longest pause',text)
+        # A reader who saw every hold does not make silence a way to reach the length: still blocked.
+        self.review('script',[{'id':'F1','severity':'minor','lines':['L002'],'problem':'the holds feel long here'}],
+                    {'F1':{'action':'kept','note':'the reader saw every hold and we keep them'}})
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertTrue(any(x.startswith('runtime_reached_with_held_silence') for x in res['issues']),res['issues'])
+        self.assertFalse(any(x.startswith('holds_changed') for x in res['issues']))
+        # The whole-silence form is no way round it.
+        for l in script['lines'][:-1]:
+            l.pop('pause_after_s'); l['pause_total_s']=3.8
+        save(vd/'script.json',script)
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertTrue(any(x.startswith('runtime_reached_with_held_silence') for x in res['issues']))
+        # The words reach the length again: the silences no longer carry it.
+        script['pace_wpm']=145
+        for l in script['lines'][:-1]:
+            l.pop('pause_total_s'); [l.pop(k) for k in HELD]; l.pop('pause_via')
+        save(vd/'script.json',script)
+        self.assertFalse([x for x in cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+                          if x.startswith('runtime_reached')])
+
+    def test_hold_changes_after_the_read_add_up(self):
+        vd=self.write_plan(review_script=False)
+        script=json.loads((vd/'script.json').read_text())
+        for k in [1]+list(range(20,35))+[49]:                   # L002 (the opening), L021-L035, L050 (the ending)
+            script['lines'][k].update({'pause_after_s':1.2,'pause_via':'edit',**HELD})
+        save(vd/'script.json',script)
+        self.review_script()
+        self.assertTrue(cli('plan-check','--run',self.run,'--video',1)['ready'])
         # A small hold tweak after a read passes with a warning.
-        vd2=vd; self.review('script',[{'id':'F1','severity':'minor','lines':['L002'],'problem':'the holds feel long here'}],
-                            {'F1':{'action':'kept','note':'the reader saw every hold and we keep them'}})
-        ok=cli('plan-check','--run',self.run,'--video',1)
-        self.assertTrue(any('carried by held silence' in w for w in ok['warnings']))
-        script['lines'][24]['pause_after_s']=5.2                                    # L025: the middle of the film
-        save(vd2/'script.json',script)
+        script['lines'][24]['pause_after_s']=3.2                                    # L025: the middle of the film
+        save(vd/'script.json',script)
         res=cli('plan-check','--run',self.run,'--video',1)
         self.assertTrue(any('held silences changed after the last read' in w for w in res['warnings']))
-        # The same 2 s in the opening (the hook), or a 6 s closing hold, is read again whatever its size.
-        script['lines'][24]['pause_after_s']=3.2; script['lines'][1]['pause_after_s']=5.2
-        save(vd2/'script.json',script)
+        # The same 2 s in the opening (the hook), or a closing hold, is read again whatever its size.
+        script['lines'][24]['pause_after_s']=1.2; script['lines'][1]['pause_after_s']=3.2
+        save(vd/'script.json',script)
         res=cli('plan-check','--run',self.run,'--video',1,expected=2)
         self.assertTrue(any(x.startswith('holds_changed_in_a_key_moment') and 'L002' in x and 'the opening' in x
                             for x in res['issues']))
-        script['lines'][1]['pause_after_s']=3.2; script['lines'][49]['pause_after_s']=6.0
-        save(vd2/'script.json',script)
+        script['lines'][1]['pause_after_s']=1.2; script['lines'][49]['pause_after_s']=4.0
+        save(vd/'script.json',script)
         res=cli('plan-check','--run',self.run,'--video',1,expected=2)
         self.assertTrue(any('L050' in x and 'the ending' in x for x in res['issues']))
         # A beat the map marks as a key moment (a reveal) counts like the hook and the ending.
-        script['lines'][49]['pause_after_s']=3.2; script['lines'][24]['pause_after_s']=5.2
-        save(vd2/'script.json',script)
-        bm=json.loads((vd2/'beat-map.json').read_text()); bm['beats'][2]['key_moment']='the reveal'
-        save(vd2/'beat-map.json',bm)
+        script['lines'][49]['pause_after_s']=1.2; script['lines'][24]['pause_after_s']=3.2
+        save(vd/'script.json',script)
+        bm=json.loads((vd/'beat-map.json').read_text()); bm['beats'][2]['key_moment']='the reveal'
+        save(vd/'beat-map.json',bm)
         res=cli('plan-check','--run',self.run,'--video',1,expected=2)
         self.assertTrue(any('L025' in x and 'the reveal' in x for x in res['issues']))
-        bm['beats'][2].pop('key_moment'); save(vd2/'beat-map.json',bm)
+        bm['beats'][2].pop('key_moment'); save(vd/'beat-map.json',bm)
         # Small edits add up from the last read: fifteen 0.4 s nudges (none half a second) are 6 s of silence moved.
-        script['lines'][24]['pause_after_s']=3.2
+        script['lines'][24]['pause_after_s']=1.2
         for l in script['lines'][20:35]:
-            l['pause_after_s']=3.6
-        save(vd2/'script.json',script)
+            l['pause_after_s']=1.6
+        save(vd/'script.json',script)
         res=cli('plan-check','--run',self.run,'--video',1,expected=2)
         self.assertTrue(any(x.startswith('holds_changed_after_the_script_read:6s') for x in res['issues']))
 
@@ -1874,6 +1912,285 @@ class StaticStudioTests(unittest.TestCase):
         self.assertFalse((cp/'40-plans/video-01/length-lock.json').exists())
         self.assertEqual(json.loads((cp/'state.json').read_text())['selected_niche'],None)
         self.assertFalse(cli('status','--run',cp)['videos'])
+
+    # ---------------------------------------------------------------- held silences: proposed, measured, decided
+    def recorded_with_gaps(self, gaps, skew=0.15, split_after=None, edge=0.1, pauses=None):
+        """A script of len(gaps) lines recorded with exactly known silences: a tone while each line is spoken, digital
+        silence after it (gaps[i] s after line i+1). Whisper's end of each line is placed `skew` s late (it places line
+        ends to within about 0.2 s). With split_after=k the narration is two parts (lines 1-k, then the rest), each
+        with `edge` s of silence at the join's side, so the join's whole gap is 2*edge. pauses: {line index: fields}.
+        Measured by narration-measure (cached Whisper: nothing transcribed). Returns (vd, folder, measure output)."""
+        import numpy as np, soundfile as sf
+        vd=self.write_plan()
+        n=len(gaps)
+        lines=[{'id':f'L{i:03}','text':f'Line {i} tells the viewer something new about the road ahead tonight.'}
+               for i in range(1,n+1)]
+        for k,fields in (pauses or {}).items():
+            lines[k-1].update(fields)
+        save(vd/'script.json',{'language':'en','pace_wpm':145,'lines':lines})
+        direction={'narrative_job':'deliver','visual_intent':'map','sound_direction':'bed','narration_direction':'curious'}
+        half=n//2
+        save(vd/'beat-map.json',{'target_length_s':600,'beats':[
+            {'id':'B01','start_s':0,'end_s':300,'line_start':1,'line_end':half,'experience':'oriented','pace':'brisk',**direction},
+            {'id':'B02','start_s':300,'end_s':600,'line_start':half+1,'line_end':n,'experience':'uneasy','pace':'slow',**direction}]})
+        d=self.run/'50-audio/video-01'; (d/'whisper').mkdir(parents=True)
+        sr=44100
+        groups=[(1,n)] if not split_after else [(1,split_after),(split_after+1,n)]
+        chunks,texts=[],[]
+        for pid,(lo,hi) in enumerate(groups,1):
+            audio=[np.zeros(int(sr*0.3),dtype='float32')]; pos=int(sr*0.3); segs=[]
+            for i in range(lo,hi+1):
+                row=lines[i-1]; words=row['text'].split()
+                s0=pos/sr; ws=[]
+                for j,w in enumerate(words):
+                    ws.append({'start_s':round(s0+0.27*j,3),'end_s':round(s0+0.27*j+0.25,3),'text':' '+w})
+                length=int(sr*0.27*len(words))
+                k=np.arange(length)
+                audio.append((0.3*np.sin(2*np.pi*220*k/sr)).astype('float32')); pos+=length
+                end=pos/sr
+                ws[-1]['end_s']=round(end+skew,3)
+                segs.append({'start_s':round(s0,3),'end_s':round(end+skew,3),'text':row['text'],'words':ws})
+                g=edge if (split_after and i==hi and i<n) else gaps[i-1]
+                audio.append(np.zeros(int(sr*g),dtype='float32')); pos+=int(sr*g)
+            name=f'part-{pid:03}.wav'
+            sf.write(str(d/name),np.concatenate(audio),sr)
+            if pid>1:          # the next part opens with `edge` of silence instead of 0.3 s
+                y,_=sf.read(str(d/name),dtype='float32'); sf.write(str(d/name),y[int(sr*(0.3-edge)):],sr)
+                for s in segs:
+                    s['start_s']=round(s['start_s']-(0.3-edge),3); s['end_s']=round(s['end_s']-(0.3-edge),3)
+                    for w in s['words']:
+                        w['start_s']=round(w['start_s']-(0.3-edge),3); w['end_s']=round(w['end_s']-(0.3-edge),3)
+            save(d/f'whisper/part-{pid:03}.json',{'status':'transcribed','model':'medium','segments':segs})
+            (d/f'whisper/part-{pid:03}.txt').write_text('\n'.join(f"[{s['start_s']:.1f}-{s['end_s']:.1f}] {s['text']}"
+                                                              for s in segs),encoding='utf-8')
+            text='\n'.join(lines[i-1]['text'] for i in range(lo,hi+1))
+            chunks.append({'id':pid,'line_start':lo,'line_end':hi,'file':name,'characters':len(text),
+                           'text_sha256':hashlib.sha256(text.encode('utf-8')).hexdigest()})
+        save(d/'manifest.json',{'model_id':'eleven_v4','voice_id':'TESTID','language':'en','status':'complete',
+                                'finished_parts':[c['id'] for c in chunks],'voice_settings':{},'chunks':chunks})
+        (d/'parts.txt').write_text(''.join(f"file '{(d/c['file']).as_posix()}'\n" for c in chunks))
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(d/'parts.txt'),
+                        '-ar','44100','-ac','2','-c:a','pcm_s16le',str(d/'narration.wav')],check=True)
+        return vd,d,cli('narration-measure','--run',self.run,'--video',1,'--no-delivery')
+
+    def two_shots(self, n):
+        shots=[{'id':'S1','beat_id':'B01','line_start':'L001','line_end':f'L{n//2:03}','composition':'wide',
+                'new_thing':'the road the narrator is talking about, from above','frame_prompt':'a long road through snow seen from a ridge at dawn'},
+               {'id':'S2','beat_id':'B02','line_start':f'L{n//2+1:03}','line_end':f'L{n:03}','composition':'close',
+                'new_thing':'the hands that will have to fix the bridge','frame_prompt':'cold hands holding a coil of rope beside a broken bridge'}]
+        save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        return shots
+
+    def quiet_at(self, wav, t):
+        av=self.load_core()._av()
+        run=av.silence_at(wav,t,search_s=0.1)
+        return round(run[1]-run[0],2) if run else None
+
+    def test_a_held_silence_counts_the_voices_own_gap_once(self):
+        core=self.load_core()
+        gaps=[0.45,0.62,0.40,1.30,0.70,0.55,0.50,0.65,0.60,0.80]       # every line its own gap, one long by nature
+        held=lambda total: {'pause_total_s':total,'pause_via':'edit',**HELD}
+        vd,d,out=self.recorded_with_gaps(gaps,pauses={3:held(1.5),4:held(1.2),7:held(2.0)})
+        # The gap after each line is read from the audio, not from Whisper's late line ends (0.15 s off here).
+        lt=json.loads((d/'line-times.json').read_text())
+        for r in lt['lines'][:-1]:
+            self.assertEqual(r['gap_basis'],'audio')
+            self.assertAlmostEqual(r['gap_after_s'],gaps[r['index']-1],delta=0.03)
+        self.assertEqual(lt['lines'][-1].get('gap_is_tail'),True)
+        # Before any decision: each pause is a proposal, its silence estimated against that line's own gap.
+        holds_issues=lambda: [x for x in cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+                              if x.startswith('holds_changed')]
+        before=holds_issues()
+        h={x['line']:x for x in cli('holds','--run',self.run,'--video',1)['holds']}
+        self.assertEqual({x['status'] for x in h.values()},{'provisional'})
+        self.assertAlmostEqual(h['L003']['added_s'],1.1,delta=0.04)         # 1.5 wanted, 0.40 already there
+        self.assertEqual(h['L004']['added_s'],0.0)                          # 1.2 wanted, the voice left 1.30
+        self.assertAlmostEqual(h['L007']['added_s'],1.5,delta=0.04)
+        # Nothing is inserted from a proposal: the edit waits for a decision on every planned pause.
+        self.two_shots(10)
+        res=cli('retime-shots','--run',self.run,'--video',1,expected=2)
+        self.assertEqual(sorted(res['details']['undecided']),['L003','L004','L007'])
+        # Decisions: L003 keeps its whole silence; L004's own gap already gives it; L007 (a reveal the next line
+        # carries) needs no held silence at all.
+        cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--total',1.5,
+            '--reason','the cost lands before the next line, the map has time to settle')
+        dec=cli('hold-decide','--run',self.run,'--video',1,'--line','L004','--stage','narration','--total',1.2,
+                '--reason','the voice already breathes here long enough for the turn')['decision']
+        self.assertEqual(dec['added_s'],0.0); self.assertIn('already gives it',dec['outcome'])
+        cli('hold-decide','--run',self.run,'--video',1,'--line','L007','--stage','narration','--no-hold',
+            '--reason','the reveal lands on the next line, a wait would only delay it')
+        # A pause the script did not plan can be decided after listening too: no quota either way.
+        cli('hold-decide','--run',self.run,'--video',1,'--line','L005','--stage','narration','--total',2,
+            '--reason','heard aloud, the turn needs a breath the script did not give it')
+        self.assertEqual(cli('plan-check','--run',self.run,'--video',1,expected=None)['holds']['undecided'],[])
+        rt=cli('retime-shots','--run',self.run,'--video',1)
+        plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        script_holds=[x for x in plan['holds'] if x['kind']=='script']
+        self.assertEqual([x['after_line'] for x in script_holds],['L003','L005'])    # only where silence is added
+        l3=script_holds[0]
+        self.assertAlmostEqual(l3['hold_s'],1.1,delta=0.04)
+        self.assertAlmostEqual(l3['resulting_gap_s'],1.5,delta=core.HOLD_VERIFY_TOL_S)
+        self.assertEqual({p['after_line']:p['hold_s'] for p in plan['pauses']}['L004'],0.0)
+        self.assertEqual({p['after_line']:p['hold_s'] for p in plan['pauses']}['L007'],0.0)
+        # The edit's narration is the narration plus exactly the added silence: nothing cut, nothing doubled.
+        nar_s=core.probe(d/'narration.wav')['duration_s']; edit_s=core.probe(d/'narration-edit.wav')['duration_s']
+        added=sum(x['hold_s'] for x in plan['holds'])
+        self.assertAlmostEqual(edit_s,nar_s+added,delta=0.03)
+        self.assertEqual(rt['edit_duration_s'],plan['edit_duration_s'])
+        import numpy as np, soundfile as sf
+        loud=lambda p: float((np.abs(sf.read(str(p),dtype='float32')[0]).mean(axis=1)>0.05).sum())/44100
+        self.assertAlmostEqual(loud(d/'narration.wav'),loud(d/'narration-edit.wav'),delta=0.01)   # every word kept
+        lt_rows={r['id']:r for r in lt['lines']}
+        shift=lambda t: t+sum(x['hold_s'] for x in plan['holds'] if x['at_audio_s']<=t)
+        mid=lambda lid: shift((lt_rows[lid]['gap_span_s'][0]+lt_rows[lid]['gap_span_s'][1])/2)
+        self.assertAlmostEqual(self.quiet_at(d/'narration-edit.wav',mid('L004')),1.30,delta=0.04)  # untouched
+        self.assertAlmostEqual(self.quiet_at(d/'narration-edit.wav',mid('L007')),0.50,delta=0.04)  # untouched
+        # The decisions never touched the reviewed script: they ask for no new read (what the fixture's own script
+        # swap asks for is unchanged).
+        self.assertEqual(holds_issues(),before)
+
+    def test_a_hold_is_decided_again_with_its_picture_and_retimed(self):
+        core=self.load_core()
+        gaps=[0.5,0.6,0.4,0.6,0.5,0.6,0.5,0.6,0.5,0.7]
+        vd,d,_=self.recorded_with_gaps(gaps,pauses={3:{'pause_total_s':1.4,'pause_via':'edit',**HELD},
+                                                    10:{'pause_total_s':2.5,'pause_via':'edit',**HELD}})
+        shots=self.two_shots(10)
+        for lid,total in (('L003',1.4),('L010',2.5)):
+            cli('hold-decide','--run',self.run,'--video',1,'--line',lid,'--stage','narration','--total',total,
+                '--reason','held for the map to settle before the voice goes on')
+        cli('retime-shots','--run',self.run,'--video',1)
+        first=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        # The closing hold sits after the voice's own tail: the last picture holds, nothing is cut from the end.
+        tail=[x for x in first['holds'] if x['after_line']=='L010'][0]
+        self.assertAlmostEqual(tail['expected_gap_s'],2.5,delta=0.04)
+        self.assertAlmostEqual(tail['resulting_gap_s'],2.5,delta=core.HOLD_VERIFY_TOL_S)
+        # A changed decision is kept in the history, and the edit plan made from the old one is outdated.
+        cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--total',0.9,
+            '--reason','listening, the shorter beat keeps the joke dry and the pace up')
+        hist=json.loads((vd/'holds.json').read_text())['history']
+        self.assertEqual([x['total_s'] for x in hist],[1.4])
+        tl=cli('timeline-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('edit_plan_outdated_holds_changed_rerun_retime_shots',tl['issues'])
+        self.assertIn('holds_not_decided_with_their_picture:L003,L010',tl['issues'])
+        cli('retime-shots','--run',self.run,'--video',1)
+        second=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        self.assertNotEqual(first['narration_for_edit']['sha256'],second['narration_for_edit']['sha256'])
+        l3=[x for x in second['holds'] if x['after_line']=='L003'][0]
+        self.assertAlmostEqual(l3['resulting_gap_s'],0.9,delta=core.HOLD_VERIFY_TOL_S)
+        self.assertAlmostEqual(second['edit_duration_s'],first['edit_duration_s']-0.5,delta=0.03)
+        # With the stills: each held silence decided again with the shot on screen while it lasts.
+        stills=self.home/'stills'; stills.mkdir()
+        job={'run':str(self.run),'video':1,'images':[{'shot_id':s['id'],'prompt':s['frame_prompt']+', ink wash',
+                                                      'out':str(stills/f"{s['id']}.png")} for s in shots]}
+        gate=core.media_gate(job,'stills'); self.assertTrue(gate['ok'],gate['issues'])
+        for it in job['images']:
+            Path(it['out']).write_bytes(b'\x89PNG\r\n\x1a\n'+b'0'*2048)
+        core.record_media(gate['run'],1,'stills',[{'out':it['out'],**rec} for it,rec in zip(job['images'],gate['records'])])
+        for lid,total in (('L003',0.9),('L010',2.5)):
+            dec=cli('hold-decide','--run',self.run,'--video',1,'--line',lid,'--stage','picture','--total',total,
+                    '--reason','with the still on screen the length still serves the moment')['decision']
+            self.assertTrue(dec['picture']['still'])
+        self.assertEqual(dec['picture']['shot_id'],'S2')
+        tl=cli('timeline-check','--run',self.run,'--video',1,expected=2)
+        self.assertFalse([x for x in tl['issues'] if 'hold' in x])         # same lengths, confirmed: no new retime
+        # The picture changes: the decision made with the old one no longer stands.
+        (stills/'S1.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'1'*2048)
+        tl=cli('timeline-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('hold_L003_decided_with_another_picture',tl['issues'])
+        # Re-recording the part a decision was made on leaves it stale: decided again before any retime.
+        y=(d/'part-001.wav').read_bytes(); (d/'part-001.wav').write_bytes(y[:200000]+bytes([y[200000]^1])+y[200001:])
+        for f in (d/'whisper').glob('*'):
+            os.utime(f)                                          # the cached transcript still stands: no Whisper run
+        cli('narration-measure','--run',self.run,'--video',1,'--no-delivery')
+        self.assertEqual(sorted(cli('holds','--run',self.run,'--video',1)['undecided']),['L003','L010'])
+        self.assertIn('undecided',cli('retime-shots','--run',self.run,'--video',1,expected=2)['details'])
+
+    def test_a_join_and_a_performed_pause_are_not_stacked(self):
+        gaps=[0.6,0.5,0.6,0.55,0.6,0.5,0.6,0.5,0.6,0.7]
+        vd,d,out=self.recorded_with_gaps(gaps,split_after=5,edge=0.1)
+        seam=out['seams'][0]
+        self.assertAlmostEqual(seam['gap_s'],0.2,delta=0.03)                    # the join, read from the audio
+        self.assertGreater(seam['seam_hold_s'],0.25)                            # continuity restored when nothing is held
+        # A pause decided at the join is decided as a whole: the join's own 0.2 s counts, no seam hold on top.
+        script=json.loads((vd/'script.json').read_text())
+        script['lines'][4].update({'pause_total_s':1.6,'pause_via':'edit',**HELD})
+        save(vd/'script.json',script)
+        cli('narration-measure','--run',self.run,'--video',1,'--no-delivery')
+        lt=json.loads((d/'line-times.json').read_text())
+        self.assertEqual(lt['seams'][0]['seam_hold_s'],0.0)
+        dec=cli('hold-decide','--run',self.run,'--video',1,'--line','L005','--stage','narration','--total',1.6,
+                '--reason','the chapter turns here, a breath before the next part')['decision']
+        self.assertAlmostEqual(dec['natural_gap_s'],0.2,delta=0.03)
+        self.assertAlmostEqual(dec['added_s'],1.4,delta=0.03)
+        self.two_shots(10)
+        cli('retime-shots','--run',self.run,'--video',1)
+        plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        self.assertEqual([x['kind'] for x in plan['holds']],['script'])
+        self.assertAlmostEqual(plan['holds'][0]['resulting_gap_s'],1.6,delta=self.load_core().HOLD_VERIFY_TOL_S)
+        # The hold belongs to the shot before the cut: the cut comes after the silence.
+        s1=plan['shots'][0]
+        self.assertAlmostEqual(s1['end_s'],plan['holds'][0]['at_audio_s']+plan['holds'][0]['hold_s'],delta=0.02)
+
+    def test_pause_forms_double_application_and_signals(self):
+        core=self.load_core()
+        tagged=[{'id':'L001','text':'There is one road. [pause]','pause_total_s':2,'pause_via':'edit',**HELD},
+                {'id':'L002','text':'And then the night comes.'}]
+        self.assertTrue(any('is_an_edit_hold_and_a_pause_tag_at_once' in x for x in core.script_pause_plan(tagged)[1]))
+        both=[{'id':'L001','text':'A line.','pause_total_s':2,'pause_after_s':2,'pause_via':'edit',**HELD}]
+        self.assertTrue(any('has_both' in x for x in core.script_pause_plan(both)[1]))
+        bare=[{'id':'L001','text':'A line.','pause_total_s':0.8,**HELD}]
+        self.assertIn('pause_L001_needs_pause_via_edit_or_tag',core.script_pause_plan(bare)[1])
+        # No minimum, no maximum: a short beat and a long one are both expressible.
+        ok=[{'id':'L001','text':'A line.','pause_total_s':0.9,'pause_via':'edit',**HELD},
+            {'id':'L002','text':'Another.','pause_total_s':9.0,'pause_via':'edit',**HELD}]
+        plan,issues=core.script_pause_plan(ok)
+        self.assertEqual(issues,[])
+        self.assertAlmostEqual(core.planned_added_s(plan[0],0.6),0.3)            # the whole 0.9, less the voice's 0.6
+        self.assertEqual(core.planned_added_s(plan[0],1.1),0.0)                  # the voice already gives it
+        self.assertAlmostEqual(core.planned_added_s(plan[1]),9.0-core.DEFAULT_NATURAL_GAP_S)
+        # The older form reads as it was written and reviewed: added on top of the voice's gap.
+        old=[{'id':'L001','text':'A line.','pause_after_s':2.5,'pause_via':'edit',**HELD},
+             {'id':'L002','text':'Short.','pause_after_s':0.8}]
+        plan,issues=core.script_pause_plan(old)
+        self.assertEqual(([p['form'] for p in plan],issues),(['added'],[]))
+        self.assertEqual(core.planned_added_s(plan[0],0.6),2.5)
+        # Signals, never verdicts: lengths that step up through the film, or are all alike.
+        rising=[{'seconds':s} for s in (2.5,3.0,3.5,4.0)]
+        self.assertTrue(any('grow steadily' in w for w in core.hold_signals(rising)))
+        self.assertEqual(core.hold_signals([{'seconds':s} for s in (1.2,3.0,0.8)]),[])
+        self.assertTrue(any('every planned pause is 2' in w for w in core.hold_signals([{'seconds':2}]*3)))
+
+    def test_previews_and_the_final_read_show_the_silences_as_they_are(self):
+        gaps=[0.5,0.6,0.4,0.6,0.5,0.6,0.5,0.6,0.5,0.7]
+        vd,d,_=self.recorded_with_gaps(gaps,pauses={3:{'pause_total_s':1.5,'pause_via':'edit',**HELD}})
+        pv=cli('holds','--run',self.run,'--video',1,'--preview','L003','--totals','1.0,2.0')['preview']
+        self.assertEqual([v['variant'] for v in pv['variants']],['voice-gap','total-1.00s','total-2.00s'])
+        core=self.load_core()
+        lens=[core.probe(Path(v['audio']))['duration_s'] for v in pv['variants']]     # the same moment, only the
+        self.assertAlmostEqual(lens[1]-lens[0],1.0-pv['natural_gap_s'],delta=0.03)     # silence differs
+        self.assertAlmostEqual(lens[2]-lens[0],2.0-pv['natural_gap_s'],delta=0.03)
+        for v in pv['variants']:                     # each preview holds the whole silence it is named for
+            self.assertAlmostEqual(self.quiet_at(Path(v['audio']),v['silence_centre_s']),v['whole_silence_s'],delta=0.04)
+        self.assertTrue(Path(pv['guide']).is_file()); self.assertFalse(pv['picture'])        # no still yet: audio only
+        dec=cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--total',1.5,
+                '--reason','the user listened and the longer beat lets the map land','--listened','the 1.5 one feels right')['decision']
+        self.assertEqual(len(dec['previews']),3); self.assertEqual(dec['listened'],'the 1.5 one feels right')
+        self.two_shots(10)
+        cli('retime-shots','--run',self.run,'--video',1)
+        # The final reviewer is told where the held silences are and how long, not why the director wanted them.
+        exp=self.home/'export.mp4'
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=navy:s=320x180:r=30',
+                        '-i',str(d/'narration-edit.wav'),'-shortest','-pix_fmt','yuv420p','-c:a','aac',str(exp)],check=True)
+        tr=self.home/'export-transcript.json'
+        save(tr,{'status':'transcribed','segments':[{'start_s':0.3,'end_s':3.0,'text':'words',
+                 'words':[{'start_s':round(0.3+0.27*i,2),'end_s':round(0.55+0.27*i,2),'text':' word'} for i in range(10)]}]})
+        cli('av-profile','--run',self.run,'--video',1,'--file',exp,'--transcript',tr)
+        pk=cli('review-packet','--run',self.run,'--video',1,'--kind','final','--file',exp)
+        text=Path(pk['packet']).read_text(encoding='utf-8')
+        self.assertIn('## Held silences in this cut',text)
+        self.assertIn('about 1.5 s with no voice, after "...',text)
+        self.assertIn('road ahead tonight.", before "Line 4 tells',text)
+        self.assertNotIn(HELD['pause_purpose'],text)
 
 
 class AvToolsTests(unittest.TestCase):
