@@ -527,9 +527,11 @@ class StaticStudioTests(unittest.TestCase):
                  'words':[{'start_s':round(0.2+0.3*i,2),'end_s':round(0.45+0.3*i,2),'text':' word'} for i in range(11)]}]})
         prof=cli('av-profile','--run',self.run,'--video',1,'--file',exp,'--transcript',tr)
         self.assertGreaterEqual(prof['profiles']['video-01']['sheets'],1)
+        self.assertGreaterEqual(prof['profiles']['video-01']['shot_sheets'],1)        # every shot once, for the reviewer
         self.assertIn('final_review_missing',cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)['issues'])
-        _,rec=self.review('final',[{'id':'F1','severity':'minor','at':'00:01-00:03',
+        pk,rec=self.review('final',[{'id':'F1','severity':'minor','at':'00:01-00:03',
                                     'problem':'the opening picture holds too long'}],file=exp)
+        self.assertIn('## Shot sheets: every shot once, in order',Path(pk['packet']).read_text(encoding='utf-8'))
         self.assertIn('final_review_r1_unanswered:F1',cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)['issues'])
         save(Path(rec['answers_file']),{'answers':{'F1':{'action':'kept','note':'the hold is the planned breath'}}})
         rel=cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)
@@ -1685,17 +1687,32 @@ class StaticStudioTests(unittest.TestCase):
         def seg(sid, kind, cat, action, **kw):
             return {'id':sid,'from':'00:01','to':'00:02','kind':kind,'category':cat,'action':action,
                     'what':'a short neutral description of the moment','role':'it sets up the next scene',
-                    'evidence':'frames and words at this time','confidence':'sure',**kw}
+                    'evidence':'frame 00:01.5 and the words at 00:01-00:02','confidence':'sure',**kw}
         why='the fact is said plainly and nothing is shown'
         bad=lambda *s:self.content_review('V001',list(s),expected=2)['details']
         # Religious, superstitious or holiday material is the user's creative exclusion, never a safety matter.
         self.assertTrue(any('not_a_safety_category' in x for x in bad(seg('S1','safety','religious','exclude',severity='low',avoid=['the ritual']))))
         self.assertTrue(any('severity_is_for_safety_only' in x for x in bad(seg('S1','religion_superstition','superstition','exclude',severity='high',avoid=['the omen']))))
         self.assertTrue(any('action_must_be' in x for x in bad(seg('S1','holiday','holiday','restrict_visuals',why=why))))
-        # The hard lines of safety: anything sexual with minors is always excluded; a high-severity segment is never kept.
-        self.assertTrue(any('minors_is_always_excluded' in x for x in bad(seg('S1','safety','minors','restrict_visuals',severity='high',why=why))))
+        # The hard lines of safety: sexual content involving a minor is always excluded (and a child in an ordinary
+        # scene is never filed under it); a high-severity segment is never kept as it is.
+        self.assertTrue(any('sexual_content_minors_is_always_excluded' in x for x in bad(seg('S1','safety','sexual_content_minors','restrict_visuals',severity='high',why=why))))
+        self.assertTrue(any('minors_is_not_a_category' in x for x in bad(seg('S1','safety','minors','exclude',severity='medium',why=why+' twice over',avoid=['x']))))
         self.assertTrue(any('high_severity_cannot_be_kept' in x for x in bad(seg('S1','safety','graphic_injury','keep',severity='high',why=why))))
         self.assertTrue(any('exclude_must_name_what_to_avoid' in x for x in bad(seg('S1','safety','graphic_injury','exclude',severity='high'))))
+        # Proportionate, and grounded: an exclusion says why the lighter actions are not enough; what is low is never
+        # excluded; evidence cites the times it was seen or heard; a doubt is looked at closer whatever is decided.
+        self.assertTrue(any('exclude_must_say_why_restricting_what_is_shown_is_not_enough' in x for x in bad(
+            seg('S1','safety','graphic_injury','exclude',severity='medium',avoid=['the wound']))))
+        self.assertTrue(any('exclude_must_say_why_it_is_a_story_device_not_a_plain_fact' in x for x in bad(
+            seg('S1','religion_superstition','religious','exclude',avoid=['the ritual']))))
+        self.assertTrue(any('low_severity_is_restricted_or_kept_never_excluded' in x for x in bad(
+            seg('S1','safety','distressing','exclude',severity='low',avoid=['the fall'],why='the fall is the whole point of this moment'))))
+        self.assertTrue(any('evidence_must_cite_the_times' in x for x in bad(
+            seg('S1','safety','distressing','keep',severity='low',why=why,evidence='seen in the frames and heard in the words'))))
+        self.assertTrue(any('unsure_needs_a_closer_look' in x for x in bad(
+            seg('S1','safety','graphic_injury','exclude',severity='medium',confidence='unsure',avoid=['the wound'],
+                why='the moment is the injury itself, nothing else is told',**{'from':'00:02','to':'00:02.5'}))))
         # Not sure, and still to be used: a closer look first.
         unsure=seg('S1','safety','graphic_injury','restrict_visuals',severity='medium',confidence='unsure',why=why)
         self.assertTrue(any('needs_a_closer_look' in x for x in bad(unsure)))
@@ -1707,8 +1724,10 @@ class StaticStudioTests(unittest.TestCase):
               seg('S2','safety','distressing','keep',severity='low',why='casualty figures stated plainly over a map, nothing shown'),
               seg('S3','safety','graphic_injury','restrict_visuals',severity='high',why='the fight is told, the wound never shown'),
               seg('S4','religion_superstition','superstition','exclude',avoid=['omen','crows foretelling death'],
+                  why='the omen carries the dread of the whole scene, a device and not a fact',
                   depends=[{'from':'00:05','to':'00:06','why':'the payoff recalls the omen'}]),
-              seg('S5','holiday','holiday','exclude',avoid=['christmas truce'])]
+              seg('S5','holiday','holiday','exclude',avoid=['christmas truce'],
+                  why='the truce is staged as a holiday scene that carries the episode')]
         out=self.content_review('V001',good,story_without_exclusions={'status':'bridged','note':'the dread comes from the weather and the silence instead'})
         self.assertEqual((out['excluded'],out['restricted'],out['kinds']),(2,2,{'safety':3,'religion_superstition':1,'holiday':1}))
         saved=json.loads((self.run/'20-analysis/content/V001.json').read_text())
@@ -1731,8 +1750,9 @@ class StaticStudioTests(unittest.TestCase):
         def seg(sid, a, b_, kind, cat, action, **kw):
             return {'id':sid,'from':a,'to':b_,'kind':kind,'category':cat,'action':action,'confidence':'sure',
                     'what':'a soldier reads an omen in the crows' if kind!='safety' else 'a close view of a wound',
-                    'role':'it builds dread before the attack','evidence':'said and shown at this time',**kw}
+                    'role':'it builds dread before the attack','evidence':f'said and shown from {a} to {b_}',**kw}
         self.content_review('V001',[seg('S1','04:50','05:10','religion_superstition','superstition','exclude',avoid=['omen','crows foretelling death'],
+                                        why='the omen is the device that carries the dread, not a plain fact',
                                         depends=[{'from':'06:10','to':'06:30','why':'the payoff recalls the omen'}])],
                             story_without_exclusions={'status':'bridged','note':'the dread comes from the weather and the silence instead'})
         self.content_review('V002',[seg('S1','02:00','02:20','safety','graphic_injury','restrict_visuals',severity='high',
@@ -1746,6 +1766,13 @@ class StaticStudioTests(unittest.TestCase):
         doc['evidence']['observations'][2]['at']='06:15-06:25'; save(vd/'direction.json',doc)
         self.assertIn('direction_cites_excluded_material:V001@06:15-06:25:S1(religion_superstition)',lock(2)['details'])
         # ...while the rest of that reference stays usable, and the restricted moment lends how it is told only.
+        # A useful element inside the excluded moment may be cited, naming exactly what is taken (a warning, on record).
+        doc['evidence']['observations'][2].update({'at':'04:55-05:00','borrows_only':'the long silent hold before the cut, not the omen'})
+        save(vd/'direction.json',doc)
+        df=self.load_core().direction_facts(self.run,1)
+        self.assertFalse([x for x in df['issues'] if 'excluded' in x])
+        self.assertTrue(any('inside excluded S1, cited only for: the long silent hold' in w for w in df['warnings']))
+        doc['evidence']['observations'][2].pop('borrows_only')
         doc['evidence']['observations'][2]['at']='07:00-07:20'
         (vd/'script.json').rename(vd/'script-later.json')          # the direction is locked before the script
         self.lock_direction(vd)
@@ -1791,7 +1818,8 @@ class StaticStudioTests(unittest.TestCase):
         save(jobp,{'run':str(self.run),'video':1,'purpose':'thumbnail','images':[{'prompt':'an empty helmet in the trampled snow at the bridge, dawn light behind','out':str(stills/'t.png')}]})
         self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
         # A story that depends on what was excluded: its craft may still be cited, never its story.
-        self.content_review('V002',[seg('S1','02:00','02:20','safety','graphic_injury','exclude',severity='high',avoid=['the wound'])],
+        self.content_review('V002',[seg('S1','02:00','02:20','safety','graphic_injury','exclude',severity='high',avoid=['the wound'],
+                                        why='the moment is the wound itself, nothing else in it can be told')],
                             story_without_exclusions={'status':'too_dependent','note':'the whole story turns on the injury itself'})
         self.assertTrue(any('V002: its story depends on material excluded' in w for w in self.load_core().direction_facts(self.run,1)['warnings']))
 

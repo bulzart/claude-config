@@ -20,7 +20,9 @@ Profile the comparable references (the length lock's) and any reference whose cr
 niche. A technique from an unrelated niche can be exactly what this story needs; its pacing usually is not.
 
 Every reference the direction cites has its content review (01), and no observation sits inside material it
-excluded (`direction_cites_excluded_material`); a restricted segment lends how it is told, never what it shows. A
+excluded (`direction_cites_excluded_material`), unless the observation is about a useful element inside that
+moment and says exactly which (`borrows_only`, a few words: "the cigarette-case exchange, not the prayer"); a
+restricted segment lends how it is told, never what it shows. A
 reference whose story depends on excluded material (`too_dependent`) still teaches its craft; never its story. When
 leaving material out takes away something the story needed, invent the bridge: a different, original way to do that
 narrative work, never the same device renamed and never filler.

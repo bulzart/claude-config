@@ -990,7 +990,7 @@ def content_flags(lines, review_text, themes=()):
 # were really taken, and that nothing excluded is cited or brought back downstream; the judgement is the agent's.
 CONTENT_KINDS = ('safety', 'religion_superstition', 'holiday')
 SAFETY_CATEGORIES = ('graphic_injury', 'distressing', 'self_harm', 'dangerous_acts', 'sexual_violence_exploitation',
-                     'minors', 'hate_extremism', 'nudity_indecency', 'other')
+                     'sexual_content_minors', 'hate_extremism', 'nudity_indecency', 'other')
 CREATIVE_CATEGORIES = {'religion_superstition': ('religious', 'superstition'), 'holiday': ('holiday',)}
 CONTENT_ACTIONS = {'safety': ('exclude', 'restrict_visuals', 'keep'),
                    'religion_superstition': ('exclude', 'keep'), 'holiday': ('exclude', 'keep')}
@@ -1027,25 +1027,34 @@ def make_shot_sheets(rd, ref):
         shots = prof['shots']
     else:
         shots = av.segment_shots(av.frame_features(rows))[0]
+    out = shot_sheets_dir(rd, ref)
+    picked, sheets = render_shot_sheets(av, rows, shots, out, ref)
+    write_json(out / 'index.json', {'reference_id': ref, 'shots': picked, 'sheets': sheets, 'frames': len(rows),
+                                    'sampler': fi.get('sampler') or LEGACY_SAMPLER, 'made_at': now()})
+    return {'shots': len(picked), 'sheets': sheets}
+
+
+def render_shot_sheets(av, rows, shots, out, label):
+    """rows [(t_s, frame path)], shots from segment_shots: the sample nearest each shot's middle, 36 to a sheet."""
     times = [t for t, _ in rows]
     picked = []
     for k, s in enumerate(shots, 1):
         mid = (float(s['start_s']) + float(s['end_s'])) / 2
         j = min(range(len(times)), key=lambda q: abs(times[q] - mid))
-        picked.append({'n': k, 'start_s': s['start_s'], 'end_s': s['end_s'], 'frame_s': times[j], 'file': rows[j][1].name})
-    out = shot_sheets_dir(rd, ref)
+        picked.append({'n': k, 'start_s': s['start_s'], 'end_s': s['end_s'], 'frame_s': times[j], 'file': Path(rows[j][1]).name,
+                       '_path': rows[j][1]})
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob('sheet-*.jpg'):
         old.unlink()
     sheets = []
     for i in range(0, len(picked), SHOTS_PER_SHEET):
         part = picked[i:i + SHOTS_PER_SHEET]
-        sheets.append(av.window_sheet([(x['frame_s'], rows[0][1].parent / x['file']) for x in part],
+        sheets.append(av.window_sheet([(x['frame_s'], x['_path']) for x in part],
                                       out / f'sheet-{i // SHOTS_PER_SHEET + 1:03d}.jpg',
-                                      f'{ref}  shots {part[0]["n"]}-{part[-1]["n"]} of {len(picked)}: one frame of every shot'))
-    write_json(out / 'index.json', {'reference_id': ref, 'shots': picked, 'sheets': sheets, 'frames': len(rows),
-                                    'sampler': fi.get('sampler') or LEGACY_SAMPLER, 'made_at': now()})
-    return {'shots': len(picked), 'sheets': sheets}
+                                      f'{label}  shots {part[0]["n"]}-{part[-1]["n"]} of {len(picked)}: one frame of every shot'))
+    for x in picked:
+        x.pop('_path')
+    return picked, sheets
 
 
 def picture_looks_path(rd, video):
@@ -1109,14 +1118,22 @@ def content_review_issues(rd, ref, doc, row):
             if cat in ('religious', 'superstition', 'holiday'):
                 iss.append(f'segment_{sid}_religious_superstitious_or_holiday_material_is_not_a_safety_category:'
                            'record it as kind religion_superstition or holiday')
+            elif cat == 'minors':
+                iss.append(f'segment_{sid}_minors_is_not_a_category:sexual_content_involving_a_minor_is_'
+                           'sexual_content_minors;_a_child_in_an_ordinary_scene_is_not_harm_by_itself_(our_own_pictures_'
+                           'show_adults,_02)')
             elif cat not in SAFETY_CATEGORIES:
                 iss.append(f'segment_{sid}_safety_category_must_be:' + '/'.join(SAFETY_CATEGORIES))
-            if str(s.get('severity') or '') not in ('low', 'medium', 'high'):
+            sev = str(s.get('severity') or '')
+            if sev not in ('low', 'medium', 'high'):
                 iss.append(f'segment_{sid}_safety_needs_a_severity:low/medium/high')
-            if cat == 'minors' and action != 'exclude':
-                iss.append(f'segment_{sid}_minors_is_always_excluded')
-            if str(s.get('severity')) == 'high' and action == 'keep':
+            if cat == 'sexual_content_minors' and action != 'exclude':
+                iss.append(f'segment_{sid}_sexual_content_minors_is_always_excluded')
+            if sev == 'high' and action == 'keep':
                 iss.append(f'segment_{sid}_high_severity_cannot_be_kept_as_it_is')
+            # proportionate: what is low in severity is told within 02 (restricted) or kept, never cut out
+            if sev == 'low' and action == 'exclude' and cat != 'sexual_content_minors':
+                iss.append(f'segment_{sid}_low_severity_is_restricted_or_kept_never_excluded')
         else:
             if cat not in CREATIVE_CATEGORIES[kind]:
                 iss.append(f'segment_{sid}_category_must_be:' + '/'.join(CREATIVE_CATEGORIES[kind]))
@@ -1130,9 +1147,16 @@ def content_review_issues(rd, ref, doc, row):
             iss.append(f'segment_{sid}_role_must_say_what_it_does_in_the_story')
         if n_words(s.get('evidence')) < 3:
             iss.append(f'segment_{sid}_evidence_must_say_what_shows_it')
+        elif not re.search(r'\d{1,2}:\d{2}', str(s.get('evidence'))):
+            iss.append(f'segment_{sid}_evidence_must_cite_the_times_it_was_seen_or_heard_(mm:ss)')
         if str(s.get('confidence') or '') not in ('sure', 'unsure'):
             iss.append(f'segment_{sid}_confidence_must_be_sure_or_unsure')
-        if action in ('keep', 'restrict_visuals') and n_words(s.get('why')) < 4:
+        if action == 'exclude' and n_words(s.get('why')) < 6:
+            # the lighter actions were considered: why the moment cannot be told with what is shown restricted
+            # (safety), or why it is a story device and not a plain fact (the creative exclusions)
+            iss.append(f'segment_{sid}_exclude_must_say_why_' + ('restricting_what_is_shown_is_not_enough' if kind == 'safety'
+                                                                 else 'it_is_a_story_device_not_a_plain_fact'))
+        elif action in ('keep', 'restrict_visuals') and n_words(s.get('why')) < 4:
             iss.append(f'segment_{sid}_{action}_must_say_why')
         avoid = [str(x).strip() for x in s.get('avoid') or [] if str(x).strip()]
         if action == 'exclude' and not avoid:
@@ -1147,8 +1171,9 @@ def content_review_issues(rd, ref, doc, row):
             else:
                 deps.append((da, db))
         looks = closer_looks(rd, ref, a, b_) if a is not None else []
-        if str(s.get('confidence')) == 'unsure' and action != 'exclude' and a is not None and not looks:
-            iss.append(f'segment_{sid}_unsure_and_used_needs_a_closer_look_first_(inspect-window)')
+        if str(s.get('confidence')) == 'unsure' and a is not None and not looks:
+            # whatever is decided (cut, restricted or kept), a doubt is settled on what is there, not on a cue
+            iss.append(f'segment_{sid}_unsure_needs_a_closer_look_first_(inspect-window)')
         segs.append({'id': sid, 'from_s': a, 'to_s': b_, 'kind': kind, 'category': cat, 'action': action,
                      'depends_s': deps, 'avoid': avoid, 'closer_looks': looks})
     if any(x['action'] == 'exclude' for x in segs):
@@ -1587,7 +1612,10 @@ def direction_facts(rd, video):
             continue
         for lo, hi, sid, kind, action in cut.get(v) or content_exclusions(rd, v):
             if a <= hi and b_ >= lo:
-                if action == 'exclude':
+                if action == 'exclude' and n_words(o.get('borrows_only')) >= 6:
+                    warn.append(f'{v}@{o.get("at")} is inside excluded {sid}, cited only for: {o.get("borrows_only")} '
+                                '(never the excluded material itself)')
+                elif action == 'exclude':
                     iss.append(f'direction_cites_excluded_material:{v}@{o.get("at")}:{sid}({kind})')
                 else:
                     warn.append(f'{v}@{o.get("at")} is inside {sid}, whose visuals are restricted: borrow how it is '
@@ -6146,6 +6174,11 @@ def cmd_av_profile(args):
             prof = av.profile(f'video-{n:02d}', meta['duration_s'], frames, wav, words,
                               sheets_dir=None if args.no_sheets else target.with_suffix(''),
                               segments=_segments_of(tj), fps=run_analysis_fps(st), sampler=av.SAMPLER)
+            # every shot of our own export once, for the final reviewer: a short shot between two watch-sheet frames
+            # is seen there (made now, while the export's frames exist)
+            prof['shot_sheets'] = ([] if args.no_sheets or not prof.get('shots') else
+                                   render_shot_sheets(av, frames, prof['shots'], target.with_suffix('') / 'shots',
+                                                      f'video-{n:02d}')[1])
         for s in prof['shots']:
             s.pop('keyframe', None)            # the export's frames were temporary; the sheets keep the pictures
         lock = read_json(video_dir(rd, n) / 'length-lock.json')
@@ -6153,7 +6186,8 @@ def cmd_av_profile(args):
                               if ref_av_path(rd, v).is_file()}
         prof.update({'source': {'file': str(f), 'fingerprint': fp}, 'made_at': now()})
         write_json(target, prof)
-        results[f'video-{n:02d}'] = {'file': str(target), 'sheets': len(prof['sheets']), 'summary': prof['summary'],
+        results[f'video-{n:02d}'] = {'file': str(target), 'sheets': len(prof['sheets']),
+                                     'shot_sheets': len(prof.get('shot_sheets') or []), 'summary': prof['summary'],
                                      'references': prof['references']}
     else:
         error('Give --refs V001,V002 (references), or --video NN --file export.mp4 (this video\'s export).')
@@ -6390,7 +6424,8 @@ FINAL_BRIEF = """# Final watch review: {TITLE}
 
 You review the finished video as a viewer would experience it. You cannot play it; you have its watch sheets: one
 image per minute, a frame every 5 seconds with the words spoken under it. Open every sheet in order and read them
-like a film. Below them are a few measurements per minute (facts, not verdicts). Read nothing else and change no file
+like a film. Then open its shot sheets: one frame of every shot in order, so a short shot that falls between two
+watch-sheet frames is seen too. Below them are a few measurements per minute (facts, not verdicts). Read nothing else and change no file
 except the one you are asked to write.
 
 Judge it against what each part was meant to feel like (listed below), not against a generic checklist:
@@ -6400,7 +6435,8 @@ Judge it against what each part was meant to feel like (listed below), not again
 4. Where does it feel like a lecture or a dry documentary instead of a story? Where does it drag or rush?
 5. Continuity breaks: a person, place, object, light or time of day that jumps without reason.
 6. The first minute and the ending.
-7. Anything on screen or in the words that breaks the house rules.
+7. Anything on screen or in the words that breaks the house rules, however it is carried: said outright,
+   paraphrased or implied, or only shown in a picture.
 
 Findings (at most 12), each with "at" as "mm:ss-mm:ss", severity "major" (a viewer would likely leave, get lost
 or stop trusting it there) or "minor", the problem, why it matters to a viewer, and a suggestion.
@@ -6523,6 +6559,9 @@ def cmd_review_packet(args):
             a_s, b_s = spans.get(str(b.get('id')), (b.get('start_s'), b.get('end_s')))
             text += f'- {_mmss(a_s)}-{_mmss(b_s)}: {b.get("experience") or b.get("narrative_job")} (pace: {b.get("pace") or "-"})\n'
         text += '\n## Watch sheets, in order\n' + '\n'.join(f'- {p}' for p in prof.get('sheets') or []) + '\n'
+        if prof.get('shot_sheets'):
+            text += ('\n## Shot sheets: every shot once, in order\n' +
+                     '\n'.join(f'- {p}' for p in prof['shot_sheets']) + '\n')
         text += '\n## Measurements per minute (facts, not verdicts)\n| minute | cuts | moving | wpm | pitch range st |\n|---|---|---|---|---|\n'
         wins = prof.get('windows') or []
         for m0 in range(0, int(prof.get('duration_s') or 0) + 1, 60):

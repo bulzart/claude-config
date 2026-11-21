@@ -120,13 +120,15 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" status --run "RUN"
 ```
 
 `kind` is `safety` (with a `category`: graphic_injury, distressing, self_harm, dangerous_acts,
-sexual_violence_exploitation, minors (anything sexual involving a minor; a child in an ordinary or non-sexual scene is
-`other`, since every person this pipeline pictures is a clearly adult figure), hate_extremism, nudity_indecency,
-other; and a `severity`) or one of the user's
+sexual_violence_exploitation, sexual_content_minors (sexual content involving a minor, always excluded; a child in an
+ordinary scene is not a safety segment by itself, since every person this pipeline pictures is a clearly adult
+figure), hate_extremism, nudity_indecency, other; and a `severity`) or one of the user's
 creative exclusions, `religion_superstition` (religious or superstition) and `holiday` (holiday), which carry no
 severity: they are not harm. `action`: `exclude` (with `avoid`; `depends` for what goes with it), `restrict_visuals`
-(safety only; with `why`) or `keep` (with `why`). `minors` is always excluded; `high` is never kept as it is; an
-`unsure` segment that is used needs a closer look (`inspect-window`) overlapping it; the shot sheets must exist
+(safety only) or `keep`, each with `why` (an exclusion: why restricting is not enough, or why it is a device and not a
+plain fact). `sexual_content_minors` is always excluded; `high` is never kept as it is; `low` is never excluded;
+`evidence` cites the times seen or heard (mm:ss); every `unsure` segment needs a closer look (`inspect-window`)
+overlapping it; the shot sheets must exist
 (`--shot-sheets`, `20-analysis/content/V###-shots/`: `sheet-NNN.jpg` and `index.json` with each shot's start, end and
 the time of the frame shown). The saved file adds the frames the review was made on, the closer looks taken (found on
 disk, not typed) and how many shot sheets there were. `content-review --status` lists every
@@ -368,7 +370,8 @@ for the script and the final review, round 1 for the treatments).
 rate and its spread, pitch range and movement in semitones, loudness contrast, the level under the voice in its
 gaps, by third of the film; picture: shots, cuts per minute, shot lengths, moving and still share, flashes, the same
 picture again, brightness and saturation), `windows` (every 15 s: the words said and every measure), `shots`,
-`sheets` (one JPEG per minute; each tile names its frame's own time and the words of its five seconds), `sampled_fps` and `sampler` (how the frames were taken: cut counts compare only between videos sampled alike), `inspect_candidates` (stretches the samples cannot settle), `thresholds` (the picture's are seconds turned into frame pairs at that rate) and `unknowns`. `10-media/V###/frame-index.json` (2 fps run): `{mode: "source_pts", sampler, fps, interval_s, clock_origin_s, max_gap_s, frames: [{file, t_s, pts_s, slot_s, approx_s}]}` (`approx_s` repeats `t_s` for older readers; a run made before keeps `mode: "nominal_sample_time"`). `preparation.json` keeps the frames' and the transcript's cache keys apart (`frames_signature`: source, rate, width, sampler; `transcript_signature`: source, Whisper model), so new frames never re-run Whisper. `transcript.json` records the `engine` Whisper really ran on (device, compute type, GPU) with `elapsed_s` and `realtime_x`. `50-audio/video-NN/delivery.json` holds the same
+`sheets` (one JPEG per minute; each tile names its frame's own time and the words of its five seconds), for an
+export also `shot_sheets` (one frame of every shot, for the final reviewer), `sampled_fps` and `sampler` (how the frames were taken: cut counts compare only between videos sampled alike), `inspect_candidates` (stretches the samples cannot settle), `thresholds` (the picture's are seconds turned into frame pairs at that rate) and `unknowns`. `10-media/V###/frame-index.json` (2 fps run): `{mode: "source_pts", sampler, fps, interval_s, clock_origin_s, max_gap_s, frames: [{file, t_s, pts_s, slot_s, approx_s}]}` (`approx_s` repeats `t_s` for older readers; a run made before keeps `mode: "nominal_sample_time"`). `preparation.json` keeps the frames' and the transcript's cache keys apart (`frames_signature`: source, rate, width, sampler; `transcript_signature`: source, Whisper model), so new frames never re-run Whisper. `transcript.json` records the `engine` Whisper really ran on (device, compute type, GPU) with `elapsed_s` and `realtime_x`. `50-audio/video-NN/delivery.json` holds the same
 narration measures for the recorded voice, per beat (`spans`, with what each beat asked for) and next to the
 references'. All of it is measurement; none of it is a verdict.
 
