@@ -10,7 +10,7 @@ be watched. **Most leads end as nothing, and recovering no moment at all is a no
   `maybe` (a moment a mining agent set aside, with why), `reaction` (a chat burst a mining agent set aside as "no reaction" or as the game's own line or
   scene, without his face seen: on the caseoh run three of three such bursts checked hid a laugh on the face cam, because a laugh is almost never in the
   transcript), `summary` (a line of a block's summary that no moment covers), `thread` (a point of a running bit
-  or a story that no moment covers; the threads of every block are listed at the end, so a bit that runs through two blocks is visible as one), `sample`
+  or a story that no moment covers: a lead of its own only with `config.json -> recall.thread_leads`, because 15 such leads on two runs gave no moment, only two context lines; the threads of every block are always listed at the end, with their points no moment covers, so a bit that runs through two blocks is visible as one: read them as context), `sample`
   (a window placed by the clock alone: no number chose it, so it finds what has no numbers: a quiet line, a picture gag).
 - The block files `RUN/20-analysis/blocks/block-NN.json` (what the scan found: the moments, the acts, the summaries, the notes), `RUN/20-analysis/brief.md`
   and `clip-criteria.md`, and the data: `RUN/10-media/Cnnnn/report.md`, `transcript.txt` (`[sub]` = words that match the subtitle on screen: in a game, the
@@ -29,6 +29,7 @@ be watched. **Most leads end as nothing, and recovering no moment at all is a no
   the picture and the sound numbers only, and say so.
 - `reaction`: the face-cam strip over the burst first, then the words around it. Laughing at something touchy (safety.md: hate, religion) stays out; a song
   under it is `music_risk`.
+- A `summary` or `sample` lead whose words carry the game's joke, a reveal, a fail or a stunt gets his face too (a face-cam strip), not the words alone: on the caseoh run (2026-11-20) one agent named all 102 leads of a 5-hour stream in 96 tool calls and missed the best find a closer look had made, a laugh on the face cam at a game line with no chat burst.
 - `summary`, `thread` and `maybe`: read the words around it (`T window` from about 30 s before to 60 s after, longer when it is a story) and the chunk's
   report lines for that time; look at a dense sheet or a frame when the picture may carry it.
 - `sample`: read the window's words (`T window --from <rec_from> --to <rec_to>`), look at its cells on the dense sheet (or `T sheet` of the window) and at

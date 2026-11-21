@@ -45,6 +45,7 @@ Whisper may mishear it. If the recon cannot name the guest, search with what the
 ### R4 What is working as a clip right now
 For this streamer and this topic on TikTok, YouTube Shorts and Instagram Reels (and the long YouTube compilations): the formats and hooks that are travelling, typical lengths,
 how the captions and sound look, what the top clip channels post, titles that pull. Five to eight real examples and what to learn from each.
+**Long videos** (the user, 2026-11-20): how this streamer's long-form viewers watch: what the streamer's own channel and the clip channels post as long videos (full VODs, edited playthroughs, episode highlights, best-ofs), how long, how much of a stream they keep, and whether the stream's full VOD is already up. It tells the planner what a long video here is for (`portfolio.md` section 2).
 
 ## How to search (what works on this PC)
 - `WebSearch` is the main tool; `mode: "extended"` for anything recent or niche (the stream is days old: the topic's news is fresh, a standard search returns last year's),
@@ -60,7 +61,7 @@ how the captions and sound look, what the top clip channels post, titles that pu
 `RUN/20-analysis/brief.md`, at most about 4 KB, plain language:
 1. **This stream:** channel, date, length, title and category changes, who is on, what it is about (3 to 5 lines).
 2. **The streamer and their people:** who they are, who watches, what the audience loves and hates, what is on brand.
-3. **What travels for them:** the 6 to 10 kinds of moment fans share (each with a real example in a few words).
+3. **What travels for them:** the 6 to 10 kinds of moment fans share (each with a real example in a few words), and the long-video line: how their long-form viewers watch (the form, the length, how much of a stream; tagged, a guess marked [I]).
 4. **The topic's social pulse:** what everyone is saying and joking about, the key points, the scale in words, the lingo, what viewers wait for.
 5. **People:** each guest or named person in a line, with the spelling to use.
 6. **Touchy:** what must not be joked about or shown (religion and superstition always: avoided), what gets blurred (gore, distress, nudity only: never personal data), spoiler or controversy notes.

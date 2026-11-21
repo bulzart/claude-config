@@ -19,7 +19,8 @@
     "sample_every_s": 600,
     "sample_len_s": 90,
     "min_stretch_s": 45,
-    "margin_s": 15
+    "margin_s": 15,
+    "thread_leads": false
   },
   "voices": {
     "enabled": true,

@@ -291,6 +291,19 @@ def main():
           "the planned length is an 'expected length' (an estimate from the spans), never called a target in the planner's guide or the long-video builder")
     check("not worth a video" in sk("cc-build-long") and "not worth a video:" in sk("cc-produce") and "not retried" in sk("cc-produce") and "dropped" in sk("cc-wrapup"),
           "a long video its builder judges not worth making is set failed with 'not worth a video: <why>', is not retried by cc-produce, and the wrap-up lists it as dropped with its reason")
+    # the user's spec of 2026-11-20 (STREAMER MODE): streamer-aware long-form intelligence: the three kinds of footage, the forms, the set, the paper edit, the long-video line
+    check(all(w in cl for w in ("Three kinds of footage", "worth watching", "what a kept part needs", "what gives the viewer nothing", "Quiet is not the third kind")),
+          "clip-economy.md: the three kinds of footage (worth watching, what a kept part needs, what gives the viewer nothing), quiet is not the third kind by itself")
+    check(all(w in pf for w in ("story episode", "condensed run", "best-of", "no form is the default", "Read the set as a viewer would", "editorial notes", "long-video line", "nothing is kept by default")),
+          "portfolio.md: the long video's form is chosen from the content and the audience (no default), the set is read as a whole, the briefs carry editorial notes, the brief's long-video line is read first")
+    check(all(w in sk("cc-plan") for w in ("long-video line", "no form is the default", "three kinds of footage")) and "second kind" in ref,
+          "cc-plan reads the long-video line, picks a form per video and tells the three kinds apart; context-keeping.md is the second kind")
+    check(all(w in sk("cc-build-long") for w in ("T paper", "paper-edit.md", "three kinds of footage", "clip-criteria.md", "Watch it on paper", "never cut the second kind")),
+          "cc-build-long sorts the three kinds, reads clip-criteria.md, and reads its video on paper (T paper) before it is built")
+    check("paper" in cmds and "how their long videos are watched" in read(CC / "reference" / "research-agent.md") and "long-video line" in read(CC / "reference" / "research-playbook.md") and "long-video line" in sk("cc-profile"),
+          "cc.py registers paper; the research note asks how the streamer's long videos are watched and the brief carries it as the long-video line")
+    check("T paper" in rt and "three kinds of footage" in rt and "paper-edit" in readme and "paper edit" in sk("cc-produce") and "paper-edit" in sk("cc-wrapup"),
+          "the router, the README, cc-produce and cc-wrapup carry the paper edit and the three kinds")
     # the user's choice of 2026-11-14 (BOTH MODES): the spoken language is found per stream (auto, fallback, a lock per run), the task stays transcribe; the agents read it in that language
     lg = read(CC / "reference" / "language.md")
     check(all(w in lg for w in ("auto", "fallback_language", "language_locked", "never translate", "An ad chunk", "mask_terms", "Posting text", "multilingual")),

@@ -1,7 +1,7 @@
 # Context in the parts you cut (streamer mode, long videos)
 
 The user, 2026-11-14: a part of the stream that has nothing to show is left out of a long video. Sometimes such a part holds something a viewer would be lost without, and something the video keeps leans on it. Then the agents may keep that bit, or only the part of it that carries the context, when they find it useful.
-This is guidance for the agents' own judgement, based on what the stream shows. There are no limits, quotas or fixed lengths here, and it is never a reason to keep something by default.
+In the craft sheet's words (`clip-economy.md`, the three kinds of footage) this is the second kind: what a kept part needs. This is guidance for the agents' own judgement, based on what the stream shows. There are no limits, quotas or fixed lengths here, and it is never a reason to keep something by default.
 
 ## How to judge (from the data)
 - Read what the stream actually says and shows (the words, the frames, the reports), not the numbers alone.
@@ -10,7 +10,7 @@ This is guidance for the agents' own judgement, based on what the stream shows. 
 - The same judgement applies to how a kept span opens: if it starts in the middle of something, the words just before it may be the context it needs.
 
 ## What it can look like (illustrations in any stream's terms, not a list to match)
-The line that says who just joined or what the stream switched to; the rules or the stakes of something that is kept later; a promise made earlier whose result is kept; why the picture looks as it does (a screen gone black, a restart); the premise of the stream when the video would otherwise open in the middle of it.
+The line that says who just joined or what the stream switched to; the rules or the stakes of something that is kept later; a promise made earlier whose result is kept; why the picture looks as it does (a screen gone black, a restart); the premise of the stream when the video would otherwise open in the middle of it; the quiet build-up that makes a climax land (the walk to the door before the scare).
 
 ## Guards (what keeps it honest)
 - Only what is already on tape: no text card, no narration, no line nobody said (`edit-craft.md`). If the context could only be given that way, leave it out and judge the moment without it.
