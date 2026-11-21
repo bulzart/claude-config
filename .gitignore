@@ -85,3 +85,16 @@ __pycache__/
 /create-static/_backups/
 /static-studio/runs/
 /loupe/data/
+
+# ---- never versioned, inside any allowed folder ------------------------------------------------
+# Runtime logs grow on every run and can carry run details, and secrets never belong in a checkpoint;
+# the files stay on disk, only versioning leaves them out (the auto-commit hook follows this file).
+*.log
+**/logs/
+.env
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
