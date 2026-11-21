@@ -136,6 +136,8 @@
     "residual_floor_dbfs": -50.0,
     "thresholds": {"id": 85, "risk": 85, "concern": 50},
     "analysis": true,
+    "escalate": ["sam-audio-base"],
+    "sam": {"python": "C:/Users/Bulzart/Documents/AI/sam-audio/.venv/Scripts/python.exe", "model": "facebook/sam-audio-base", "description": "man speaking", "keep": "target", "dtype": "float32", "chunk_s": 10.0, "shims": "C:/Users/Bulzart/Documents/AI/sam-audio/shims", "gpu_need_mb": 9000, "memguard": "C:/Users/Bulzart/Documents/AI/tools/memguard.py", "memguard_limit_gb": 13, "timeout_s": 3600},
     "recognition": {
       "provider": "none",
       "allow_upload": false,

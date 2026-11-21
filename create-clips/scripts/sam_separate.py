@@ -5,7 +5,11 @@ torch 2.7.1+cu128, the official sam_audio package, dacvae, perception_models, xf
 job = {"device": "cuda", "model": "facebook/sam-audio-base", "dtype": "float32" | "bfloat16", "shims": "<folder holding the torchcodec stand-in>",
        "ode_step": 0.0625 (the official default, 2/32: 16 midpoint steps), "keep_loaded_s": 0,
        "spans": [{"id", "wav_in", "description": "music playing", "keep": "residual" | "target", "anchors": [["+", s, e], ...] or null,
-                  "out": {"target": wav, "residual": wav, "clean_mono": wav, "clean_mask": wav}, "chunk_s": 30.0, "sig": "..."}]}
+                  "out": {"target": wav, "residual": wav, "clean_mono": wav, "clean_mask": wav}, "chunk_s": 30.0, "sig": "...",
+                  production (cc.py music): "wav_out": wav, "words": [[s, e], ...], "gap_gate_s" (or "gap_before_s" / "gap_after_s"), "gate_db",
+                  "crossfade_s"}]}
+A production span ("wav_out") is the music step's cleaned audio: the stereo mask result, lowered by gate_db where no transcript word is near (as
+audio_separate.py does, so a stretch without his talk is quiet, never a half-removed song) and crossfaded into the original at both edges.
 Per span: SAM gets the span in mono at 48 kHz (its processor's own rule) with the text prompt (and time anchors when the span has real ones); it returns
 `target` (the prompted sound) and `residual` (everything else). `keep` says which one is wanted: "residual" when the prompt names the music to take out,
 "target" when it names the voice to keep. Two results are written: `clean_mono` (SAM's own output, at the input's rate, the same on both channels) and
@@ -168,7 +172,7 @@ def main():
         return torch.stft(x, 2048, 512, window=torch.hann_window(2048), return_complex=True)
 
     for sp in job.get("spans") or []:
-        side = (sp.get("out") or {}).get("clean_mask")
+        side = sp.get("wav_out") or (sp.get("out") or {}).get("clean_mask")
         side = side + ".json" if side else None
         try:
             if side and os.path.isfile(side):
@@ -212,18 +216,46 @@ def main():
                 d_in = torch.nn.functional.pad(d_in, (0, n_in - d_in.shape[-1]))
             if out.get("clean_mono"):
                 sf.write(out["clean_mono"], k_in[None].repeat(wav.shape[0], 1).T.numpy(), sr_in)
-            if out.get("clean_mask"):
+            extra = {}
+            if out.get("clean_mask") or sp.get("wav_out"):
                 K, D = stft(k_in).abs() ** 2, stft(d_in).abs() ** 2
                 M = K / (K + D + 1e-10)
                 chans = [torch.istft(stft(wav[c]) * M, 2048, 512, window=torch.hann_window(2048), length=n_in) for c in range(wav.shape[0])]
                 y = torch.stack(chans)
-                pk = float(y.abs().max())
-                if pk > 0.99:
-                    y = y * (0.99 / pk)
-                sf.write(out["clean_mask"], y.T.numpy(), sr_in)
+                if out.get("clean_mask"):
+                    pk = float(y.abs().max())
+                    sf.write(out["clean_mask"], (y * (0.99 / pk) if pk > 0.99 else y).T.numpy(), sr_in)
+                if sp.get("wav_out"):
+                    gap = float(sp.get("gap_gate_s", 2.0))
+                    pre = float(sp["gap_before_s"]) if sp.get("gap_before_s") is not None else gap
+                    post = float(sp["gap_after_s"]) if sp.get("gap_after_s") is not None else gap
+                    speech = torch.zeros(n_in, dtype=torch.bool)
+                    for s, e in sorted(sp.get("words") or []):
+                        a, b = max(0, int((s - pre) * sr_in)), min(n_in, int((e + post) * sr_in))
+                        if b > a:
+                            speech[a:b] = True
+                    g = torch.ones(n_in)
+                    g[~speech] = 10 ** (float(sp.get("gate_db", -40.0)) / 20.0)
+                    k = max(1, int(0.05 * sr_in))                           # 50 ms ramps, never a click
+                    g = torch.nn.functional.avg_pool1d(g[None, None], kernel_size=2 * k + 1, stride=1, padding=k, count_include_pad=False)[0, 0][:n_in]
+                    clean = y * g
+                    xf = min(int(float(sp.get("crossfade_s", 0.15)) * sr_in), n_in // 4)
+                    if xf > 0:
+                        ramp = torch.linspace(0.0, 1.0, xf)
+                        clean[:, :xf] = wav[:, :xf] * (1 - ramp) + clean[:, :xf] * ramp
+                        clean[:, -xf:] = clean[:, -xf:] * (1 - ramp) + wav[:, -xf:] * ramp
+                    pk = float(clean.abs().max())
+                    if pk > 0.99:
+                        clean = clean * (0.99 / pk)
+                    sf.write(sp["wav_out"], clean.T.numpy(), sr_in)
+
+                    def rdb(x):
+                        return round(20 * float(torch.log10(torch.sqrt(torch.mean(x.float() ** 2)) + 1e-12)), 2) if x.numel() else None
+                    extra = {"duration_s": round(n_in / sr_in, 3), "rms_db": {"mix": rdb(wav), "clean": rdb(clean)},
+                             "gated_share": round(float((~speech).float().mean()), 3), "peak_scaled": pk > 0.99}
             res = {"id": sp.get("id"), "sig": sp.get("sig"), "ok": True, "seconds": round(time.time() - t1, 2), "audio_s": round(n_in / sr_in, 2),
                    "description": sp.get("description"), "keep": sp.get("keep") or "residual", "anchors": sp.get("anchors"),
-                   "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2 ** 20) if device == "cuda" else None}
+                   "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2 ** 20) if device == "cuda" else None, **extra}
             if side:
                 json.dump(res, open(side, "w", encoding="utf-8"))
         except Exception as e:  # noqa: BLE001
