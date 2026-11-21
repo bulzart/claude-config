@@ -1265,7 +1265,8 @@ def content_signals(rd, ref, row):
             'frames': {'count': len(fi.get('frames') or []), 'fps': fi.get('fps'), 'sampler': fi.get('sampler') or LEGACY_SAMPLER},
             'transcribed': tj.get('status') == 'transcribed', 'word_hits': hits[:120],
             'picture_candidates': prof.get('inspect_candidates') if prof else None,
-            'closer_looks_taken': closer_looks(rd, ref),
+            # which stretches were looked at closer, not why: a fresh or second review is not steered by the first
+            'closer_looks_taken': [{k: x[k] for k in ('from_s', 'to_s', 'rate', 'frames')} for x in closer_looks(rd, ref)],
             'shot_sheets': (read_json(shot_sheets_dir(rd, ref) / 'index.json').get('sheets')
                             or 'not made yet: content-review --shot-sheets (one frame of every shot)'),
             'note': 'Places to look, not verdicts: a word can be plain fact, and something can be shown without a word '
@@ -6054,8 +6055,12 @@ def cmd_inspect_window(args):
     shown = 'every frame' if rate == 'native' else f'{rate:g} fps'
     sheet = av.window_sheet([(f['t_s'], out / 'frames' / f['file']) for f in frames], out / 'sheet.jpg',
                             f'{label}  {_mmss(a)}-{_mmss(b)}  {shown}: {len(frames)} frames', words)
+    before = read_json(out / 'index.json')
+    earlier = (before.get('earlier') or []) + ([{'why': before.get('why'), 'made_at': before.get('made_at')}]
+                                               if before.get('made_at') else [])
     write_json(out / 'index.json', {'label': label, 'source': str(src), 'from_s': a, 'to_s': b, 'rate': rate,
-                                    'width': args.width, 'why': args.why, 'clock_origin_s': origin, 'frames': frames,
+                                    'width': args.width, 'why': args.why, 'earlier': earlier,
+                                    'clock_origin_s': origin, 'frames': frames,
                                     'words': ' '.join(str(w.get('text') or '').strip() for w in words),
                                     'sheet': sheet, 'made_at': now()})
     emit({'ok': True, 'window': str(out), 'frames': len(frames), 'sheet': sheet,

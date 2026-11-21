@@ -104,7 +104,7 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" status --run "RUN"
 `20-analysis/content/V###.json`, one per reference, timestamps in `mm:ss` (or `h:mm:ss`, or seconds):
 
 ```json
-{"looked_at": "every 2 fps frame and the whole transcript; a closer look at 12:03-12:09",
+{"looked_at": "every watch sheet and shot sheet, the whole transcript, full frames where it mattered; a closer look at 12:03-12:09",
  "segments": [
    {"id": "S1", "from": "12:03", "to": "12:41", "kind": "religion_superstition", "category": "superstition",
     "what": "a soldier reads an omen in the crows before the attack", "role": "sets up the dread of the night attack",

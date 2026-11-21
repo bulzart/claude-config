@@ -1741,6 +1741,11 @@ class StaticStudioTests(unittest.TestCase):
         sig=cli('content-review','--run',self.run,'--ref','V001','--signals')
         self.assertEqual((sig['frames']['sampler'],len(sig['closer_looks_taken'])),('pts-v1',1))
         self.assertIn('not verdicts',sig['note'])
+        self.assertNotIn('why',sig['closer_looks_taken'][0])        # where the earlier looks were, never what they concluded
+        # The same window looked at again keeps the earlier look's reason on record.
+        again=cli('inspect-window','--run',self.run,'--ref','V001','--from','00:01','--to','00:01.8','--why','a second opinion')
+        idx=json.loads((Path(again['window'])/'index.json').read_text())
+        self.assertEqual((idx['why'],idx['earlier'][0]['why']),('a second opinion','is the injury shown?'))
 
     def test_excluded_material_stays_out_of_what_is_made(self):
         vd=self.write_plan(lock=False)
