@@ -82,7 +82,8 @@ def main():
         sheet_n = 3
 
         r = cc("report", "--run", run, "--dry-run", env={**base, "FAKE_CLAUDE_MODE": "ok"})
-        check(r.get("ok") and r["would_report"] == [cid] and r["model"] == "claude-haiku-5-5" and r["parallel"] == 2, "report --dry-run lists the chunk and the model " + json.dumps(r)[:200])
+        check(r.get("ok") and r["would_report"] == [cid] and r["model"] == "claude-haiku-5-5" and r["parallel"] == json.loads((HERE.parent / "config.json").read_text(encoding="utf-8"))["report"]["parallel"],
+              "report --dry-run lists the chunk, the model and the configured number of sessions at once " + json.dumps(r)[:200])
 
         # ---- a good report
         count_file.unlink(missing_ok=True)
@@ -127,7 +128,7 @@ def main():
               "files not opened: one retry names them, the second attempt opens everything (cost of both counted) " + json.dumps(rep["made_by"])[:200])
         r = cc("report", "--run", run, "--force", "--chunk", cid, env={**base, "FAKE_CLAUDE_MODE": "never_open"})
         rep = json.loads((run / "10-media" / cid / "report.json").read_text(encoding="utf-8"))
-        check(r.get("ok") and len(rep["made_by"]["not_opened"]) >= 3 and any("not opened" in w for w in rep["warnings"]) and "NOT opened" in (run / "10-media" / cid / "report.md").read_text(encoding="utf-8"),
+        check(r.get("ok") and len(rep["made_by"]["not_opened"]) >= 2 and any("not opened" in w for w in rep["warnings"]) and "NOT opened" in (run / "10-media" / cid / "report.md").read_text(encoding="utf-8"),
               "a report whose files were still not all opened after the retry is kept and says so (made_by, warnings, report.md)")
         count_file.unlink(missing_ok=True)
         r = cc("report", "--run", run, "--force", "--chunk", cid, env={**base, "FAKE_CLAUDE_MODE": "no_open"})

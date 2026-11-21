@@ -123,8 +123,9 @@ def main():
               and "[sub] Lord" not in txt, "transcript.txt marks the subtitled lines [sub], leaves the streamer's lines plain:\n" + txt[:400])
         check(V.render_chunk_transcript(run, "C0001") and (cd / "transcript.txt").read_text(encoding="utf-8") == txt, "render_chunk_transcript writes the marked view")
         check(cc_report.source_sig(run, row) == sig_before, "the [sub] marks and voices.json never make the chunk's report stale (same signature)")
-        check(any(p.name == "voices.json" for p in cc_report.must_open(cc_report.inputs(run, "C0001"))),
-              "the reporter is given voices.json to read")
+        opens_, inline_ = cc_report.split_inputs(cc_report.inputs(run, "C0001"))
+        check(any(p.name == "voices.json" for p in opens_) or any(n == "voices.json" for n, _ in inline_),
+              "the reporter is given voices.json (in its prompt since 2026-11-21, opened only when too long)")
         env = {**os.environ, "CC_RUNS_ROOT": str(tmp / "runs"), "CC_NOTIFY": "0", "PYTHONIOENCODING": "utf-8"}
         r, stdout = cc("words", "--run", run, "--from", 100, "--to", 112, env=env)
         check(r.get("ok") and r.get("subtitled_words") == 24 and "[sub] We" in stdout and "here. [/sub]" in stdout and "[sub] Chat," not in stdout,
