@@ -1,0 +1,1 @@
+{"schema": "cc-music-claims/1", "note": "claims really received for a recording (a YouTube Content ID claim, block or restriction), added by the user with `cc.py music-claim --add \"Artist - Title\" --evidence \"...\"`; the only evidence that makes `cc.py music` remove a song", "claims": []}

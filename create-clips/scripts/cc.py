@@ -23,13 +23,15 @@ import argparse
 import importlib
 import json
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import cc_crypto_loader  # noqa: E402,F401  (registers the decrypt-on-import hook before anything below can need it: the user, 2026-11-15)
 
-MODULES = ("cc_proc", "cc_report", "cc_notify", "cc_edit", "cc_hud", "cc_game", "cc_heat", "cc_voices", "cc_recall", "cc_paper")
+HERE = Path(__file__).resolve().parent
+MODULES = ("cc_proc", "cc_report", "cc_notify", "cc_edit", "cc_hud", "cc_game", "cc_heat", "cc_voices", "cc_recall", "cc_paper", "cc_music", "cc_ops")
 
 
 def fail(msg: str, code: int = 2, **extra) -> None:
@@ -81,7 +83,40 @@ def main(argv=None) -> None:
     if not getattr(a, "func", None):
         ap.print_help()
         fail("a command is needed", 2)
-    a.func(a)
+    t0, code = time.time(), 0
+    try:
+        a.func(a)
+    except SystemExit as e:
+        code = e.code if isinstance(e.code, int) else (0 if e.code is None else 1)
+        raise
+    except BaseException:
+        code = 1
+        raise
+    finally:
+        _log_timing(a, t0, code)
+
+
+def _log_timing(a, t0: float, code: int) -> None:
+    """One line per command that works on a run, in RUN/logs/cc-timings.jsonl: what ran, how long, how it ended. `cc.py timings` reads it. A command
+    without a run is not logged. Never fails the command it measures."""
+    try:
+        run = getattr(a, "run", None)
+        if not run:
+            return
+        rp = Path(str(run))
+        if not rp.is_dir():
+            import contextlib
+            import io
+            import cc_common
+            with contextlib.redirect_stdout(io.StringIO()):     # a run given by its name; a failed lookup prints nothing more
+                rp = cc_common.resolve_run(str(run))
+        dest = rp / "logs"
+        dest.mkdir(parents=True, exist_ok=True)
+        line = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "cmd": getattr(a, "cmd", None), "s": round(time.time() - t0, 3), "code": code, "run": rp.name}
+        with open(dest / "cc-timings.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(line) + "\n")
+    except BaseException:  # noqa: BLE001  (resolve_run exits when a run is not found: never let the timing change the command's outcome)
+        pass
 
 
 if __name__ == "__main__":

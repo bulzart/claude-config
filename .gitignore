@@ -59,6 +59,8 @@
 /create-clips/scripts/cc_voices.py
 /create-clips/scripts/cc_recall.py
 /create-clips/scripts/cc_paper.py
+/create-clips/scripts/cc_music.py
+/create-clips/scripts/cc_ops.py
 /create-static/scripts/cs_core.py
 /create-static/scripts/cs_compose.py
 /.credentials.json

@@ -86,7 +86,7 @@ def make_run(tmp: Path) -> Path:
 
 
 def snapshot(run: Path, skip: Path) -> dict:
-    return {str(p): hashlib.sha1(p.read_bytes()).hexdigest() for p in run.rglob("*") if p.is_file() and skip not in p.parents}
+    return {str(p): hashlib.sha1(p.read_bytes()).hexdigest() for p in run.rglob("*") if p.is_file() and skip not in p.parents and (run / "logs") not in p.parents}   # logs: every command is timed there
 
 
 def main():
@@ -155,6 +155,19 @@ def main():
         res, _ = cc("paper", "--run", run, "--edl", tmp / "empty.json")
         check(res.get("ok") is False or "error" in json.dumps(res), "an EDL with no segments is refused")
 
+        # 4b. the study sheet: no EDL, the planned spans as they are (every word, the moments, the marks), written outside the run's analysis
+        res, _ = cc("paper", "--run", run, "--spans", "0-150,240-270", "--out", side / "study")
+        smd = (side / "study" / "study.md").read_text(encoding="utf-8") if (side / "study" / "study.md").is_file() else ""
+        sj = json.loads((side / "study" / "study.json").read_text(encoding="utf-8")) if (side / "study" / "study.json").is_file() else {}
+        check(res.get("ok") is True and abs(res.get("span_s", 0) - 180.0) < 0.01 and smd.startswith("# Study sheet"),
+              "paper --spans without --edl writes the study sheet of the planned spans: " + json.dumps(res)[:160])
+        check("hello chat welcome back" in smd and "nothing to see on this drive" in smd and "[sub] big crash" in smd and "and the end payoff" in smd,
+              "the study sheet prints every word of the planned spans, the game's subtitled words marked [sub]")
+        check(any("dull" in m["what"] for m in sj.get("marks_in_spans", [])) and any("music" in m["what"] for m in sj.get("marks_in_spans", [])),
+              "the study sheet lists what is marked inside the spans (a dull act, an avoid span)")
+        res, _ = cc("paper", "--run", run)
+        check(res.get("ok") is False, "paper with neither --edl nor --spans is refused")
+
         # 5. nothing in the run changed but the paper edit's own files (and the resolved.json this test wrote)
         after = snapshot(run, out)
         check(before == after, "the run's own files are unchanged (the paper edit only reads them)")
@@ -162,7 +175,7 @@ def main():
               "the paper edit writes only paper-edit.md and paper-edit.json beside the EDL")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    n = 24
+    n = 28
     print(f"test_paper: ok {n - len(check.failed)} | " + ("ALL PASSED" if not check.failed else f"FAILED: {check.failed}"))
     sys.exit(1 if check.failed else 0)
 

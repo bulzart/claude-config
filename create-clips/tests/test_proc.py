@@ -224,7 +224,9 @@ def main():
             mono = all(words[i]["s"] <= words[i + 1]["s"] + 0.05 for i in range(len(words) - 1))
             check("A: transcript has words with sane, ordered times", len(words) > 100 and mono and all(0 <= w["s"] <= w["e"] <= dur + 1 for w in words),
                   f"{len(words)} words")
-            check("A: transcript model/device recorded", tr["model"] == ("tiny" if FAST else "medium") and tr["device"] == "cpu" and tr["language"] == "en",
+            check("A: transcript model/device recorded (the GPU, or the CPU with the fallback recorded)", tr["model"] == ("tiny" if FAST else "medium")
+                  and (tr["device"] == "cuda" or (tr["device"] == "cpu" and (tr.get("device_fallback") or os.environ.get("CC_WHISPER_DEVICE") == "cpu")))
+                  and tr["language"] == "en",
                   f"{tr.get('model')} {tr.get('device')} {tr.get('language')}")
             check("A: segments carry avg_logprob / no_speech_prob / compression_ratio", all(k in tr["segments"][0] for k in ("avg_logprob", "no_speech_prob", "compression_ratio")))
             check("A: timeline.md has one row per second", data_rows(cdir / "timeline.md") == math.ceil(dur), f"{data_rows(cdir / 'timeline.md')} rows")

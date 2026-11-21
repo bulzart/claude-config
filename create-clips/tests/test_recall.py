@@ -95,8 +95,11 @@ def main():
         check(sums == [10, 120, 750, 900], "summary lines no moment covers are leads (10, 120-180, 750, 900), the line inside a moment (400) and a time outside "
                                             "the block (1:00:00) are not: " + str(sums))
         thr = sorted(round(x["rec_from"]) for x in kinds.get("thread", []))
-        check(thr == [150, 610, 820, 1700], "thread points from older notes ('Running bits: the hat (150, 610, 820)') and from structured threads, those "
-                                            "inside a moment left out (395, 420, 1425): " + str(thr))
+        check(thr == [], "thread points are not leads of their own by default (2026-11-20: 15 thread leads gave no moment): " + str(thr))
+        gt = R.gather(run, {**cfg, "thread_leads": True})
+        thr = sorted(round(x["rec_from"]) for x in gt["leads"] if x["kind"] == "thread")
+        check(thr == [150, 610, 820, 1700], "with recall.thread_leads, thread points from older notes ('Running bits: the hat (150, 610, 820)') and from "
+                                            "structured threads are leads, those inside a moment left out (395, 420, 1425): " + str(thr))
         mays = kinds.get("maybe", [])
         check(len(mays) == 2 and any(m.get("inside") == "B02-M01" for m in mays) and all("set aside" in m["text"] for m in mays),
               "every set-aside moment is a lead, with its reason, even one inside a moment (named): " + json.dumps(mays)[:240])
@@ -125,8 +128,20 @@ def main():
               "checked": [{"lead": ld["id"], "verdict": "not-a-moment", "why": "x"} for ld in g["leads"][:3]]}
         (run / "20-analysis" / "second-look.json").write_text(json.dumps(sl), encoding="utf-8")
         r, _ = cc("recall", "--run", run, "--check", run / "20-analysis" / "second-look.json", env=env)
-        check(r.get("ok") is False and len(r["unmentioned"]) == len(g["leads"]) - 3 and r["recovered"] == 1,
-              "`--check` lists every lead the second look never mentioned: " + json.dumps(r)[:200])
+        must = [ld for ld in g["leads"] if ld["tier"] in ("look", "sample")]
+        named = {ld["id"] for ld in g["leads"][:3]}
+        check(r.get("ok") is False and len(r["unmentioned"]) == len([ld for ld in must if ld["id"] not in named]) and r["recovered"] == 1
+              and r["read_tier_not_mentioned"] == len([ld for ld in g["leads"] if ld["tier"] == "read" and ld["id"] not in named]),
+              "`--check` lists every look-first lead and sample window the second look never mentioned, and only counts the read-tier ones: " + json.dumps(r)[:200])
+        tiers = {ld["kind"]: ld["tier"] for ld in g["leads"]}
+        check(tiers.get("reaction") == "look" and tiers.get("sample") == "sample" and tiers.get("summary") == "read" and g["tier_counts"]["look"] >= 2,
+              "the tiers: a burst set aside without the face seen is look-first, a sample window is a sample, a summary line is context: " + json.dumps(tiers))
+        md0 = R.render_md(g)
+        check(md0.index("## Look first") < md0.index("## Sample windows") < md0.index("## The rest, by stretch"), "recall.md lists the look-first leads, then the samples, then the rest")
+        sl["checked"] = [{"lead": ld["id"], "verdict": "not-a-moment", "why": "x"} for ld in must]
+        (run / "20-analysis" / "second-look.json").write_text(json.dumps(sl), encoding="utf-8")
+        r, _ = cc("recall", "--run", run, "--check", run / "20-analysis" / "second-look.json", env=env)
+        check(r.get("ok") is True and r["unmentioned"] == [], "every look-first lead and sample window named (the read tier left as context): the check passes")
         sl["checked"] = [{"lead": ld["id"], "verdict": "not-a-moment", "why": "x"} for ld in g["leads"]]
         (run / "20-analysis" / "second-look.json").write_text(json.dumps(sl), encoding="utf-8")
         r, _ = cc("recall", "--run", run, "--check", run / "20-analysis" / "second-look.json", env=env)

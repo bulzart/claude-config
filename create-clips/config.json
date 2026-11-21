@@ -38,7 +38,7 @@
   },
   "whisper": {
     "model": "medium",
-    "device": "cpu",
+    "device": "cuda",
     "compute_type": "int8",
     "language": "auto",
     "fallback_language": "en",
@@ -50,7 +50,9 @@
     "initial_prompt": "",
     "idle_unload_s": 600,
     "local_files_only": true,
-    "cuda_dll_dir": "C:/Users/Bulzart/Documents/AI/ACE-Step-1.5/.venv/Lib/site-packages/torch/lib"
+    "cuda_dll_dir": "C:/Users/Bulzart/Documents/AI/ACE-Step-1.5/.venv/Lib/site-packages/torch/lib",
+    "cuda_compute_type": "float16",
+    "gpu_retry_s": 600
   },
   "chat": {
     "lag_hint_s": 8,
@@ -80,7 +82,7 @@
     "enabled": true,
     "model": "claude-haiku-5-5",
     "effort": "high",
-    "parallel": 2,
+    "parallel": 4,
     "timeout_s": 420,
     "max_turns": 30,
     "max_attempts": 2,
@@ -105,6 +107,23 @@
     "scan_chunks_streamer": 10,
     "scan_chunks_game": 8,
     "produce_max": 4
+  },
+  "produce": {
+    "claim_stale_min": 120
+  },
+  "music": {
+    "enabled": true,
+    "python": "",
+    "device": "cuda",
+    "pad_s": 1.0,
+    "crossfade_s": 0.15,
+    "gap_gate_s": 1.5,
+    "gate_db": -18.0,
+    "threshold": 0.5,
+    "min_music_s": 4.0,
+    "extend_max_s": 60.0,
+    "verify_min_word_match": 0.8,
+    "max_span_s": 900.0
   },
   "awl_home": "C:/Users/Bulzart/.claude/analyze-with-loupe"
 }

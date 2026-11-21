@@ -105,9 +105,12 @@
 - [create-video: captions](create-video-captions.md) — user 2026-11-20: Luckiest Guy box | Montserrat Bold yellow word | none, asked once; captions.py, Whisper word times; CapCut drawing not verified
 - [create-video: narration calibration](create-video-narration-calibration.md) — 2026-11-20 trial (2,051 of 5,000 credits): v4 ~0.40 credits/char, context unbilled, balance lags; waits for the user's ears
 - [create-clips: who speaks ([sub])](create-clips-speaker-facts.md) — 2026-11-20: transcript words matching on-screen subtitles (OCR) marked [sub]; voices.json, T voices; voice/music/laughter not shipped
-- [create-clips: second look (recall)](create-clips-second-look.md) — 2026-11-20: cc.py recall + ONE second-look agent after the scan; strong 11/11 found by the single pass, recoveries = laughs + cut-off payoffs; config recall.second_look
+- [create-clips: second look (recall)](create-clips-second-look.md) — 2026-11-20: cc.py recall + ONE second-look agent; since 2026-11-21 tiered (look-first + samples), in the background during the merge
 - [create-clips: the face is evidence](create-clips-face-is-evidence.md) — 2026-11-20: 'no reaction' only after a face-cam strip (T sheet --crop); 3 of 3 checked hid a laugh
 - [create-clips: streamer-only lexicon fixes](create-clips-lexicon-scope.md) — 2026-11-20: scope "streamer" never changes words printed in the game's subtitle; plain pairs fix every voice
 - [create-video: Whisper on the GPU](create-video-gpu-whisper.md) — user 2026-11-21: medium, cuda float16, always; CPU only with --cpu-approved; doctor --whisper; script adds the pip CUDA DLL dirs itself
 - [create-video: 2 fps analysis](create-video-analysis-2fps.md) — user 2026-11-21: 2 fps, each frame at its own timestamp (transcript clock); runs keep their rate (old run 5 fps); inspect-window for brief stretches
 - [create-video: content review](create-video-content-review.md) — user 2026-11-21: per-reference safety vs religion/superstition vs holiday, kept apart; selective exclusion; checked downstream; every timeline picture looked at
+- [create-clips: Whisper on the GPU](create-clips-gpu-whisper.md) — user 2026-11-21: the recorder's processing too; cuda float16, automatic CPU fallback per chunk
+- [create-clips: music removed on evidence only](create-clips-music-isolation.md) — user 2026-11-21: T music, claims register, Demucs in the ACE-Step venv; singer under speech stays; never "safe"
+- [create-clips: no detached judges](create-clips-no-detached-judges.md) — user 2026-11-21: no blind/pairwise judges, second planners or compare-builds; context checks + validators
