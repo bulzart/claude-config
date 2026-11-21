@@ -1003,6 +1003,51 @@ def content_review_path(rd, ref):
     return rd / '20-analysis' / 'content' / f'{str(ref).strip().upper()}.json'
 
 
+def shot_sheets_dir(rd, ref):
+    return rd / '20-analysis' / 'content' / f'{str(ref).strip().upper()}-shots'
+
+
+SHOTS_PER_SHEET = 36
+
+
+def make_shot_sheets(rd, ref):
+    """One frame of every shot (the sample nearest its middle), 36 to a sheet, each tile labelled with its frame's
+    time: the content review's picture coverage. The watch sheets show a frame every 5 s, so a shot of a second or
+    two between two tiles is seen only here. Shots come from the av-profile when it was made from these frames,
+    else they are measured from the frames (no audio work)."""
+    av = _av()
+    fi = read_json(rd / '10-media' / ref / 'frame-index.json')
+    rows = [(f['t_s'] if f.get('t_s') is not None else f['approx_s'], rd / '10-media' / ref / 'sampled-frames' / f['file'])
+            for f in fi.get('frames') or []]
+    if not rows:
+        error('No sampled frames for this reference: run prepare first.', ref)
+    prof = read_json(ref_av_path(rd, ref))
+    sig = prof.get('signature') or {}
+    if prof.get('shots') and sig.get('frames') == len(rows) and sig.get('sampler', LEGACY_SAMPLER) == (fi.get('sampler') or LEGACY_SAMPLER):
+        shots = prof['shots']
+    else:
+        shots = av.segment_shots(av.frame_features(rows))[0]
+    times = [t for t, _ in rows]
+    picked = []
+    for k, s in enumerate(shots, 1):
+        mid = (float(s['start_s']) + float(s['end_s'])) / 2
+        j = min(range(len(times)), key=lambda q: abs(times[q] - mid))
+        picked.append({'n': k, 'start_s': s['start_s'], 'end_s': s['end_s'], 'frame_s': times[j], 'file': rows[j][1].name})
+    out = shot_sheets_dir(rd, ref)
+    out.mkdir(parents=True, exist_ok=True)
+    for old in out.glob('sheet-*.jpg'):
+        old.unlink()
+    sheets = []
+    for i in range(0, len(picked), SHOTS_PER_SHEET):
+        part = picked[i:i + SHOTS_PER_SHEET]
+        sheets.append(av.window_sheet([(x['frame_s'], rows[0][1].parent / x['file']) for x in part],
+                                      out / f'sheet-{i // SHOTS_PER_SHEET + 1:03d}.jpg',
+                                      f'{ref}  shots {part[0]["n"]}-{part[-1]["n"]} of {len(picked)}: one frame of every shot'))
+    write_json(out / 'index.json', {'reference_id': ref, 'shots': picked, 'sheets': sheets, 'frames': len(rows),
+                                    'sampler': fi.get('sampler') or LEGACY_SAMPLER, 'made_at': now()})
+    return {'shots': len(picked), 'sheets': sheets}
+
+
 def picture_looks_path(rd, video):
     return rd / '60-visuals' / f'video-{int(video):02d}' / 'content-looks.json'
 
@@ -1029,6 +1074,9 @@ def content_review_issues(rd, ref, doc, row):
     media = rd / '10-media' / ref
     if not (media / 'frame-index.json').is_file():
         iss.append('reference_not_prepared_run_prepare_first')
+    elif read_json(shot_sheets_dir(rd, ref) / 'index.json').get('frames') != len(read_json(media / 'frame-index.json').get('frames') or []):
+        # the review sees every shot: one frame of each (the watch sheets' frame every 5 s can step over a short shot)
+        iss.append('shot_sheets_missing_run_content-review_--shot-sheets_and_open_every_one')
     if row.get('has_audio') and read_json(media / 'transcript.json').get('status') != 'transcribed':
         iss.append('reference_words_not_transcribed_run_prepare_with_whisper_first')
     if n_words(doc.get('looked_at')) < 4:
@@ -1191,6 +1239,8 @@ def content_signals(rd, ref, row):
             'transcribed': tj.get('status') == 'transcribed', 'word_hits': hits[:120],
             'picture_candidates': prof.get('inspect_candidates') if prof else None,
             'closer_looks_taken': closer_looks(rd, ref),
+            'shot_sheets': (read_json(shot_sheets_dir(rd, ref) / 'index.json').get('sheets')
+                            or 'not made yet: content-review --shot-sheets (one frame of every shot)'),
             'note': 'Places to look, not verdicts: a word can be plain fact, and something can be shown without a word '
                     'said. The review is your judgement of the whole video in context.'
                     + ('' if prof else ' Run av-profile for the picture candidates.')}
@@ -1259,6 +1309,12 @@ def cmd_content_review(args):
     if args.signals:
         emit({'ok': True, **content_signals(rd, ref, row)})
         return
+    if args.shot_sheets:
+        made = make_shot_sheets(rd, ref)
+        emit({'ok': True, 'reference': ref, **made,
+              'note': 'Open every sheet: each shot of the video once, at its frame\'s time (the watch sheets show a '
+                      'frame every 5 s and can step over a short shot).'})
+        return
     if not args.file:
         error('Give the review: --file review.json (see 07 for its fields), or --signals for where to look first')
     doc = read_json(Path(args.file).expanduser().resolve(), required=True)
@@ -1271,7 +1327,8 @@ def cmd_content_review(args):
     saved = {**doc, 'reference_id': ref, 'revision': int(old.get('revision') or 0) + 1, 'made_at': now(),
              'frames_seen': {'fps': fi.get('fps'), 'sampler': fi.get('sampler') or LEGACY_SAMPLER,
                              'count': len(fi.get('frames') or [])},
-             'closer_looks': closer_looks(rd, ref)}
+             'closer_looks': closer_looks(rd, ref),
+             'shot_sheets': len(read_json(shot_sheets_dir(rd, ref) / 'index.json').get('sheets') or [])}
     saved['review_sha256'] = canonical_sha({k: v for k, v in saved.items() if k not in ('made_at', 'review_sha256')})
     write_json(target, saved)
     emit({'ok': True, 'file': str(target), 'revision': saved['revision'], 'segments': len(segs),
@@ -6890,6 +6947,7 @@ def main():
                        'for where to look), the look at every picture of an edit (--video --pictures --file), --status')
     p.add_argument('--run', required=True); p.add_argument('--ref'); p.add_argument('--file')
     p.add_argument('--signals', action='store_true'); p.add_argument('--status', action='store_true')
+    p.add_argument('--shot-sheets', action='store_true', help='one frame of every shot, 36 to a sheet, for the review')
     p.add_argument('--video', type=int); p.add_argument('--pictures', action='store_true')
     p.set_defaults(func=cmd_content_review)
     p = sub.add_parser('inspect-window', help='A closer look at a brief stretch of a reference or video: a higher rate '

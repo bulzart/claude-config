@@ -16,6 +16,7 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" 
 python "$HOME/.claude/static-studio/scripts/static_core.py" av-profile --run "RUN" --refs V001,V002,V003
 # Where to look closer, then the content review of each reference (01): what is excluded and what stays useful.
 python "$HOME/.claude/static-studio/scripts/static_core.py" content-review --run "RUN" --ref V001 --signals
+python "$HOME/.claude/static-studio/scripts/static_core.py" content-review --run "RUN" --ref V001 --shot-sheets
 python "$HOME/.claude/static-studio/scripts/static_core.py" inspect-window --run "RUN" --ref V001 --from 12:03 --to 12:09 --why "a fast insert"
 python "$HOME/.claude/static-studio/scripts/static_core.py" content-review --run "RUN" --ref V001 --file "RUN/20-analysis/content/V001-draft.json"
 # Agent writes evidence-grounded 20-analysis/cards/V###.json and niche synthesis.
@@ -119,12 +120,16 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" status --run "RUN"
 ```
 
 `kind` is `safety` (with a `category`: graphic_injury, distressing, self_harm, dangerous_acts,
-sexual_violence_exploitation, minors, hate_extremism, nudity_indecency, other; and a `severity`) or one of the user's
+sexual_violence_exploitation, minors (anything sexual involving a minor; a child in an ordinary or non-sexual scene is
+`other`, since every person this pipeline pictures is a clearly adult figure), hate_extremism, nudity_indecency,
+other; and a `severity`) or one of the user's
 creative exclusions, `religion_superstition` (religious or superstition) and `holiday` (holiday), which carry no
 severity: they are not harm. `action`: `exclude` (with `avoid`; `depends` for what goes with it), `restrict_visuals`
 (safety only; with `why`) or `keep` (with `why`). `minors` is always excluded; `high` is never kept as it is; an
-`unsure` segment that is used needs a closer look (`inspect-window`) overlapping it. The saved file adds the frames
-the review was made on and the closer looks taken (found on disk, not typed). `content-review --status` lists every
+`unsure` segment that is used needs a closer look (`inspect-window`) overlapping it; the shot sheets must exist
+(`--shot-sheets`, `20-analysis/content/V###-shots/`: `sheet-NNN.jpg` and `index.json` with each shot's start, end and
+the time of the frame shown). The saved file adds the frames the review was made on, the closer looks taken (found on
+disk, not typed) and how many shot sheets there were. `content-review --status` lists every
 reference's review.
 
 A closer look (`inspect-window`) writes `20-analysis/inspect/V###/<from>-<to>@<rate>/` with its frames (each at its

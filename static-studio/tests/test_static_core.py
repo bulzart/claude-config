@@ -121,6 +121,7 @@ class StaticStudioTests(unittest.TestCase):
         doc={'looked_at':'every sampled frame and the whole soundtrack, start to end','segments':segments,
              'usable':'the pacing, the holds and the map transitions',**extra}
         rp=self.home/f'review-{ref}.json'; save(rp,doc)
+        cli('content-review','--run',self.run,'--ref',ref,'--shot-sheets')      # every shot seen once
         return cli('content-review','--run',self.run,'--ref',ref,'--file',rp,expected=expected)
 
     def add_ref(self, vid, path, duration, audio, fps=30):
@@ -1651,6 +1652,33 @@ class StaticStudioTests(unittest.TestCase):
         gone=cli('inspect-window','--run',self.run,'--ref','V006','--from','00:02.9','--to','00:03.5','--remove')
         self.assertEqual(list((Path(out['window'])/'frames').glob('*.jpg')),[])
         self.assertIn('frames_removed_at',json.loads(Path(gone['record_kept']).read_text()))
+
+    def test_the_review_sees_every_shot_not_only_the_watch_sheets(self):
+        # A 1.8 s blue shot at 8.0-9.8 s between red: the watch sheets' tiles (frames at 2, 7 and 12 s) never show it.
+        src=self.home/'short-shot.mp4'
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=red:s=64x36:r=30:d=8',
+                        '-f','lavfi','-i','color=c=blue:s=64x36:r=30:d=1.8','-f','lavfi','-i','color=c=red:s=64x36:r=30:d=4.2',
+                        '-filter_complex','[0:v][1:v][2:v]concat=n=3:v=1:a=0','-pix_fmt','yuv420p',str(src)],check=True)
+        self.add_ref('V007',src,14.0,False)
+        cli('prepare','--run',self.run,'--ids','V007','--skip-whisper')
+        cli('av-profile','--run',self.run,'--refs','V007')
+        media=self.run/'10-media/V007/sampled-frames'
+        times={f['t_s']:f['file'] for f in json.loads((self.run/'10-media/V007/frame-index.json').read_text())['frames']}
+        tiles=json.loads((self.run/'20-analysis/av/V007.json').read_text())['sheet_tiles']
+        self.assertEqual([self.colour(media/times[x['frame_s']]) for x in tiles],['red','red','red'])
+        # The review is refused until every shot has been put in front of the reviewer...
+        rp=self.home/'review-V007.json'
+        save(rp,{'looked_at':'every sampled frame and the whole soundtrack, start to end','segments':[],'usable':'the colour cuts'})
+        self.assertIn('shot_sheets_missing_run_content-review_--shot-sheets_and_open_every_one',
+                      cli('content-review','--run',self.run,'--ref','V007','--file',rp,expected=2)['details'])
+        made=cli('content-review','--run',self.run,'--ref','V007','--shot-sheets')
+        self.assertEqual((made['shots'],len(made['sheets'])),(3,1))
+        idx=json.loads((self.run/'20-analysis/content/V007-shots/index.json').read_text())
+        # ...and there the short shot is seen, at its own time.
+        self.assertEqual([self.colour(media/x['file']) for x in idx['shots']],['red','blue','red'])
+        self.assertTrue(8.0<=idx['shots'][1]['frame_s']<=9.8)
+        self.assertEqual(cli('content-review','--run',self.run,'--ref','V007','--file',rp)['segments'],0)
+        self.assertEqual(json.loads((self.run/'20-analysis/content/V007.json').read_text())['shot_sheets'],1)
 
     def test_content_review_keeps_safety_and_creative_exclusions_apart(self):
         cli('prepare','--run',self.run,'--ids','V001','--skip-whisper')
