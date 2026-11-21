@@ -91,6 +91,27 @@ def main():
         check(all(x["name"] != "dead" for x in G.leases()), "a lease of a process that has ended is ignored")
         stale.unlink(missing_ok=True)
 
+        # THE CAPCUT DESK (the user, 2026-11-21: a finished short waited 20 minutes for another video's build): a build waits while a GUI export holds the desk,
+        # the export waits while a build writes its project; a second session's export is refused; nothing is taken while CapCut itself is open
+        if not G.capcut_open():
+            g = G.desk_for_build("T1", 2, by="t")
+            check(g["lease"] and g["waited_s"] < 2, "desk: a build takes the desk at once when no export runs and CapCut is closed " + json.dumps(g))
+            e = G.desk_for_export(by="sess", wait_s=2)
+            check(not e["ok"] and "writing" in e["error"], "desk: the GUI export waits while a build writes its project, then says so " + json.dumps(e)[:160])
+            G.release(g["lease"])
+            e = G.desk_for_export(by="sess", wait_s=2)
+            check(e["ok"], "desk: once the build is done the GUI export holds the desk")
+            g2 = G.desk_for_build("T2", 2, by="t")
+            check(g2["lease"] is None and "capcut-export" in str(g2["why"]) and g2["waited_s"] >= 2, "desk: a build waits while the export holds the desk (and says why) " + json.dumps(g2))
+            e2 = G.desk_for_export(by="other", wait_s=1)
+            check(not e2["ok"] and "held by sess" in e2["error"], "desk: another session's export is refused while the first holds the desk")
+            G.release("capcut-export")
+            g3 = G.desk_for_build("T3", 2, by="t")
+            check(bool(g3["lease"]) and g3["lease"].endswith(str(os.getpid())), "desk: the build's lease carries its process, so two builds never free each other's")
+            G.release(g3["lease"])
+        else:
+            print("note: CapCut is open: the desk tests are skipped")
+
         # recording_active (the real function)
         G.recording_active = real[2]
         sd = inbox / "chan" / "20261121-000000-chan"

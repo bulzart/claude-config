@@ -123,6 +123,31 @@ def main():
         check(r.get("ok") and r["ingest_stages_min"]["transcript"]["median_s"] == 9.1 and r["reports"]["median_turns"] == 2
               and r["reports"]["ready_after_chunk_min"]["median"] == 2.6 and "claim" in r["commands"],
               "timings: the stages, the reports and how long after its chunk each report was ready: " + json.dumps(r.get("reports"))[:200])
+        # THE FRAME OF AN EXPORT (the user, 2026-11-21: "a 1080x1920 export can still be badly cropped"): the export's picture against the source laid where the
+        # plan puts it. The whole picture in the band with black above and below passes; a crop that fills the canvas, a stretch to 9:16 and a zoom inside the band fail.
+        fsrc = tmp / "frame-src.mp4"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30", "-t", "6", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                        "-g", "30", str(fsrc)], check=True)
+        fres = {"kind": "short", "canvas": {"width": 1080, "height": 1920, "fps": 30},
+                "pieces": [{"piece": 1, "kind": "plain", "file": str(fsrc), "src_from": 0.0, "src_to": 6.0, "at": 0.0, "dur_out": 6.0, "speed": 1.0,
+                            "src_size": [1280, 720], "layout": {"mode": "fit", "scale": 1.0, "posX": 0.0, "posY": 0.0}}],
+                "captions": {"placement": {"band": [1263.8, 1920], "caption_reach_px": [1302.0, 1375.0]}}}
+        outs = {}
+        for name, vf in (("fit", "scale=1080:608,pad=1080:1920:0:656:black"), ("crop", "crop=405:720:437:0,scale=1080:1920"), ("stretch", "scale=1080:1920"),
+                         ("zoomed", "scale=1404:790,crop=1080:608:162:91,pad=1080:1920:0:656:black"),
+                         ("fit-caption", "scale=1080:608,pad=1080:1920:0:656:black,drawbox=x=300:y=1310:w=480:h=60:color=yellow:t=fill"),
+                         ("fit-blur", "split[a][b];[a]scale=1080:1920,boxblur=20[bg];[b]scale=1080:608[fg];[bg][fg]overlay=0:656")):
+            p_ = tmp / f"frame-{name}.mp4"
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(fsrc), "-vf", vf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30", str(p_)], check=True)
+            outs[name] = O._framing_check(p_, fres, "short", "fit", tmp)
+        s_fit = outs["fit"]["samples"]
+        check(outs["fit"]["ok"] and s_fit and all(s["whole_source_visible"] and s["bands_black"] and s["picture"] >= 0.95 for s in s_fit) and Path(outs["fit"]["sheet"]).is_file(),
+              "framing: the whole picture in the band, black above and below: ok, the picture matches the source " + json.dumps([(s["t"], s["picture"], s["strips"]) for s in s_fit])[:220])
+        check(outs["fit-caption"]["ok"] and all(s.get("caption_rows_px") for s in outs["fit-caption"]["samples"]),
+              "framing: a caption in the band under the picture is allowed and its rows are found " + json.dumps([s.get("caption_rows_px") for s in outs["fit-caption"]["samples"]]))
+        for name in ("crop", "stretch", "zoomed", "fit-blur"):
+            ss = outs[name]["samples"]
+            check(not outs[name]["ok"], f"framing: a {name} export of a whole-picture plan is caught " + json.dumps([(s["t"], s.get("picture"), s.get("strips"), s.get("bands_black")) for s in ss])[:260])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print(f"test_ops: ok {N[0] - len(FAILED)} of {N[0]} | " + ("ALL PASSED" if not FAILED else f"FAILED: {FAILED}"))

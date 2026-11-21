@@ -73,11 +73,10 @@ def main():
         r = cc("layout-calc", "--src", "1280x720", "--canvas", "1080x1920", "--mode", "fill", "--focus", "0.0,0.5")
         check(r["clamped"], "layout-calc clamps a focus at the edge")
 
-        edl = {"schema": "cc-edl/1", "video": "S01", "kind": "short", "layout": {"mode": "fill", "focus": [0.5, 0.5]},
-               "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0, "zoom": [{"at": 1.0, "to": 1.2, "in": 0.2, "hold": 1.0, "out": 0.2}]},
+        edl = {"schema": "cc-edl/1", "video": "S01", "kind": "short",
+               "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0, "zoom": [{"at": 1.0, "to": 1.2, "in": 0.2, "hold": 1.0, "out": 0.2, "focus": [0.2, 0.3]}]},
                             {"id": "s2", "rec_from": 10.0, "rec_to": 15.0, "transition_in": {"slug": "flash", "dur": 0.2},
-                             "censor": [{"rec_from": 11.0, "rec_to": 12.5, "region": [0.1, 0.1, 0.4, 0.4], "style": "blur", "why": "test"}],
-                             "layout": {"mode": "fill", "focus": [0.3, 0.5]}}],
+                             "censor": [{"rec_from": 11.0, "rec_to": 12.5, "region": [0.1, 0.1, 0.4, 0.4], "style": "blur", "why": "test"}]}],
                "captions": {"mask_terms": ["damn"], "highlight_words": ["wild"], "replace": [["Kai Sinat", "Kai Cenat"]]}}
         out = run / "60-outputs" / "S01"
         out.mkdir(parents=True)
@@ -96,6 +95,46 @@ def main():
         check(sum(1 for o in plan["ops"] if o["op"] == "add_video") == 5, "mcp plan has 5 add_video ops")
         fin = json.loads((out / "finish.json").read_text(encoding="utf-8"))
         check(len(fin["zoom"]) == 1 and fin["transitions"][0]["refused"] is None, "finish plan: one zoom, the flash transition accepted")
+        # THE SHORTS FRAME (the user, 2026-11-21): the whole 16:9 picture fitted inside the 9:16 canvas, centred, black above and below; a punch-in keeps its focus
+        # and never grows down into the captions' band; the captions sit in that band, close under the picture
+        lay = res.get("layout") or {}
+        check(lay.get("run_frame") == "fit" and lay.get("modes") == ["fit"] and lay.get("pieces_whole_source_visible") == lay.get("pieces") == 5
+              and lay.get("picture_px") == [[0.0, 656.2, 1080.0, 1263.8]],
+              "a short shows the whole 1280x720 picture by default: 1080x608 in the middle of 1080x1920, black above and below " + json.dumps(lay))
+        keys = fin["zoom"][0]["keys"]
+        zk = [k for k in keys if k["scale"] > 1.0]
+        check(zk and all(k.get("bottom_px", 9e9) <= 1263.8 + 0.1 for k in keys) and all(k["x"] > 0 for k in zk),
+              "the punch-in pushes toward its focus (left of the middle: the picture moves right) and never below the picture's resting edge " + json.dumps(keys)[:200])
+        pz = cc("layout-calc", "--src", "1280x720", "--canvas", "1080x1920", "--mode", "fit", "--focus", "0.2,0.3", "--zoom", "1.2")
+        check(pz["picture_px"][0] <= 0 and pz["picture_px"][2] >= 1080 and abs(pz["picture_px"][3] - 1263.8) < 0.2 and not pz["whole_source_visible"],
+              "layout-calc fit with a punch-in: the canvas's width stays covered, the bottom edge stays put " + json.dumps(pz["picture_px"]))
+        for src_, pic_ in (("1440x1080", [0.0, 555.0, 1080.0, 1365.0]), ("2560x1080", [0.0, 732.2, 1080.0, 1187.8]), ("1080x1920", [0.0, 0.0, 1080.0, 1920.0])):
+            q = cc("layout-calc", "--src", src_, "--canvas", "1080x1920", "--mode", "fit")
+            check(q["scale"] == 1.0 and q["picture_px"] == pic_ and q["whole_source_visible"], f"layout-calc fit {src_}: the whole source, scale 1.0, {q['picture_px']}")
+        cpl = res["captions"].get("placement") or {}
+        check(cpl.get("where", "").startswith("the black band under") and cpl["caption_reach_px"][0] >= 1263.8 and cpl["caption_reach_px"][1] <= 0.80 * 1920
+              and abs(res["captions"]["y_rel"] - cpl["y_rel"]) < 1e-9 and abs((1 - 2 * cpl["y_rel"]) * 1000 - round((1 - 2 * cpl["y_rel"]) * 1000)) < 1e-6,
+              "the captions sit in the black band under the picture, above the platform's buttons: " + json.dumps(cpl))
+        e_fill = json.loads((out / "edl.json").read_text(encoding="utf-8"))
+        e_fill["layout"] = {"mode": "fill", "focus": [0.3, 0.5], "zoom": 1.5}
+        e_fill["captions"] = {**e_fill["captions"], "y_rel": 0.5}
+        of = run / "60-outputs" / "S11"
+        of.mkdir(parents=True)
+        (of / "edl.json").write_text(json.dumps({**e_fill, "video": "S11"}), encoding="utf-8")
+        r = cc("edl-check", "--run", run, "--edl", of / "edl.json", env=env)
+        rf = json.loads((of / "resolved.json").read_text(encoding="utf-8"))
+        check(r.get("ok") is False and any("whole picture" in str(w.get("warning")) for w in r.get("warnings") or []) and rf["layout"]["modes"] == ["fit"]
+              and rf["layout"]["pieces_whole_source_visible"] == rf["layout"]["pieces"] and rf["captions"]["placement"].get("edl_y_rel_not_used") == 0.5,
+              "an EDL asking for a crop (fill, zoom 1.5) in a whole-picture run: not followed, edl-check lists it, the captions' y of the EDL is not used " + json.dumps(r.get("warnings"))[:240])
+        r = cc("state", "--run", run, "set", "shorts_layout=sideways", env=env)
+        check(r.get("ok") is False, "state: an unknown shorts_layout is refused")
+        r = cc("state", "--run", run, "set", "shorts_layout=crop", env=env)
+        cc("edl-check", "--run", run, "--edl", of / "edl.json", env=env)
+        rf = json.loads((of / "resolved.json").read_text(encoding="utf-8"))
+        check(json.loads((run / "state.json").read_text(encoding="utf-8")).get("shorts_layout") == "fill" and rf["layout"]["modes"] == ["fill"]
+              and rf["layout"]["pieces_whole_source_visible"] == 0 and rf["captions"]["placement"].get("band") is None,
+              "the user's own pick (shorts_layout=crop, stored as fill): the crop is followed and the captions keep the look's place " + json.dumps(rf["layout"]))
+        cc("state", "--run", run, "set", "shorts_layout=fit", env=env)
         r = cc("captions", "--run", run, "--resolved", out / "resolved.json", env=env)
         srt = (out / "captions.srt").read_text(encoding="utf-8")
         check(r.get("ok") and "SH*T" in srt and "D*MN" in srt and "KAI CENAT" in srt and "SHIT" not in srt and "DAMN" not in srt,
@@ -107,7 +146,7 @@ def main():
               "captions are ON when the run has no `captions` key: resolved.json and finish.json say enabled")
 
         # the word-box look needs a text per word and state: too many spoken words, or a language it cannot take, fall back to the plain look with the reason written down
-        e4 = {"schema": "cc-edl/1", "video": "S04", "kind": "short", "layout": {"mode": "fill", "focus": [0.5, 0.5]}, "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}],
+        e4 = {"schema": "cc-edl/1", "video": "S04", "kind": "short", "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}],
               "captions": {"word_box_max_words": 3}}
         o4 = run / "60-outputs" / "S04"
         o4.mkdir(parents=True)
@@ -127,7 +166,7 @@ def main():
         check(json.loads((o4 / "resolved.json").read_text(encoding="utf-8"))["captions"]["style"] == "word-box", "English: the word-box look is the default")
 
         # a short is ALWAYS 9:16 (the user, 2026-11-14): another canvas in a short's EDL is a warning (edl-check is then not ok); the default and an explicit 1080x1920 pass; a long video keeps 16:9
-        e9 = {"schema": "cc-edl/1", "video": "S09", "kind": "short", "canvas": {"width": 1920, "height": 1080, "fps": 30}, "layout": {"mode": "fill", "focus": [0.5, 0.5]},
+        e9 = {"schema": "cc-edl/1", "video": "S09", "kind": "short", "canvas": {"width": 1920, "height": 1080, "fps": 30},
               "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}]}
         o9 = run / "60-outputs" / "S09"
         o9.mkdir(parents=True)
@@ -183,7 +222,7 @@ def main():
 
         # THE NO-BOX LOOK (the user, 2026-11-20), picked at the start (state.json captions=no-box): Montserrat Bold, yellow #FFFF00, the black outline, nothing behind the
         # text, one text per caption; the run's look wins over an EDL that asks for another style or for key words in a colour; captions=box and the older 'on' are the box look
-        e7 = {"schema": "cc-edl/1", "video": "S07", "kind": "short", "layout": {"mode": "fill", "focus": [0.5, 0.5]},
+        e7 = {"schema": "cc-edl/1", "video": "S07", "kind": "short",
               "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}, {"id": "s2", "rec_from": 12.0, "rec_to": 14.5}],
               "captions": {"style": "word-box", "highlight_words": ["wild"], "mask_terms": ["damn"], "replace": [["Kai Sinat", "Kai Cenat"]]}}
         o7 = run / "60-outputs" / "S07"
@@ -310,7 +349,8 @@ def main():
                   "every caption text has Loupe video 04's look: the 0.18 outline, the shadow, upper case")
             ys = {round(float(s["clip"]["transform"]["y"]), 4) for t in c["tracks"] if t["type"] == "text" for s in t["segments"]}
             xs = [float(s["clip"]["transform"]["x"]) for t in c["tracks"] if t["type"] == "text" for s in t["segments"]]
-            check(len(ys) == 1 and ys == {round(1 - 2 * 0.66, 4)} and min(xs) < 0 < max(xs) and all(-1 < x < 1 for x in xs), f"every caption text is on one baseline (y {ys}) and the words sit left and right of the centre")
+            y01 = json.loads((out / "resolved.json").read_text(encoding="utf-8"))["captions"]["y_rel"]
+            check(len(ys) == 1 and ys == {round(1 - 2 * y01, 4)} and min(xs) < 0 < max(xs) and all(-1 < x < 1 for x in xs), f"every caption text is on one baseline (y {ys}, the band under the picture) and the words sit left and right of the centre")
             seg0 = [t for t in c["tracks"] if t["type"] == "video"][0]["segments"][0]
             check(any(k["property_type"] == "KFTypeScaleX" for k in seg0.get("common_keyframes", [])), "the zoom keyframes are on the first clip")
             lint = subprocess.run([capcut, "lint", str(store / "cctest")], capture_output=True, text=True)
@@ -363,6 +403,10 @@ def main():
             # ONE command for everything: compose + finish + the read-back, one answer
             r = cc("capcut-build", "--run", run, "--video", "S01", "--name", "cctest_build", "--store", store, env=env)
             rb = r.get("read_back") or {}
+            fr = rb.get("framing") or {}
+            check(fr.get("clips") == fr.get("whole_source_visible") == 5 and not fr.get("stretched") and not fr.get("cropped_material") and not fr.get("not_black_background")
+                  and not fr.get("not_as_planned") and fr.get("picture_px") == [[0.0, 656.2, 1080.0, 1263.8]] and abs(fr.get("largest_punch_in", 0) - 1.2) < 1e-3,
+                  "capcut-build reads the frame back from the draft: every clip shows the whole picture, unstretched, uncropped, on black, as planned " + json.dumps(fr)[:300])
             check(r.get("ok") and not r.get("problems") and rb.get("main_clips") == 5 and rb.get("texts") == rb.get("composed_caption_texts") == cj["word_box"]["texts"]
                   and (rb.get("lint") or {}).get("errors") == 0 and rb.get("joins_not_contiguous") == 0 and not rb.get("media_missing"),
                   "capcut-build: one command makes the whole project and reads it back (clips, length, joins, texts, media on disk, lint): " + json.dumps({k: r.get(k) for k in ("ok", "problems", "seconds_by_part")}) + json.dumps(rb)[:300])
@@ -409,7 +453,7 @@ def main():
                   f"four capcut-compose calls at once: all ok and all four projects are in the shared index {listed}")
             # the look is free: any font family and any highlight colour (the agent picks them to match the video), and the old plain look is still there
             def small_edl(video, caps):
-                e = {"schema": "cc-edl/1", "video": video, "kind": "short", "layout": {"mode": "fill", "focus": [0.5, 0.5]},
+                e = {"schema": "cc-edl/1", "video": video, "kind": "short",
                      "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}, {"id": "s2", "rec_from": 12.0, "rec_to": 14.5}], "captions": caps}
                 o = run / "60-outputs" / video
                 o.mkdir(parents=True, exist_ok=True)
@@ -473,7 +517,7 @@ def main():
                   and all(str(m.get("text_color", "")).upper() == "#FFFF00" and str(m.get("font_path", "")).endswith("Montserrat-Bold.otf") and abs(float(m["border_width"]) - 0.18) < 1e-6
                           and str(m.get("border_color", "")).upper() == "#000000" and m.get("has_shadow") is True and not float(m.get("background_alpha") or 0)
                           and not int(m.get("check_flag") or 0) & 16 and json.loads(m["content"])["text"] == json.loads(m["content"])["text"].upper() for m in mats_n)
-                  and all(abs(float(s["clip"]["transform"]["x"])) < 1e-6 and abs(float(s["clip"]["transform"]["y"]) - round(1 - 2 * 0.66, 4)) < 1e-4 for s in segs_n),
+                  and all(abs(float(s["clip"]["transform"]["x"])) < 1e-6 and abs(float(s["clip"]["transform"]["y"]) - round(1 - 2 * json.loads((o7 / "resolved.json").read_text(encoding="utf-8"))["captions"]["y_rel"], 4)) < 1e-4 for s in segs_n),
                   f"the no-box texts: one subtitle track, {len(mats_n)} yellow #FFFF00 texts in Montserrat Bold with the 0.18 black outline and the shadow, no box, upper case, centred on the baseline")
             cc("capcut-compose", "--run", run, "--video", "S07", "--name", "cctest_nobox_bare", "--store", store, "--bare", env=env)
             r = cc("capcut-finish", "--run", run, "--draft", store / "cctest_nobox_bare", "--video", "S07", env=env)
@@ -561,7 +605,7 @@ def main():
             cc("state", "--run", run, "set", "caption_style=", env=env)
             cc("state", "--run", run, "set", "captions=on", env=env)
             # a short that is not 9:16 is listed by capcut-build as a problem too (the user, 2026-11-14: shorts are ALWAYS 9:16), even when the edl-check warning was not heeded
-            e7 = {"schema": "cc-edl/1", "video": "S08", "kind": "short", "canvas": {"width": 1920, "height": 1080, "fps": 30}, "layout": {"mode": "fill", "focus": [0.5, 0.5]},
+            e7 = {"schema": "cc-edl/1", "video": "S08", "kind": "short", "canvas": {"width": 1920, "height": 1080, "fps": 30},
                   "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}]}
             o7 = run / "60-outputs" / "S08"
             o7.mkdir(parents=True, exist_ok=True)
