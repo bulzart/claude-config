@@ -21,7 +21,14 @@ be watched. **Most leads end as nothing, and recovering no moment at all is a no
 2. `brief.md`, `clip-criteria.md`, then `recall.md` whole.
 3. The moments the scan already has: every block file's `moments` (id, span, title), so you never find one again.
 
-## How to look (every lead gets one look; a second look, not a second scan)
+## Which leads (the user, 2026-11-21: selective, in proportion to what it can find)
+On the caseoh run one agent naming all 102 leads of a 5-hour stream took 22 minutes and about 415k tokens for two weak finds and no change to the plan; the finds that mattered were laughs on the face cam. `recall.md` lists the leads in tiers:
+- **Look first** (each gets a line in `checked`): a chat burst set aside without his face seen, a beat its miner set aside as unsure.
+- **Sample windows** (each gets a line; a quick look at the words and the face: most hold nothing).
+- **The rest** (summary lines no moment covers, beats set aside with a reason, the threads) is context: open one only where it may hold the setup or the payoff of something you are checking, and give it a line when you do.
+Reuse what exists: the chunk's dense sheets show the face cam when it is large enough; make a face-cam strip only where they cannot settle it.
+
+## How to look (a second look at the likeliest places, not a second scan)
 - **His face is evidence the words do not carry.** Find where the face cam sits once (`T frame --at <rec> --max-width 960`, read its place as fractions of
   the frame, e.g. `0,0.1,0.21,0.3` for a top-left inset) and look at it with a face-cam strip: `T sheet --from <rec_from> --to <rec_to> --step 0.5 --crop
   x,y,w,h` (one image, every cell timestamped). A laugh (doubling over, covering his face, leaning back, a grin), a jump back or a stare is a reaction; the
@@ -39,9 +46,9 @@ be watched. **Most leads end as nothing, and recovering no moment at all is a no
 - Threads: a setup in one block and its payoff in another, with no moment holding the pair, is a lead for a moment (or for a moment's context). The same
   bit named in two blocks is one thread.
 - Batch: several `T window` lines in ONE PowerShell call, the sheets and frames read together in one message. Never read a whole block's transcripts again.
-  Aim for about 15 minutes and about 60 tool calls.
+  Aim for about 8 minutes and about 30 tool calls.
 
-## Decide each lead (one line in `checked`)
+## Decide each lead you looked at (one line in `checked`)
 `moment` (you wrote a card: give its id), `covered` (a moment of the scan already holds it: name it), `context` (not a moment, but context a moment needs:
 name the moment and the span), `not-a-moment` (why, in a few words: an ordinary drive, a game line with no reaction, a weak joke, no payoff, a song),
 `unclear` (the data cannot settle it: say what would, e.g. "listen: his voice or the radio?").
@@ -61,6 +68,5 @@ write a card for what a moment already holds, never widen a scan moment (say `co
  "threads": [ {"what": "...", "points": [3916.0, 6147.0], "moments": ["B03-M02", "SL-M01"]} ],
  "notes": "anything the planner should know"}
 ```
-Then `T recall --run RUN --check RUN/20-analysis/second-look.json`: every lead must be named once (a lead looked at and set aside is fine, one never looked
-at is not); fix what it lists. Check the file parses. Write nothing else; read media only; never ask, never spawn agents.
+Then `T recall --run RUN --check RUN/20-analysis/second-look.json`: every look-first lead and sample window must be named once (one looked at and set aside is fine, one never looked at is not); fix what it lists. Check the file parses. Write nothing else; read media only; never ask, never spawn agents.
 Return three lines: the file, how many moments you recovered of how many leads, anything the planner must know.
