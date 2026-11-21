@@ -1756,7 +1756,7 @@ class StaticStudioTests(unittest.TestCase):
                                         depends=[{'from':'06:10','to':'06:30','why':'the payoff recalls the omen'}])],
                             story_without_exclusions={'status':'bridged','note':'the dread comes from the weather and the silence instead'})
         self.content_review('V002',[seg('S1','02:00','02:20','safety','graphic_injury','restrict_visuals',severity='high',
-                                        why='the cost is told by the count and the faces')])
+                                        why='the cost is told by the count and the faces',avoid=['the open wound'])])
         doc=self.direction_doc()
         self.direction_doc=lambda:doc
         # The direction cannot cite the excluded device, nor what depended on it...
@@ -1807,6 +1807,11 @@ class StaticStudioTests(unittest.TestCase):
         shots[2]['content_note']='a severed rope is a cut rope on a bridge; nobody is hurt or shown hurt'
         save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
         self.assertFalse([x for x in cli('shot-check','--run',self.run,'--video',1,expected=None)['issues'] if 'content_flag' in x])
+        # A restricted moment's subject can be told, but what its review says must never be shown is flagged in a
+        # picture prompt, and the reviewers are told it.
+        core=self.load_core()
+        self.assertIn('restricted_theme:V002/S1',core.prompt_flags('a medic kneels by the open wound in the snow',core.excluded_themes(self.run,1)))
+        self.assertIn('may be told, but never shown',core.house_rules(self.run,1))
         # Style words cannot bring in what the approved prompt doesn't; a thumbnail is held to the same.
         stills=self.home/'stills'
         jobp=self.home/'job.json'

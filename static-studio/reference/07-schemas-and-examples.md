@@ -126,7 +126,9 @@ figure), hate_extremism, nudity_indecency, other; and a `severity`) or one of th
 creative exclusions, `religion_superstition` (religious or superstition) and `holiday` (holiday), which carry no
 severity: they are not harm. `action`: `exclude` (with `avoid`; `depends` for what goes with it), `restrict_visuals`
 (safety only) or `keep`, each with `why` (an exclusion: why restricting is not enough, or why it is a device and not a
-plain fact). `sexual_content_minors` is always excluded; `high` is never kept as it is; `low` is never excluded;
+plain fact). `avoid` is required on an exclusion and optional on a restriction (what must never be shown); both are
+then flagged in script lines and picture prompts and listed in the reviewers' house rules. Optional `not_segments`:
+`[{"at": "mm:ss", "what": "...", "why": "..."}]`, things looked at and cleared. `sexual_content_minors` is always excluded; `high` is never kept as it is; `low` is never excluded;
 `evidence` cites the times seen or heard (mm:ss); every `unsure` segment needs a closer look (`inspect-window`)
 overlapping it; the shot sheets must exist
 (`--shot-sheets`, `20-analysis/content/V###-shots/`: `sheet-NNN.jpg` and `index.json` with each shot's start, end and

@@ -971,7 +971,7 @@ def content_flags(lines, review_text, themes=()):
         spoken = strip_tags(row.get('text') or '')
         found = [(kind, sorted({h.lower() for h in rx.findall(spoken)})) for kind, rx in CONTENT_FLAGS]
         # an excluded segment's theme (its review's "avoid") brought back in the words: rewritten, or why it isn't
-        found += [(f'excluded_theme:{th}', [ph]) for th, ph in theme_hits(spoken, themes)]
+        found += [(label, [ph]) for label, ph in theme_hits(spoken, themes)]
         for kind, hits in found:
             if hits:
                 reviewed = bool(re.search(r'\b' + re.escape(lid) + r'\b', section))
@@ -1206,15 +1206,17 @@ def content_exclusions(rd, ref):
 
 
 def excluded_themes(rd, video):
-    """What a video must not bring back: the excluded segments of the references its direction cites."""
+    """What a video must not bring back: the excluded segments of the references its direction cites, and what a
+    restricted segment's `avoid` says must never be shown (its subject may still be told)."""
     d = read_json(video_dir(rd, video) / 'direction.json')
     ev = d.get('evidence') if isinstance(d.get('evidence'), dict) else {}
     out = []
     for ref in dict.fromkeys(str(x).strip().upper() for x in ev.get('references') or []):
         for s in read_json(content_review_path(rd, ref)).get('segments') or []:
-            if s.get('action') == 'exclude':
+            avoid = [str(x) for x in s.get('avoid') or [] if str(x).strip()]
+            if s.get('action') == 'exclude' or (s.get('action') == 'restrict_visuals' and avoid):
                 out.append({'theme': f'{ref}/{s.get("id")}', 'kind': s.get('kind'), 'what': s.get('what'),
-                            'avoid': [str(x) for x in s.get('avoid') or [] if str(x).strip()]})
+                            'avoid': avoid, 'label': 'excluded_theme' if s.get('action') == 'exclude' else 'restricted_theme'})
     return out
 
 
@@ -1232,7 +1234,7 @@ def theme_hits(text, themes):
             toks = _theme_tokens(ph)
             if toks and all(w in words or w + 's' in words or w + 'es' in words or
                             (w.endswith('s') and w[:-1] in words) for w in toks):
-                out.append((th['theme'], ph))
+                out.append((f"{th.get('label') or 'excluded_theme'}:{th['theme']}", ph))
     return out
 
 
@@ -1240,7 +1242,7 @@ def prompt_flags(text, themes=()):
     """The content flags of a picture prompt: 02's words (swearing aside) and an excluded theme brought back."""
     plain = strip_tags(str(text or ''))
     kinds = [kind for kind, rx in CONTENT_FLAGS if kind != 'swearing' and rx.search(plain)]
-    kinds += [f'excluded_theme:{th}' for th, _ in theme_hits(plain, themes)]
+    kinds += [label for label, _ in theme_hits(plain, themes)]
     return list(dict.fromkeys(kinds))
 
 
@@ -6332,12 +6334,18 @@ HOUSE_RULES = ('House rules the video must keep (never suggest breaking them; fl
 def house_rules(rd, video):
     """HOUSE_RULES, plus the themes this video's reference material was cut for (its content reviews)."""
     themes = excluded_themes(rd, video)
-    if not themes:
-        return HOUSE_RULES
-    return HOUSE_RULES + (' Parts of the reference material were left out on purpose; nothing in this video may bring '
-                          'them back, in other words or other pictures either: ' +
-                          '; '.join(f'{th["what"]} ({"a content-safety exclusion" if th["kind"] == "safety" else "a creative exclusion"})'
-                                    for th in themes) + '.')
+    out = HOUSE_RULES
+    gone = [th for th in themes if th.get('label') != 'restricted_theme']
+    shown = [th for th in themes if th.get('label') == 'restricted_theme']
+    if gone:
+        out += (' Parts of the reference material were left out on purpose; nothing in this video may bring them back, '
+                'in other words or other pictures either: ' +
+                '; '.join(f'{th["what"]} ({"a content-safety exclusion" if th["kind"] == "safety" else "a creative exclusion"})'
+                          for th in gone) + '.')
+    if shown:
+        out += (' These may be told, but never shown or described in their graphic form: ' +
+                '; '.join(f'{th["what"]} (never shown: {", ".join(th["avoid"])})' for th in shown) + '.')
+    return out
 
 SCRIPT_BRIEF = """# Cold read: {TITLE}
 
