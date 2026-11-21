@@ -132,7 +132,16 @@
     "model": "hdemucs",
     "pydeps": "C:/Users/Bulzart/Documents/AI/music-sep/pydeps",
     "gpu_need_mb": 1500,
-    "gpu_wait_s": 900
+    "gpu_wait_s": 900,
+    "residual_floor_dbfs": -50.0,
+    "remove_strong": true,
+    "recognition": {
+      "provider": "none",
+      "allow_upload": false,
+      "window_s": 12.0,
+      "windows_per_interval": 2,
+      "max_queries_per_run": 60
+    }
   },
   "awl_home": "C:/Users/Bulzart/.claude/analyze-with-loupe"
 }

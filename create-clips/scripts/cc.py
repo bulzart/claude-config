@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cc_crypto_loader  # noqa: E402,F401  (registers the decrypt-on-import hook before anything below can need it: the user, 2026-11-15)
 
 HERE = Path(__file__).resolve().parent
-MODULES = ("cc_proc", "cc_report", "cc_notify", "cc_edit", "cc_hud", "cc_game", "cc_heat", "cc_voices", "cc_recall", "cc_paper", "cc_music", "cc_ops", "cc_gpu", "cc_desk")
+MODULES = ("cc_proc", "cc_report", "cc_notify", "cc_edit", "cc_hud", "cc_game", "cc_heat", "cc_voices", "cc_recall", "cc_paper", "cc_music", "cc_ops", "cc_gpu", "cc_desk", "cc_songid")
 
 
 def fail(msg: str, code: int = 2, **extra) -> None:

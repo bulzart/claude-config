@@ -63,6 +63,7 @@
 /create-clips/scripts/cc_ops.py
 /create-clips/scripts/cc_gpu.py
 /create-clips/scripts/cc_desk.py
+/create-clips/scripts/cc_songid.py
 /create-clips/data/gpu/
 /create-static/scripts/cs_core.py
 /create-static/scripts/cs_compose.py

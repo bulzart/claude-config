@@ -81,7 +81,7 @@
 - [create-clips: one project per match](create-clips-game-one-project-per-match.md) — user 2026-11-14, game mode: each game of each match = its own video and CapCut project
 - [create-clips: shorts edit freedom](create-clips-shorts-edit-freedom.md) — user 2026-11-14: zoom, sfx, words per caption are the agents' call, never forced
 - [create-clips: shorts level](create-clips-shorts-level.md) — user 2026-11-14: Concentrated (1-3) or Normal (~5-10), state.shorts_level; never a quota
-- [create-clips: shorts 9:16](create-clips-shorts-always-9-16.md) — user 2026-11-14: a short is ALWAYS 1080x1920; long videos stay 16:9
+- [create-clips: shorts 9:16, whole picture](create-clips-shorts-always-9-16.md) — user 2026-11-14/21: a short is ALWAYS 1080x1920 and shows the whole source fitted, black above and below (crop only on the user's pick); captions in the band
 - [create-clips: spoken language](create-clips-spoken-language.md) — user 2026-11-14: whisper.language auto, first sure detection locked; transcribe, never translate
 - [Fix limits, don't just report them](feedback-fix-limits-dont-just-report.md) — user 2026-11-14: a gap in my own work: evaluate on real data, fix lightly; ask only the user's choices
 - [/create-static command](create-static-command.md) — 2026-11-13: Static mode as its own command (~/.claude/create-static, cs-*); not yet run end to end
@@ -100,7 +100,7 @@
 - [No cross-session messages](no-cross-session-messages.md) — user 2026-11-20: never message other Claude sessions to check their work; read state.json/outputs/CapCut, or ask the user
 - [create-video: adaptive-niche guardrail](create-video-adaptive-niche-guardrail.md) — 9-point shift never drifts; 10-creative-direction.md, av-profile watch sheets, direction.json + lock before script, three sealed fresh reads, media gate + field-level revisions; code enforces process, never quality
 - [create-video: narration direction](create-video-narration-direction.md) — user 2026-11-20: per-video voice lock, v4 has no speed, selective tags, no silence padding, beat-aligned parts, paid trials only after a yes
-- [CapCut desktop automation](capcut-desktop-automation.md) — on the user's yes: `cc.py desk` + `capcut-app` (no computer-use in the CLI); ExportPath registry; fresh projects keep 8 timeline copies; trim cannot move text
+- [CapCut desktop automation](capcut-desktop-automation.md) — on the user's yes: `cc.py desk` + `capcut-app`; desk hand-off with builds; ExportPath registry; 8 timeline copies; Pro advert: close with X
 - [One pipeline per session](one-pipeline-per-session.md) — user 2026-11-20: a brief naming another pipeline means this session's pipeline; others are read-only references
 - [create-video: captions](create-video-captions.md) — user 2026-11-20: Luckiest Guy box | Montserrat Bold yellow word | none, asked once; captions.py, Whisper word times; CapCut drawing not verified
 - [create-video: narration calibration](create-video-narration-calibration.md) — 2026-11-20 trial (2,051 of 5,000 credits): v4 ~0.40 credits/char, context unbilled, balance lags; waits for the user's ears
@@ -112,5 +112,6 @@
 - [create-video: 2 fps analysis](create-video-analysis-2fps.md) — user 2026-11-21: 2 fps, each frame at its own timestamp (transcript clock); runs keep their rate (old run 5 fps); inspect-window for brief stretches
 - [create-video: content review](create-video-content-review.md) — user 2026-11-21: per-reference safety vs religion/superstition vs holiday, kept apart; selective exclusion; checked downstream; every timeline picture looked at
 - [create-clips: Whisper on the GPU](create-clips-gpu-whisper.md) — user 2026-11-21: cuda float16 incl. the recorder; kept while recording, yields to GPU leases / low VRAM; `cc.py gpu`
-- [create-clips: music removed on evidence only](create-clips-music-isolation.md) — user 2026-11-21: claims register + fingerprints recognise claimed songs; Demucs v3 default; singer under speech stays; never "safe"
+- [create-clips: music removed on evidence only](create-clips-music-isolation.md) — long videos only: claims + evidence register (verified/strong), recognition service only on the user's yes, recording_left check; never "safe"
+- [create-clips: Shorts never touch music](create-clips-shorts-never-touch-music.md) — user 2026-11-21: a short's audio stays exactly as recorded; no identification, risk analysis or separation
 - [create-clips: no detached judges](create-clips-no-detached-judges.md) — user 2026-11-21: no blind/pairwise judges, second planners or compare-builds; context checks + validators
