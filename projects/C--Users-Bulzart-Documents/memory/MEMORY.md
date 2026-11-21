@@ -117,4 +117,4 @@
 - [Local neural fingerprint](local-neural-fingerprint.md) — 2026-11-21: LAION open weights + local index (music-index); names only indexed songs; under-talk limit measured
 - [create-clips: Shorts never touch music](create-clips-shorts-never-touch-music.md) — user 2026-11-21: a short's audio stays exactly as recorded; no identification, risk analysis or separation
 - [create-clips: no detached judges](create-clips-no-detached-judges.md) — user 2026-11-21: no blind/pairwise judges, second planners or compare-builds; context checks + validators
-- [create-video: held silences](create-video-held-silences.md) — user 2026-11-21: pause_total_s = whole silence, decided on the recorded voice then with the picture (holds, hold-decide); no quota/formula/padding
+- [create-video: held silences](create-video-held-silences.md) — user 2026-11-21: pause_total_s = whole silence, decided on the recorded voice then with the picture (holds, hold-decide); transitions clean by default, fades only on audible room tone, bed per silence
