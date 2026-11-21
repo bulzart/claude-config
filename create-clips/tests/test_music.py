@@ -296,16 +296,44 @@ def main():
             x_ = (rs_.get("results") or [{}])[0]
             err_ = str(rs_.get("error"))
             if not rs_.get("ok") and ("GPU" in err_ or "[memguard]" in err_):
-                # the PC's state, not the code: the GPU busy, or the memory guard stopped SAM in full precision AND in its bfloat16 retry (GPU memory
-                # counts as committed memory on Windows: other open programs leave too little)
+                # the PC's state, not the code: the GPU busy, or the memory guard stopped SAM (always full precision; GPU memory counts as committed
+                # memory on Windows: other open programs can leave too little)
                 print("SKIP the real SAM run (this PC's memory or GPU, not the code): " + err_[-220:].replace(chr(10), " | "))
             else:
                 d_o, _ = sf.read(str(tmp / "sam-out.wav"), dtype="float32", always_2d=True) if (tmp / "sam-out.wav").is_file() else (np.zeros((0, 2)), 0)
                 check(rs_.get("ok") and x_.get("ok") and len(d_o) == 8 * 44100 and d_o.shape[1] == 2 and rs_.get("peak_vram_mb"),
                       f"the real SAM Audio Base: loaded in {rs_.get('load_s')} s, 8 s separated in {x_.get('seconds')} s, stereo, same length, "
-                      f"GPU peak {rs_.get('peak_vram_mb')} MB, {rs_.get('dtype')}{' (the retry after a memory stop)' if rs_.get('dtype_fallback') else ''}")
+                      f"GPU peak {rs_.get('peak_vram_mb')} MB, {rs_.get('dtype')}")
+            check(rs_.get("dtype") in (None, "float32") and "dtype_fallback" not in rs_ and M.sam_settings({"sam": {"dtype": "bfloat16"}})["dtype"] == "float32",
+                  "SAM always runs in full precision: no lighter retry, and a config asking for bfloat16 is ignored")
         else:
             print("skip the real SAM run: " + M.sam_ready(M.settings())["why"])
+        # a memory-guard stop (stand-ins: the guard's messages, a GPU lease): one full-precision try, no lighter retry, the reason in plain words
+        import contextlib
+        import subprocess as sp_
+        import cc_gpu
+        real_run_, real_lease_ = M.subprocess.run, cc_gpu.lease
+        sam_calls = []
+
+        def fake_run_(cmd, **kw):
+            if any("sam_separate.py" in str(c_) for c_ in cmd):
+                sam_calls.append(cmd)
+                return sp_.CompletedProcess(cmd, 1, "", "[memguard] STOPPED: free commit 0.9 GB (floor 1.0 GB)\n[memguard] Close some programs (browser "
+                                                         "tabs, chat apps) and start it again.\n[memguard] peak memory used by the app: 12.40 GB (cap 16.0 GB)\n")
+            return real_run_(cmd, **kw)
+
+        @contextlib.contextmanager
+        def fake_lease_(*a_, **k_):
+            yield {"device": "cuda", "why": None}
+        M.subprocess.run, cc_gpu.lease = fake_run_, fake_lease_
+        try:
+            rs_m = M.sam_spans([{"id": "m1", "sig": "m", "wav_in": str(tmp / "none.wav"), "wav_out": str(tmp / "never.wav")}], M.settings(), tmp)
+        finally:
+            M.subprocess.run, cc_gpu.lease = real_run_, real_lease_
+        job_m = json.loads((tmp / "sam-job.json").read_text(encoding="utf-8"))
+        check(not rs_m["ok"] and rs_m.get("memory_stop") and "close other programs" in rs_m["error"] and len(sam_calls) == 1 and job_m["dtype"] == "float32"
+              and "16" in " ".join(str(c_) for c_ in sam_calls[0]),
+              "a memory-guard stop: one full-precision try only (cap 16 GB), no lighter retry, the reason in plain words: " + rs_m["error"][:110])
         r = cc("music-claim", "--add", "Someone - Something")
         check(r.get("ok") is False, "a claim without its evidence is refused")
 
