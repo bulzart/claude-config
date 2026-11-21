@@ -473,6 +473,83 @@ def main():
             print("skip the real neural fingerprint: not installed")
         S.EVIDENCE.unlink(missing_ok=True)
 
+        # ---------------------------------------------------------------- the excerpts merged (no model): consistency, another excerpt, ambiguity
+        man_ = {"r1": {"title": "Song One", "artist": "A", "provenance": "test"}, "r2": {"title": "Song Two", "artist": "B", "provenance": "test"}}
+
+        def ans(dec, rid=None, chain=3, off=0.0, cos=0.8):
+            return {"ok": True, "decision": dec, "candidates": [{"id": "r1"}, {"id": "r2"}],
+                    "best": {"id": rid, "chain_windows": chain, "offset_s": off, "max_cos": cos} if rid else None}
+        unk = {"ok": True, "decision": "UNKNOWN"}
+        m1 = M.nafp_merge([(0.0, ans("MATCH", "r1", 3, 10.0, 0.95), ans("MATCH", "r1", 3, 10.0, 0.95)),
+                           (120.0, ans("MATCH", "r1", 4, 130.4, 0.93), ans("MATCH", "r1", 4, 130.4, 0.93))], man_, 0.67)
+        m2 = M.nafp_merge([(0.0, ans("MATCH", "r1", 3, 10.0, 0.95), ans("MATCH", "r1", 3, 10.0, 0.95)),
+                           (120.0, ans("MATCH", "r1", 3, 190.0, 0.95), ans("MATCH", "r1", 3, 190.0, 0.95))], man_, 0.67)
+        check(m1["level"] == "strong" and m1["consistent"] is True and "one continuous playback" in m1["evidence"]
+              and m2["level"] == "fair" and m2["consistent"] is False and "DIFFERENT alignments" in m2["evidence"],
+              "a song matched in two excerpts must line up as one playback; at two alignments it stays at the fair level")
+        m3 = M.nafp_merge([(0.0, unk, unk), (120.0, ans("MATCH", "r2", 2, 5.0, 0.7), unk)], man_, 0.67)
+        check(m3 and m3["index_id"] == "r2" and m3["level"] == "fair" and m3["title"] == "Song Two",
+              "the first excerpt names nothing, another excerpt does: named at the fair level")
+        m4 = M.nafp_merge([(0.0, ans("AMBIGUOUS"), unk)], man_, 0.67)
+        m5 = M.nafp_merge([(0.0, ans("MATCH", "r1", 5, 1.0, 0.96), ans("MATCH", "r1", 5, 1.0, 0.96)), (120.0, ans("MATCH", "r2", 2, 3.0, 0.7), unk)],
+                          man_, 0.67)
+        check(m4.get("ambiguous") and M.nafp_merge([(0.0, unk, unk)], man_, 0.67) is None and m5["index_id"] == "r1" and m5["also_in_interval"] == ["r2"],
+              "two references in one excerpt: ambiguous (nothing named); nothing: UNKNOWN; two songs in two excerpts: the best one named, the other listed")
+
+        # ---------------------------------------------------------------- the retry on the separated accompaniment where his words overlap (stand-ins)
+        real_ready, real_run, real_words = M.nafp_ready, M.nafp_run, M.words_in
+        idx_stub = tmp / "nafp-stub"
+        idx_stub.mkdir(exist_ok=True)
+        (idx_stub / "manifest.json").write_text(json.dumps({"recordings": {"stub-song": {"title": "Stub Song", "artist": "Lab", "provenance": "test"}}}),
+                                                encoding="utf-8")
+        os.environ["CC_NAFP_INDEX"] = str(idx_stub)
+        sent = []
+
+        def stub_run(ops, cfg_, work):
+            sent.extend(str(o.get("file")) for o in ops)
+            res_ = []
+            for o in ops:
+                hit = "accompaniment-" in str(o.get("file"))
+                res_.append({"op": "query", "qid": o["qid"], "ok": True, "decision": "MATCH" if hit else "UNKNOWN",
+                             "best": {"id": "stub-song", "chain_windows": 3, "offset_s": 12.0 + float(o.get("start_s") or 0), "max_cos": 0.81} if hit else None})
+            return {"ok": True, "results": res_, "device": "stub"}
+        M.nafp_ready = lambda cfg_: {"ok": True, "why": None, "recordings": 1, "index_version": "stub-1"}
+        M.nafp_run = stub_run
+        M.INDEX_DIR = tmp / "music-index-retry"
+        for f in (adir / "fingerprint-matches.json", adir / "neural-fp.json", adir / "separated.json"):
+            f.unlink(missing_ok=True)
+        (out_l / "edl.json").write_text(json.dumps(plain), encoding="utf-8")
+        M.words_in = lambda run_, rows_, a_, b_: []
+        r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+        ivs = [m_["rec"] for v_ in r["videos"] for m_ in v_["music"]]
+        for x0_, x1_ in ivs:
+            ap = adir / "analysis" / f"accompaniment-{x0_:.2f}-{x1_:.2f}.wav"
+            ap.parent.mkdir(parents=True, exist_ok=True)
+            import soundfile as sf_
+            sf_.write(str(ap), np.zeros((44100, 2), np.float32), 44100)
+        (adir / "neural-fp.json").unlink(missing_ok=True)
+        r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+        no_words = r["neural_fingerprint"]
+        M.words_in = lambda run_, rows_, a_, b_: [(a_ + 1.0, a_ + 1.4, "hello")]
+        (adir / "neural-fp.json").unlink(missing_ok=True)
+        sent.clear()
+        r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+        mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+        nf = r["neural_fingerprint"]
+        check(no_words["retried_on_separated"] == 0 and nf["retried_on_separated"] == len(ivs) and nf["named_on_separated"] == len(ivs)
+              and any("accompaniment-" in x for x in sent) and any("nfp-" in x for x in sent)
+              and mj["identified"] and mj["identified"]["by"] == "neural-fp" and mj["identified"]["source"] == "accompaniment"
+              and "separated accompaniment" in mj["identified"]["evidence"],
+              "the stream audio names nothing; where his words overlap, the separated accompaniment is tried and names the song (without words: no "
+              "retry): " + str(mj["identified"].get("evidence") if mj["identified"] else None)[:120])
+        M.nafp_ready, M.nafp_run, M.words_in = real_ready, real_run, real_words
+        os.environ["CC_NAFP_INDEX"] = str(tmp / "nafp-none")
+        for f in (adir / "neural-fp.json", adir / "fingerprint-matches.json"):
+            f.unlink(missing_ok=True)
+        import shutil as sh_
+        sh_.rmtree(adir / "analysis", ignore_errors=True)
+        S.EVIDENCE.unlink(missing_ok=True)
+
         # ---------------------------------------------------------------- the two scores (no audio)
         I = lambda kind, s, g, vs=False: {"kind": kind, "strength": s, "group": g, "version_specific": vs}     # noqa: E731
         a1 = S.id_score([I("fingerprint_claim", 95, "fingerprint", True), I("fingerprint_learned", 88, "fingerprint", True)])

@@ -1914,13 +1914,34 @@ class StaticStudioTests(unittest.TestCase):
         self.assertFalse(cli('status','--run',cp)['videos'])
 
     # ---------------------------------------------------------------- held silences: proposed, measured, decided
-    def recorded_with_gaps(self, gaps, skew=0.15, split_after=None, edge=0.1, pauses=None):
+    def recorded_with_gaps(self, gaps, skew=0.15, split_after=None, edge=0.1, pauses=None, contours=None, room=0.0,
+                           breaths=None, delivery=False):
         """A script of len(gaps) lines recorded with exactly known silences: a tone while each line is spoken, digital
         silence after it (gaps[i] s after line i+1). Whisper's end of each line is placed `skew` s late (it places line
         ends to within about 0.2 s). With split_after=k the narration is two parts (lines 1-k, then the rest), each
         with `edge` s of silence at the join's side, so the join's whole gap is 2*edge. pauses: {line index: fields}.
-        Measured by narration-measure (cached Whisper: nothing transcribed). Returns (vd, folder, measure output)."""
+        contours: {line index: 'fall'|'rise'}: the line's last 0.6 s glides from 220 Hz to 140 Hz or 330 Hz. room: the
+        level (amplitude) of a room tone in every silence instead of digital silence. breaths: {line index: seconds}:
+        a soft breath (0.1 s of noise) that many seconds before the NEXT line starts. Measured by narration-measure
+        (cached Whisper: nothing transcribed; with delivery=True its pitch and ending measurements run too)."""
         import numpy as np, soundfile as sf
+        rng = np.random.default_rng(3)
+        contours, breaths = contours or {}, breaths or {}
+        def quiet(seconds):
+            k = int(44100 * seconds)
+            return (rng.normal(0, room, k) if room else np.zeros(k)).astype('float32')
+        def tone(i, length):
+            f = np.full(length, 220.0)
+            glide = min(length, int(44100 * 0.6))
+            if contours.get(i):
+                f[-glide:] = np.linspace(220.0, 140.0 if contours[i] == 'fall' else 330.0, glide)
+            return (0.3 * np.sin(2 * np.pi * np.cumsum(f) / 44100)).astype('float32')
+        def silence_after(i, seconds):
+            s = quiet(seconds)
+            if i in breaths and seconds > breaths[i] + 0.1:
+                k0 = len(s) - int(44100 * breaths[i])
+                s[k0:k0 + 4410] += rng.normal(0, 0.011, 4410).astype('float32')     # about 30 dB under the voice
+            return s
         vd=self.write_plan()
         n=len(gaps)
         lines=[{'id':f'L{i:03}','text':f'Line {i} tells the viewer something new about the road ahead tonight.'}
@@ -1938,20 +1959,19 @@ class StaticStudioTests(unittest.TestCase):
         groups=[(1,n)] if not split_after else [(1,split_after),(split_after+1,n)]
         chunks,texts=[],[]
         for pid,(lo,hi) in enumerate(groups,1):
-            audio=[np.zeros(int(sr*0.3),dtype='float32')]; pos=int(sr*0.3); segs=[]
+            audio=[quiet(0.3)]; pos=int(sr*0.3); segs=[]
             for i in range(lo,hi+1):
                 row=lines[i-1]; words=row['text'].split()
                 s0=pos/sr; ws=[]
                 for j,w in enumerate(words):
                     ws.append({'start_s':round(s0+0.27*j,3),'end_s':round(s0+0.27*j+0.25,3),'text':' '+w})
                 length=int(sr*0.27*len(words))
-                k=np.arange(length)
-                audio.append((0.3*np.sin(2*np.pi*220*k/sr)).astype('float32')); pos+=length
+                audio.append(tone(i,length)); pos+=length
                 end=pos/sr
                 ws[-1]['end_s']=round(end+skew,3)
                 segs.append({'start_s':round(s0,3),'end_s':round(end+skew,3),'text':row['text'],'words':ws})
                 g=edge if (split_after and i==hi and i<n) else gaps[i-1]
-                audio.append(np.zeros(int(sr*g),dtype='float32')); pos+=int(sr*g)
+                audio.append(silence_after(i,g)); pos+=int(sr*g)
             name=f'part-{pid:03}.wav'
             sf.write(str(d/name),np.concatenate(audio),sr)
             if pid>1:          # the next part opens with `edge` of silence instead of 0.3 s
@@ -1971,7 +1991,7 @@ class StaticStudioTests(unittest.TestCase):
         (d/'parts.txt').write_text(''.join(f"file '{(d/c['file']).as_posix()}'\n" for c in chunks))
         subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(d/'parts.txt'),
                         '-ar','44100','-ac','2','-c:a','pcm_s16le',str(d/'narration.wav')],check=True)
-        return vd,d,cli('narration-measure','--run',self.run,'--video',1,'--no-delivery')
+        return vd,d,cli('narration-measure','--run',self.run,'--video',1,*([] if delivery else ['--no-delivery']))
 
     def two_shots(self, n):
         shots=[{'id':'S1','beat_id':'B01','line_start':'L001','line_end':f'L{n//2:03}','composition':'wide',
@@ -2086,13 +2106,23 @@ class StaticStudioTests(unittest.TestCase):
         for it in job['images']:
             Path(it['out']).write_bytes(b'\x89PNG\r\n\x1a\n'+b'0'*2048)
         core.record_media(gate['run'],1,'stills',[{'out':it['out'],**rec} for it,rec in zip(job['images'],gate['records'])])
-        for lid,total in (('L003',0.9),('L010',2.5)):
-            dec=cli('hold-decide','--run',self.run,'--video',1,'--line',lid,'--stage','picture','--total',total,
-                    '--reason','with the still on screen the length still serves the moment')['decision']
-            self.assertTrue(dec['picture']['still'])
+        nobed=cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','picture','--total',0.9,
+                  '--reason','with the still on screen the length still serves the moment',expected=2)
+        self.assertIn('--bed',nobed['error'])                                 # with the picture, the sound too
+        def confirm():
+            for lid,total in (('L003',0.9),('L010',2.5)):
+                dec=cli('hold-decide','--run',self.run,'--video',1,'--line',lid,'--stage','picture','--total',total,
+                        '--bed','none','--reason','with the still on screen the length still serves the moment')['decision']
+                self.assertTrue(dec['picture']['still'])
+            return dec
+        dec=confirm()
         self.assertEqual(dec['picture']['shot_id'],'S2')
         tl=cli('timeline-check','--run',self.run,'--video',1,expected=2)
-        self.assertFalse([x for x in tl['issues'] if 'hold' in x])         # same lengths, confirmed: no new retime
+        self.assertIn('edit_plan_outdated_holds_changed_rerun_retime_shots',tl['issues'])   # the bed is now decided
+        cli('retime-shots','--run',self.run,'--video',1)
+        confirm()                                                             # the same again: nothing changes
+        tl=cli('timeline-check','--run',self.run,'--video',1,expected=2)
+        self.assertFalse([x for x in tl['issues'] if 'hold' in x])
         # The picture changes: the decision made with the old one no longer stands.
         (stills/'S1.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'1'*2048)
         tl=cli('timeline-check','--run',self.run,'--video',1,expected=2)
@@ -2191,6 +2221,133 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('about 1.5 s with no voice, after "...',text)
         self.assertIn('road ahead tonight.", before "Line 4 tells',text)
         self.assertNotIn(HELD['pause_purpose'],text)
+
+    # ---------------------------------------------------------------- transitions into and out of a held silence
+    def test_how_a_line_lands_and_the_next_begins_is_measured(self):
+        gaps=[0.6,0.7,0.6,0.7,0.6,0.7,0.6,0.7,0.6,0.8]
+        vd,d,out=self.recorded_with_gaps(gaps,contours={2:'fall',4:'rise'},delivery=True,
+                                         pauses={2:{'pause_total_s':1.4,'pause_via':'edit',**HELD},
+                                                 4:{'pause_total_s':1.4,'pause_via':'edit',**HELD}})
+        self.assertTrue(out['cadence_usual'])                                  # this voice's usual endings
+        h={x['line']:x for x in cli('holds','--run',self.run,'--video',1)['holds']}
+        fall,rise=h['L002']['ending'],h['L004']['ending']
+        self.assertLess(fall['last_vowel_vs_line_st'],-3)                     # it lands: falls below the line
+        self.assertGreater(rise['last_vowel_vs_line_st'],3)                   # it hangs: rises above the line
+        self.assertGreater(rise['next_reset_st'],-12); self.assertLess(fall['next_reset_st'],12)
+        self.assertEqual(fall['punctuation'],'.')
+        self.assertLess(fall['soft_end_s'],0.1)                               # a clean stop, nothing after the vowel
+        self.assertIn('inside_silence',h['L002'])
+
+    def test_an_added_silence_keeps_a_breath_with_its_line(self):
+        core=self.load_core()
+        gaps=[0.6,0.6,1.0,0.6,0.6,1.0,0.6,0.6,1.0,0.7]
+        # L003: a breath just before the next line. L006: a breath in the middle of the silence, where the middle of
+        # the gap (the old place for an added silence) would have cut it in two. L009: a release just after the line,
+        # which belongs to that line: the added silence goes after it.
+        breaths={3:0.25,6:0.55,9:0.75}
+        vd,d,_=self.recorded_with_gaps(gaps,breaths=breaths,pauses={k:{'pause_total_s':2.0,'pause_via':'edit',**HELD}
+                                                                       for k in breaths})
+        rows={x['id']:x for x in json.loads((d/'line-times.json').read_text())['lines']}
+        for k,lead in breaths.items():
+            r=rows[f'L{k:03}']
+            self.assertAlmostEqual(r['gap_after_s'],1.0,delta=0.04)           # the breath is inside the silence...
+            self.assertGreater(r['gap_other_material_s'],0.05)
+            breath=(r['gap_span_s'][1]-lead, r['gap_span_s'][1]-lead+0.1)
+            self.assertFalse(breath[0]-0.02<=r['gap_insert_at_s']<=breath[1]+0.02)   # ...never cut by the added one
+            cli('hold-decide','--run',self.run,'--video',1,'--line',f'L{k:03}','--stage','narration','--total',2.0,
+                '--reason','the turn lands, then the breath that opens the next line')
+        self.two_shots(10)
+        cli('retime-shots','--run',self.run,'--video',1)
+        plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        import numpy as np, soundfile as sf
+        y,sr=sf.read(str(d/'narration-edit.wav'),dtype='float32',always_2d=True); y=y[:,0]
+        for p in plan['pauses']:
+            self.assertAlmostEqual(p['resulting_gap_s'],2.0,delta=core.HOLD_VERIFY_TOL_S)
+            # In the edit the breath is whole, and as far as recorded from the line it belongs to.
+            lead=breaths[p['index']]
+            t_from,t_next=p['times_in_edit']['silence_from_s'],p['times_in_edit']['next_line_s']
+            win=y[int(t_from*sr):int(t_next*sr)]
+            env=np.array([np.sqrt(np.mean(win[k:k+441]**2)) for k in range(0,len(win)-441,441)])
+            on=env>env.max()/3
+            start=int(np.argmax(on)); length=int(np.argmax(~on[start:])) if (~on[start:]).any() else len(on)-start
+            at=t_from+0.01*start
+            centre=(1.0-lead+0.05)/1.0                     # where the breath sits in its 1.0 s silence
+            if centre>=0.45:  # an intake before the next line (or mid-silence): stays with the next line
+                self.assertAlmostEqual(t_next-at,lead,delta=0.03)
+            else:             # a release after the line: stays with that line
+                self.assertAlmostEqual(at-t_from,1.0-lead,delta=0.04)
+            self.assertAlmostEqual(0.01*length,0.1,delta=0.03)                # one breath, not two halves
+
+    def test_a_fade_touches_only_audible_room_tone(self):
+        import numpy as np, soundfile as sf
+        core=self.load_core()
+        gaps=[0.6,0.6,1.0,0.6,0.6,0.6,0.6,0.6,0.6,0.8]
+        # A recording with audible room tone in its silences (about 45 dB under the voice).
+        vd,d,_=self.recorded_with_gaps(gaps,room=0.0013,pauses={3:{'pause_total_s':1.8,'pause_via':'edit',**HELD}})
+        r=[x for x in json.loads((d/'line-times.json').read_text())['lines'] if x['id']=='L003'][0]
+        self.assertLess(r['gap_floor_under_speech_db'],core._av().AUDIBLE_FLOOR_UNDER_DB)
+        refused=cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--no-hold',
+                    '--into','fade','--reason','a fade with nothing added would only change the voice',expected=2)
+        self.assertIn('nothing is added',json.dumps(refused))
+        last=cli('hold-decide','--run',self.run,'--video',1,'--line','L010','--stage','narration','--total',2.0,
+                 '--out-of','fade','--reason','the ending fades back in to nothing at all',expected=2)
+        self.assertIn('nothing follows the last line',json.dumps(last))
+        dec=cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--total',1.8,
+                '--into','fade','--out-of','fade','--reason','the room tone eases into the held silence and back')['decision']
+        f=dec['transition']['fades_on_narration_clock']
+        self.assertTrue(f['into'] and f['out_of'])
+        self.assertGreaterEqual(f['into'][0],r['gap_subrun_s'][0])            # inside the quiet stretch only
+        self.assertLessEqual(f['out_of'][1],r['gap_subrun_s'][1])
+        self.two_shots(10)
+        cli('retime-shots','--run',self.run,'--video',1)                     # the voice-unchanged check passes
+        plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        h=plan['holds'][0]
+        self.assertEqual((h['transition']['into'],h['transition']['out_of']),('fade','fade'))
+        self.assertAlmostEqual(h['resulting_gap_s'],1.8,delta=core.HOLD_VERIFY_TOL_S)
+        # The room tone really fades to the splice: the last 50 ms before it are far quieter than in the recording.
+        a,sr=sf.read(str(d/'narration.wav'),dtype='float32',always_2d=True); b,_=sf.read(str(d/'narration-edit.wav'),dtype='float32',always_2d=True)
+        at=h['at_audio_s']; rms=lambda x: float(np.sqrt(np.mean(x**2))+1e-9)
+        before_orig=rms(a[int((at-0.05)*sr):int(at*sr),0]); before_edit=rms(b[int((at-0.05)*sr):int(at*sr),0])
+        self.assertLess(20*np.log10(before_edit/before_orig),-6)
+
+    def test_a_fade_is_refused_where_the_silence_is_already_silent(self):
+        gaps=[0.6,0.6,1.0,0.6,0.6,0.6,0.6,0.6,0.6,0.8]
+        vd,d,_=self.recorded_with_gaps(gaps,pauses={3:{'pause_total_s':1.8,'pause_via':'edit',**HELD}})
+        res=cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--total',1.8,
+                '--into','fade','--reason','the room tone eases into the held silence',expected=2)
+        self.assertIn('silence already',json.dumps(res))
+        pv=cli('holds','--run',self.run,'--video',1,'--preview','L003','--totals','1.8','--into','clean,fade')['preview']
+        self.assertEqual([v['variant'] for v in pv['variants']],['voice-gap','total-1.80s'])
+        self.assertTrue(pv['refused'] and 'silence already' in json.dumps(pv['refused']))
+        self.assertIn('Not rendered',Path(pv['guide']).read_text(encoding='utf-8'))
+
+    def test_the_bed_around_a_silence_is_carried_and_checked(self):
+        gaps=[0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.8]
+        vd,d,_=self.recorded_with_gaps(gaps,pauses={3:{'pause_total_s':1.6,'pause_via':'edit',**HELD}})
+        cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--total',1.6,'--bed','enters',
+            '--reason','the music begins in the silence after the turn, under the picture')
+        self.two_shots(10)
+        cli('retime-shots','--run',self.run,'--video',1)
+        plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        p=plan['pauses'][0]
+        self.assertEqual(p['transition']['bed'],'enters')
+        tm=p['times_in_edit']
+        self.assertAlmostEqual(tm['next_line_s']-tm['silence_from_s'],1.6,delta=0.05)
+        tdir=self.run/'70-edit/video-01'
+        def check(music_start, music_end):
+            save(tdir/'timeline.json',{'canvas':'1920x1080','visual_segments':[],
+                 'audio_tracks':[{'kind':'narration','file':plan['narration_for_edit']['file'],'start_s':0,
+                                  'end_s':plan['edit_duration_s']},
+                                 {'kind':'music','file':str(self.home/'bed.wav'),'start_s':music_start,'end_s':music_end,
+                                  'beats':['B01']}]})
+            return [x for x in cli('timeline-check','--run',self.run,'--video',1,expected=2)['issues'] if '_bed_' in x]
+        self.assertEqual(check(tm['silence_from_s']+0.2,plan['edit_duration_s']),[])      # it enters in the silence
+        self.assertTrue(check(tm['silence_from_s']+6.0,plan['edit_duration_s']))          # six seconds late: caught
+        cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--total',1.6,'--bed','none',
+            '--reason','the silence stays bare, nothing under it at all')
+        cli('retime-shots','--run',self.run,'--video',1)
+        plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        self.assertTrue(check(0.0,plan['edit_duration_s']))                 # a bed playing under a bare silence: caught
 
 
 class AvToolsTests(unittest.TestCase):

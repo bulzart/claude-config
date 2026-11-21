@@ -27,19 +27,25 @@ only:
   (the claim's reference is taken from the whole song occurrence around the claimed part, up to 8 minutes, to cover as much of it as there is).
 - **Neural fingerprint** (local, open weights; `scripts/nafp.py` in `C:\Users\Bulzart\Documents\AI\audio-fp\.venv`): LAION's
   `laion/neural-audio-fingerprint` (Apache-2.0, 80.3 M parameters, checkpoint 321,329,282 bytes, SHA-256 checked) turns every 1 s of 16 kHz audio into a
-  128-number fingerprint; a music interval the landmark fingerprints did not name is queried against the LOCAL REFERENCE INDEX (`data/nafp-index/`:
-  `cc.py music-index`). **It names a song only when that song's reference recording is in the index; otherwise UNKNOWN.** The production index starts
-  empty: no commercial song can be named until a reference is added (the user's own files, a stream stretch where an identified song plays alone, openly
-  licensed music; never downloaded commercial recordings). Levels: 0.90 with two consistent windows = strong (90, 95 with four), 0.80 = fair (80: alone
-  below 85, a second method is needed); the same method group as the landmark fingerprints (one reference audio: never counted twice). Cached per
-  interval and index version (`30-assets/music/neural-fp.json`). Measured 2026-11-21 (`C:\Users\Bulzart\Documents\stream-clips\validation\fingerprint-bench-20261121`:
-  8 references (5 ACE-Step tracks made on this PC, 3 stream songs), 110 queries, never the indexed files themselves): clean 5 s 16/16, 2-3 s 16/16, MP3
-  64 kbps 8/8, -20 dB 8/8, 3 % faster 3/3, 6 % faster 1/3 (a sped-up upload is mostly another recording), the song 6 dB over his talk 8/8 at 0.80, as
-  loud as his talk 1/8, 6 dB under it 0/8 at every setting, the -6 dB mixes separated first by Demucs 0/9 and by SAM 0/9 (2/9 at 0.75): separating
-  before fingerprinting does not rescue a song buried under talk; not-indexed songs, his talk, game sound, TTS and sound effects 13/13 UNKNOWN; no false
-  or wrong match at any setting tried (highest score of a wrong recording 0.70). Load 0.7-0.8 s, 0.6-0.7 GB of GPU memory, seconds per interval. The
-  thresholds come from this one small set: provisional. The real stream: the stretch of the test edit inside an indexed stream reference was named
-  (171 windows, identity 95, outcome C: no claim evidence), the stretch before it (not indexed) stayed UNKNOWN.
+  128-number fingerprint. A music interval the landmark fingerprints did not name is queried against the LOCAL REFERENCE INDEX (`data/nafp-index/`,
+  `cc.py music-index`) in excerpts of 2 minutes (up to 10: another excerpt is tried wherever one fails), and where his words overlap the music and
+  nothing was named, again on the analysis step's separated accompaniment (temporary audio, never the output). **It names a song only when that song's
+  reference recording is in the index; otherwise UNKNOWN.** The production index starts empty: no commercial song can be named until a reference is
+  added (the user's own files, a stream stretch where an identified song plays alone, openly licensed music; never downloaded commercial recordings).
+  A match = two consecutive 1 s windows at one offset. Levels: strong 0.90 (identity 90, 95 with four windows), fair 0.67 (80: alone below 85, a
+  second independent method is needed). A song matched in two or more excerpts must line up as one continuous playback (within 1 s), otherwise it
+  stays at the fair level; two references in one excerpt = AMBIGUOUS (nothing named); other songs matched elsewhere in the interval are listed. A
+  reference is never surer than its own label: `--id-score` (required for a stretch of a run) caps every match against it. The
+  same method group as the landmark fingerprints (one reference audio: never counted twice). Cached per interval, source and index version
+  (`30-assets/music/neural-fp.json`); `music.json` names the matching reference (`index_id`), the level, the source and the consistency.
+  Measured 2026-11-21 (`C:\Users\Bulzart\Documents\stream-clips\validation\fingerprint-bench-20261121`: 8 references (5 ACE-Step tracks made on this
+  PC, 3 stream songs), 110 queries, never the indexed files themselves, 10,057 null windows): clean 5 s, 2-3 s, MP3 64 kbps, -20 dB, 3 % and 6 %
+  faster: all found; not-indexed songs, his talk, game sound, TTS and sound effects: all UNKNOWN; no false or wrong match at any level down to 0.54
+  (the two-window rule does the work; highest single wrong score 0.70). At the fair level 0.67 (0.1 % of null windows above it; it was 0.80: song as
+  loud as his talk 1/8): the song as loud as his talk 7/8, 6 dB under it 1/8, the -6 dB mixes separated first by Demucs 3/9 and by SAM 5/9. A song
+  buried under his talk stays mostly unrecognised. Load 0.7-0.8 s, 0.4-0.7 GB of GPU memory, about 2 ms per window. The real stream: the stretch
+  inside an indexed stream reference was named (171 windows, identity 95, outcome C: no claim evidence); the stretch before it under his talk (not in
+  the reference) stayed UNKNOWN on the stream audio and on the separated accompaniment. The levels come from one small set: provisional.
 
 - **Analysis** (temporary audio, never the output): an interval no fingerprint knows is split once into voices and accompaniment by Demucs
   (`30-assets/music/analysis/`, cached); the accompaniment is matched against the local fingerprints (the song without his voice over it); Whisper
@@ -115,8 +121,14 @@ only:
   "man speaking" loses the laugh: -0.3); BUT game sound under a song kept no better than SAM's "music playing" removal while removing LESS song (-12.8
   against -15.9 dB), and on the real stream the singer stayed audible before his words (-4.8 to -9 dB against SAM's -65): not adopted. MVSep's DnR v3
   Mel-Band RoFormer: its weights are not published (mvsep.com/algorithms/64 offers it hosted only); not used. SAM Audio Small and Large are not
-  installed. The second fingerprint model (nmfp-triplet, AGPLv3) was not tested: the measured failure is the song buried under talk, which separation
-  did not fix either; its licence would need the user's decision first.
+  installed. The second fingerprint model, **nmfp-triplet** (raraz15/neural-music-fp, ISMIR 2025; installed for the test only in
+  `C:\Users\Bulzart\Documents\AI\nmfp`, never called by the toolkit): its readme says AGPLv3 for code and weights, its LICENSE file GPL-3.0, Zenodo
+  GPL-3.0-or-later (read as AGPLv3). TensorFlow 2.13 has no GPU on Windows and its spectrogram library (Essentia) no Windows build: run on the CPU
+  with Essentia's spectrogram replicated from its source (all 832 weight tensors restored; clean excerpts 0.97). At the same false-alarm rate as
+  LAION (`fp_compare.py`, `compare-matched-false-alarm.json`): 6 dB under his talk 6/8 against 2/8 (1 %) and 3/8 against 1/8 (0.1 %), Demucs-separated
+  7/9 against 6/9; but SAM-separated 5/9 against 7/9 and sped-up versions 0/6 against 6/6; equal elsewhere; about 40 times slower (64 ms per window
+  on the CPU). Not adopted: better only for a song well under his talk, and adding it would bind the toolkit to its licence (the user's decision).
+
 
 - **Licence:** Demucs's code is MIT; its weights were trained partly on MUSDB18, a non-commercial dataset, and carry no licence of their own (the user
   decides about a monetized channel). SAM Audio's weights: the SAM License, accepted by the user with their Hugging Face access.
@@ -138,7 +150,8 @@ fragments, the stream's words about a song, the times to look at. The agent, for
    versions, ISRCs, lengths, remixes, DJ mixes), and items it finds with `--add-id --rid <rid> --kind <kind> --run RUN --rec A-B --detail "..."
    --source <where>` (his words naming it: spoken_mention; a title on screen: onscreen_title with the frame time; a soundtrack listing of that very
    recording: soundtrack_listing). A candidate the evidence contradicts gets its items too: the scores record the contradiction. Once a song is identified at 85+ and a stretch of the stream plays it WITHOUT his talk, add that stretch to the local index (`T music-index
-   --from-run RUN --rec A-B --id <short id> --title "..." --artist "..." --license "the user's stream recording"`): from then on it is recognised
+   --from-run RUN --rec A-B --id <short id> --title "..." --artist "..." --id-score <its identity score> --license "the user's stream
+   recording"`): from then on it is recognised
    acoustically wherever that recording plays again.
 2. *Risk* (only for a recording identified at 85+): reports of YouTube Content ID claims, blocks or restrictions that NAME THIS RECORDING and version,
    the rights holder's own statements, a licence or clearance for YouTube: `T music-evidence --add-risk --rid <rid> --kind <kind> --summary "..."

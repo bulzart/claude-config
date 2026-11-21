@@ -1014,6 +1014,63 @@ def edit_holds_s(lines, gaps=None):
 # director's call, never a formula's.
 HOLD_STAGES = ('narration', 'picture')
 HOLD_VERIFY_TOL_S = 0.06       # an inserted silence measured in the edit's narration lands this close to the decision
+# The transition into and out of a held silence, decided with it, never applied by default. 'clean' keeps the voice
+# exactly as recorded: its own ending, its own breath, an immediate stop (often the right one for a joke or a reveal).
+# 'fade' works ONLY on the voice's own quiet inside the silence (its room tone), never on a syllable, a release or a
+# breath, and only when that quiet is audible and long enough: it smooths room tone into and out of the added silence.
+# The bed (music, ambience) is the bigger lever and is carried to the edit with exact times: it goes on, enters,
+# stops, dips or swells around the silence, or there is none.
+TRANSITION_INTO = ('clean', 'fade')
+TRANSITION_OUT = ('clean', 'fade')
+BED_MOVES = ('continues', 'enters', 'stops', 'dips', 'swells', 'none')
+BED_KINDS = ('music', 'ambience', 'bed')        # timeline.json audio_tracks kinds that make the bed
+FADE_MIN_S, FADE_MAX_S, FADE_MARGIN_S = 0.08, 0.3, 0.02
+
+
+def fade_windows(gap, into='clean', out_of='clean', last_line=False):
+    """Where a transition fade may act inside one silence (gap: measured_gap or line_gaps' facts, on the narration's
+    clock): only on the quiet stretch the added silence goes into, from FADE_MARGIN_S inside its edges to the splice,
+    at most FADE_MAX_S long. Returns ({'into': [a, b] | None, 'out_of': [a, b] | None}, problems): a problem means
+    the fade cannot be done without touching the voice or without changing nothing at all."""
+    res, problems = {'into': None, 'out_of': None}, []
+    if into == 'clean' and out_of == 'clean':
+        return res, problems
+    sub, at = gap.get('subrun_s'), gap.get('insert_at_s')
+    if gap.get('basis') != 'audio' or not sub or at is None:
+        return res, ['no measured quiet stretch here to fade: the silence was not read from the audio']
+    floor = gap.get('floor_under_speech_db')
+    audible = float(_av().AUDIBLE_FLOOR_UNDER_DB)
+    if floor is None or float(floor) > audible:
+        problems.append(f'the voice\'s own silence here is {floor} dB under its speech (audible room tone starts within '
+                        f'{audible:g} dB): it is silence already, a fade would change nothing anyone can hear')
+    if into == 'fade':
+        a, b = float(sub[0]) + FADE_MARGIN_S, float(at)
+        if b - a < FADE_MIN_S:
+            problems.append(f'only {max(0.0, b - a):.2f} s of quiet before the splice: too little to fade without '
+                            'reaching the end of the line')
+        else:
+            res['into'] = [round(max(a, b - FADE_MAX_S), 3), round(b, 3)]
+    if out_of == 'fade':
+        if last_line:
+            problems.append('nothing follows the last line: there is no way out of this silence to fade')
+        else:
+            a, b = float(at), float(sub[1]) - FADE_MARGIN_S
+            if b - a < FADE_MIN_S:
+                problems.append(f'only {max(0.0, b - a):.2f} s of quiet after the splice: too little to fade without '
+                                'reaching the next line')
+            else:
+                res['out_of'] = [round(a, 3), round(min(b, a + FADE_MAX_S), 3)]
+    return res, problems
+
+
+def line_ending_mark(text):
+    """The punctuation a line ends on (the writer's cadence the voice follows): '.', '?', '!', ',', ':', ';', '...',
+    a dash, or '' when it ends on a word."""
+    t = strip_tags(str(text or '')).rstrip().rstrip('"\'”’)')
+    for mark in ('...', '…', '—', '--', '-', '.', '?', '!', ',', ':', ';'):
+        if t.endswith(mark):
+            return {'…': '...', '—': 'dash', '--': 'dash', '-': 'dash'}.get(mark, mark)
+    return ''
 
 
 def holds_path(rd, video):
@@ -1050,7 +1107,9 @@ def measured_gap(rows, index, nlines):
         parts[str(nx.get('part'))] = None
     if 'gap_after_s' in r:
         return {'natural_gap_s': r.get('gap_after_s'), 'basis': r.get('gap_basis') or 'audio',
-                'span_s': r.get('gap_span_s'), 'parts': parts}
+                'span_s': r.get('gap_span_s'), 'parts': parts, 'subrun_s': r.get('gap_subrun_s'),
+                'insert_at_s': r.get('gap_insert_at_s'), 'floor_under_speech_db': r.get('gap_floor_under_speech_db'),
+                'other_material_s': r.get('gap_other_material_s'), 'cadence': r.get('cadence')}
     if nx and nx.get('start_s') is not None and r.get('end_s') is not None:
         return {'natural_gap_s': round(max(0.0, nx['start_s'] - r['end_s']), 3), 'basis': 'whisper',
                 'span_s': [r['end_s'], nx['start_s']], 'parts': parts}
@@ -1142,7 +1201,12 @@ def hold_facts(rd, video, lines=None):
         row = {'line': lid, 'index': i, 'beat': beats.get(i), 'words_before': text[-90:], 'words_after': after[:70],
                'proposal': ({k: p[k] for k in ('form', 'seconds', 'via', 'purpose', 'picture', 'sound')} if p else None),
                'natural_gap_s': g.get('natural_gap_s') if g else None, 'gap_basis': g.get('basis') if g else 'not_recorded',
-               'status': 'provisional', 'decision': None}
+               'status': 'provisional', 'decision': None,
+               # How the line before it ends and the next begins (narration-measure, from the audio; the punctuation
+               # from the script), and what the silence itself holds: what a transition is decided on.
+               'ending': {'punctuation': line_ending_mark(lines[i - 1].get('text')), **((g or {}).get('cadence') or {})},
+               'inside_silence': ({k: g.get(k) for k in ('insert_at_s', 'subrun_s', 'floor_under_speech_db',
+                                                         'other_material_s')} if g else None)}
         if d:
             fresh = bool(d.get('parts')) and all(prints.get(int(k)) == v for k, v in (d.get('parts') or {}).items())
             if fresh:
@@ -1162,6 +1226,7 @@ def hold_facts(rd, video, lines=None):
                 row['estimate_from'] = 'the older pause_after_s: added on top of the voice\'s gap, as written'
         out.append(row)
     return {'holds': out, 'voice_gaps': prof, 'line_times_current': current,
+            'endings_usual': (lt.get('cadence_usual') or {}) if current else {},
             'added_s': round(sum(h.get('added_s') or 0 for h in out), 2),
             'undecided': [h['line'] for h in out if h['status'] in ('provisional', 'stale')],
             'decided_narration': [h['line'] for h in out if h['status'] == 'decided_narration'],
@@ -1169,10 +1234,15 @@ def hold_facts(rd, video, lines=None):
 
 
 def hold_decisions_sha(rd, video):
-    """What the edit plan was timed from: the silence decided at every line (whole and added). A confirmation with the
-    picture that keeps the length changes nothing in the edit, so it asks for no new retime."""
+    """What the edit plan was timed from: the silence decided at every line (whole and added) and its transition (the
+    fades the edit's narration carries, what the bed does). A confirmation with the picture that keeps all of these
+    changes nothing in the edit, so it asks for no new retime."""
     decs = hold_decisions(rd, video)['decisions']
-    return canonical_sha({k: [v.get('total_s'), v.get('added_s')] for k, v in sorted(decs.items())})
+    def tr(v):
+        t = v.get('transition') or {}
+        return [t.get('into') or 'clean', t.get('out_of') or 'clean', t.get('bed')]
+    return canonical_sha({k: [v.get('total_s'), v.get('added_s')] + (tr(v) if v.get('transition') else [])
+                          for k, v in sorted(decs.items())})
 
 
 def hold_signals(plan):
@@ -5186,6 +5256,29 @@ def timeline_facts(rd, video):
                 if (seen_pic.get('shot_id'), seen_pic.get('still_fingerprint')) != \
                         (now_pic.get('shot_id'), now_pic.get('still_fingerprint')):
                     issues.append(f'hold_{h["line"]}_decided_with_another_picture')
+        # What the bed does around each held silence, as decided, in the project: it enters, stops, goes on under it,
+        # or there is none (from timeline.json's music and ambience tracks). A dip or a swell is a volume move the
+        # project's read-back here does not carry: it is listed to listen to, never claimed.
+        beds = [t for t in track.get('audio_tracks') or [] if isinstance(t, dict)
+                and str(t.get('kind') or '').lower() in BED_KINDS and t.get('start_s') is not None
+                and t.get('end_s') is not None]
+        for p in plan.get('pauses') or []:
+            bed, tm = (p.get('transition') or {}).get('bed'), p.get('times_in_edit') or {}
+            if not bed or not tm:
+                continue
+            a, b = float(tm['silence_from_s']), float(tm['silence_to_s'])
+            nxt = float(tm.get('next_line_s') or b)
+            spans_ = [(float(t['start_s']), float(t['end_s'])) for t in beds]
+            covers = any(s <= a + 0.05 and e >= b - 0.05 for s, e in spans_)
+            under = any(s < b - 0.2 and e > a + 0.2 for s, e in spans_)
+            ok = {'enters': any(a - 0.5 <= s <= nxt + 0.5 for s, _ in spans_),
+                  'stops': any(a - 0.5 <= e <= nxt + 0.5 for _, e in spans_),
+                  'continues': covers, 'none': not under, 'dips': covers, 'swells': covers}[bed]
+            if not ok:
+                issues.append(f'hold_{p["after_line"]}_bed_{bed}_not_in_the_project_at_{_mmss(a)}')
+            elif bed in ('dips', 'swells'):
+                warnings.append(f'{p["after_line"]}: the bed {bed} at {_mmss(a)}-{_mmss(nxt)}: a volume move the read-back '
+                                'does not carry; listen there')
     cursor, seen = 0.0, {}
     for i, clip in enumerate(seq, 1):
         try:
@@ -5995,6 +6088,11 @@ def cmd_narration_measure(args):
             rows[li].update({'gap_after_s': x['gap_s'], 'gap_span_s': x['span_s'], 'gap_basis': x['basis']})
             if x.get('last_line'):
                 rows[li]['gap_is_tail'] = True
+            # Inside the silence: where an added silence would go (the middle of its longest quiet stretch, so a breath
+            # stays with its line), how loud the voice's own silence is, and what else it holds (a breath, a click).
+            for k in ('subrun_s', 'insert_at_s', 'floor_under_speech_db', 'other_material_s'):
+                if x.get(k) is not None:
+                    rows[li]['gap_' + k] = x[k]
     part_ends = {int(c['line_end']) for c in chunks}
     between = [float(rows[li]['gap_after_s']) for li in order if rows[li].get('gap_basis') == 'audio'
                and rows[li].get('gap_after_s') is not None and not rows[li].get('gap_is_tail') and li not in part_ends]
@@ -6071,7 +6169,7 @@ def cmd_narration_measure(args):
     # How the voice moves, beat by beat and on each side of every join, next to what each beat asked for and to the
     # references measured the same way (av_tools): the writing of the parts not yet recorded is where a flat stretch
     # gets fixed.
-    delivery, delivery_error = None, None
+    delivery, delivery_error, cadence_usual = None, None, {}
     if not args.no_delivery:
         try:
             av = _av()
@@ -6083,6 +6181,14 @@ def cmd_narration_measure(args):
                 spans[f'seam_{s["after_part"]}_after'] = (s['at_s'], s['at_s'] + 20)
             wav = joined if joined is not None else av.concat_audio(files, Path(tmpdir) / 'narration.wav')
             delivery = av.delivery(f'video-{n:02d} narration', wav, all_words, spans=spans, segments=all_segments)
+            # How each line ends and the next begins (the facts a held silence's transition is decided on), next to
+            # this voice's usual endings.
+            cad = av.line_cadence(wav, [{'index': li, 'start_s': rows[li]['start_s'], 'end_s': rows[li]['end_s'],
+                                         'gap_span_s': rows[li].get('gap_span_s')} for li in order])
+            for li, c in (cad.get('boundaries') or {}).items():
+                if int(li) in rows:
+                    rows[int(li)]['cadence'] = c
+            cadence_usual = cad.get('usual') or {}
             for b in read_json(vd / 'beat-map.json').get('beats') or []:
                 k = str(b.get('id'))
                 if k in (delivery.get('spans') or {}):
@@ -6110,7 +6216,7 @@ def cmd_narration_measure(args):
            'duration_s': round(tot_dur, 2), 'words': int(tot_words), 'speech_s': round(tot_speech, 2), 'wpm': wpm,
            'script_words': script_words, 'forecast_wpm': forecast_wpm, 'overall_wpm': overall_wpm,
            'natural_line_gap_median_s': round(natural_gap, 3), 'per_line_overhead_s': per_line,
-           'line_gaps_from_audio': gaps_now, 'line_gaps_error': gap_error,
+           'line_gaps_from_audio': gaps_now, 'line_gaps_error': gap_error, 'cadence_usual': cadence_usual,
            'alignment_match_ratio': round(ratio_all, 3), 'tags_measured': measured_tags,
            'unheard_lines': unheard, 'rechecked_lines': rechecks, 'tags_read_aloud': read_aloud,
            'possible_repeats': repeats, 'seams': seams, 'beats': beat_rows, 'pronunciation_heard': pron_heard,
@@ -6167,7 +6273,7 @@ def cmd_narration_measure(args):
           'wpm': wpm, 'forecast_wpm': forecast_wpm, 'overall_wpm': overall_wpm, 'words': int(tot_words),
           'script_words': script_words, 'duration_s': round(tot_dur, 2), 'per_line_overhead_s': per_line,
           'natural_line_gap_median_s': round(natural_gap, 3), 'tags_measured': measured_tags,
-          'line_gaps_from_audio': gaps_now, 'line_gaps_error': gap_error,
+          'line_gaps_from_audio': gaps_now, 'line_gaps_error': gap_error, 'cadence_usual': cadence_usual,
           'unheard_lines': unheard, 'rechecked_lines': rechecks, 'tags_read_aloud': read_aloud, 'seams': seams,
           'beats': beat_rows, 'pronunciation_heard': pron_heard, 'pause_profile': profile,
           'references': {v: {'wpm': (lock.get('per_ref_wpm') or {}).get(v), **p}
@@ -6235,10 +6341,12 @@ def _narration_source(rd, video, tmpdir):
     return _av().concat_audio(files, Path(tmpdir) / 'narration.wav')
 
 
-def hold_previews(rd, video, lines, lid, totals):
-    """Short local previews of one held silence at several whole lengths (the voice's own gap among them): the words
-    around it, the silence, and, once the stills exist, the shot(s) on screen as the edit would cut them. For the
-    user's ears and the director's comparison; a preview shows a still without CapCut's moves, captions or music."""
+def hold_previews(rd, video, lines, lid, totals, intos='clean', outs='clean'):
+    """Short local previews of one held silence at several whole lengths (the voice's own gap among them) and, when
+    asked, several transitions (intos/outs: 'clean,fade'): the words around it, the silence, and, once the stills
+    exist, the shot(s) on screen as the edit would cut them. A transition that cannot be done here is listed with why,
+    not rendered. For the user's ears and the director's comparison; a preview shows a still without CapCut's moves,
+    captions or music."""
     n = int(video)
     index = {str(r.get('id') or f'L{i + 1:03d}'): i + 1 for i, r in enumerate(lines)}
     if lid not in index:
@@ -6254,7 +6362,8 @@ def hold_previews(rd, video, lines, lid, totals):
     natural = float(g['natural_gap_s'])
     r = rows[i]
     span = g.get('span_s') if g.get('basis') == 'audio' else None
-    at = (span[0] + span[1]) / 2 if span else (r['end_s'] + (rows[i + 1]['start_s'] if i + 1 in rows else r['end_s'])) / 2
+    at = (g.get('insert_at_s') if g.get('insert_at_s') is not None else (span[0] + span[1]) / 2) if span else \
+        (r['end_s'] + (rows[i + 1]['start_s'] if i + 1 in rows else r['end_s'])) / 2
     last = i == len(lines)
     prev_r, next_r = rows.get(i - 1) or r, rows.get(i + 1)
     start = max(0.0, max(prev_r['start_s'], r['end_s'] - 15.0) - 0.3)
@@ -6262,7 +6371,23 @@ def hold_previews(rd, video, lines, lid, totals):
     wanted = sorted({round(float(x), 2) for x in str(totals or '').replace(';', ',').split(',') if x.strip()})
     if any(x <= 0 for x in wanted):
         error('--totals are whole silences in seconds, each above 0.')
-    variants = [('voice-gap', natural, 0.0)] + [(f'total-{x:.2f}s', x, round(max(0.0, x - natural), 3)) for x in wanted]
+    pick = lambda s, allowed: [x for x in dict.fromkeys(y.strip() for y in str(s or 'clean').split(',') if y.strip())
+                               if x in allowed] or ['clean']
+    intos, outs = pick(intos, TRANSITION_INTO), pick(outs, TRANSITION_OUT)
+    variants, refused = [('voice-gap', natural, 0.0, 'clean', 'clean')], []
+    for x in wanted:
+        add = round(max(0.0, x - natural), 3)
+        for ti in intos:
+            for to in outs:
+                if (ti, to) != ('clean', 'clean'):
+                    _, problems = fade_windows(g, ti, to, last_line=last)
+                    if add <= 0:
+                        problems = ['nothing is added at this length: a fade would change the voice\'s own gap'] + problems
+                    if problems:
+                        refused.append({'variant': f'total-{x:.2f}s into-{ti} out-of-{to}', 'why': problems})
+                        continue
+                name = f'total-{x:.2f}s' + ('' if (ti, to) == ('clean', 'clean') else f'-into-{ti}-out-of-{to}')
+                variants.append((name, x, add, ti, to))
     out_dir = rd / '70-edit' / f'video-{n:02d}' / 'hold-previews' / lid
     out_dir.mkdir(parents=True, exist_ok=True)
     shot = hold_shot(rd, n, i)
@@ -6272,19 +6397,23 @@ def hold_previews(rd, video, lines, lid, totals):
         dur = probe(src)['duration_s']
         end = dur if end is None or last else min(end, dur)
         at = dur if last else at
-        for label, total, add in variants:
+        for label, total, add, ti, to in variants:
             wav = out_dir / f'{label}.wav'
-            filt = [f'[0:a]atrim=start={start:.3f}:end={at:.3f},asetpts=PTS-STARTPTS[a]',
+            fades, _ = fade_windows(g, ti, to, last_line=last)
+            fa = (f",afade=t=out:st={fades['into'][0] - start:.3f}:d={fades['into'][1] - fades['into'][0]:.3f}"
+                  if fades.get('into') else '')
+            fb = f",afade=t=in:st=0:d={fades['out_of'][1] - fades['out_of'][0]:.3f}" if fades.get('out_of') else ''
+            filt = [f'[0:a]atrim=start={start:.3f}:end={at:.3f},asetpts=PTS-STARTPTS{fa}[a]',
                     f'anullsrc=r=44100:cl=stereo,atrim=duration={max(add, 0.001):.3f}[s]']
             labels = '[a][s]'
             if at < end - 0.01:
-                filt.append(f'[0:a]atrim=start={at:.3f}:end={end:.3f},asetpts=PTS-STARTPTS[b]')
+                filt.append(f'[0:a]atrim=start={at:.3f}:end={end:.3f},asetpts=PTS-STARTPTS{fb}[b]')
                 labels += '[b]'
             filt.append(f'{labels}concat=n={len(labels) // 3}:v=0:a=1,aresample=44100[out]')
             run_cmd(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', str(src), '-filter_complex',
                      ';'.join(filt), '-map', '[out]', '-ac', '2', '-c:a', 'pcm_s16le', str(wav)])
             item = {'variant': label, 'whole_silence_s': round(natural + add, 2), 'added_s': add, 'audio': str(wav),
-                    'silence_centre_s': round((at - start) + add / 2, 3)}
+                    'silence_centre_s': round((at - start) + add / 2, 3), 'into': ti, 'out_of': to}
             stills = []
             if shot and shot.get('still'):
                 cut = (at - start) + add                  # the hold stays on the shot before the cut
@@ -6311,15 +6440,23 @@ def hold_previews(rd, video, lines, lid, totals):
     guide = [f'# Held silence after {lid}: listening previews', '',
              f'Before: "{words_before}"', f'After: "{words_after}"', '',
              f'The voice\'s own gap here: {natural:.2f} s ({g.get("basis")}). Each file is the same moment with a '
-             'different whole silence after the line; nothing else differs.', '']
-    guide += [f'- {m["variant"]}: about {m["whole_silence_s"]:.2f} s of silence -> {m.get("video") or m["audio"]}' for m in made]
-    guide += ['', 'Listen for: does the line land, or does the silence wait for nothing? Does the next line still feel '
-              'connected? Would you want the voice to go on sooner?',
+             'different whole silence after the line (and, where named, a different transition); nothing else differs.',
+             '']
+    guide += [f'- {m["variant"]}: about {m["whole_silence_s"]:.2f} s of silence'
+              + ('' if (m['into'], m['out_of']) == ('clean', 'clean') else f', into {m["into"]}, out of {m["out_of"]}')
+              + f' -> {m.get("video") or m["audio"]}' for m in made]
+    if refused:
+        guide += ['', 'Not rendered (they could not be done here without touching the voice, or would change nothing):']
+        guide += [f'- {x["variant"]}: ' + '; '.join(x['why']) for x in refused]
+    guide += ['', 'Listen for: does the line land, or does the silence wait for nothing? Does the voice stop the way '
+              'the moment wants (a clean stop can be the point)? Does the next line come back in naturally, or too '
+              'late? Would you want the voice to go on sooner?',
               'Previews show the still only: no camera moves, captions, transitions or music.' if shot and shot.get('still')
-              else 'Audio only: the picture for this moment does not exist yet.']
+              else 'Audio only: the picture and the music for this moment do not exist yet.']
     (out_dir / 'index.md').write_text('\n'.join(guide) + '\n', encoding='utf-8')
     return {'line': lid, 'natural_gap_s': natural, 'gap_basis': g.get('basis'), 'folder': str(out_dir),
-            'guide': str(out_dir / 'index.md'), 'variants': made,
+            'guide': str(out_dir / 'index.md'), 'variants': made, 'refused': refused,
+            'inside_silence': {k: g.get(k) for k in ('insert_at_s', 'subrun_s', 'floor_under_speech_db', 'other_material_s')},
             'picture': bool(shot and shot.get('still')),
             'limits': 'A preview is the recorded voice with the silence set as named, over the shot\'s still when it '
                       'exists: no camera moves, captions, transitions or music. No agent here can hear it; the '
@@ -6343,6 +6480,7 @@ def cmd_holds(args):
                 h['on_screen'] = sh
     plan = read_json(artifact_path(rd, n, 'edit'))
     out = {'ok': True, 'video': n, 'holds': hf['holds'], 'voice_gaps': hf['voice_gaps'],
+           'endings_usual': hf['endings_usual'],
            'line_times_current': hf['line_times_current'], 'added_s': hf['added_s'],
            'undecided': hf['undecided'], 'decided_after_narration': hf['decided_narration'],
            'decided_with_picture': hf['decided_picture'],
@@ -6351,11 +6489,20 @@ def cmd_holds(args):
            'reading': 'A planned pause is a proposal. For each: does the voice\'s own gap here already give the moment '
                       'what it needs? What does the viewer see and hear while it lasts, and would they wait, or want '
                       'the voice to go on? Decide the WHOLE silence (or no hold) with hold-decide; the edit adds only '
-                      'the difference with the measured gap. No quota, no formula, no length copied from a reference.',
-           'next': 'hold-decide --line Lnnn --stage narration (--total S | --no-hold) --reason "..." for every pause '
-                   'whose line and the next are recorded; after the stills exist, again with --stage picture.'}
+                      'the difference with the measured gap. No quota, no formula, no length copied from a reference. '
+                      'The transition: `ending` says how the line lands (the pitch of its last clear vowel against the '
+                      'line, falling below zero; how long and how soft its end is after that vowel, where a creaky '
+                      'landing shows; its punctuation) and how the next line starts again (its reset and lead-in), '
+                      'next to this voice\'s usual (`endings_usual`). A landed line takes a silence as meant; one left '
+                      'hanging (level or rising, little softening) can make a long silence sound like a dropout or a '
+                      'wait for a laugh. Clean is the default; a fade is possible only on audible room tone '
+                      '(`inside_silence`); the bed is often the better lever. Numbers, never a verdict: listen.',
+           'next': 'hold-decide --line Lnnn --stage narration (--total S | --no-hold) [--into clean|fade] '
+                   '[--out-of clean|fade] [--bed continues|enters|stops|dips|swells|none] --reason "..." for every pause '
+                   'whose line and the next are recorded; after the stills exist, again with --stage picture (--bed '
+                   'required).'}
     if args.preview:
-        out['preview'] = hold_previews(rd, n, lines, args.preview.strip(), args.totals)
+        out['preview'] = hold_previews(rd, n, lines, args.preview.strip(), args.totals, args.into, args.out_of)
     emit(out)
 
 
@@ -6391,6 +6538,19 @@ def cmd_hold_decide(args):
     natural = float(g['natural_gap_s'])
     total = None if args.no_hold else round(float(args.total), 3)
     added = 0.0 if total is None else round(max(0.0, total - natural), 3)
+    # The transition: kept clean unless this moment asks otherwise, and a fade only where it can work on the voice's
+    # own quiet without touching the voice (fade_windows), and only into or out of silence that is really added.
+    into, out_of, bed = args.into, args.out_of, (args.bed or None)
+    if args.stage == 'picture' and not bed:
+        error('With the picture, say what the bed does around this silence (--bed continues|enters|stops|dips|swells|'
+              'none): the transition is the picture, the voice and the sound together.')
+    fades, problems = fade_windows(g, into, out_of, last_line=(i == len(lines)))
+    if (into == 'fade' or out_of == 'fade') and added <= 0:
+        problems.insert(0, 'nothing is added here: a fade would change the voice\'s own natural gap, not a held silence')
+    if problems:
+        error('That transition cannot be done here without touching the voice or without changing nothing at all.',
+              {'line': lid, 'into': into, 'out_of': out_of, 'problems': problems,
+               'measured': {k: g.get(k) for k in ('natural_gap_s', 'subrun_s', 'insert_at_s', 'floor_under_speech_db')}})
     p = {x['line']: x for x in script_pause_plan(lines)[0]}.get(lid)
     rec = {'line': lid, 'index': i, 'beat': _line_beats(vd).get(i), 'stage': args.stage, 'total_s': total,
            'no_hold': total is None, 'natural_gap_s': natural, 'gap_basis': g.get('basis'),
@@ -6401,7 +6561,12 @@ def cmd_hold_decide(args):
            'reason': args.reason.strip(), 'listened': (args.listened or '').strip() or None, 'decided_at': now(),
            'parts': {k: prints.get(int(k)) for k in (g.get('parts') or {}) if k.isdigit()},
            'proposal': ({k: p[k] for k in ('form', 'seconds', 'via', 'purpose', 'picture', 'sound')} if p else None),
-           'voice_gaps': voice_gap_profile(lt)}
+           'voice_gaps': voice_gap_profile(lt),
+           'transition': {'into': into, 'out_of': out_of, 'bed': bed, 'fades_on_narration_clock': fades},
+           'ending': {'punctuation': line_ending_mark(lines[i - 1].get('text')), **(g.get('cadence') or {})},
+           'endings_usual': lt.get('cadence_usual') or {},
+           'inside_silence': {k: g.get(k) for k in ('insert_at_s', 'subrun_s', 'floor_under_speech_db',
+                                                    'other_material_s')}}
     if args.stage == 'picture':
         sh = hold_shot(rd, n, i)
         if not sh or not sh.get('still'):
@@ -6492,7 +6657,10 @@ def cmd_retime_shots(args):
         total_s = d.get('total_s')
         added = 0.0 if total_s is None else round(max(0.0, float(total_s) - natural), 3)
         if g.get('basis') == 'audio' and g.get('span_s'):
-            at = dur if i == len(lines) else (g['span_s'][0] + g['span_s'][1]) / 2     # inside the voice's own silence
+            # Inside the voice's own silence, in the middle of its longest quiet stretch: the end of the line (its
+            # decay, a release) stays with that line, a breath before the next line stays with the next line.
+            at = dur if i == len(lines) else (g['insert_at_s'] if g.get('insert_at_s') is not None else
+                                              (g['span_s'][0] + g['span_s'][1]) / 2)
         else:
             at = (times[i]['end_s'] + times[i + 1]['start_s']) / 2 if i < len(lines) else dur
             notes.append(f'{h["line"]}: no clear silence found in the audio after it; the hold sits at Whisper\'s '
@@ -6500,11 +6668,21 @@ def cmd_retime_shots(args):
         if d.get('natural_gap_s') is not None and abs(float(d['natural_gap_s']) - natural) > 0.1:
             notes.append(f'{h["line"]}: the gap measured in narration.wav ({natural:.2f} s) differs from the one the '
                          f'decision read ({float(d["natural_gap_s"]):.2f} s); the decided whole silence is kept')
+        tr = d.get('transition') or {}
+        into, out_of = tr.get('into') or 'clean', tr.get('out_of') or 'clean'
+        fades, problems = fade_windows({**g, 'insert_at_s': at}, into, out_of, last_line=(i == len(lines)))
+        if problems or ((into == 'fade' or out_of == 'fade') and added <= 0):
+            error(f'{h["line"]}: the decided transition no longer fits the narration as measured now: decide it again '
+                  '(hold-decide).', {'into': into, 'out_of': out_of, 'problems': problems or ['nothing is added here']})
+        span = g.get('span_s') or [times[i]['end_s'], times[i + 1]['start_s'] if i < len(lines) else dur]
         rec = {'after_line': h['line'], 'index': i, 'at_audio_s': round(at, 3), 'hold_s': added, 'kind': 'script',
                'purpose': (h.get('proposal') or {}).get('purpose') or d.get('reason'), 'total_s': total_s,
                'natural_gap_s': round(natural, 3), 'gap_basis': g.get('basis') or d.get('gap_basis'),
                'stage': d.get('stage'), 'decided_at': d.get('decided_at'),
-               'expected_gap_s': round(natural + added, 3)}
+               'expected_gap_s': round(natural + added, 3),
+               'transition': {'into': into, 'out_of': out_of, 'bed': tr.get('bed'), 'fades': fades},
+               '_span': [float(span[0]), float(span[1])],
+               '_next_start': float(times[i + 1]['start_s']) if i < len(lines) else None}
         pauses.append(rec)
         if added > 0:
             holds.append(rec)
@@ -6522,6 +6700,14 @@ def cmd_retime_shots(args):
                 seam_s += round(float(s['seam_hold_s']), 2)
     holds.sort(key=lambda h: h['at_audio_s'])
     total = round(dur + sum(h['hold_s'] for h in holds), 3)
+    # Where each decided pause sits on the edit's own clock: the silence from the end of the line to the next line
+    # (the voice's gap plus what was added), so the bed's move (enters, stops, dips...) is placed on it exactly.
+    for p in pauses:
+        before = sum(h['hold_s'] for h in holds if h['at_audio_s'] < p['at_audio_s'] - 1e-6)
+        own = p['hold_s']
+        sp, ns = p.pop('_span'), p.pop('_next_start')
+        p['times_in_edit'] = {'silence_from_s': round(sp[0] + before, 3), 'silence_to_s': round(sp[1] + before + own, 3),
+                              'next_line_s': round(ns + before + own, 3) if ns is not None else None}
     # The length is reached by the narration, never by the silence added to it.
     tol0 = max(4, lock['target_length_s'] * lock.get('tolerance_export_pct', .025))
     win_lo = lock['target_length_s'] - tol0
@@ -6576,13 +6762,24 @@ def cmd_retime_shots(args):
     if holds:      # the CapCut project uses the narration with its holds: always written when there are any
         src, outp = folder / 'narration.wav', folder / 'narration-edit.wav'
         filt, labels, prev = [], [], 0.0
+        # A decided fade works on the stretch of the voice's own quiet next to its splice: out at the end of the
+        # stretch before it, in at the start of the stretch after it. Nothing else in the narration is touched.
+        seg_fx = [[] for _ in range(len(holds) + 1)]
+        bounds = [0.0] + [h['at_audio_s'] for h in holds]
         for j, h in enumerate(holds):
-            filt.append(f"[0:a]atrim=start={prev:.3f}:end={h['at_audio_s']:.3f},asetpts=PTS-STARTPTS[a{j}]")
+            fz = (h.get('transition') or {}).get('fades') or {}
+            if fz.get('into'):
+                seg_fx[j].append(f"afade=t=out:st={fz['into'][0] - bounds[j]:.3f}:d={fz['into'][1] - fz['into'][0]:.3f}")
+            if fz.get('out_of'):
+                seg_fx[j + 1].append(f"afade=t=in:st=0:d={fz['out_of'][1] - fz['out_of'][0]:.3f}")
+        fx = lambda k: ''.join(',' + x for x in seg_fx[k])
+        for j, h in enumerate(holds):
+            filt.append(f"[0:a]atrim=start={prev:.3f}:end={h['at_audio_s']:.3f},asetpts=PTS-STARTPTS{fx(j)}[a{j}]")
             filt.append(f"anullsrc=r=44100:cl=stereo,atrim=duration={h['hold_s']:.3f}[s{j}]")
             labels += [f'[a{j}]', f'[s{j}]']
             prev = h['at_audio_s']
         if prev < dur - 0.01:
-            filt.append(f'[0:a]atrim=start={prev:.3f},asetpts=PTS-STARTPTS[tail]')
+            filt.append(f'[0:a]atrim=start={prev:.3f},asetpts=PTS-STARTPTS{fx(len(holds))}[tail]')
             labels.append('[tail]')
         filt.append(''.join(labels) + f'concat=n={len(labels)}:v=0:a=1[out]')
         run_cmd(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', str(src),
@@ -6613,6 +6810,14 @@ def cmd_retime_shots(args):
             if wrong:
                 error('The edit\'s narration does not carry the silences that were decided (measured in '
                       'narration-edit.wav): nothing was written to the shot plan or the edit plan.', wrong)
+        # The voice itself is the recording, sample for sample, everywhere outside the added silences and the decided
+        # fades: no word, release or breath was moved, cut, faded or resampled.
+        av = av or _av()
+        excluded = [w for h in holds for w in ((h.get('transition') or {}).get('fades') or {}).values() if w]
+        changed = av.voice_unchanged(src, outp, [(h['at_audio_s'], h['hold_s']) for h in holds], excluded)
+        if changed:
+            error('narration-edit.wav differs from the recorded narration outside its added silences and decided '
+                  'fades: nothing was written to the shot plan or the edit plan.', changed)
     plan['timed_to'] = {'narration': str(folder / 'narration.wav'), 'edit_duration_s': total, 'retimed_at': now()}
     write_json(plan_path, plan)
     # The one audio file the CapCut project must carry, at 0 s, at speed 1, untrimmed (timeline-check), and that the
@@ -7263,9 +7468,11 @@ def cmd_review_packet(args):
                 lid = str(h.get('after_line'))
                 k = order_ids.index(lid) if lid in order_ids else -1
                 after = line_text[order_ids[k + 1]] if 0 <= k < len(order_ids) - 1 else '(the end)'
+                bed = (h.get('transition') or {}).get('bed')
                 held_rows.append(f'- {_mmss(h["at_audio_s"] + shift)}: about '
                                  f'{h.get("resulting_gap_s") or h.get("expected_gap_s") or h["hold_s"]:.1f} s with no '
-                                 f'voice, after "...{line_text.get(lid, "")[-70:]}", before "{after[:60]}..."')
+                                 f'voice, after "...{line_text.get(lid, "")[-70:]}", before "{after[:60]}..."'
+                                 + (f' (the music {bed})' if bed and bed != 'none' else ' (no music)' if bed else ''))
             shift += float(h.get('hold_s') or 0)
         text += ('\n## Held silences in this cut\n' + ('\n'.join(held_rows) if held_rows else
                  '- none: every pause is the voice\'s own') + '\n')
@@ -7669,6 +7876,8 @@ def main():
     p.add_argument('--preview', default='', help='A line whose held silence to preview (Lnnn)')
     p.add_argument('--totals', default='', help='Whole silences to preview, in seconds (the voice\'s own gap is always '
                    'one of the previews): 1.2,2.0')
+    p.add_argument('--into', default='clean', help='Transitions into the silence to compare: clean,fade')
+    p.add_argument('--out-of', dest='out_of', default='clean', help='Transitions out of the silence to compare: clean,fade')
     p.set_defaults(func=cmd_holds)
     p = sub.add_parser('hold-decide', help='Decide one held silence on evidence: the whole silence after a line, or none')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
@@ -7678,6 +7887,13 @@ def main():
     p.add_argument('--no-hold', action='store_true', help='No added silence: the voice\'s own gap stays as recorded')
     p.add_argument('--reason', required=True, help='Why this length serves this moment')
     p.add_argument('--listened', default='', help='The user\'s own words, when they listened to the previews')
+    p.add_argument('--into', default='clean', choices=TRANSITION_INTO, help='Into the silence: clean (the voice as '
+                   'recorded, the default) or fade (the voice\'s own room tone fades into the added silence; refused '
+                   'where it would touch the voice or where that quiet is inaudible)')
+    p.add_argument('--out-of', dest='out_of', default='clean', choices=TRANSITION_OUT, help='Out of the silence: clean '
+                   '(the default) or fade (the room tone fades back in before the next line; same limits)')
+    p.add_argument('--bed', default='', choices=('',) + BED_MOVES, help='What the music or ambience does around the '
+                   'silence (required with --stage picture)')
     p.set_defaults(func=cmd_hold_decide)
     p = sub.add_parser('retime-shots', help='Time the shot plan to the real narration and its decided holds')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)

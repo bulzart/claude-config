@@ -912,8 +912,209 @@ def line_gaps(wav, rows, last_index=None):
         else:
             out.append({'index': r['index'], 'gap_s': round(max(0.0, float(nx['start_s']) - float(r['end_s'])), 3),
                         'span_s': [round(float(r['end_s']), 3), round(float(nx['start_s']), 3)], 'basis': 'whisper'})
+    for g in out:
+        if g['basis'] == 'audio' and g.get('span_s'):
+            detail = gap_detail(levels, ref, g['span_s'], dur, last_line=bool(g.get('last_line')))
+            if detail:
+                g.update(detail)
     return {'speech_level_db': round(ref, 1), 'quiet_under_db': QUIET_UNDER_DB, 'duration_s': round(dur, 3),
             'gaps': out}
+
+
+# Inside one silence. A gap can hold a breath or a click between stretches of true quiet (bridged above). An added
+# silence goes in the middle of the LONGEST quiet stretch: an intake of breath just before the next line stays with
+# that line, a release just after the last word stays with it, and the decaying end of the last word is never cut.
+# How loud the voice's own silence is (its room tone, in dB under the speech level) decides whether there is any
+# material a fade could work on: under AUDIBLE_FLOOR_UNDER_DB it is silence already (one eleven_v4 voice measured
+# about 62 dB under its speech, 2026-11-21), and a fade would change nothing anyone can hear.
+AUDIBLE_FLOOR_UNDER_DB = 55.0
+
+
+def gap_detail(levels, ref, span, dur, last_line=False):
+    """The quiet stretches inside one silence (span_s, on the file's clock): the longest one (`subrun_s`), where an added
+    silence goes (`insert_at_s`: its middle; after the script's last line, the end of the file), the level of the
+    voice's own silence there (`floor_under_speech_db`) and how much non-quiet material (a breath, a click) the
+    silence holds (`other_material_s`). None when nothing in it is quiet."""
+    np, _, _ = _audio_deps()
+    a = max(0, min(int(round(span[0] / GAP_HOP_S)), len(levels) - 1))
+    b = max(a + 1, min(int(round(span[1] / GAP_HOP_S)), len(levels)))
+    seg = levels[a:b]
+    quiet = seg < ref - QUIET_UNDER_DB
+    runs, k = [], 0
+    while k < len(seg):
+        if quiet[k]:
+            j = k
+            while j + 1 < len(seg) and quiet[j + 1]:
+                j += 1
+            runs.append((k, j))
+            k = j + 1
+        else:
+            k += 1
+    if not runs:
+        return None
+    lo, hi = max(runs, key=lambda x: (x[1] - x[0], -x[0]))
+    if len(runs) > 1:
+        # Something sounds inside the silence (a breath, a release). An intake of breath leads into the next phrase,
+        # a release ends the last one: one past the middle of the silence (or at it) stays with the next line, the
+        # added silence goes before it; one in the first half stays with the line before, the silence goes after it.
+        # A stretch too short to split (under 40 ms) falls back to the longest quiet stretch.
+        sounds = [(runs[k][1] + 1, runs[k + 1][0] - 1) for k in range(len(runs) - 1)]
+        s0, s1 = max(sounds, key=lambda x: x[1] - x[0])
+        k = sounds.index((s0, s1))
+        pick = runs[k] if (s0 + s1) / 2 >= 0.45 * len(seg) else runs[k + 1]
+        if (pick[1] - pick[0] + 1) * GAP_HOP_S >= 0.04:
+            lo, hi = pick
+    sub = [round((a + lo + 0.5) * GAP_HOP_S, 3), round(min(dur, (a + hi + 1.5) * GAP_HOP_S), 3)]
+    if hi >= len(seg) - 1 and b >= len(levels):
+        sub[1] = round(dur, 3)
+    floor = float(np.median(seg[quiet]))
+    return {'subrun_s': sub, 'insert_at_s': round(dur, 3) if last_line else round((sub[0] + sub[1]) / 2, 3),
+            'floor_under_speech_db': round(ref - floor, 1),
+            'other_material_s': round(float((~quiet).sum()) * GAP_HOP_S, 3)}
+
+
+# ---------------------------------------------------------------- how a line ends and the next begins
+# The pitch and level of the last quarter-second of a line, next to the line's own and to the same voice's other
+# endings, say whether the voice lands the sentence (falls, softens: a silence after it reads as meant) or leaves it
+# hanging (stays level or rises: a long silence after it can sound like a dropout). The next line's first quarter-
+# second says how it starts again (a pitch reset is a fresh start). Facts for the director, never a verdict: a
+# suspended ending can be exactly the joke. Pitch: pYIN at CADENCE_HOP (16 ms). Its floor is 40 Hz and its frame
+# 128 ms because narrators often land a sentence in creaky voice, far below their speaking pitch: one eleven_v4 voice
+# ended a line at about 50 Hz (2026-11-21), which a 65 Hz floor clipped and a 500 Hz ceiling stopped calling voiced,
+# reading a falling ending as a rising one. The 400 Hz ceiling covers narration; a shout above it reads unvoiced.
+CADENCE_HOP = 256
+CADENCE_FMIN, CADENCE_FMAX, CADENCE_FRAME = 40.0, 400.0, 2048
+LOUD_VOWEL_UNDER_DB = 25.0      # a pitched frame within 25 dB of the speech level: a vowel, not a creak or a breath
+END_WINDOW_S = 0.25
+BEFORE_WINDOW_S = 0.5
+
+
+def line_cadence(wav, rows):
+    """For each pair of consecutive lines (rows: [{'index', 'start_s', 'end_s', 'gap_span_s'?}] in order, on the
+    file's clock): how the first ends: `last_vowel_vs_line_st` (the pitch of its last clearly voiced, loud quarter-
+    second against the line's, in semitones: below = falling), `last_vowel_fall_st` (against the half-second before),
+    `soft_end_s` (sound after that vowel before the silence: a creaky or breathy landing, a release, final
+    consonants; a creak lands a line but cannot be pitch-read, so read it with the next two), `end_level_db` (its last
+    quarter-second of sound against the line's level); what the silence holds (`other_material_s`: a breath, a click);
+    and how the next line begins: `next_reset_st` (its first vowels against this ending: a reset up is a fresh start),
+    `next_lead_in_s` (sound before its first vowel: a breath, unvoiced consonants), `next_onset_level_db`. `usual`:
+    this voice's median of each, the yardstick one ending is read against. Measurements, never a verdict."""
+    np, librosa, _ = _audio_deps()
+    y = _load_mono(wav)
+    levels = level_frames(y)
+    ref = speech_level(levels)
+    f0, voiced, _ = librosa.pyin(y, fmin=CADENCE_FMIN, fmax=CADENCE_FMAX, sr=SR, frame_length=CADENCE_FRAME,
+                                 hop_length=CADENCE_HOP)
+    voiced = voiced & np.isfinite(f0)
+    out = {}
+    if not voiced.any():
+        return {'boundaries': out, 'usual': {}, 'speech_level_dbfs': round(ref, 1)}
+    st = np.full(len(f0), np.nan)
+    st[voiced] = 12 * np.log2(f0[voiced] / float(np.median(f0[voiced])))
+    hop_s = CADENCE_HOP / SR
+
+    def vframes(a, b):
+        i0, i1 = max(0, int(a / hop_s)), min(len(st), int(math.ceil(b / hop_s)))
+        return [i for i in range(i0, i1) if voiced[i]]
+
+    def med(ix):
+        return float(np.median(st[ix])) if ix else None
+
+    def level(a, b, speech_only=False):
+        i0, i1 = max(0, int(a / GAP_HOP_S)), min(len(levels), max(int(a / GAP_HOP_S) + 1, int(math.ceil(b / GAP_HOP_S))))
+        seg = levels[i0:i1]
+        if speech_only:
+            seg = seg[seg >= ref - QUIET_UNDER_DB]
+        return float(np.median(seg)) if len(seg) else None
+    # Pitch is read only on clearly voiced, LOUD frames (vowels): a creaky or breathy ending is too aperiodic for any
+    # pitch tracker (its voicing confidence measured about 0.01, the same as ordinary vowels of a synthetic voice, so
+    # the tracker's yes/no there depends on context). That soft end is measured by what can be measured: how long it
+    # lasts after the last vowel and how far the level has dropped.
+    lvl_at = lambda i: levels[min(len(levels) - 1, int(i * hop_s / GAP_HOP_S))]
+    loud = [bool(voiced[i]) and lvl_at(i) >= ref - LOUD_VOWEL_UNDER_DB for i in range(len(st))]
+
+    def vowels(a, b):
+        i0, i1 = max(0, int(a / hop_s)), min(len(st), int(math.ceil(b / hop_s)))
+        return [i for i in range(i0, i1) if loud[i]]
+    order = [r for r in rows if r.get('start_s') is not None and r.get('end_s') is not None]
+    for r, nx in zip(order, order[1:]):
+        if int(nx['index']) != int(r['index']) + 1:
+            continue
+        span = r.get('gap_span_s') or [float(r['end_s']), float(nx['start_s'])]
+        line_v = vowels(float(r['start_s']), float(span[0]))
+        if len(line_v) < 8:
+            continue
+        t_last = line_v[-1] * hop_s
+        last = [i for i in line_v if i * hop_s >= t_last - END_WINDOW_S]
+        before = [i for i in line_v if t_last - END_WINDOW_S - BEFORE_WINDOW_S <= i * hop_s < t_last - END_WINDOW_S]
+        line_level = level(float(r['start_s']), float(span[0]), speech_only=True)
+        end_level = level(float(span[0]) - END_WINDOW_S, float(span[0]), speech_only=True)
+        row = {'last_vowel_vs_line_st': _r(med(last) - med(line_v), 1),
+               'last_vowel_fall_st': _r(med(last) - med(before), 1) if before else None,
+               'end_level_db': _r(end_level - line_level, 1) if end_level is not None and line_level is not None else None,
+               'soft_end_s': _r(max(0.0, float(span[0]) - (t_last + hop_s)), 2)}
+        a, b = max(0, int(round(span[0] / GAP_HOP_S))), min(len(levels), int(round(span[1] / GAP_HOP_S)))
+        row['other_material_s'] = _r(float((levels[a:b] >= ref - QUIET_UNDER_DB).sum()) * GAP_HOP_S, 2) if b > a else 0.0
+        next_v = vowels(float(nx['start_s']), float(nx['end_s']))
+        if next_v:
+            t_first = next_v[0] * hop_s
+            first = [i for i in next_v if i * hop_s <= t_first + END_WINDOW_S]
+            nl = level(float(nx['start_s']), float(nx['end_s']), speech_only=True)
+            ol = level(float(span[1]), float(span[1]) + END_WINDOW_S, speech_only=True)
+            row.update({'next_reset_st': _r(med(first) - med(last), 1),
+                        'next_lead_in_s': _r(max(0.0, t_first - float(span[1])), 2),
+                        'next_onset_level_db': _r(ol - nl, 1) if ol is not None and nl is not None else None})
+        out[int(r['index'])] = row
+    usual = {}
+    for k in ('last_vowel_vs_line_st', 'last_vowel_fall_st', 'end_level_db', 'soft_end_s', 'next_reset_st',
+              'next_lead_in_s', 'next_onset_level_db'):
+        vals = [v[k] for v in out.values() if v.get(k) is not None]
+        if vals:
+            usual[k] = _r(statistics.median(vals), 2)
+    return {'boundaries': out, 'usual': usual, 'lines_read': len(out), 'speech_level_dbfs': round(ref, 1),
+            'pitch_hop_s': round(hop_s, 3)}
+
+
+def voice_unchanged(orig_wav, edit_wav, cuts, excluded=(), probe_s=0.02, max_lag=4, tol=3):
+    """The edit's narration is the recording, sample for sample, outside its added silences and decided fades. cuts:
+    [(at_s, added_s)] in order on the recording's clock; excluded: [[a, b]] stretches (fades) on the same clock. For
+    each stretch between splices, probes at a quarter, half and three quarters of it (away from splices and fades) are
+    looked up in the edit within a few samples of where they must be and compared on the first channel. Returns the
+    probes that do not match (empty: the voice is untouched)."""
+    np, _, sf = _audio_deps()
+    a, sra = sf.read(str(orig_wav), dtype='int16', always_2d=True)
+    b, srb = sf.read(str(edit_wav), dtype='int16', always_2d=True)
+    if sra != srb:
+        return [{'problem': f'sample rates differ ({sra} and {srb}): the edit was resampled'}]
+    a, b = a[:, 0].astype('int32'), b[:, 0].astype('int32')
+    n = int(round(probe_s * sra))
+    edges = [0.0] + [float(c[0]) for c in cuts] + [len(a) / sra]
+    shifts = [0.0]
+    for c in cuts:
+        shifts.append(shifts[-1] + float(c[1]))
+    bad = []
+    for k in range(len(edges) - 1):
+        lo, hi = edges[k] + 0.03, edges[k + 1] - 0.03
+        if hi - lo < 3 * probe_s:
+            continue
+        for frac in (0.25, 0.5, 0.75):
+            t = lo + (hi - lo) * frac
+            if any(float(x0) - probe_s <= t <= float(x1) for x0, x1 in excluded):
+                continue
+            i = int(round(t * sra))
+            o = a[i:i + n]
+            j = i + int(round(shifts[k] * sra))
+            best = None
+            for lag in range(-max_lag, max_lag + 1):
+                if j + lag < 0:
+                    continue
+                e = b[j + lag:j + lag + n]
+                if len(e) == len(o) and len(o):
+                    d = int(np.max(np.abs(o - e)))
+                    best = d if best is None else min(best, d)
+            if best is None or best > tol:
+                bad.append({'at_s': round(t, 3), 'max_difference': best})
+    return bad
 
 
 def silence_at(wav, t_s, search_s=GAP_SEARCH_S):

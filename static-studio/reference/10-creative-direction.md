@@ -201,6 +201,16 @@ These are craft principles. Each one says when it applies.
   moment, nothing copied from a reference, never runtime. A length written in the script is a proposal: it is decided
   on the recorded voice (its real gap there, a listening preview) and again with the picture (05, `holds`,
   `hold-decide`).
+- **The way into a silence and out of it is part of the performance.** A silence reads as meant when the voice lands
+  the line before it (it falls and settles, often into a soft or creaky end) and starts the next one fresh (a reset,
+  a breath that leads in). After a line left hanging, a long silence sounds like the voice stopped or is waiting for a
+  laugh. Choose what the moment needs, not a treatment: a deadpan joke usually wants the line said flat and a short,
+  clean stop, never a softened tail; a hard reveal can cut straight to silence; a reflective beat can let the music
+  hold the room while the voice rests; an ending can let the last image and the bed resolve together. Most transitions
+  need nothing at all beyond the right length. When the voice does not land a line the silence needs landed: in parts
+  not yet recorded, write the ending to land (a full stop, a short last clause, a tag only where the writing cannot do
+  it); in recorded parts, a shorter silence, the picture or the bed usually serves before any paid re-recording. The
+  edit never fades a syllable, a release or a breath, and never adds sound to hide an empty moment (05).
 - **Delivery comes from the writing.** In TTS the voice and its settings set the character; the text sets the
   performance: punctuation, sentence length, line breaks, a question, direct address, and now and then a delivery
   tag where the register changes (05's catalogue). After the calibration part, `narration-measure` writes
