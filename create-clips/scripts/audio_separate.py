@@ -2,8 +2,8 @@
 else found by `cc.py music-setup`). Kept plain (never encrypted): another interpreter runs it, and it imports nothing from the toolkit.
 
 One job file in, one result file out:
-  job = {"device": "cuda"|"cpu", "spans": [{"id", "sig", "wav_in", "wav_out", "words": [[s, e], ...] (seconds in the span), "gap_gate_s", "gate_db",
-         "crossfade_s"}]}
+  job = {"device": "cuda"|"cpu", "spans": [{"id", "sig", "wav_in", "wav_out", "words": [[s, e], ...] (seconds in the span), "gap_gate_s" (or
+         "gap_before_s" and "gap_after_s"), "gate_db", "crossfade_s"}]}
 Each finished span also writes wav_out + ".json" (its numbers and sig) at once, so an interrupted batch resumes where it stopped: a span whose
 sidecar carries the same sig is not separated again (`--smoke` runs a 4 s self-test instead).
 
@@ -69,9 +69,11 @@ def one_span(model, sr, srcs, device, sp):
     rest = sum(stems[i] for i, s in enumerate(srcs) if s != "vocals")
     n = voc.shape[-1]
     gap = float(sp.get("gap_gate_s", 1.5))
+    pre = float(sp["gap_before_s"]) if sp.get("gap_before_s") is not None else gap      # before a word: a breath at most
+    post = float(sp["gap_after_s"]) if sp.get("gap_after_s") is not None else gap      # after a word: the laugh or reaction that follows a line
     speech = torch.zeros(n, dtype=torch.bool, device=device)
     for s, e in sorted(sp.get("words") or []):
-        a, b = max(0, int((s - gap) * sr)), min(n, int((e + gap) * sr))
+        a, b = max(0, int((s - pre) * sr)), min(n, int((e + post) * sr))
         if b > a:
             speech[a:b] = True
     gate = torch.ones(n, device=device)
@@ -141,6 +143,7 @@ def main():
             json.dump(res, open(side, "w", encoding="utf-8"))
         results.append(res)
     json.dump({"ok": True, "device": device, "model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS", "load_s": load_s, "torch": torch.__version__,
+               "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2 ** 20) if device == "cuda" else None,
                "results": results}, open(sys.argv[2], "w", encoding="utf-8"))
 
 
