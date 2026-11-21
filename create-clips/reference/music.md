@@ -84,7 +84,8 @@ only:
   CapCut export, the memory guard): "man speaking" kept through a stereo mask (SAM's keep/drop ratio applied to the ORIGINAL stereo audio: its phase
   and stereo picture stay, nothing generated is heard directly), the same gate, verified again; only a pass is used. A wrong length or offset is a
   fault, never escalated. Neither passes: `UNRESOLVED`, the original audio stays, both attempts recorded. SAM runs in full precision; stopped for
-  memory (it needs about 11-12 GB of committed memory: GPU memory counts on Windows), it retries ONCE in bfloat16 (measured 2026-11-21: 5.3 GB of GPU
+  memory (GPU memory counts as committed memory on Windows: about 12 GB for a short span, more than 13 GB for a 4.6-minute one; the guard's per-job cap
+  `music.sam.memguard_limit_gb` is 16 GB since 2026-11-22, raised from 13 on the user's word so full precision fits), it retries ONCE in bfloat16 (measured 2026-11-21: 5.3 GB of GPU
   memory instead of 8.3, but 4-5 dB less of the song removed under his talk: -15.9 against -20.1 dB, still more than Demucs's -13.0), and its line
   says so. Where nobody speaks the gate makes the span quiet, game sound and reactions far from his words included: no method tested removed the song
   there while keeping them (the trade-off is written in each removed line).

@@ -138,7 +138,7 @@
     "analysis": true,
     "escalate": ["sam-audio-base"],
     "nafp": {"python": "C:/Users/Bulzart/Documents/AI/audio-fp/.venv/Scripts/python.exe", "model_dir": "C:/Users/Bulzart/.cache/huggingface/hub/models--laion--neural-audio-fingerprint/snapshots/5dd84fa09ddbfb36f0d3740d896fea213cba5d47", "index": "", "tau": 0.90, "tau_fair": 0.67, "min_chain": 2, "max_query_s": 120.0, "max_excerpts": 10, "retry_separated": true, "gpu_need_mb": 1000, "timeout_s": 900},
-    "sam": {"python": "C:/Users/Bulzart/Documents/AI/sam-audio/.venv/Scripts/python.exe", "model": "facebook/sam-audio-base", "description": "man speaking", "keep": "target", "dtype": "float32", "chunk_s": 10.0, "shims": "C:/Users/Bulzart/Documents/AI/sam-audio/shims", "gpu_need_mb": 10000, "memguard": "C:/Users/Bulzart/Documents/AI/tools/memguard.py", "memguard_limit_gb": 13, "timeout_s": 3600},
+    "sam": {"python": "C:/Users/Bulzart/Documents/AI/sam-audio/.venv/Scripts/python.exe", "model": "facebook/sam-audio-base", "description": "man speaking", "keep": "target", "dtype": "float32", "chunk_s": 10.0, "shims": "C:/Users/Bulzart/Documents/AI/sam-audio/shims", "gpu_need_mb": 10000, "memguard": "C:/Users/Bulzart/Documents/AI/tools/memguard.py", "memguard_limit_gb": 16, "timeout_s": 3600},
     "recognition": {
       "provider": "none",
       "allow_upload": false,
