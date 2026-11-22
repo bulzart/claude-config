@@ -115,6 +115,7 @@
 - [create-clips: music removed on evidence only](create-clips-music-isolation.md) — long videos only: identity + claim-risk index per interval, only outcome A removes (Demucs, then SAM); never "safe"
 - [SAM Audio Base installed](sam-audio-base-install.md) — 2026-11-21: Documents\AI\sam-audio venv; streamed loader (Windows commit), shims, 10 s windows; escalation only, measured vs Demucs
 - [Local neural fingerprint](local-neural-fingerprint.md) — 2026-11-21: LAION open weights + local index (music-index); names only indexed songs; under-talk limit measured
+- [CapCut export ignores clip volume](capcut-export-ignores-clip-volume.md) — measured 2026-11-22: a video clip at volume 0 still sounds in the GUI export; silence the media itself (create-clips: 30-assets/mute)
 - [create-clips: Isolation / Non-Isolation](create-clips-music-mode.md) — user 2026-11-22: start question, state music_isolation_mode; only gates the music step, never selection or edits; old runs = Isolation
 - [create-clips: Shorts never touch music](create-clips-shorts-never-touch-music.md) — user 2026-11-21: a short's audio stays exactly as recorded; no identification, risk analysis or separation
 - [create-clips: no detached judges](create-clips-no-detached-judges.md) — user 2026-11-21: no blind/pairwise judges, second planners or compare-builds; context checks + validators
