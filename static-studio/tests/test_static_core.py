@@ -2973,6 +2973,63 @@ class StartWordTests(unittest.TestCase):
         self.assertNotEqual(core.shot_structure_sha(a), core.shot_structure_sha([dict(a[0], start_word=3)]))
 
 
+class MasterSoundTests(unittest.TestCase):
+    """master-sound (2026-11-22): the export's mix brought to a measured loudness, the picture copied, the export kept."""
+
+    def setUp(self):
+        self.td = tempfile.TemporaryDirectory()
+        self.addCleanup(self.td.cleanup)
+        self.rd = Path(self.td.name)/'run'
+        save(self.rd/'state.json', {'schema': 'static-youtube-longform-v1', 'run': 'r'})
+        self.src = Path(self.td.name)/'export.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=320x180:r=30:d=6',
+                        '-f', 'lavfi', '-i', 'aevalsrc=0.1*sin(2*PI*220*t)*(0.55+0.45*sin(2*PI*3*t)):s=44100:d=6',
+                        '-shortest', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac',
+                        '-b:a', '192k', str(self.src)], check=True)
+        save(self.rd/'00-inventory/references.json', {'items': [{'id': 'V001', 'source_path': str(self.src)}]})
+
+    def probe(self, f):
+        out = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-count_frames', '-show_entries',
+                              'stream=codec_name,nb_read_frames', '-of', 'csv=p=0', str(f)], capture_output=True, text=True)
+        return out.stdout.strip()
+
+    def test_the_mix_reaches_the_target_under_the_ceiling_and_the_picture_is_copied(self):
+        out = Path(self.td.name)/'final.mp4'
+        res = cli('master-sound', '--run', self.rd, '--video', 1, '--file', self.src, '--out', out, '--target-lufs', -16,
+                  '--refs', 'V001', '--why', 'the references are mastered louder than this export plays')
+        self.assertLess(abs(res['result']['integrated_lufs'] + 16), 0.5, res)
+        self.assertLessEqual(res['result']['true_peak_dbtp'], -1.5)
+        self.assertEqual(self.probe(out), self.probe(self.src))          # the same picture, frame for frame
+        self.assertTrue(self.src.is_file())                               # the export is kept
+        rec = json.loads((self.rd/'80-deliverables/video-01/master.json').read_text(encoding='utf-8'))
+        self.assertIn('integrated_lufs', rec['references']['V001'])
+        self.assertIn('over_1db_share', rec['limiter_activity'])
+
+    def test_refused_without_a_reason_or_onto_the_export_itself(self):
+        cli('master-sound', '--run', self.rd, '--video', 1, '--file', self.src, '--out', Path(self.td.name)/'x.mp4',
+            '--target-lufs', -14, '--why', 'louder', expected=2)
+        cli('master-sound', '--run', self.rd, '--video', 1, '--file', self.src, '--out', self.src, '--target-lufs', -14,
+            '--why', 'the references are mastered louder than this', expected=2)
+
+
+class CaptionOnsetTests(unittest.TestCase):
+    """A line's first caption word never lights before the voice (2026-11-22: "Just" lit inside a held breath)."""
+
+    def test_the_first_word_starts_where_the_measured_silence_ends(self):
+        spec = importlib.util.spec_from_file_location('static_core_onset', TOOL)
+        core = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(core)
+        ws = [{'w': 'Just', 's': 453.78, 'e': 454.76}, {'w': 'after', 's': 454.76, 'e': 455.14}]
+        self.assertEqual(core.clamp_line_onset(ws, 454.465), 1)
+        self.assertEqual((ws[0]['s'], ws[0]['e']), (454.465, 454.76))
+        late = [{'w': 'So', 's': 10.0, 'e': 10.3}]
+        self.assertEqual(core.clamp_line_onset(late, 10.01), 0)                 # within tolerance: untouched
+        self.assertEqual(core.clamp_line_onset(late, None), 0)
+        whole = [{'w': 'No.', 's': 5.0, 'e': 5.3}, {'w': 'Then', 's': 6.2, 'e': 6.5}]
+        core.clamp_line_onset(whole, 5.6)                                       # the whole word was before the voice
+        self.assertEqual((whole[0]['s'], whole[0]['e']), (5.6, 6.2))
+
+
 class StillTouchupTests(unittest.TestCase):
     """still_touchup.py: a local fix to a generated still keeps the original and records the edit (manual 04)."""
 

@@ -98,6 +98,10 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" hold-decide --run "R
 # Agent makes/records CapCut project (edit-plan narration_for_edit at 0 s, speed 1, untrimmed; stills at the retimed
 # shot times) and writes project-derived timeline.json, naming the project in capcut_draft.
 python "$HOME/.claude/static-studio/scripts/static_core.py" timeline-check --run "RUN" --video 1
+# The export's sound to the loudness the references are mastered at (the picture copied, the export kept):
+python "$HOME/.claude/static-studio/scripts/static_core.py" master-sound --run "RUN" --video 1 \
+  --file "RUN/80-deliverables/video-01/export/final.mp4" --out "C:/videos/final.mp4" --target-lufs -14 \
+  --refs V006,V030 --why "both length-lock references are mastered at -14 LUFS; the export plays at -23.5"
 # Only after an actual MP4 is accessible:
 python "$HOME/.claude/static-studio/scripts/static_core.py" export-check \
   --run "RUN" --video 1 --file "C:/videos/final.mp4" --deep

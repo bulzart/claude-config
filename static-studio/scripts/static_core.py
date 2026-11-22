@@ -4498,7 +4498,7 @@ def loudness_stats(path):
     """Integrated loudness (LUFS), loudness range (LU) and true peak (dBTP) of one file, by ffmpeg's EBU R128 meter
     (local, free). Never raises: {'error': ...} when it can't be read."""
     try:
-        cp = subprocess.run(['ffmpeg', '-hide_banner', '-nostats', '-i', str(path), '-af', 'ebur128=peak=true', '-f',
+        cp = subprocess.run(['ffmpeg', '-hide_banner', '-nostats', '-i', str(path), '-vn', '-af', 'ebur128=peak=true', '-f',
                              'null', '-'], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=180)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return {'error': f'{type(exc).__name__}: {str(exc)[:120]}'}
@@ -5699,7 +5699,7 @@ def cmd_captions_plan(args):
             error('The word box needs its colour for this video: --box-color #RRGGBB (a colour of the video\'s own '
                   'palette that stands out from the pictures behind the caption line) and --box-color-why "...".')
         out.update({'box_color': args.box_color.upper(), 'box_color_why': args.box_color_why})
-    words, problems = [], []
+    words, problems, clamped = [], [], 0
     counts = {'whisper': 0, 'shared': 0, 'between': 0}
     for i, line in enumerate(lines, 1):
         r = rows.get(i) or {}
@@ -5713,6 +5713,10 @@ def cmd_captions_plan(args):
         if prob:
             problems.append({'line': line.get('id'), 'problem': prob})
             continue
+        # the line's first word never lights before the voice starts it: Whisper often stretches it back over the
+        # silence before the line, which the audio measures (2026-11-22: "Just" lit 1.4 s early, inside a held breath)
+        onset = ((rows.get(i - 1) or {}).get('gap_span_s') or [None, None])[1] if i > 1 else None
+        clamped += clamp_line_onset(ws, onset)
         for w in ws:
             counts[w['timing']] += 1
             words.append({'w': w['w'], 's': cap.edit_time(w['s'], holds), 'e': cap.edit_time(w['e'], holds),
@@ -5733,6 +5737,9 @@ def cmd_captions_plan(args):
                               'edit_plan_made_at': ep.get('made_at')}})
     write_json(captions_plan_path(rd, n), out)
     warn = []
+    if clamped:
+        warn.append(f'{clamped} lines began before the voice by Whisper\'s times: their first word now lights when the '
+                    'audio says the voice starts')
     if counts['between']:
         warn.append(f'{counts["between"]} words had no time of their own from Whisper: each sits between its timed '
                     'neighbours by its length')
@@ -5744,6 +5751,18 @@ def cmd_captions_plan(args):
           'words': len(words), 'timing_evidence': out['timing_evidence'], 'warnings': warn,
           'next': 'With CapCut closed: captions-build --draft "<project folder>" (then capcut_tools.py capcut-repair '
                   '--keep-text), then timeline-check reads them back.'})
+
+
+def clamp_line_onset(ws, onset, tolerance=0.02):
+    """A line's first word starts no earlier than the voice: `onset` is where the measured silence before the line
+    ends (the previous line's gap_span_s[1], on the narration's clock). Returns 1 when it moved the word, else 0."""
+    if not ws or onset is None or ws[0].get('s') is None or ws[0]['s'] >= onset - tolerance:
+        return 0
+    ws[0]['s'] = round(float(onset), 3)
+    if ws[0].get('e') is None or ws[0]['e'] <= ws[0]['s']:
+        nxt = ws[1]['s'] if len(ws) > 1 and ws[1].get('s') is not None and ws[1]['s'] > ws[0]['s'] else None
+        ws[0]['e'] = round(nxt if nxt is not None else ws[0]['s'] + 0.2, 3)
+    return 1
 
 
 SQUEEZE_S = 0.08
@@ -6101,6 +6120,132 @@ def cmd_timeline_check(args):
     rd, st = run_folder(args)
     res = timeline_facts(rd, args.video)
     emit(res, 0 if res['ready'] else 2)
+
+
+MASTER_SOUND_DB = -40.0     # a 10 ms window of the mastered mix counts as sound above this (dBFS)
+
+
+def master_chain(gain_db, ceiling_dbtp, sample_rate):
+    """One gain, then a 4x oversampled look-ahead peak limiter at the ceiling (its delay compensated), back to the source
+    rate. No compressor: the voice and the beds keep the balance they were mixed at."""
+    limit = 10 ** (float(ceiling_dbtp) / 20)
+    return (f'volume={float(gain_db):.2f}dB,aresample={4 * int(sample_rate)},alimiter=limit={limit:.4f}:attack=5:'
+            f'release=80:level=false:asc=1:latency=1,aresample={int(sample_rate)}')
+
+
+def limiter_activity(src_wav, gain_db, out_wav, sample_rate):
+    """How hard the limiter worked: the share of 10 ms windows with sound that it took down by more than 1 dB and by
+    more than 3 dB (the gained mix before the limiter against the mix after it, on the same clock). Facts only."""
+    import numpy as np
+
+    def load(path, af=None):
+        cmd = ['ffmpeg', '-v', 'error', '-i', str(path)] + (['-af', af] if af else []) + \
+              ['-ac', '1', '-ar', str(int(sample_rate)), '-f', 'f32le', '-']
+        return np.frombuffer(subprocess.run(cmd, capture_output=True).stdout, dtype=np.float32).astype(np.float64)
+    pre, post = load(src_wav, f'volume={float(gain_db):.2f}dB'), load(out_wav)
+    w = max(1, int(0.01 * sample_rate))
+    k = min(len(pre), len(post)) // w
+    if not k:
+        return {}
+
+    def env(x):
+        return np.sqrt((x[:k * w].reshape(k, w) ** 2).mean(1)) + 1e-12
+    a, b = env(pre), env(post)
+    sound = 20 * np.log10(b) > MASTER_SOUND_DB
+    if not sound.any():
+        return {}
+    gr = 20 * np.log10(a / b)[sound]
+    return {'windows_with_sound': int(sound.sum()), 'over_1db_share': round(float((gr > 1).mean()), 4),
+            'over_3db_share': round(float((gr > 3).mean()), 4), 'over_6db_share': round(float((gr > 6).mean()), 4)}
+
+
+def reference_files(rd, ids):
+    """The run's reference videos by id (00-inventory/references.json)."""
+    inv = read_json(rd / '00-inventory' / 'references.json')
+    rows = []
+    for v in (inv.values() if isinstance(inv, dict) else []):
+        if isinstance(v, list):
+            rows += [r for r in v if isinstance(r, dict)]
+    base = Path(str(inv.get('references_dir') or '.')) if isinstance(inv, dict) else Path('.')
+    by = {}
+    for r in rows:
+        p = r.get('source_path') or r.get('path') or r.get('file') or (
+            str(base / r['relative_path']) if r.get('relative_path') else None)
+        by[str(r.get('id'))] = p
+    return {i: by.get(i) for i in ids}
+
+
+def cmd_master_sound(args):
+    """The export's sound brought to the loudness the niche's own videos are mastered at (YouTube turns a loud video down
+    but never turns a quiet one up). One gain and a peak limiter over the whole mix; the picture is copied untouched and
+    the export itself is kept. The agent picks the target from the references measured here (--refs) and says why; this
+    measures, applies and records: the mastered MP4 (--out) and 80-deliverables/video-NN/master.json. The mastered file
+    is the one export-check, the final watch review and release-check then read."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    src, out = Path(args.file), Path(args.out)
+    target, ceiling = float(args.target_lufs), float(args.true_peak)
+    if not src.is_file():
+        error(f'No export at {src}.')
+    if n_words(args.why) < MIN_NOTE_WORDS:
+        error('Say why this loudness (--why "..."): what the references measured, and what the video needs.')
+    if not -24.0 <= target <= -9.0:
+        error('--target-lufs must be between -24 and -9 LUFS.')
+    if ceiling > -0.5:
+        error('--true-peak must leave the encoder room: -0.5 dBTP or lower.')
+    if out.resolve() == src.resolve():
+        error('--out must be a new file: the export itself is kept as it is.')
+    pr = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_type,sample_rate',
+                                    '-of', 'json', str(src)], capture_output=True, text=True).stdout or '{}')
+    audio = [x for x in pr.get('streams') or [] if x.get('codec_type') == 'audio']
+    if not audio:
+        error('The export has no sound to master.')
+    sr = int(audio[0].get('sample_rate') or 48000)
+    refs = {}
+    for rid, path in reference_files(rd, [x.strip() for x in (args.refs or '').split(',') if x.strip()]).items():
+        refs[rid] = ({'file': path, **loudness_stats(path)} if path and Path(path).is_file() else {'error': 'not found'})
+    with tempfile.TemporaryDirectory() as td:
+        raw, mixed = Path(td) / 'export.wav', Path(td) / 'mastered.wav'
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(src), '-vn', '-c:a', 'pcm_s24le', str(raw)], check=True)
+        before = loudness_stats(raw)
+        if before.get('integrated_lufs') is None:
+            error('The export\'s loudness could not be measured.', before)
+        gain, passes = target - before['integrated_lufs'], []
+        for _ in range(3):              # the limiter takes a little loudness back: aim again from what it measured
+            chain = master_chain(gain, ceiling, sr)
+            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(raw), '-af', chain, '-c:a', 'pcm_s24le', str(mixed)],
+                           check=True)
+            got = loudness_stats(mixed)
+            passes.append({'gain_db': round(gain, 2), **got})
+            if got.get('integrated_lufs') is None or abs(got['integrated_lufs'] - target) <= 0.2:
+                break
+            gain += target - got['integrated_lufs']
+        activity = limiter_activity(raw, gain, mixed, sr)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        part = out.with_name(out.stem + '.part' + out.suffix)
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(src), '-map', '0:v:0', '-map', '0:a:0', '-c:v', 'copy',
+                        '-af', chain, '-c:a', 'aac', '-b:a', '320k', '-ar', str(sr), '-movflags', '+faststart', str(part)],
+                       check=True)
+        part.replace(out)
+    after = loudness_stats(out)
+    rec = {'made_at': now(), 'export': {'file': str(src), 'sha256': file_sha256(src), **before},
+           'mastered': {'file': str(out), 'sha256': file_sha256(out), **after},
+           'target_lufs': target, 'true_peak_ceiling_dbtp': ceiling, 'chain': chain, 'gain_db': round(gain, 2),
+           'passes': passes, 'limiter_activity': activity, 'references': refs, 'why': args.why,
+           'what_it_does': 'one gain and a 4x oversampled look-ahead peak limiter over the whole mix; the picture copied '
+                           'untouched; the export kept as it is'}
+    mpath = rd / '80-deliverables' / f'video-{n:02d}' / 'master.json'
+    old = read_json(mpath)
+    write_json(mpath, {**rec, 'history': (old.get('history') or []) + ([{k: old[k] for k in ('made_at', 'export', 'mastered',
+                                                                                              'target_lufs')}]
+                                                                        if old.get('mastered') else [])})
+    miss = after.get('integrated_lufs') is None or abs(after['integrated_lufs'] - target) > 0.5 or \
+        (after.get('true_peak_dbtp') or 0) > ceiling + 0.5
+    emit({'ok': not miss, 'mastered': str(out), 'export': before, 'result': after, 'gain_db': round(gain, 2),
+          'limiter_activity': activity, 'references': {k: {x: v.get(x) for x in ('integrated_lufs', 'true_peak_dbtp')}
+                                                        for k, v in refs.items()}, 'record': str(mpath),
+          'next': 'export-check --deep on the mastered file, then the final watch review of that file and release-check.'},
+         1 if miss else 0)
 
 
 def cmd_export_check(args):
@@ -8536,6 +8681,16 @@ def main():
     p.set_defaults(func=cmd_timeline_check)
     p = sub.add_parser('export-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--file', required=True); p.add_argument('--deep', action='store_true'); p.set_defaults(func=cmd_export_check)
+    p = sub.add_parser('master-sound', help='The export\'s mix brought to the loudness the references are mastered at '
+                       '(one gain and a peak limiter; the picture copied untouched; the export kept)')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--file', required=True, help='The export from CapCut')
+    p.add_argument('--out', required=True, help='The mastered MP4 to write (a new file)')
+    p.add_argument('--target-lufs', type=float, required=True, help='Integrated loudness to reach, from the references')
+    p.add_argument('--true-peak', type=float, default=-2.0, help='The true-peak ceiling in dBTP (default -2.0)')
+    p.add_argument('--refs', help='Reference ids to measure as evidence, e.g. V006,V030')
+    p.add_argument('--why', required=True, help='Why this loudness')
+    p.set_defaults(func=cmd_master_sound)
     p = sub.add_parser('status'); p.add_argument('--run', required=True); p.set_defaults(func=cmd_status)
     p = sub.add_parser('content-review', help='The content record: a reference\'s review (--ref --file; --signals '
                        'for where to look), the look at every picture of an edit (--video --pictures --file), --status')

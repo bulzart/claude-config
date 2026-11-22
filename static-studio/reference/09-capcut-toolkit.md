@@ -78,7 +78,7 @@ The loop for one video:
 4. A shot every 10 to 30 s until it says the video is saved, then Close, never Share. The dialog moves between exports: read Close off the shot.
 5. `app quit`, then `export-path --restore`. The PC is the user's again.
 
-Then check the file with ffmpeg and the toolkit, not in CapCut: `export-check --deep` (length, size, frame rate, the approved narration found in the export window by window, black frames, silences), frames pulled at the moments that matter and looked at whole (the opening, each drawing, the captions of a line whose words had no time of their own, the ending), the bed measured around the held silences, then the final watch review (manual 06) and `release-check` on that exact file. A fault in the file is fixed in the toolkit and the run, built as a fresh project and exported again; the earlier file goes to `export/superseded/`, named for what was wrong with it.
+Then bring its sound to the level the references play at (`master-sound`, manual 05: one gain and a peak limiter, the picture copied untouched, the export kept), and check the mastered file with ffmpeg and the toolkit, not in CapCut: `export-check --deep` (length, size, frame rate, the approved narration found in the export window by window, black frames, silences), frames pulled at the moments that matter and looked at whole (the opening, each drawing, the captions of a line whose words had no time of their own, the ending), the bed measured around the held silences, then the final watch review (manual 06) and `release-check` on that exact file. A fault in the file is fixed in the toolkit and the run, built as a fresh project and exported again; the earlier file goes to `export/superseded/`, named for what was wrong with it.
 
 ## Not covered
 
