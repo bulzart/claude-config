@@ -839,6 +839,16 @@ DEFAULT_NATURAL_GAP_S = 0.6
 # the sound does. Required of every planned pause, read by the cold reader, and carried into the edit.
 PAUSE_TEXT_FIELDS = (('pause_purpose', 'needs_its_story_purpose'), ('pause_picture', 'needs_its_picture'),
                      ('pause_sound', 'needs_its_sound'))
+# A planned silence is part of a performance (05 "Narration as a performance"): how the line before it should land and
+# how the next line should start again are planned with it, before anything is recorded (pause_total_s form).
+PAUSE_PERFORMANCE_FIELDS = (('pause_landing', 'needs_how_the_line_lands'),
+                            ('pause_resume', 'needs_how_the_next_line_starts'))
+# Seconds a cue may add, as a band, when this voice has not been measured with it (05): a catalogue value was measured
+# on another voice (x0.5-1.5), a pause wording without one 1-3 s, a delivery cue may slow or quicken its own line a
+# little. Assumptions, labelled as such, replaced by this voice's own observations once a take exists.
+TAG_BAND_CATALOGUE = (0.5, 1.5)
+TAG_BAND_PAUSE_UNKNOWN_S = (1.0, 3.0)
+TAG_BAND_DELIVERY_S = (-0.3, 0.6)
 
 
 def strip_tags(text):
@@ -882,6 +892,28 @@ def tag_cost_s(tag, measured_costs=None):
     if entry.get('approx_cost_s') is not None:
         return float(entry['approx_cost_s'])
     return 2.0 if 'pause' in tag else 0.0
+
+
+def tag_estimate(tag, category, measured=None):
+    """What one cue may add to the narration, as a band (05): this voice setup's own observations when a take has
+    measured it (the silence a pause cue left beyond the usual gap; the time a delivery cue added to its line), else
+    a labelled assumption. Never a universal number, and never assumed to add up exactly across a passage."""
+    obs = [o for o in ((measured or {}).get('cue_observations') or []) if o.get('tag') == tag]
+    key = 'excess_s' if category == 'pause' else 'line_extra_s'
+    xs = [float(o[key]) for o in obs if isinstance(o.get(key), (int, float))]
+    if xs:
+        return {'tag': tag, 'low_s': round(min(xs), 2), 'high_s': round(max(xs), 2), 'n': len(xs),
+                'basis': f'measured on this voice setup ({len(xs)} occurrence{"s" if len(xs) != 1 else ""})'}
+    entry = tag_catalogue().get(tag) or {}
+    if category == 'pause':
+        if entry.get('approx_cost_s') is not None:
+            a = float(entry['approx_cost_s'])
+            return {'tag': tag, 'low_s': round(a * TAG_BAND_CATALOGUE[0], 2), 'high_s': round(a * TAG_BAND_CATALOGUE[1], 2),
+                    'n': 0, 'basis': 'catalogue value measured on another voice: a band until this voice is measured'}
+        return {'tag': tag, 'low_s': TAG_BAND_PAUSE_UNKNOWN_S[0], 'high_s': TAG_BAND_PAUSE_UNKNOWN_S[1], 'n': 0,
+                'basis': 'pause wording not measured anywhere: an assumed band'}
+    return {'tag': tag, 'low_s': TAG_BAND_DELIVERY_S[0], 'high_s': TAG_BAND_DELIVERY_S[1], 'n': 0,
+            'basis': 'delivery cue not measured on this voice: may slow or quicken its line a little (assumed band)'}
 
 
 def script_tags(lines):
@@ -971,12 +1003,18 @@ def script_pause_plan(lines):
         for field, issue in PAUSE_TEXT_FIELDS:
             if n_words(row.get(field)) < MIN_NOTE_WORDS:
                 issues.append(f'pause_{lid}_{issue}')
+        if form == 'total':
+            for field, issue in PAUSE_PERFORMANCE_FIELDS:
+                if n_words(row.get(field)) < MIN_NOTE_WORDS:
+                    issues.append(f'pause_{lid}_{issue}')
         plan.append({'line': lid, 'index': i + 1, 'via': via, 'form': form, 'seconds': seconds,
                      'total_s': seconds if form == 'total' else None,
                      'added_s': seconds if form == 'added' else None,
                      'purpose': str(row.get('pause_purpose') or '').strip() or None,
                      'picture': str(row.get('pause_picture') or '').strip() or None,
-                     'sound': str(row.get('pause_sound') or '').strip() or None})
+                     'sound': str(row.get('pause_sound') or '').strip() or None,
+                     'landing': str(row.get('pause_landing') or '').strip() or None,
+                     'resume': str(row.get('pause_resume') or '').strip() or None})
     return plan, issues
 
 
@@ -3197,6 +3235,17 @@ def plan_facts(rd, video):
     warnings += script_review['warnings']
     measured = voice_measurement(rd, video)
     tag_s = round(sum(tag_cost_s(t['tag'], measured.get('tag_costs_s')) for t in tags), 2)
+    # Each cue as a band (its own evidence named): the forecast is a range wherever the evidence is limited, and
+    # several cues in one passage are not assumed to add up exactly (05).
+    tag_bands = [{**tag_estimate(t['tag'], t.get('category'), measured), 'line': t['line']} for t in tags]
+    tag_low = round(sum(b['low_s'] for b in tag_bands), 2)
+    tag_high = round(sum(b['high_s'] for b in tag_bands), 2)
+    # A delivery cue colours the rest of its own line (every script line is sent on its own text line): the line
+    # names the words it should colour and where the delivery returns (cue_scope), so a local change stays local.
+    by_lid = {str(r.get('id') or f'L{i + 1:03d}'): r for i, r in enumerate(lines)}
+    issues += [f'tag_{lid}_needs_its_scope' for lid in
+               sorted({t['line'] for t in tags if t.get('category') != 'pause'})
+               if n_words((by_lid.get(lid) or {}).get('cue_scope')) < 3]
     pace = float(script.get('pace_wpm') or lock.get('pace_wpm') or 0)
     if not pace:
         issues.append('script_missing_narration_pace')
@@ -3277,7 +3326,7 @@ def plan_facts(rd, video):
                              'script_wpm': script.get('pace_wpm'), 'voice_measured_wpm': measured.get('wpm'),
                              'voice_overall_wpm': measured.get('overall_wpm'),
                              'voice_per_line_gap_s': round(measured['per_line_overhead_s'], 3) if measured else None},
-            'audio_tags': tags, 'tag_time_s': tag_s, 'pause_plan': pause_plan, 'edit_holds_s': holds,
+            'audio_tags': tags, 'tag_time_s': tag_s, 'tag_time_range_s': [tag_low, tag_high], 'tag_estimates': tag_bands, 'pause_plan': pause_plan, 'edit_holds_s': holds,
             'holds': holds_info, 'density': density,
             'pronunciation': {'file': pron['file'], 'terms': [{k: t[k] for k in ('term', 'say', 'how', 'confidence')}
                                                               | {'lines': len(pron['uses'].get(t['term']) or [])}
@@ -3289,6 +3338,8 @@ def plan_facts(rd, video):
                          'majors_closed_by_decision': script_review.get('majors_closed_by_decision') or []},
             'writing_signals': writing_signals(lines, lock.get('language') or script.get('language') or 'en'),
             'forecast_s': forecast, 'real_narration_forecast_s': real_narr, 'real_forecast_s': real,
+            'real_forecast_range_s': ([round(real - (tag_s - tag_low), 2), round(real + (tag_high - tag_s), 2)]
+                                      if real is not None else None),
             'locked_target_s': target,
             'export_window_s': [round(target - max(4, target * lock.get('tolerance_export_pct', .025)), 2),
                                 round(target + max(4, target * lock.get('tolerance_export_pct', .025)), 2)],
@@ -3349,6 +3400,9 @@ def model_limit(model):
 # ---------------------------------------------------------------- parts that follow the story
 PART_TARGET_CHARS = 3500     # an engineering guideline for one request, not a rule
 PART_SOFT_MAX = 1.5          # a whole beat may run to this multiple of the target before it is split
+# A part that follows the beat map's chapters (beats marked chapter_start) may hold a whole chapter up to this size:
+# one request of ~7,000 characters took ~95 s here (measured ~75 characters a second), well inside the 180 s wait.
+PART_CHAPTER_MAX = 7000
 
 
 def _split_long_beat(lines, sizes, lo, hi, target, hard_max):
@@ -3414,6 +3468,30 @@ def chunks_for_beats(lines, beats, target=PART_TARGET_CHARS, hard_max=10000):
         cursor = hi
     if not spans or cursor != n:
         return [{**c, 'beats': []} for c in chunks_for_lines(lines, max([target] + sizes))]
+    # The story's own chapters, when the beat map marks them: a recording boundary sits only where the story itself
+    # starts again, so the narrator's fresh start (and the previous part's last landing) falls where one belongs (05).
+    starts = {str(b.get('id')) for b in beats or [] if b.get('chapter_start')}
+    if starts:
+        chapters = []
+        for lo, hi, bid in spans:
+            if not chapters or bid in starts:
+                chapters.append([])
+            chapters[-1].append((lo, hi, bid))
+        out = []
+        for ch in chapters:
+            lo, hi = ch[0][0], ch[-1][1]
+            size = sum(sizes[lo - 1:hi])
+            if size <= min(PART_CHAPTER_MAX, hard_max):
+                out.append({'line_start': lo, 'line_end': hi, 'beats': [b for _, _, b in ch], 'chapter': True,
+                            'text': '
+'.join(str(r['text']).strip() for r in lines[lo - 1:hi])})
+            else:          # a chapter too long for one request: split between its beats (flagged, listened to)
+                sub = chunks_for_beats(lines[lo - 1:hi], [{'id': b, 'line_start': a - lo + 1, 'line_end': z - lo + 1}
+                                                          for a, z, b in ch], target, hard_max)
+                for c in sub:
+                    out.append({**c, 'line_start': c['line_start'] + lo - 1, 'line_end': c['line_end'] + lo - 1,
+                                'chapter': False, 'split_inside_chapter': True})
+        return out
     units = []
     for lo, hi, bid in spans:
         if sum(sizes[lo - 1:hi]) > target * PART_SOFT_MAX:
