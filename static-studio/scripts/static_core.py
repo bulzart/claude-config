@@ -1266,6 +1266,10 @@ def hold_facts(rd, video, lines=None):
                'ending': {'punctuation': line_ending_mark(lines[i - 1].get('text')), **((g or {}).get('cadence') or {})},
                'inside_silence': ({k: g.get(k) for k in ('insert_at_s', 'subrun_s', 'floor_under_speech_db',
                                                          'other_material_s')} if g else None)}
+        # A silence planned through a pause cue: what the cue gave, judged with a tolerance (close is a success, the
+        # model's timing can't be steered to the millisecond): achieved is kept as performed, nothing added.
+        if p and p.get('via') == 'tag' and p.get('form') == 'total' and row['natural_gap_s'] is not None:
+            row['cue_result'] = pause_cue_outcome(p.get('seconds'), row['natural_gap_s'])
         if d:
             fresh = bool(d.get('parts')) and all(prints.get(int(k)) == v for k, v in (d.get('parts') or {}).items())
             if fresh:
@@ -1283,6 +1287,10 @@ def hold_facts(rd, video, lines=None):
                                     'the voice\'s usual gap' if usual else f'{DEFAULT_NATURAL_GAP_S:g} s before any voice')
             if p and p['form'] == 'added':
                 row['estimate_from'] = 'the older pause_after_s: added on top of the voice\'s gap, as written'
+            if (row.get('cue_result') or {}).get('outcome') == 'achieved':
+                row['added_s'] = 0.0
+                row['estimate_from'] = ('the performed pause is within tolerance of the whole silence planned: kept as '
+                                        'performed')
         out.append(row)
     return {'holds': out, 'voice_gaps': prof, 'line_times_current': current,
             'endings_usual': (lt.get('cadence_usual') or {}) if current else {},
@@ -1835,6 +1843,61 @@ def contrast_axes():
 def tag_qualities(inner):
     """The qualities one tag asks for: '[tense, cautious]' -> ['tense', 'cautious']."""
     return [q.strip().lower() for q in str(inner).split(',') if q.strip()]
+
+
+CUE_PAUSE_TOLERANCE = (0.3, 0.25)
+CUE_MOVES = {'volume': ('speech_level_db', 1.0, 'dB'), 'tempo': ('speech_rate_wpm', 0.05, 'share'),
+             'energy': ('pitch_range_st', 1.0, 'st')}
+
+
+def cue_poles(inner):
+    """The delivery axes a cue asks to move, and which way: '[quietly, slowly]' -> {'volume': 'low', 'tempo': 'slow'}."""
+    text = ' ' + ' '.join(tag_qualities(inner)) + ' '
+    words = set(re.findall(r"[a-z']+", text))
+    out = {}
+    for axis, poles in contrast_axes().items():
+        hit = [pole for pole, terms in poles.items()
+               if any((' ' + t + ' ' in text) if ' ' in t else (t in words) for t in terms)]
+        if len(hit) == 1:
+            out[axis] = hit[0]
+    return out
+
+
+def pause_cue_outcome(planned_s, measured_s):
+    """A performed pause is judged on its length, never on where it falls in time: achieved within max(0.3 s, 25 %) of
+    the whole silence planned. The model's timing can't be steered to the millisecond; close is a success."""
+    if planned_s is None or measured_s is None:
+        return None
+    tol = max(CUE_PAUSE_TOLERANCE[0], CUE_PAUSE_TOLERANCE[1] * float(planned_s))
+    d = float(measured_s) - float(planned_s)
+    return {'planned_s': round(float(planned_s), 2), 'measured_s': round(float(measured_s), 2),
+            'tolerance_s': round(tol, 2), 'outcome': 'achieved' if abs(d) <= tol else 'short' if d < 0 else 'long'}
+
+
+def delivery_cue_outcome(inner, line_stats, usual):
+    """Whether a delivery cue moved its line the way it asked, against this take's usual line: volume by the speech
+    level, tempo by the speaking rate, energy by the pitch range. Under the step it is no clear change, the wrong way it
+    is opposite. A cue on none of these axes ([curious], [deadpan] aside) is listened to, not judged here."""
+    poles = cue_poles(inner)
+    if not poles:
+        return {'outcome': 'not_measured', 'note': 'a cue on no measured axis (volume, energy, tempo): listen'}
+    rows = []
+    for axis, pole in poles.items():
+        key, step, kind = CUE_MOVES[axis]
+        v, u = (line_stats or {}).get(key), (usual or {}).get(key)
+        if v is None or u is None:
+            rows.append({'axis': axis, 'asked': pole, 'outcome': 'not_measured', 'note': 'too short to measure'})
+            continue
+        need = step * u if kind == 'share' else step
+        moved = (u - v) if pole in ('low', 'slow') else (v - u)
+        rows.append({'axis': axis, 'asked': pole, 'measure': key, 'line': v, 'usual': round(u, 2),
+                     'change': round(v - u, 2), 'step': round(need, 2),
+                     'outcome': 'as_asked' if moved >= need else 'opposite' if moved <= -need else 'no_clear_change'})
+    outs = {r['outcome'] for r in rows}
+    overall = ('as_asked' if outs == {'as_asked'} else 'opposite' if 'opposite' in outs else
+               'not_measured' if outs == {'not_measured'} else 'no_clear_change' if 'no_clear_change' in outs
+               else 'partly')
+    return {'outcome': overall, 'axes': rows}
 
 
 def contradictions(qualities):
@@ -3267,6 +3330,12 @@ def plan_facts(rd, video):
     issues += [f'tag_{lid}_needs_its_scope' for lid in
                sorted({t['line'] for t in tags if t.get('category') != 'pause'})
                if n_words((by_lid.get(lid) or {}).get('cue_scope')) < 3]
+    # A pause cue goes before the words that follow the silence: ElevenLabs "Place a tag before the words it affects",
+    # and their examples put it before the next words or on its own line. At a line's end it is undocumented; one
+    # measured there (eleven_v4, 2026-11-22) left about 0.2 s over the voice's usual gap.
+    warnings += [f'{lid}: a pause cue at the end of the line; ElevenLabs places a tag before the words it affects: put it '
+                 'at the start of the next line, before the words after the silence'
+                 for lid in sorted({t['line'] for t in tags if t.get('category') == 'pause' and t.get('at_line_end')})]
     pace = float(script.get('pace_wpm') or lock.get('pace_wpm') or 0)
     if not pace:
         issues.append('script_missing_narration_pace')
@@ -6202,6 +6271,29 @@ def cmd_narration_measure(args):
             for k in ('subrun_s', 'insert_at_s', 'floor_under_speech_db', 'other_material_s'):
                 if x.get(k) is not None:
                     rows[li]['gap_' + k] = x[k]
+    # A cue at a line's end (or start) is measured on the audio's own silence there, the basis hold-decide and the edit
+    # use: Whisper's word ends drift by up to ~0.4 s, enough to hide a short pause or invent one. The usual gap it is
+    # compared with is read the same way (lines without a pause cue, inside one part). The word-based value stays.
+    audio_usual = [rows[li]['gap_after_s'] for li in order
+                   if rows[li].get('gap_after_s') is not None and not rows[li].get('gap_is_tail')
+                   and li not in pause_tag_at and li + 1 in rows and rows[li + 1]['part'] == rows[li]['part']]
+    if audio_usual:
+        base_audio = statistics.median(audio_usual)
+        for t in tag_rows:
+            if not (t['at_end'] or t['at_start']):
+                continue
+            g = (rows.get(t['li'] if t['at_end'] else t['li'] - 1) or {}).get('gap_after_s')
+            m = next((x for x in measured_tags if x['line'] == t['line'] and x['tag'] == t['tag']), None)
+            if g is None or m is None or m.get('basis') == 'audio':
+                continue
+            m.update({'words_gap_s': m['gap_s'], 'gap_s': round(g, 2), 'excess_s': round(g - base_audio, 2),
+                      'usual_gap_s': round(base_audio, 2), 'basis': 'audio'})
+        costs = {}
+        for m in measured_tags:
+            costs.setdefault(m['tag'], []).append(m['excess_s'])
+        costs = {k: round(statistics.median(v), 2) for k, v in costs.items()}
+        tag_excess = sum(max(0.0, m['excess_s']) for m in measured_tags)
+        per_line = round((tot_dur - tot_speech - tag_excess) / nlines, 3) if nlines else None
     part_ends = {int(c['line_end']) for c in chunks}
     between = [float(rows[li]['gap_after_s']) for li in order if rows[li].get('gap_basis') == 'audio'
                and rows[li].get('gap_after_s') is not None and not rows[li].get('gap_is_tail') and li not in part_ends]
@@ -6278,18 +6370,23 @@ def cmd_narration_measure(args):
     # How the voice moves, beat by beat and on each side of every join, next to what each beat asked for and to the
     # references measured the same way (av_tools): the writing of the parts not yet recorded is where a flat stretch
     # gets fixed.
-    delivery, delivery_error, cadence_usual = None, None, {}
+    delivery, delivery_error, cadence_usual, line_stats = None, None, {}, {}
     if not args.no_delivery:
         try:
             av = _av()
             spans = {}
             for b in beat_rows:
                 spans[str(b['id'])] = (b['start_s'], b['end_s'])
+            for li in order:        # every line, so a cue's line can be compared with this take's usual line
+                if rows[li].get('start_s') is not None and rows[li].get('end_s') is not None:
+                    spans[f'line_{li}'] = (rows[li]['start_s'], rows[li]['end_s'])
             for s in seams:
                 spans[f'seam_{s["after_part"]}_before'] = (max(0.0, s['at_s'] - 20), s['at_s'])
                 spans[f'seam_{s["after_part"]}_after'] = (s['at_s'], s['at_s'] + 20)
             wav = joined if joined is not None else av.concat_audio(files, Path(tmpdir) / 'narration.wav')
             delivery = av.delivery(f'video-{n:02d} narration', wav, all_words, spans=spans, segments=all_segments)
+            line_stats = {int(k[5:]): v for k, v in (delivery.get('spans') or {}).items() if k.startswith('line_')}
+            delivery['spans'] = {k: v for k, v in (delivery.get('spans') or {}).items() if not k.startswith('line_')}
             # How each line ends and the next begins (the facts a held silence's transition is decided on), next to
             # this voice's usual endings.
             cad = av.line_cadence(wav, [{'index': li, 'start_s': rows[li]['start_s'], 'end_s': rows[li]['end_s'],
@@ -6326,11 +6423,29 @@ def cmd_narration_measure(args):
             return None
         w = count_words(lines[li - 1].get('text') or '')
         return round((r['end_s'] - r['start_s']) - w * 60 / forecast_wpm, 2) if w else None
-    cue_obs = []
+    tagged_lines = {t['li'] for t in tag_rows}
+    usual_line = {}
+    for key in ('speech_level_db', 'speech_rate_wpm', 'pitch_range_st'):
+        vals = [v.get(key) for k, v in line_stats.items() if k not in tagged_lines and v.get(key) is not None]
+        if vals:
+            usual_line[key] = statistics.median(vals)
+    cue_obs, cue_outcomes = [], []
     for t in tag_rows:
         li, r = t['li'], rows.get(t['li']) or {}
         m = next((x for x in measured_tags if x['line'] == t['line'] and x['tag'] == t['tag']), None)
         nxt = rows.get(li + 1) or {}
+        if t.get('category') == 'pause':
+            gli = li if t['at_end'] else li - 1 if t['at_start'] else None
+            held = lines[gli - 1] if gli and 0 < gli <= len(lines) else {}
+            planned = held.get('pause_total_s') if held.get('pause_via') == 'tag' else None
+            outcome = pause_cue_outcome(planned, m['gap_s'] if m else None) or \
+                {'outcome': 'performed', 'measured_s': m['gap_s'] if m else None,
+                 'note': 'no whole silence planned through this cue: what it gave is decided at the holds'}
+            outcome['silence_after'] = str(rows[gli]['id']) if gli in rows else None
+        else:
+            outcome = delivery_cue_outcome(t['inner'], line_stats.get(li), usual_line) if line_stats else \
+                {'outcome': 'not_measured', 'note': 'delivery not measured (--no-delivery)'}
+        cue_outcomes.append({'line': t['line'], 'tag': t['tag'], **outcome})
         cue_obs.append({'tag': t['tag'], 'category': t.get('category'), 'line': t['line'],
                         'at': 'start' if t['at_start'] else 'end' if t['at_end'] else 'inside',
                         'excess_s': m['excess_s'] if m else None, 'gap_s': m['gap_s'] if m else None,
@@ -6338,6 +6453,7 @@ def cmd_narration_measure(args):
                         'next_line_extra_s': _extra(li + 1),
                         'next_end_level_db': (nxt.get('cadence') or {}).get('end_level_db'),
                         'usual_end_level_db': cadence_usual.get('end_level_db') if cadence_usual else None,
+                        'outcome': cue_outcomes[-1].get('outcome'),
                         'take': prints.get(r.get('part')), **setup, 'measured_at': now()})
     # The joins: did the recording boundary change the delivery where the story goes on (not at a chapter turn)?
     chapter_first = set()
@@ -6364,7 +6480,8 @@ def cmd_narration_measure(args):
            'natural_line_gap_median_s': round(natural_gap, 3), 'per_line_overhead_s': per_line,
            'line_gaps_from_audio': gaps_now, 'line_gaps_error': gap_error, 'cadence_usual': cadence_usual,
            'alignment_match_ratio': round(ratio_all, 3), 'tags_measured': measured_tags,
-           'cue_observations': cue_obs, 'unheard_lines': unheard, 'rechecked_lines': rechecks, 'tags_read_aloud': read_aloud,
+           'cue_observations': cue_obs, 'cue_outcomes': cue_outcomes, 'unheard_lines': unheard, 'rechecked_lines': rechecks,
+           'tags_read_aloud': read_aloud,
            'possible_repeats': repeats, 'seams': seams, 'beats': beat_rows, 'pronunciation_heard': pron_heard,
            'pause_profile': profile, 'lines': [rows[li] for li in order], 'measured_at': now(),
            'method': 'transcribe() + wpm_from_transcript_raw on each part, exactly as on the references; lines '
@@ -6417,7 +6534,15 @@ def cmd_narration_measure(args):
         warnings.append('Under 90% of the script words were matched: listen for missing or extra words, or a script edit.')
     for m in measured_tags:
         if classify_tag(m['tag'][1:-1]).get('category') == 'pause' and m['excess_s'] < 0.2:
-            warnings.append(f"{m['line']} {m['tag']} made no measurable pause: listen (was it read aloud?)")
+            warnings.append(f"{m['line']} {m['tag']} made no measurable pause ({m['gap_s']} s against the usual "
+                            f"{m.get('usual_gap_s', round(natural_gap, 2))} s, {m.get('basis', 'word times')}): listen "
+                            "(was it read aloud?)")
+    for c in cue_outcomes:
+        if c.get('outcome') in ('short', 'long'):
+            warnings.append(f"{c['line']} {c['tag']}: the pause came out {c['outcome']} ({c['measured_s']} s against "
+                            f"{c['planned_s']} s planned, tolerance {c['tolerance_s']} s): decide it at the holds")
+        elif c.get('outcome') in ('opposite', 'no_clear_change'):
+            warnings.append(f"{c['line']} {c['tag']}: the line did not move as the cue asked ({c['outcome']}): listen")
     for r in repeats:
         warnings.append(f'possible repeated words at {_mmss(r["at_s"])}: "{r["heard"]}" (listen)')
     for s in seams:
@@ -6428,7 +6553,7 @@ def cmd_narration_measure(args):
     emit({'ok': not issues, 'issues': issues, 'line_times': str(folder / 'line-times.json'), 'complete': complete,
           'wpm': wpm, 'forecast_wpm': forecast_wpm, 'overall_wpm': overall_wpm, 'words': int(tot_words),
           'script_words': script_words, 'duration_s': round(tot_dur, 2), 'per_line_overhead_s': per_line,
-          'natural_line_gap_median_s': round(natural_gap, 3), 'tags_measured': measured_tags,
+          'natural_line_gap_median_s': round(natural_gap, 3), 'tags_measured': measured_tags, 'cue_outcomes': cue_outcomes,
           'line_gaps_from_audio': gaps_now, 'line_gaps_error': gap_error, 'cadence_usual': cadence_usual,
           'unheard_lines': unheard, 'rechecked_lines': rechecks, 'tags_read_aloud': read_aloud, 'seams': seams,
           'beats': beat_rows, 'pronunciation_heard': pron_heard, 'pause_profile': profile,

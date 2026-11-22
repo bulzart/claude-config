@@ -1964,7 +1964,8 @@ class StaticStudioTests(unittest.TestCase):
         for pid,(lo,hi) in enumerate(groups,1):
             audio=[quiet(0.3)]; pos=int(sr*0.3); segs=[]
             for i in range(lo,hi+1):
-                row=lines[i-1]; words=row['text'].split()
+                row=lines[i-1]; spoken=' '.join(w for w in row['text'].split() if not w.startswith('[') and not w.endswith(']'))
+                words=spoken.split()
                 s0=pos/sr; ws=[]
                 for j,w in enumerate(words):
                     ws.append({'start_s':round(s0+0.27*j,3),'end_s':round(s0+0.27*j+0.25,3),'text':' '+w})
@@ -1972,7 +1973,7 @@ class StaticStudioTests(unittest.TestCase):
                 audio.append(tone(i,length)); pos+=length
                 end=pos/sr
                 ws[-1]['end_s']=round(end+skew,3)
-                segs.append({'start_s':round(s0,3),'end_s':round(end+skew,3),'text':row['text'],'words':ws})
+                segs.append({'start_s':round(s0,3),'end_s':round(end+skew,3),'text':spoken,'words':ws})
                 g=edge if (split_after and i==hi and i<n) else gaps[i-1]
                 audio.append(silence_after(i,g)); pos+=int(sr*g)
             name=f'part-{pid:03}.wav'
@@ -2388,8 +2389,56 @@ class StaticStudioTests(unittest.TestCase):
         low,high=res['tag_time_range_s']
         self.assertLessEqual(low,res['tag_time_s']); self.assertGreaterEqual(high,res['tag_time_s'])
         self.assertEqual({e['tag'] for e in res['tag_estimates']},{'[curious]','[pause]'})
+        self.assertTrue(any(w.startswith('L013: a pause cue at the end of the line') for w in res['warnings']))
+        self.assertFalse(any(w.startswith('L001: a pause cue') for w in res['warnings']))
         script=json.loads((vd/'script.json').read_text()); script['lines'][0].pop('cue_scope'); save(vd/'script.json',script)
         self.assertIn('tag_L001_needs_its_scope',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
+
+    def test_cue_measured_on_the_audio_silence(self):
+        """A pause cue at a line's end is measured on the silence in the audio, the basis the holds and the edit use:
+        Whisper placing that one line's end late must not make the cue look like it did nothing."""
+        gaps=[0.6]*12; gaps[5]=1.4
+        tagged={6:{'text':'Line 6 tells the viewer something new about the road ahead tonight. [pause]',
+                   'pause_total_s':1.4,'pause_via':'tag',**HELD}}
+        vd,d,_=self.recorded_with_gaps(gaps,pauses=tagged)
+        w=json.loads((d/'whisper/part-001.json').read_text())
+        seg=next(x for x in w['segments'] if x['text'].startswith('Line 6 '))
+        seg['end_s']=round(seg['end_s']+0.5,3); seg['words'][-1]['end_s']=round(seg['words'][-1]['end_s']+0.5,3)
+        save(d/'whisper/part-001.json',w)
+        res=cli('narration-measure','--run',self.run,'--video',1,'--no-delivery')
+        m=next(x for x in res['tags_measured'] if x['line']=='L006')
+        self.assertEqual(m['basis'],'audio')
+        self.assertAlmostEqual(m['gap_s'],1.4,delta=0.08)
+        self.assertAlmostEqual(m['excess_s'],0.8,delta=0.1)
+        self.assertLess(m['words_gap_s'],1.0)                     # what Whisper's late end alone suggested
+        self.assertFalse(any('made no measurable pause' in x for x in res['warnings']))
+        c=next(x for x in res['cue_outcomes'] if x['line']=='L006')
+        self.assertEqual((c['outcome'],c['planned_s'],c['silence_after']),('achieved',1.4,'L006'))
+        vl=json.loads((self.run/'60-voice/video-01/voice-lock.json').read_text()) if (self.run/'60-voice/video-01/voice-lock.json').exists() else {}
+        obs=[o for o in ((vl.get('measured') or {}).get('cue_observations') or []) if o.get('line')=='L006']
+        if obs:
+            self.assertAlmostEqual(obs[-1]['excess_s'],0.8,delta=0.1)
+
+    def test_cue_results_are_judged_with_a_tolerance(self):
+        """A performed pause is judged on its length, never its clock time (the user's example: 0.8 s planned, 0.78 s
+        that starts half a second later is a success); a delivery cue on whether its line moved the way it asked."""
+        core=self.load_core()
+        self.assertEqual(core.pause_cue_outcome(0.8,0.78)['outcome'],'achieved')
+        self.assertEqual(core.pause_cue_outcome(1.6,0.82)['outcome'],'short')
+        self.assertEqual(core.pause_cue_outcome(1.0,1.5)['outcome'],'long')
+        self.assertEqual(core.pause_cue_outcome(2.0,2.45)['tolerance_s'],0.5)          # 25 % of a longer silence
+        self.assertIsNone(core.pause_cue_outcome(None,0.8))
+        self.assertEqual(core.cue_poles('quietly, slowly'),{'volume':'low','tempo':'slow'})
+        self.assertEqual(core.cue_poles('curious'),{})
+        usual={'speech_level_db':-20.0,'speech_rate_wpm':170.0,'pitch_range_st':9.0}
+        q=lambda **kw: core.delivery_cue_outcome('quietly',{**usual,**kw},usual)['outcome']
+        self.assertEqual(q(speech_level_db=-22.5),'as_asked')
+        self.assertEqual(q(speech_level_db=-20.4),'no_clear_change')
+        self.assertEqual(q(speech_level_db=-18.0),'opposite')
+        self.assertEqual(core.delivery_cue_outcome('slowly',{**usual,'speech_rate_wpm':150.0},usual)['outcome'],'as_asked')
+        self.assertEqual(core.delivery_cue_outcome('deadpan',{**usual,'pitch_range_st':6.5},usual)['outcome'],'as_asked')
+        self.assertEqual(core.delivery_cue_outcome('curious',usual,usual)['outcome'],'not_measured')
+        self.assertEqual(core.delivery_cue_outcome('quietly',{'speech_level_db':None},usual)['outcome'],'not_measured')
 
     def test_parts_break_only_at_chapter_turns(self):
         core=self.load_core()
