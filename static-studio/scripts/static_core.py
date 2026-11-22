@@ -6372,20 +6372,41 @@ def anchor_for(t, marks):
     return {'line': best[0], 'at': best[1], 'offset_s': round(float(t) - best[2], 3)}
 
 
-def resolve_anchor(anchor, marks):
+def edit_words(rd, video):
+    """Each line's caption words' start times on the edit's clock, in order: {line id: [start_s, ...]} (word N of a
+    line is the Nth caption display word, as in a shot's start_word)."""
+    words = read_json(captions_plan_path(rd, int(video))).get('words') or []
+    out = {}
+    for w in words:
+        out.setdefault(str(w['line']), []).append(float(w['s']))
+    return out
+
+
+def resolve_anchor(anchor, marks, words=None):
+    """An anchor's time on the current edit: a line landmark (start, end, silence_start, silence_end), a word of a line
+    ({"at": "word", "word": N}: a sound that belongs to that word), or the video's start; plus its offset (which may be
+    negative: a bed whose music must run out just before a word enters that many seconds earlier)."""
     if not isinstance(anchor, dict):
         return None
     if anchor.get('at') == 'video_start':
         return round(float(anchor.get('offset_s') or 0), 3)
+    if anchor.get('at') == 'word':
+        ws = (words or {}).get(str(anchor.get('line'))) or []
+        try:
+            k = int(anchor.get('word'))
+        except (TypeError, ValueError):
+            return None
+        return round(ws[k - 1] + float(anchor.get('offset_s') or 0), 3) if 1 <= k <= len(ws) else None
     v = (marks.get(str(anchor.get('line'))) or {}).get(str(anchor.get('at')))
     return None if v is None else round(v + float(anchor.get('offset_s') or 0), 3)
 
 
 def cmd_sound_anchors(args):
     """Sounds placed by the story, not by the clock (05): --to-anchors writes, for each item's time fields, the
-    narration landmark it follows and its offset (`<field>_anchor`); --resolve recomputes each field from its anchor
-    against the current edit, after a re-recording, a new hold or a retime. The file is any JSON with a list of items
-    (beds, sounds); the fields are named with --fields (default at,end). The previous file is kept as .bak."""
+    narration landmark it follows and its offset (`<field>_anchor`); an anchor already written (by hand: a word, or a
+    negative offset from a later moment) is kept. --resolve recomputes each field from its anchor against the current
+    edit, after a re-recording, a new hold or a retime. The file is any JSON with a list of items (beds, sounds); the
+    fields are named with --fields (default at,end). The previous file is kept as .bak."""
     rd, st = run_folder(args)
     n = int(args.video)
     path = Path(args.file)
@@ -6397,13 +6418,17 @@ def cmd_sound_anchors(args):
     if not marks:
         error('No narration landmarks: run captions-plan (or narration-measure and retime-shots) first.')
     fields = [f.strip() for f in (args.fields or 'at,end').split(',') if f.strip()]
-    changes, missing = [], []
+    words = edit_words(rd, n)
+    changes, missing, kept = [], [], []
     for it in data[key]:
         for f in fields:
             if args.to_anchors and it.get(f) is not None:
-                it[f + '_anchor'] = anchor_for(it[f], marks)
+                if isinstance(it.get(f + '_anchor'), dict):
+                    kept.append(f'{it.get("id")}.{f}')
+                else:
+                    it[f + '_anchor'] = anchor_for(it[f], marks)
             elif args.resolve and isinstance(it.get(f + '_anchor'), dict):
-                v = resolve_anchor(it[f + '_anchor'], marks)
+                v = resolve_anchor(it[f + '_anchor'], marks, words)
                 if v is None:
                     missing.append(f'{it.get("id")}.{f}')
                     continue
@@ -6415,7 +6440,7 @@ def cmd_sound_anchors(args):
     shutil.copyfile(path, path.with_name(path.name + '.bak'))
     write_json(path, data)
     emit({'ok': True, 'file': str(path), 'mode': 'to-anchors' if args.to_anchors else 'resolve', 'items': len(data[key]),
-          'changed': changes})
+          'changed': changes, 'anchors_kept': kept})
 
 
 MASTER_SOUND_DB = -40.0     # a 10 ms window of the mastered mix counts as sound above this (dBFS)

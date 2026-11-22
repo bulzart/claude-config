@@ -1914,10 +1914,11 @@ class StaticStudioTests(unittest.TestCase):
         save(vd/'script.json',script)
         packet,_=self.review_script()
         self.assertNotIn('content_flag_unreviewed:L003:excluded_theme:V001/S1',cli('plan-check','--run',self.run,'--video',1,expected=None)['issues'])
-        # The fresh reader is told what was left out (as a creative exclusion, not as harm), to catch it in disguise.
+        # The cold reader gets the title, the words and the silences only (brief #4, 2026-11-22): no exclusion records.
+        # The excluded device in disguise is plan-check's content flag above, answered by the editorial review.
         text=Path(packet['packet']).read_text(encoding='utf-8')
-        self.assertIn('a soldier reads an omen in the crows (a creative exclusion)',text)
-        self.assertIn('saying plainly that people were hurt or died is fine',text)
+        self.assertNotIn('a soldier reads an omen in the crows',text)
+        self.assertNotIn('saying plainly that people were hurt or died is fine',text)
         # Picture prompts: the excluded theme, or 02's subjects, are flags to answer before anything is generated.
         shots=self.shots_for_plan()
         shots[1]['frame_prompt']='black crows circling over the valley at noon as an omen, one clear subject'
@@ -2234,7 +2235,14 @@ class StaticStudioTests(unittest.TestCase):
         core=self.load_core()
         tagged=[{'id':'L001','text':'There is one road. [pause]','pause_total_s':2,'pause_via':'edit',**HELD},
                 {'id':'L002','text':'And then the night comes.'}]
-        self.assertTrue(any('is_an_edit_hold_and_a_pause_tag_at_once' in x for x in core.script_pause_plan(tagged)[1]))
+        # The whole silence decided once: the cue performs part of it, the edit tops up only what the measured cue
+        # leaves (a residual). In the older added-on-top form the same pair would stack, and is refused.
+        plan,issues=core.script_pause_plan(tagged)
+        self.assertFalse([x for x in issues if 'is_an_edit_hold_and_a_pause_tag_at_once' in x])
+        self.assertTrue(plan[0]['residual_of_tag'])
+        older=[{'id':'L001','text':'There is one road. [pause]','pause_after_s':2,'pause_via':'edit',**HELD},
+               {'id':'L002','text':'And then the night comes.'}]
+        self.assertTrue(any('is_an_edit_hold_and_a_pause_tag_at_once' in x for x in core.script_pause_plan(older)[1]))
         both=[{'id':'L001','text':'A line.','pause_total_s':2,'pause_after_s':2,'pause_via':'edit',**HELD}]
         self.assertTrue(any('has_both' in x for x in core.script_pause_plan(both)[1]))
         bare=[{'id':'L001','text':'A line.','pause_total_s':0.8,**HELD}]
@@ -2430,13 +2438,15 @@ class StaticStudioTests(unittest.TestCase):
         # The older form keeps resuming as written (nothing new asked of it).
         self.assertEqual(core.script_pause_plan([{'id':'L001','text':'A line.','pause_after_s':2.0,'pause_via':'edit',
                                                    **bare}])[1],[])
-        # A delivery cue and an edit hold serve different purposes; a pause cue and an edit hold are one silence twice.
+        # A delivery cue and an edit hold serve different purposes; a pause cue and an edit hold in the whole-silence
+        # form are one silence, the edit adding only what the measured cue leaves.
         soft=[{'id':'L001','text':'[softly] It went quiet.','pause_total_s':2.0,'pause_via':'edit',**HELD},
               {'id':'L002','text':'Then the phone rang.'}]
         self.assertEqual(core.script_pause_plan(soft)[1],[])
         short=[{'id':'L001','text':'It went quiet. [short pause]','pause_total_s':2.0,'pause_via':'edit',**HELD},
                {'id':'L002','text':'Then the phone rang.'}]
-        self.assertTrue(any('is_an_edit_hold_and_a_pause_tag_at_once' in x for x in core.script_pause_plan(short)[1]))
+        self.assertFalse([x for x in core.script_pause_plan(short)[1] if 'is_an_edit_hold_and_a_pause_tag_at_once' in x])
+        self.assertTrue(core.script_pause_plan(short)[0][0]['residual_of_tag'])
         # Cue estimates are bands from evidence: another voice's catalogue value, a labelled assumption, this voice.
         b=core.tag_estimate('[short pause]','pause',{})
         self.assertEqual((b['low_s'],b['high_s'],b['n']),(0.75,2.25,0))
@@ -3200,6 +3210,14 @@ class ReadabilityAndAnchorTests(unittest.TestCase):
             self.assertAlmostEqual(b['at'], 4.1)
             self.assertAlmostEqual(b['end'], 7.8)
             self.assertEqual(len(res['changed']), 2)
+            # a sound that belongs to a word follows that word; a hand-written anchor survives --to-anchors
+            sfx = Path(td)/'sfx.json'
+            save(sfx, {'sfx': [{'id': 'key', 'at': 0.0, 'at_anchor': {'line': 'L002', 'at': 'word', 'word': 1,
+                                                                       'offset_s': -0.1}}]})
+            res = cli('sound-anchors', '--run', rd, '--video', 1, '--file', sfx, '--to-anchors')
+            self.assertEqual(res['anchors_kept'], ['key.at'])
+            cli('sound-anchors', '--run', rd, '--video', 1, '--file', sfx, '--resolve')
+            self.assertAlmostEqual(json.loads(sfx.read_text(encoding='utf-8'))['sfx'][0]['at'], 5.2)
 
 
 class StillTouchupTests(unittest.TestCase):

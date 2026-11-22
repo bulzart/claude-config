@@ -8,6 +8,8 @@ The user chooses a **niche**, not a forced title or story form. The writer has c
 
 No title, hook or narrator performance can save a premise with only three minutes of substance. If research finds no depth, return to topic exploration *before recording*. Never add invented “facts,” pointless facts, filler, machine-gun rhetorical questions or theatrical fake stakes to reach the duration.
 
+**Comprehension without simplification.** A first-time viewer should always know who matters, what is happening and why it matters, while the film keeps its complexity, wit and surprises. Confusion is a cause to find (a name never set up, too much at once, a payoff too far from its set-up, a picture that shows something else), not a reason to explain everything; a mystery the viewer wants solved is a promise, and stays (03 "What the viewer knows at each turn").
+
 ## The story engine (author before script)
 
 Write `40-plans/video-NN/blueprint.json` and a compelling 1–2-page `outline.md` that answer:

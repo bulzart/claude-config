@@ -50,11 +50,13 @@ The measurements give you the parts you can't perceive directly:
 | cuts per minute, shot lengths, moving share, same picture again | rhythm, stillness, motion, reuse | whether a shot earns its length |
 
 These are proxies, not taste. A narrator who moves a lot can still be tiring; a narrow one can be intimate. Label what
-you write: `[O]` observed at a timestamp (a measurement included), `[I]` your inference about why it works, `[U]`
+you write: `[O]` observed at a timestamp (a measurement included), `[I]` your inference about why it works, `[H]` a
+hypothesis this film tests (what it should do for the viewer, and how the final watch will show whether it did), `[U]`
 unknown. View counts and popularity prove nothing about any single technique. A pattern several references share is
 evidence of a convention and of what it can do, not proof that it caused anyone to keep watching: read it in its scene,
 for the experience it serves. An idea of ours that no reference uses is welcome: say it is ours, what it should give
-the viewer, and judge it in context.
+the viewer, and judge it in context. The aim is informed originality, not evidence-shaped imitation: the references
+show what audiences are used to and what a device can do; this film's choices come from its own story.
 
 Write what you learn into the cards (`audiovisual_moments`, `narration_delivery`, `delight`: 01) and the cluster's
 creative profile (02): what makes these videos *enjoyable*, not only what they contain, and what remains unexplored.
@@ -172,6 +174,9 @@ These are craft principles. Each one says when it applies.
 - **Give the narrator a point of view and a relationship.** Curious, amused, moved, sceptical, fond: sincerely, where
   the material earns it. A narrator who reacts to what they are telling ("which is a strange thing to do in a
   blizzard") sounds like a person; one who only reports sounds like a reader.
+- **The voice performs, and the script plans it.** ElevenLabs v4's delivery and pause cues are part of every
+  narration where a moment calls for them (05): a line that settles, a beat before a reveal, restrained humour, a
+  hushed passage. Never a quota, never decoration, and never a cover for a sentence that is unclear: rewrite that.
 - **Context just in time.** Give the viewer what they need for the next moment, when they need it. A recap before the
   story begins is usually the first exit. If the title promises an experience, start the experience.
 - **Facts become experience.** Tie a number to a body, a decision, a comparison or a picture. Say each number once,
@@ -242,6 +247,11 @@ These are craft principles. Each one says when it applies.
   one. A beautiful picture that adds nothing to the moment is decoration.
 - **Every shot says its job** (`new_thing` in the shot plan): what the viewer learns or feels from the picture that
   the narration didn't give them.
+- **Show the relationship.** When the words state a cause, a comparison, a route or a plan, the picture shows how the
+  parts connect, revealed in the order the viewer needs it (04). Plan the drawing with the beat, not after the edit.
+- **One thing to read at a time.** Captions, drawn labels and words inside the picture compete for the same eyes. Give
+  a label the time and the size to be read, keep it out of the caption band, and let a dense moment be carried by
+  the picture or the words, not both at once (timeline-check lists small, short or covered words).
 
 ## 7. Refine before spending, then once more at the end
 
