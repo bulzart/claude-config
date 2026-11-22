@@ -1218,7 +1218,10 @@ def hold_shot(rd, video, index):
         hit = latest.get(src)
         return ({'still': hit[1], 'still_fingerprint': quick_fingerprint(Path(hit[1]))} if hit else
                 {'still': None, 'still_fingerprint': None})
-    for k, s in enumerate(shots):
+    # the LAST shot over the line: a line can hold a cut on a word (start_word), and the silence after the line
+    # belongs to the shot that ends it
+    for k in range(len(shots) - 1, -1, -1):
+        s = shots[k]
         a, b = pos.get(str(s.get('line_start'))), pos.get(str(s.get('line_end')))
         if a is None or b is None or not a <= index <= b:
             continue
@@ -2949,7 +2952,7 @@ def shot_facts(rd, video):
     order = [str(r.get('id') or f'L{i + 1:03d}') for i, r in enumerate(lines)]
     shots = plan.get('shots') or []
     out['shots'] = len(shots)
-    used, cursor, earlier = set(), 0, set()
+    used, cursor, earlier, prev_a, prev_sw = set(), 0, set(), None, None
     for s in shots:
         sid = s.get('id')
         if str(s.get('beat_id')) not in beats:
@@ -2971,8 +2974,18 @@ def shot_facts(rd, video):
         earlier.add(str(sid))
         a = order.index(str(s.get('line_start'))) + 1 if str(s.get('line_start')) in order else None
         b = order.index(str(s.get('line_end'))) + 1 if str(s.get('line_end')) in order else None
-        if a != cursor + 1 or b is None or b < a:
+        sw = s.get('start_word')
+        if sw is not None:
+            # a cut on a word inside a line (04): the shot starts at that word of line_start, which the previous shot
+            # ends on; words counted as the captions show them
+            words_n = len(_captions().display_words(lines[a - 1].get('text') or '', strip_tags)) if a else 0
+            if not (isinstance(sw, int) and not isinstance(sw, bool) and 2 <= sw <= words_n):
+                out['issues'].append(f'shot_{sid}_start_word_not_in_line')
+            elif prev_a == a and prev_sw and sw <= prev_sw:
+                out['issues'].append(f'shot_{sid}_start_word_not_after_previous_shot')
+        if a != (cursor if sw is not None else cursor + 1) or b is None or b < a:
             out['issues'].append(f'shot_{sid}_lines_not_contiguous')
+        prev_a, prev_sw = a, sw
         span = spans.get(str(s.get('beat_id')))
         if span and a and b and (a < span[0] or b > span[1]):
             # The picture would play over another beat's words while following this beat's direction.
@@ -5369,7 +5382,8 @@ def cmd_audio_check(args):
 
 def shot_structure_sha(shots):
     """What the edit's timing depends on: which shots, for which beats, over which lines (prompts can change freely)."""
-    return canonical_sha([[str(s.get(k)) for k in ('id', 'beat_id', 'line_start', 'line_end')] for s in shots or []])
+    return canonical_sha([[str(s.get(k)) for k in ('id', 'beat_id', 'line_start', 'line_end')]
+                          + ([str(s.get('start_word'))] if s.get('start_word') else []) for s in shots or []])
 
 
 def _run_file(rd, f):
@@ -5720,12 +5734,40 @@ def cmd_captions_plan(args):
     write_json(captions_plan_path(rd, n), out)
     warn = []
     if counts['between']:
-        warn.append(f'{counts["between"]} words had no time from Whisper (a line found on a second listen): each sits '
-                    'between its timed neighbours by its length')
+        warn.append(f'{counts["between"]} words had no time of their own from Whisper: each sits between its timed '
+                    'neighbours by its length')
+    for run in squeezed_runs(words):
+        warn.append(f'{run["line"]}: {run["words"]} words in a row lit under {SQUEEZE_S:g} s each '
+                    f'({run["from_s"]:.2f}-{run["to_s"]:.2f} s, "{run["text"]}"): too fast to read and not where the '
+                    'voice says them; look at the word_times of that line in line-times.json before building')
     emit({'ok': True, 'captions': 'on', 'style': choice[1], 'plan': str(captions_plan_path(rd, n)),
           'words': len(words), 'timing_evidence': out['timing_evidence'], 'warnings': warn,
           'next': 'With CapCut closed: captions-build --draft "<project folder>" (then capcut_tools.py capcut-repair '
                   '--keep-text), then timeline-check reads them back.'})
+
+
+SQUEEZE_S = 0.08
+
+
+def squeezed_runs(words, min_s=None, min_run=3):
+    """Runs of words of one line, each lit shorter than min_s, at least min_run in a row: captions that flash by
+    unread, because those words had no time of their own (2026-11-22: L013, ten words in its last 0.4 s). Facts for the
+    agent; nothing is decided here."""
+    min_s = SQUEEZE_S if min_s is None else min_s
+    runs, cur = [], []
+    def close():
+        if len(cur) >= min_run:
+            runs.append({'line': cur[0]['line'], 'words': len(cur), 'from_s': round(cur[0]['s'], 3),
+                         'to_s': round(cur[-1]['e'], 3), 'text': ' '.join(str(w['w']) for w in cur)[:80]})
+    for w in words:
+        short = (w['e'] - w['s']) < min_s - 1e-9
+        if short and cur and cur[-1]['line'] == w['line']:
+            cur.append(w)
+            continue
+        close()
+        cur = [w] if short else []
+    close()
+    return runs
 
 
 def cmd_captions_build(args):
@@ -7090,6 +7132,30 @@ def cmd_hold_decide(args):
                    if args.stage == 'narration' else 'Rebuild the CapCut project from the new edit plan if it changed.')})
 
 
+def word_cut_s(row, text, start_word, language='en'):
+    """Where a shot that starts at word `start_word` of a line cuts in (1-based, the line's words as the captions show
+    them), on the narration's own clock: in the middle of the pause before that word when there is one (0.06 s or
+    more), else 0.03 s before the word. None when the line has no such word or no times."""
+    cap = _captions()
+    gap0 = (row.get('gap_span_s') or [None])[0]
+    end = max(row.get('end_s'), gap0) if gap0 is not None and row.get('end_s') is not None else row.get('end_s')
+    if row.get('start_s') is None or end is None:
+        return None
+    ws, prob = cap.line_words(text or '', row.get('word_times'), (row.get('start_s'), end), tokens_of, strip_tags,
+                              language, line_token_map)
+    try:
+        k = int(start_word)
+    except (TypeError, ValueError):
+        return None
+    if prob or not 2 <= k <= len(ws) or ws[k - 1]['s'] is None or ws[k - 2]['e'] is None:
+        return None
+    w, before = ws[k - 1], ws[k - 2]
+    gap = w['s'] - before['e']
+    cut = (before['e'] + w['s']) / 2 if gap >= 0.06 else max(before['e'], w['s'] - 0.03)
+    return {'cut_s': round(cut, 3), 'word': w['w'], 'word_timing': w['timing'], 'pause_before_s': round(max(gap, 0.0), 3),
+            'basis': 'whisper', 'prev_word_span_s': [before['s'], before['e']], 'word_span_s': [w['s'], w['e']]}
+
+
 def cmd_retime_shots(args):
     """Time every shot to the real narration: each cut falls in the silence between the last line of one shot
     and the first line of the next. Only DECIDED holds are inserted (hold-decide: a planned pause is a proposal until
@@ -7213,20 +7279,50 @@ def cmd_retime_shots(args):
               f'{win_lo - dur - seam_s:.1f} s short of the export window. The answer is the story (more substance in '
               'the parts to re-record, or an authorised length revision), never longer silences.',
               {'narration_s': dur, 'held_silence_s': held_s, 'export_window_from_s': round(win_lo, 2)})
-    ranges, cursor = [], 0
-    for s in shots:
+    ranges, cursor, cut_in = [], 0, {}
+    lt_rows = {int(r['index']): r for r in lt.get('lines') or []}
+    language = lock.get('language') or script.get('language') or 'en'
+    for k, s in enumerate(shots):
         a, b = index.get(str(s.get('line_start'))), index.get(str(s.get('line_end')))
-        if a is None or b is None or a != cursor + 1 or b < a:
-            error(f'Shot {s.get("id")} does not start on the line after the previous shot ends.',
+        sw = s.get('start_word')
+        if a is None or b is None or a != (cursor if sw is not None else cursor + 1) or b < a:
+            error(f'Shot {s.get("id")} does not start on the line after the previous shot ends (or, with start_word, '
+                  'inside the line it ends on).',
                   {'line_start': s.get('line_start'), 'line_end': s.get('line_end'), 'previous_end': cursor})
+        if sw is not None:
+            # the cut goes in on a word inside the line the previous shot ends on (04)
+            prev_sw = shots[k - 1].get('start_word') if ranges and ranges[-1][0] == a else None
+            c = word_cut_s(lt_rows.get(a) or {}, lines[a - 1].get('text') or '', sw, language)
+            if c is None or (prev_sw is not None and int(sw) <= int(prev_sw)):
+                error(f'Shot {s.get("id")}: start_word {sw} is not a timed word of {s.get("line_start")} after the '
+                      'previous shot starts.', {'start_word': sw, 'previous_start_word': prev_sw})
+            cut_in[k] = c
         ranges.append((a, b))
         cursor = b
+    if cut_in and av is not None:
+        # Whisper often stretches a word over the pause after it: the pause before each cut word is measured in the
+        # audio itself (the same quiet-run measure as the silences between lines), and the cut goes in its middle
+        pairs = []
+        for j, k in enumerate(sorted(cut_in)):
+            c = cut_in[k]
+            pairs += [{'index': 2 * j + 1, 'start_s': c['prev_word_span_s'][0], 'end_s': c['prev_word_span_s'][1]},
+                      {'index': 2 * j + 2, 'start_s': c['word_span_s'][0], 'end_s': c['word_span_s'][1]}]
+        measured = {int(g['index']): g for g in av.line_gaps(nar, pairs)['gaps']}
+        for j, k in enumerate(sorted(cut_in)):
+            g = measured.get(2 * j + 1) or {}
+            if g.get('basis') == 'audio' and g.get('span_s') and g['span_s'][1] - g['span_s'][0] >= 0.1:
+                cut_in[k].update({'cut_s': round((g['span_s'][0] + g['span_s'][1]) / 2, 3), 'basis': 'audio',
+                                  'pause_before_s': round(g['span_s'][1] - g['span_s'][0], 3)})
     if cursor != len(lines):
         error('The shots do not cover every script line.', {'last_line_covered': cursor, 'lines': len(lines)})
     out_shots, start = [], 0.0
     hold_at = {int(h['index']): h['at_audio_s'] for h in pauses}
     for k, (s, (a, b)) in enumerate(zip(shots, ranges)):
-        if k + 1 < len(shots):
+        if k + 1 < len(shots) and k + 1 in cut_in:
+            # the next shot starts on a word inside this shot's last line: the cut goes in there
+            split = cut_in[k + 1]['cut_s']
+            end = split + sum(h['hold_s'] for h in holds if h['at_audio_s'] <= split + 1e-6)
+        elif k + 1 < len(shots):
             # The cut sits in the silence after the shot's last line: where its hold is, when it has one (the hold stays
             # on the shot before), else in the middle of the measured silence, else at Whisper's boundary.
             g = gmap.get(b) or {}
@@ -7246,7 +7342,8 @@ def cmd_retime_shots(args):
         # Each shot carries its beat's direction: what the editor's move, transition and sound serve here (09, 05).
         out_shots.append({'id': s.get('id'), 'beat_id': s.get('beat_id'), 'start_s': s['start_s'],
                           'end_s': s['end_s'], 'duration_s': round(length, 2),
-                          'direction': beat_dir.get(str(s.get('beat_id'))) or {}})
+                          'direction': beat_dir.get(str(s.get('beat_id'))) or {},
+                          **({'cut_in': cut_in[k]} if k in cut_in else {})})
         start = end
     beat_spans = {}
     for s in out_shots:

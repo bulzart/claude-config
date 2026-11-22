@@ -569,6 +569,28 @@ class StaticStudioTests(unittest.TestCase):
         self.assertTrue(any('nearly the same' in w for w in res['warnings']))
         self.assertTrue(any('in a row of the same composition' in w for w in res['warnings']))
 
+    def test_a_shot_can_cut_in_on_a_word_inside_a_line(self):
+        self.write_plan()
+        base='a wide valley at dawn with one narrow road and a column of small trucks far below'
+        props=['a ridge line at night with fires along its length', 'a broken bridge over a gorge in snow',
+               'a radio operator bent over a set in a cellar', 'a harbour crowded with grey ships at noon',
+               'a general reading a telegram beside a stove', 'a field hospital tent in heavy rain']
+        def shot(i, b, a, z, **kw):
+            return {'id': f'S{i}', 'beat_id': b, 'line_start': a, 'line_end': z, 'composition': f'c{i}',
+                    'new_thing': 'something new the viewer sees here', 'frame_prompt': props[i - 1], **kw}
+        shots=[shot(1,'B01','L001','L010'), shot(2,'B02','L011','L015'), shot(3,'B02','L015','L020',start_word=5),
+               shot(4,'B03','L021','L030'), shot(5,'B04','L031','L040'), shot(6,'B05','L041','L052')]
+        plan=self.run/'60-visuals/video-01/shot-plan.json'
+        save(plan,{'video':1,'shots':shots})
+        issues=cli('shot-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in issues if 'contiguous' in x or 'start_word' in x], issues)
+        shots[2]['start_word']=40                                   # the line has 27 words
+        save(plan,{'video':1,'shots':shots})
+        self.assertIn('shot_S3_start_word_not_in_line',cli('shot-check','--run',self.run,'--video',1,expected=None)['issues'])
+        shots[2]['start_word']=5; shots[2]['line_start']='L016'     # a cut word starts inside the line S2 ends on
+        save(plan,{'video':1,'shots':shots})
+        self.assertIn('shot_S3_lines_not_contiguous',cli('shot-check','--run',self.run,'--video',1,expected=None)['issues'])
+
     def test_writing_signals_count_what_a_listener_hears(self):
         core=self.load_core()
         lines=[{'id':'L001','text':'This is not a retreat. It is a plan.'},
@@ -2904,6 +2926,51 @@ class RecheckWordsTests(unittest.TestCase):
         self.assertEqual(core.merge_recheck_words(row2, {'tok_times': [[0.1, 0.2], None]}, 0.0), 0)
         self.assertEqual(core.merge_recheck_words(row2, {'tok_times': [[0.1, 0.2]]}, 0.0), 0)
         self.assertEqual(row2['_tok'], [(1.0, 1.2), (1.2, 1.4)])
+
+
+class SqueezedCaptionTests(unittest.TestCase):
+    """captions-plan names runs of words that would flash by unread (2026-11-22, L013)."""
+
+    def test_three_or_more_short_words_of_one_line_in_a_row_are_named(self):
+        spec = importlib.util.spec_from_file_location('static_core_squeeze', TOOL)
+        core = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(core)
+        w = lambda t, s, e, line='L013': {'w': t, 's': s, 'e': e, 'line': line}
+        words = [w('They', 67.98, 68.26), w('said', 68.26, 68.5), w('again.', 74.19, 74.25), w('No.', 74.25, 74.29),
+                 w('He', 74.29, 74.31), w('tried', 74.31, 74.36), w('Next', 75.0, 75.3, 'L014')]
+        runs = core.squeezed_runs(words)
+        self.assertEqual([(r['line'], r['words'], r['from_s'], r['to_s']) for r in runs], [('L013', 4, 74.19, 74.36)])
+        # two short words, or short words split across two lines, are not a run
+        self.assertEqual(core.squeezed_runs(words[:4]), [])
+        self.assertEqual(core.squeezed_runs([w('a', 1.0, 1.02), w('b', 1.02, 1.04), w('c', 1.04, 1.06, 'L014')]), [])
+
+
+class StartWordTests(unittest.TestCase):
+    """A cut on a word inside a line (shot-plan start_word), 2026-11-22: the final review asked five times for a cut on a
+    word, which line-only cuts could not give."""
+
+    def core(self):
+        spec = importlib.util.spec_from_file_location('static_core_start_word', TOOL)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+
+    def test_the_cut_goes_in_the_pause_before_the_word_or_just_before_it(self):
+        core = self.core()
+        text = 'They said no. He tried again.'
+        row = {'start_s': 0.0, 'end_s': 3.0,
+               'word_times': [[0.0, 0.3], [0.3, 0.6], [0.6, 1.0], [1.6, 1.8], [1.8, 2.1], [2.1, 2.6]]}
+        c = core.word_cut_s(row, text, 4)
+        self.assertEqual((c['word'], c['cut_s'], c['pause_before_s']), ('He', 1.3, 0.6))
+        self.assertEqual(core.word_cut_s(row, text, 2)['cut_s'], 0.3)       # no pause: just before the word
+        self.assertIsNone(core.word_cut_s(row, text, 1))                     # the shot before needs a word of its own
+        self.assertIsNone(core.word_cut_s(row, text, 7))
+
+    def test_a_cut_word_changes_the_shot_structure_and_old_plans_keep_their_hash(self):
+        core = self.core()
+        a = [{'id': 'S1', 'beat_id': 'B1', 'line_start': 'L1', 'line_end': 'L2'}]
+        self.assertEqual(core.shot_structure_sha(a), core.canonical_sha([['S1', 'B1', 'L1', 'L2']]))
+        self.assertNotEqual(core.shot_structure_sha(a), core.shot_structure_sha([dict(a[0], start_word=3)]))
 
 
 class StillTouchupTests(unittest.TestCase):

@@ -14,8 +14,12 @@ copied function by function with their helpers, the source lines unchanged. Chan
     original wording);
   * the command-line glue at the end is new: the images' starts, moves and joins come from a file (--timeline), there is no run, and
     capcut-repair always keeps every text as it is (--keep-text; the other toolkit's house text style code is copied because
-    capcut-repair names it, but nothing here turns it on).
-Nothing else was changed; the CapCut logic is theirs.
+    capcut-repair names it, but nothing here turns it on);
+  * capcut-repair has two steps of this toolkit's own, added 2026-11-22 and not in the source: `audio-materials` before register
+    (_audio_materials: every audio clip in CapCut's own form, type "extract_music"; the MCP writes "audio", which CapCut 9.x drops
+    on open, so every audio track showed empty) and `photo-durations` after it (_photo_durations: CapCut's 3-hour duration on a
+    still the MCP saved with none). A re-copy must add both back: AudioMaterialTests and PhotoDurationTests fail until it does.
+Nothing else was changed; apart from those two steps, the CapCut logic is theirs.
 """
 
 import argparse

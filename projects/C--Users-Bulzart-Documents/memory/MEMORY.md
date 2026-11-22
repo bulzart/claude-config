@@ -101,7 +101,7 @@
 - [No cross-session messages](no-cross-session-messages.md) — user 2026-11-20: never message other Claude sessions to check their work; read state.json/outputs/CapCut, or ask the user
 - [create-video: adaptive-niche guardrail](create-video-adaptive-niche-guardrail.md) — 9-point shift never drifts; 10-creative-direction.md, av-profile watch sheets, direction.json + lock before script, three sealed fresh reads, media gate + field-level revisions; code enforces process, never quality; 2026-11-22: evidence-grounded originality ([O]/[I]/our idea, cite evidence for big choices)
 - [create-video: narration direction](create-video-narration-direction.md) — user 2026-11-20: per-video voice lock, v4 has no speed, selective tags, no silence padding, beat-aligned parts, paid trials only after a yes
-- [CapCut desktop automation](capcut-desktop-automation.md) — on the user's yes: `cc.py desk` + `capcut-app`; desk hand-off with builds; ExportPath registry; 8 timeline copies; Pro advert: close with X
+- [CapCut desktop automation](capcut-desktop-automation.md) — create-clips `cc.py desk` on the user's yes; /create-video its own capcut_desk.py, exports itself (yes 2026-11-22); ExportPath registry; Pro advert: close with X
 - [One pipeline per session](one-pipeline-per-session.md) — user 2026-11-20: a brief naming another pipeline means this session's pipeline; others are read-only references
 - [create-video: captions](create-video-captions.md) — user 2026-11-20: Luckiest Guy box | Montserrat Bold yellow word | none, asked once; captions.py, Whisper word times; CapCut drawing not verified
 - [create-video: narration calibration](create-video-narration-calibration.md) — 2026-11-20 trial (2,051 of 5,000 credits): v4 ~0.40 credits/char, context unbilled, balance lags; waits for the user's ears
@@ -122,3 +122,4 @@
 - [create-clips: no detached judges](create-clips-no-detached-judges.md) — user 2026-11-21: no blind/pairwise judges, second planners or compare-builds; context checks + validators
 - [create-video: held silences](create-video-held-silences.md) — user 2026-11-21: pause_total_s = whole silence, decided on the recorded voice then with the picture (holds, hold-decide); transitions clean by default, fades only on audible room tone, bed per silence; 2026-11-22: voice gaps = baseline not ceiling, reference pauses = evidence not values
 - [create-video: stills one at a time](create-video-stills-one-at-a-time.md) — user 2026-11-22: one still per worker run, each looked at as it lands; lettering fixed locally (still_touchup.py), content remade
+- [MCP audio clips vanish in CapCut](capcut-mcp-audio-type.md) — 2026-11-22: MCP add_audio type "audio" -> CapCut 9.8 shows empty audio tracks; use "extract_music" (create-video capcut-repair fixes it)
