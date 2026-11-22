@@ -41,7 +41,7 @@ Never build a project clip by clip (`capcut add-video`, the MCP tools): the comp
 - The media pool (`draft_meta_info.json -> draft_materials`) lists only files that exist: a missing one makes CapCut open the project with a "Media lost / Link media" window. A project built from capcut-cli's or the MCP's clone of a template can carry the template's media there; the composition does not.
 
 ## When something goes wrong
-- The build says CapCut is running: close it, run it again (set `videos.<id>.status=ready-to-build` and stop when you cannot). It failed with a plain error (a missing media file, a refused spec, a captions file that is missing or older than the last edl-check): the error text says which; fix the cause (a wrong path in the EDL, a chunk that is not there, run `captions` again) and run it again;
+- The build says CapCut is running: close it, run it again (set `videos.<id>.status=ready-to-build` and stop when you cannot). It failed with a plain error (a missing media file, a refused spec, a captions file that is missing or older than the last edl-check, an EDL whose music patch is newer than the last edl-check): the error text says which; fix the cause (a wrong path in the EDL, a chunk that is not there, run `captions` again) and run it again;
   a half-made draft folder that a failed compile left is yours to remove only by its exact path (the build removes its own when it retries without the extras).
 - `video_segments_retargeted` is less than `pieces`, or `big_media_copied_into_the_draft` is not empty: the draft is wrong; delete that one draft folder by its exact path and build again under a new `--name`.
 - A finish step says a piece has no clip: the main track's clips do not start where the plan says; build again.

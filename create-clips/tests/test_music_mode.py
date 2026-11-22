@@ -104,6 +104,23 @@ def song_muted(pieces) -> bool:
     return any(p.get("muted") and p["rec_from"] < 80.0 and p["rec_to"] > 30.0 for p in pieces)
 
 
+def frame_sig(f, at):
+    """One decoded frame of a media file at a time (for: the same picture)."""
+    import hashlib
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{at:.3f}", "-i", str(f), "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                         capture_output=True).stdout
+    return hashlib.sha1(raw).hexdigest() if raw else None
+
+
+def peak(f, a, b):
+    """The loudest sample of a media file's sound between two times."""
+    import numpy as np
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{a:.3f}", "-t", f"{b - a:.3f}", "-i", str(f), "-vn", "-ac", "1", "-ar", "48000", "-f", "f32le", "-"],
+                         capture_output=True).stdout
+    x = np.frombuffer(raw, dtype=np.float32)
+    return float(np.abs(x).max()) if len(x) else None
+
+
 def set_mode_raw(run, mode):
     """The state key written directly (no `cc.py state`, so no switch): for the resolver's own checks."""
     st = rj(Path(run) / "state.json")
@@ -257,6 +274,13 @@ def main():
               "Isolation: the claimed song in the long video is recognised, scored (outcome A), separated, checked and patched; the short is not processed")
         check(editorial(patched) == editorial(long_edl), "the patch changes only the audio: every segment, cut, zoom, transition, sound effect and the "
                                                          "builder's own mute are the same")
+        # a music patch newer than the resolved plan is refused by the build (it would build the video without the patch: the song left in)
+        cc("edl-check", "--run", run, "--edl", out_l / "edl.json")
+        t_ = time.time() + 5
+        os.utime(out_l / "edl.json", (t_, t_))
+        gb = cc("capcut-build", "--run", run, "--video", "L01", "--store", tmp / "drafts")
+        check(gb.get("ok") is False and "changed after the last edl-check" in gb.get("error", "") and not (tmp / "drafts").exists(),
+              "a music patch applied after the last edl-check: the build refuses and says to run edl-check and captions again (nothing made)")
         wj(out_d / "edl.json", patched | {"video": "L02"})
         state = rj(run / "state.json")
         state["videos"] = {"L01": {"kind": "long", "status": "built", "project": "test"}, "L02": {"kind": "long", "status": "verified", "export": "C:/x/L02.mp4"},
@@ -277,6 +301,19 @@ def main():
         rs_ = rj(g / "iso" / "S01" / "resolved.json")
         check(song_muted(ri_["pieces"]) and ci["totals"]["sfx"] == 2 and "music_patch_left_out" not in ri_,
               "Isolation, long video: the patch is built (the song's stretch muted, the cleaned audio on a lane beside the sound effect)")
+        # CapCut's export plays a clip's own sound even at volume 0 (2026-11-22): a muted piece plays a silent copy of its file instead
+        sil = [p for p in ri_["pieces"] if p.get("silent_copy_of")]
+        song_p = [p for p in sil if p.get("music_muted")]
+        sp_ = song_p[0] if song_p else None
+        check(sp_ and all("/30-assets/mute/" in p["file"] and Path(p["file"]).is_file() for p in sil)
+              and all(not p.get("silent_copy_of") and p["file"].endswith("chunk.mp4") for p in ri_["pieces"] if not p.get("muted"))
+              and any(x["music"] for x in ci.get("muted_pieces") or []) and any(not x["music"] for x in ci.get("muted_pieces") or []),
+              "the song's pieces (and the builder's own muted stretch) play a silent copy of their chunk; every other piece plays the chunk itself")
+        if sp_:
+            mid_t = (sp_["src_from"] + sp_["src_to"]) / 2
+            check(frame_sig(sp_["file"], mid_t) == frame_sig(sp_["silent_copy_of"], mid_t) and peak(sp_["file"], sp_["src_from"], sp_["src_to"]) == 0.0
+                  and (peak(sp_["silent_copy_of"], sp_["src_from"], sp_["src_to"]) or 0) > 0.01,
+                  "the silent copy: the same picture at the same time, no sound at all where the chunk has the song")
         check(not song_muted(rs_["pieces"]) and cs["totals"]["sfx"] == 0 and (cs.get("music_patch_left_out") or {}).get("music_mute_spans") == 1,
               "a short carrying a patch copied from a long video: left out, its original audio plays: " + str((cs.get("music_patch_left_out") or {}).get("why")))
         set_mode_raw(run, "non_isolation")      # the mode alone, without the switch (tested below): here only the resolver

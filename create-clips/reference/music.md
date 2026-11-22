@@ -173,6 +173,11 @@ fragments, the stream's words about a song, the times to look at. The agent, for
 2. Name an interval's recording in the EDL's `music` list only where the evidence shows it (`{"rec_from", "rec_to", "title", "artist",
    "confidence": "high|medium|low", "evidence"}`): a weak item (50 at most); never a guessed title. Research is the main session's.
 3. `T music --run RUN --edl OUT/edl.json --apply` when a line says `remove` (outcome A): Demucs, and SAM Audio Base for a span Demucs cannot clean;
+   when it changed the EDL (`patched`), `T edl-check ... --make-censor` and `T captions` again before the build: `capcut-build` refuses a music patch
+   newer than the resolved plan (built without it, the song would stay in). In the plan, the song's stretch plays a SILENT COPY of its chunk
+   (`RUN/30-assets/mute`: the picture stream-copied, the same frames at the same times; the sound silent), because CapCut's export plays a clip's
+   own sound even at volume 0 (measured 2026-11-22 on LT2: the original stayed under the cleaned audio; the user's fix: mute that part of the
+   original before CapCut uses it); the cleaned audio plays on its own lane over it.
    an EDL changed after `--apply` gets `--apply` again (cached: seconds); the patch is replaced, never stacked.
 4. The report lists every interval: its output time, removed (with SAM: listen before publishing) / UNRESOLVED / left as it is with its outcome, and
    why. A music line never fails a video and never drops a moment.
