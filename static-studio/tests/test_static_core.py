@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import hashlib
+import re
 import json
 import importlib.util
 import io
@@ -543,7 +544,13 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('final_review_missing',cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)['issues'])
         pk,rec=self.review('final',[{'id':'F1','severity':'minor','at':'00:01-00:03',
                                     'problem':'the opening picture holds too long'}],file=exp)
-        self.assertIn('## Shot sheets: every shot once, in order',Path(pk['packet']).read_text(encoding='utf-8'))
+        ptext=Path(pk['packet']).read_text(encoding='utf-8')
+        self.assertIn('## Shot sheets: every shot once, in order',ptext)
+        listed=[x[2:] for x in ptext.splitlines() if x.startswith('- ') and x.lower().endswith(('.jpg','.png'))]
+        self.assertTrue(listed)                                                     # the sheets travel with the packet:
+        for x in listed:                                                            # inside the reader's own folder
+            self.assertTrue(Path(x).is_file() and Path(pk['packet']).parent in Path(x).parents, x)
+        self.assertNotIn(str(self.run),ptext)
         self.assertIn('final_review_r1_unanswered:F1',cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)['issues'])
         save(Path(rec['answers_file']),{'answers':{'F1':{'action':'kept','note':'the hold is the planned breath'}}})
         rel=cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)
@@ -624,11 +631,58 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('likely_cause',text)
         self.assertIn('Following it by ear',text)
         self.assertIn('static-cold-reader',packet['next'])
+        # a script-only read: no claim about the voice; no anchoring score, no cap on findings, real line ids
+        self.assertIn('You are reading, not hearing',text)
+        self.assertNotIn('"keep_watching_1_10": 7',text)
+        self.assertNotIn('at most',text)
+        head=text.split('## The narration')[0]
+        ids={l['id'] for l in json.loads((vd/'script.json').read_text(encoding='utf-8'))['lines']}
+        self.assertTrue(re.findall(r'L\d{3}',head))
+        self.assertTrue(set(re.findall(r'L\d{3}',head)) <= ids, re.findall(r'L\d{3}',head))
         save(fi,{'reviewer':'test reader','findings':[{'id':'F1','severity':'minor','lines':['L003'],
                  'problem':'a name arrives with no introduction','likely_cause':'a name nobody introduced'}]})
         cli('review-record','--run',self.run,'--video',1,'--kind','script')
         kept=json.loads((vd/'reviews/script-r1-findings.json').read_text(encoding='utf-8'))
         self.assertEqual(kept['findings'][0]['likely_cause'],'a name nobody introduced')
+
+    def test_review_read_runs_the_reader_restricted_in_its_own_folder(self):
+        vd=self.write_plan(review_script=False)
+        packet=cli('review-packet','--run',self.run,'--video',1,'--kind','script')
+        stub=Path(self.tmp.name)/'stub_reader.py'
+        stub.write_text('import json,os,sys\n'
+                        'args=sys.argv[1:]\n'
+                        'assert "--restricted" in args and args[args.index("--tools")+1]=="Read,Write", args\n'
+                        'prompt=args[args.index("-p")+1]\n'
+                        'assert prompt.startswith("Read only ") and os.path.samefile(os.path.dirname(prompt[10:].split(" and follow")[0]),os.getcwd()), (prompt,os.getcwd())\n'
+                        'json.dump({"reviewer":"stub","findings":[{"id":"F1","severity":"minor","lines":["L002"],'
+                        '"problem":"the second line repeats the first one","likely_cause":"the same point again"}]},'
+                        'open("findings.json","w"))\n',encoding='utf-8')
+        os.environ['STUDIO_CLAUDE_BIN']=json.dumps([sys.executable,str(stub)])
+        try:
+            res=cli('review-read','--run',self.run,'--video',1,'--kind','script')
+        finally:
+            os.environ.pop('STUDIO_CLAUDE_BIN',None)
+        self.assertEqual(Path(res['findings_file']),Path(packet['findings_file']))
+        cli('review-record','--run',self.run,'--video',1,'--kind','script')
+        self.assertTrue((vd/'reviews/script-r1-findings.json').is_file())
+        self.assertIn('review-read',packet['next'])
+
+    def test_a_finding_about_a_silence_is_revised_by_changing_the_silence(self):
+        vd=self.write_plan(review_script=False)
+        script=json.loads((vd/'script.json').read_text(encoding='utf-8'))
+        script['lines'][4].update({**HELD,'pause_total_s':2.4,'pause_via':'edit'})
+        save(vd/'script.json',script)
+        _,rec=self.review('script',[{'id':'F1','severity':'minor','lines':['L005'],
+                                     'problem':'the silence after this line goes on too long'}])
+        script['lines'][4].pop('pause_total_s',None)
+        script['lines'][4].pop('pause_via',None)
+        for k in list(HELD):
+            script['lines'][4].pop(k,None)
+        save(vd/'script.json',script)                                   # the text is the same, the silence is gone
+        save(Path(rec['answers_file']),{'answers':{'F1':{'action':'revised','lines':['L005'],
+                                                         'note':'the planned silence after this line is removed'}}})
+        issues=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in issues if 'revised_but_unchanged' in x])
 
     def test_writing_signals_count_what_a_listener_hears(self):
         core=self.load_core()
@@ -1174,11 +1228,13 @@ class StaticStudioTests(unittest.TestCase):
         # no picture or sound plan, no house rules, in a folder outside the run.
         packet=cli('review-packet','--run',self.run,'--video',1,'--kind','script')
         text=Path(packet['packet']).read_text(encoding='utf-8')
-        self.assertIn('(silence: about 3.8 s in all, the voice stops, the picture stays.)',text)
+        self.assertIn('(silence after this line: about 3.8 s in all)',text)
         self.assertNotIn(HELD['pause_picture'],text)
         self.assertNotIn('House rules',text)
         self.assertNotIn(str(self.run),str(packet['packet']))
-        self.assertIn('Silences in this script: 51',text)
+        # no priming (the user, 2026-11-22): no count or sum of the silences, no baseline gap, no picture assumed
+        for primer in ('Silences in this script','own gap between two lines','picture stays','the voice stops'):
+            self.assertNotIn(primer,text)
         self.assertNotIn('longest pause',text)
         # A reader who saw every hold does not make silence a way to reach the length: still blocked.
         self.review('script',[{'id':'F1','severity':'minor','lines':['L002'],'problem':'the holds feel long here'}],
@@ -3130,6 +3186,27 @@ class ComprehensionAndPauseTests(unittest.TestCase):
         beats[1]['depends_on'] = [{'what': 'the courier is the sister', 'withheld': 'later', 'revealed_in': 'B1'}]
         out = core.beat_dependency_issues(beats, lines)
         self.assertTrue(any('withheld_needs_why' in x for x in out) and any('is_not_later' in x for x in out), out)
+
+    def test_a_residual_pause_counts_its_cue_once_before_the_line_is_measured(self):
+        core = self.core()
+        why = {'pause_purpose': 'the reveal needs a moment to land with the viewer',
+               'pause_picture': 'the empty chair stays on screen the whole time',
+               'pause_sound': 'the bed carries on quietly under the silence',
+               'pause_landing': 'the line falls and settles on its last word',
+               'pause_resume': 'the next line starts again plainly and quietly'}
+        with tempfile.TemporaryDirectory() as td:
+            rd = Path(td)/'run'
+            save(rd/'state.json', {'schema': 'static-youtube-longform-v1', 'run': 'r'})
+            gap = core.DEFAULT_NATURAL_GAP_S
+            cued = [{'id': 'L001', 'text': 'He asked them to stand by.', 'pause_total_s': 3.0, 'pause_via': 'edit', **why},
+                    {'id': 'L002', 'text': '[short pause] Nobody answered.'}]
+            row = [h for h in core.hold_facts(rd, 1, cued)['holds'] if h['line'] == 'L001'][0]
+            cue = core.tag_cost_s('[short pause]')
+            self.assertGreater(cue, 0)                                       # never assumed to take no time
+            self.assertAlmostEqual(row['added_s'], round(max(0.0, 3.0 - gap - cue), 2))
+            plain = [dict(cued[0]), {'id': 'L002', 'text': 'Nobody answered.'}]
+            row = [h for h in core.hold_facts(rd, 1, plain)['holds'] if h['line'] == 'L001'][0]
+            self.assertAlmostEqual(row['added_s'], round(3.0 - gap, 2))
 
     def test_a_pause_cue_topped_up_by_the_edit_is_a_residual_only_in_the_whole_silence_form(self):
         core = self.core()

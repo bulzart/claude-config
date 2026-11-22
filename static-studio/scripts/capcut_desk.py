@@ -5,14 +5,21 @@ Six abilities, each a command that prints one JSON object on its last line (exit
   shot     [--out PNG] [--region X,Y,W,H] [--scale S]   the screen (or a region) as a PNG to open and look at. The process
                                                        is DPI-aware: a pixel of the shot is a pixel of the screen. A shot
                                                        scaled down by S maps back with x / S + region x (the answer says so).
+                                                       Refused unless CapCut is in front: the screen is the user's too.
   click    X Y [--double] [--right]                     move the cursor there and press. Refused unless CapCut is in front
                                                        AND the window on top at that point is CapCut's.
   key      COMBO                                        e.g. ctrl+a, enter, esc, tab, alt+f4 is refused. Refused unless
                                                        CapCut is in front.
   type     TEXT                                         typed character by character as Unicode (never the clipboard).
                                                        Refused unless CapCut is in front.
-  windows                                               the visible windows: title, rectangle, process, which is in front.
-  focus                                                 bring CapCut's main window to the front (and say if it worked).
+  windows                                               the visible windows: rectangle, process, which is in front; the
+                                                       title only for CapCut's own (another program's title can name the
+                                                       user's private files).
+  focus [--when-idle N]                                 bring CapCut's main window to the front (and say if it worked);
+                                                       with --when-idle, only after N seconds without keyboard or mouse
+                                                       input: never pull the screen away from someone using it.
+  idle [--wait S --at-least N]                          seconds since the last keyboard or mouse input; with --wait, waits
+                                                       up to S seconds for N seconds of quiet.
   app start|quit|status                                 start CapCut and wait for its window; quit = the normal close
                                                        message (WM_CLOSE) to its windows, repeated until it is gone.
                                                        CapCut saves its project itself. Never killed. A CapCut already
@@ -187,6 +194,16 @@ if sys.platform == 'win32':
         user32.GetWindowThreadProcessId(fg, ctypes.byref(pid))
         return _process_name(pid.value).lower() == PROCESS
 
+    class LASTINPUTINFO(ctypes.Structure):
+        _fields_ = [('cbSize', wt.UINT), ('dwTime', wt.DWORD)]
+
+    def idle_seconds():
+        """Seconds since the last keyboard or mouse input on this desktop (anyone's, this tool's own included)."""
+        li = LASTINPUTINFO(cbSize=ctypes.sizeof(LASTINPUTINFO))
+        if not user32.GetLastInputInfo(ctypes.byref(li)):
+            return None
+        return ((kernel32.GetTickCount() - li.dwTime) & 0xFFFFFFFF) / 1000.0
+
     def capcut_running():
         cp = subprocess.run(['tasklist', '/FI', f'IMAGENAME eq {PROCESS}', '/NH', '/FO', 'CSV'], capture_output=True, text=True)
         return PROCESS in (cp.stdout or '').lower()
@@ -210,13 +227,18 @@ if sys.platform == 'win32':
         return _process_name(pid.value)
 
 
+def public(w):
+    """A window as this tool reports it: another program's title is left out (it can name the user's own files)."""
+    return w if not w or w.get('process', '').lower() == PROCESS else {**w, 'title': ''}
+
+
 def need_front(allow_any=False):
     if allow_any:
         return
     if not capcut_in_front():
         fg = next((w for w in list_windows() if w['front']), None)
         out({'ok': False, 'refused': 'CapCut is not the window in front: run `focus`, take a shot, then act',
-             'front': fg}, 2)
+             'front': public(fg)}, 2)
 
 
 def need_capcut_at(x, y, allow_any=False):
@@ -246,6 +268,10 @@ def mine_running():
 
 
 def cmd_shot(a):
+    if not getattr(a, 'any_window', False) and not capcut_in_front():
+        fg = next((w for w in list_windows() if w['front']), None)
+        out({'ok': False, 'refused': 'no shot while another program is in front: the screen is the user\'s too '
+                                     '(focus --when-idle first)', 'front_process': (fg or {}).get('process', '')}, 2)
     from PIL import ImageGrab
     region = [int(v) for v in a.region.split(',')] if a.region else None
     bbox = (region[0], region[1], region[0] + region[2], region[1] + region[3]) if region else None
@@ -296,10 +322,22 @@ def cmd_type(a):
 
 
 def cmd_windows(a):
-    rows = list_windows()
+    rows = [public(w) for w in list_windows()]
     if a.capcut:
         rows = [w for w in rows if w['process'].lower() == PROCESS]
     out({'ok': True, 'windows': rows, 'capcut_in_front': capcut_in_front()})
+
+
+def cmd_idle(a):
+    need, wait = float(a.at_least or 0), float(a.wait or 0)
+    started = time.time()
+    idle = idle_seconds()
+    while wait and need and (idle is None or idle < need) and time.time() - started < wait:
+        time.sleep(min(5.0, max(0.5, need - (idle or 0))))
+        idle = idle_seconds()
+    quiet = idle is not None and (not need or idle >= need)
+    out({'ok': quiet, 'idle_s': None if idle is None else round(idle, 1), 'at_least_s': need or None,
+         'waited_s': round(time.time() - started, 1)}, 0 if quiet else 1)
 
 
 def main_window():
@@ -311,6 +349,12 @@ def cmd_focus(a):
     w = main_window()
     if not w:
         out({'ok': False, 'error': 'no CapCut window'}, 1)
+    need = float(getattr(a, 'when_idle', 0) or 0)
+    if need and not capcut_in_front():
+        idle = idle_seconds()
+        if idle is not None and idle < need:
+            out({'ok': False, 'refused': f'someone is using this computer (last input {idle:.0f} s ago): CapCut is not '
+                                         f'brought to the front before {need:g} s without input', 'idle_s': round(idle, 1)}, 2)
     hwnd = wt.HWND(w['hwnd'])
     if user32.IsIconic(hwnd):
         user32.ShowWindow(hwnd, SW_RESTORE)
@@ -422,13 +466,15 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('shot'); p.add_argument('--out'); p.add_argument('--region'); p.add_argument('--scale', type=float)
-    p.set_defaults(fn=cmd_shot)
+    p.add_argument('--any-window', action='store_true'); p.set_defaults(fn=cmd_shot)
     p = sub.add_parser('click'); p.add_argument('x'); p.add_argument('y'); p.add_argument('--double', action='store_true')
     p.add_argument('--right', action='store_true'); p.add_argument('--any-window', action='store_true'); p.set_defaults(fn=cmd_click)
     p = sub.add_parser('key'); p.add_argument('combo'); p.add_argument('--any-window', action='store_true'); p.set_defaults(fn=cmd_key)
     p = sub.add_parser('type'); p.add_argument('text'); p.add_argument('--any-window', action='store_true'); p.set_defaults(fn=cmd_type)
     p = sub.add_parser('windows'); p.add_argument('--capcut', action='store_true'); p.set_defaults(fn=cmd_windows)
-    p = sub.add_parser('focus'); p.set_defaults(fn=cmd_focus)
+    p = sub.add_parser('focus'); p.add_argument('--when-idle', type=float, default=0); p.set_defaults(fn=cmd_focus)
+    p = sub.add_parser('idle'); p.add_argument('--wait', type=float, default=0); p.add_argument('--at-least', type=float, default=0)
+    p.set_defaults(fn=cmd_idle)
     p = sub.add_parser('app'); p.add_argument('action', choices=['start', 'quit', 'status'])
     p.add_argument('--timeout', default='90'); p.set_defaults(fn=cmd_app)
     p = sub.add_parser('export-path'); g = p.add_mutually_exclusive_group(required=True)

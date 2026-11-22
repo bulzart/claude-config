@@ -60,6 +60,8 @@ CapCut has no freehand drawing primitive (only 9 fixed mask shapes, keyframes on
 
 ## Export and look: CapCut's own window (`capcut_desk.py`)
 
+**The screen is shared.** This is the user's computer, often in use while a run works. Before taking the front: `capcut_desk.py idle --wait 1800 --at-least 120` waits for two quiet minutes, then `focus --when-idle 120` brings CapCut forward only if nobody has typed or moved the mouse since. A click, key or shot is refused while another program is in front, and the tool never names another program's window (its title can name the user's files). If the user comes back mid-export, stop and wait again; CapCut keeps rendering an export without the front.
+
 When `timeline-check` passes, export the project yourself, in CapCut on this PC, and look at what you made. `STUDIO/scripts/capcut_desk.py` is the hands; you are the eyes: **one small action, then a shot to look at. Nothing is clicked from memory.** It takes this PC's mouse and keyboard for about a minute per video, so do it in one go and give the PC back.
 
 Call it as `python "$HOME/.claude/static-studio/scripts/capcut_desk.py" <command>` (one JSON line each; exit 2 = refused, nothing done):

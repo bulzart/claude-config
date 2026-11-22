@@ -1260,6 +1260,7 @@ def hold_facts(rd, video, lines=None):
     usual = prof.get('median_s') or (voice_measurement(rd, n) or {}).get('natural_gap_s')
     decs = hold_decisions(rd, n)['decisions']
     beats = _line_beats(vd)
+    cue_costs = (voice_measurement(rd, n) or {}).get('tag_costs_s')
     out = []
     for lid in sorted(set(by_line) | set(decs), key=lambda x: (index.get(x) or 10 ** 6, x)):
         i, p, d = index.get(lid), by_line.get(lid), decs.get(lid)
@@ -1293,10 +1294,19 @@ def hold_facts(rd, video, lines=None):
                             'why_stale': 'the part this line sits in was re-recorded after the decision'})
         if row['status'] in ('provisional', 'stale'):
             gap = row['natural_gap_s'] if row['natural_gap_s'] is not None else usual
-            row['added_s'] = round(planned_added_s(p, gap), 2) if p else 0.0
+            # A pause cue that performs part of a whole silence (a residual) is never free: until the line is measured
+            # with it, the edit is planned to add only what the cue's expected pause leaves. The cue's time is counted
+            # once, in the narration's tag time; once measured, the gap already holds it.
+            cue_s = 0.0
+            if p and p.get('residual_of_tag') and row['natural_gap_s'] is None:
+                cue_s = sum(tag_cost_s(f'[{t}]', cue_costs) for t in _pause_tags_around(lines, i - 1))
+            row['added_s'] = round(max(0.0, planned_added_s(p, gap) - cue_s), 2) if p else 0.0
             row['added_is_estimate'] = True
             row['estimate_from'] = ('this line\'s measured gap' if row['natural_gap_s'] is not None else
                                     'the voice\'s usual gap' if usual else f'{DEFAULT_NATURAL_GAP_S:g} s before any voice')
+            if cue_s:
+                row['estimate_from'] += f', less the pause cue\'s expected {cue_s:.2f} s (it performs part of this silence)'
+                row['cue_expected_s'] = round(cue_s, 2)
             if p and p['form'] == 'added':
                 row['estimate_from'] = 'the older pause_after_s: added on top of the voice\'s gap, as written'
             if (row.get('cue_result') or {}).get('outcome') == 'achieved':
@@ -2906,6 +2916,9 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
             st['issues'].append(f'{kind}_review_r{rnd}_findings_altered')
         later = recs[i + 1][0].get('subject_snapshot') if i + 1 < len(recs) else snapshot
         old = rec.get('subject_snapshot') or {}
+        # a line's planned silence is part of what was read: changing it (a finding about a silence) is a revision
+        held_then = rec.get('holds_snapshot') or {}
+        held_later = (recs[i + 1][0].get('holds_snapshot') if i + 1 < len(recs) else holds) or {}
         open_ids = []
         for f in fs:
             fid = str(f.get('id'))
@@ -2917,7 +2930,7 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
                 ls = expand_lines(a.get('lines'), list(dict.fromkeys(list(old) + list(later))))
                 if not ls:
                     open_ids.append(fid)
-                elif all(old.get(x) == later.get(x) for x in ls):
+                elif all(old.get(x) == later.get(x) and held_then.get(x) == held_later.get(x) for x in ls):
                     st['issues'].append(f'{kind}_review_r{rnd}_revised_but_unchanged:{fid}')
         if open_ids:
             st['issues'].append(f'{kind}_review_r{rnd}_unanswered:' + ','.join(open_ids))
@@ -3594,7 +3607,7 @@ def plan_facts(rd, video):
                              'script_wpm': script.get('pace_wpm'), 'voice_measured_wpm': measured.get('wpm'),
                              'voice_overall_wpm': measured.get('overall_wpm'),
                              'voice_per_line_gap_s': round(measured['per_line_overhead_s'], 3) if measured else None},
-            'audio_tags': tags, 'tag_time_s': tag_s, 'tag_time_range_s': [tag_low, tag_high], 'tag_estimates': tag_bands, 'pause_plan': pause_plan, 'edit_holds_s': holds,
+            'audio_tags': tags, 'tag_time_s': tag_s, 'tag_time_range_s': [min(tag_low, tag_s), max(tag_high, tag_s)], 'tag_estimates': tag_bands, 'pause_plan': pause_plan, 'edit_holds_s': holds,
             'holds': holds_info, 'density': density,
             'pronunciation': {'file': pron['file'], 'terms': [{k: t[k] for k in ('term', 'say', 'how', 'confidence')}
                                                               | {'lines': len(pron['uses'].get(t['term']) or [])}
@@ -3606,7 +3619,9 @@ def plan_facts(rd, video):
                          'majors_closed_by_decision': script_review.get('majors_closed_by_decision') or []},
             'writing_signals': writing_signals(lines, lock.get('language') or script.get('language') or 'en'),
             'forecast_s': forecast, 'real_narration_forecast_s': real_narr, 'real_forecast_s': real,
-            'real_forecast_range_s': ([round(real - (tag_s - tag_low), 2), round(real + (tag_high - tag_s), 2)]
+            # The point uses each cue's measured cost at its place, a delivery cue's band the whole line's change: when
+            # the two disagree the range covers both, so it always holds the point it is published with.
+            'real_forecast_range_s': ([round(real - max(0.0, tag_s - tag_low), 2), round(real + max(0.0, tag_high - tag_s), 2)]
                                       if real is not None else None),
             'locked_target_s': target,
             'export_window_s': [round(target - max(4, target * lock.get('tolerance_export_pct', .025)), 2),
@@ -8288,21 +8303,24 @@ def house_rules(rd, video):
 SCRIPT_BRIEF = """# Cold read: {TITLE}
 
 You are a first-time viewer, not an editor. Below is the complete narration of a long-form YouTube video
-(about {MINUTES} minutes, narrated over illustrated stills). You get only the title, the words and where the narrator
-falls silent, on purpose: no plan, no rationale, no earlier reader's view. Read nothing else and do not change any
+(about {MINUTES} minutes, narrated over illustrated stills). You get only the title, the words and the silences the
+writer intends, on purpose: no plan, no rationale, no earlier reader's view. Read nothing else and do not change any
 file except the one you are asked to write.
 
-Read it all the way through as someone who clicked the title and is listening. Be honest, specific and fair:
-say what works as plainly as what does not. Refer to line ids.
+Read it all the way through as someone who clicked the title. Be honest, specific and fair: say what works as
+plainly as what does not. Refer to the line ids exactly as they appear below.
 
-Words in [square brackets] are delivery directions the voice receives but never says. A line followed by
-"(silence: ...)" is followed by about that much silence in all, the voice's own short gap included. The lengths are
-proposals, not yet fitted to the recorded voice. Judge both as part of what you would hear: does each direction help,
-or push the narration into theatre; would you want each silence, or would you be waiting for the voice to go on?
+You are reading, not hearing. Words in [square brackets] are delivery directions the narrator will be given; they are
+never spoken. Judge the personality and tone the writing implies, and the delivery the directions ask for, as
+intentions: never say how the voice sounds or whether a direction works, which only the recording can show.
+"(silence after this line: about N s in all)" is the whole silence the writer intends there, a proposal not yet fitted
+to a recording. A pause direction next to such a silence (at the end of the line, or at the start of the next one) is
+part of that same wait and never free: judge the whole wait as written, and notice where silences and pause
+directions follow one another.
 
 Think about:
 1. What the video promised, and whether it delivered.
-2. Your gut, 1-10: would you keep watching? (a viewer's gut, not a quality score)
+2. Your gut: would you keep watching, from 1 to 10, and why? (a viewer's gut, not a quality score)
 3. Where your attention dropped, and why: facts with no consequence for anyone, the same point made again, a list
    read aloud, a sentence pattern repeating, textbook register, explaining what you had already felt, exposition
    before you cared. Roughly how long each stretch felt.
@@ -8313,32 +8331,34 @@ Think about:
    like a promise (you wanted to know) or like being lost? Complexity you enjoyed is not a problem: say so.
 5. What feels formulaic: devices used so often they stop working (count them).
 6. The strongest passages, and why they work.
-7. Whether the narrator sounds like a person you would enjoy listening to: personality, warmth, wit or emotion
-   where the material invites it; or a reader of facts; or someone straining for drama.
+7. The narrator the writing implies: personality, warmth, wit or emotion where the material invites it; or a reader
+   of facts; or someone straining for drama.
 8. Lines hard to follow by ear: number pile-ups, very long sentences, tangled grammar, jargon.
 9. The ending: does it land and answer what the opening promised; is anything after the payoff too long or too short.
-10. The delivery directions and the silences: where they help, where they are theatre or filler. For each silence:
-   does it feel needed, or does it delay the next thing you want to know? Would you become impatient? Does it help
-   the joke, the reveal or the feeling, or would the line land as well with the voice going straight on? Does it make
-   the narrator sound unnaturally slow? Would a first-time viewer understand why it is there? A silence you would
-   cut or shorten is a finding.
+10. The intended delivery and silences: which directions serve their moment and which push the narration into
+   theatre or decoration. For each intended silence: does it feel needed, or does it delay what you want to know
+   next? Would you become impatient? Does it help the joke, the reveal or the feeling, or would the line land as well
+   going straight on? Would it make the narrator sound unnaturally slow? Would a first-time viewer understand why it
+   is there? A silence you would cut or shorten is a finding.
 
-Then list findings (at most 12), each concrete enough to act on, with what you think causes it (likely_cause: for
-example "a name nobody introduced", "no consequence for anyone", "the same point again", "too much at once",
-"waiting too long for the payoff"). Severity "major": a viewer would likely stop watching, lose the thread or stop
-trusting the video there (a long sag, a confusing stretch, a contradiction, a broken or unearned ending). "minor":
-polish.
+Then list your findings, the most important first, each concrete enough to act on: what you noticed, what you think
+causes it (likely_cause: for example "a name nobody introduced", "no consequence for anyone", "the same point again",
+"too much at once", "waiting too long for the payoff"), and what it does to a viewer. Severity "major": a viewer would
+likely stop watching, lose the thread or stop trusting the video there (a long sag, a confusing stretch, a
+contradiction, a broken or unearned ending). "minor": polish. Report every major problem, however many there are;
+group small polish points together rather than leave out anything serious.
 
 Do not invent facts. If a fix needs a new fact, write "needs a sourced detail".
 
 Write your answer as JSON, and nothing else, to: {OUT}
 {{
   "reviewer": "fresh cold reader",
-  "verdict": {{"promise": "...", "delivered": "...", "keep_watching_1_10": 7, "why": "..."}},
-  "strongest": [{{"lines": "L052-L058", "why": "..."}}],
-  "findings": [{{"id": "F1", "severity": "major", "lines": ["L112-L135"], "problem": "...",
+  "verdict": {{"promise": "...", "delivered": "...", "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
+  "strongest": [{{"lines": "{EX_RANGE}", "why": "..."}}],
+  "findings": [{{"id": "F1", "severity": "major or minor", "lines": ["{EX_LINE}"], "problem": "...",
                  "likely_cause": "...", "viewer_impact": "...", "suggestion": "..."}}]
 }}
+Line ids: only ids that appear below, one id or a range such as "{EX_RANGE}".
 
 ## The narration
 """
@@ -8360,18 +8380,19 @@ Judge them as a viewer choosing what to watch for {MINUTES} minutes, not by the 
    too cute, too much like a lecture)?
 4. Anything in a sample that breaks the house rules.
 
-Findings (at most 8): each names the treatment label, severity "major" (this treatment would not hold a long watch,
-or has a serious flaw) or "minor", the problem, why it matters to a viewer, and a suggestion.
+Findings, the most important first: each names the treatment label, severity "major" (this treatment would not
+hold a long watch, or has a serious flaw) or "minor", the problem, why it matters to a viewer, and a suggestion.
+Report every serious flaw, however many; group small points together.
 
 {HOUSE_RULES}
 
 Write your answer as JSON, and nothing else, to: {OUT}
 {{
   "reviewer": "fresh reader",
-  "would_watch": "B",
+  "would_watch": "<the label you would most want to watch>",
   "why": "...",
   "per_treatment": {{"A": "...", "B": "..."}},
-  "findings": [{{"id": "F1", "severity": "minor", "treatment": "A", "problem": "...",
+  "findings": [{{"id": "F1", "severity": "major or minor", "treatment": "<label>", "problem": "...",
                  "viewer_impact": "...", "suggestion": "..."}}]
 }}
 """
@@ -8382,7 +8403,8 @@ You review the finished video as a viewer would experience it. You cannot play i
 image per minute, a frame every 5 seconds with the words spoken under it. Open every sheet in order and read them
 like a film. Then open its shot sheets: one frame of every shot in order, so a short shot that falls between two
 watch-sheet frames is seen too. Below them are a few measurements per minute (facts, not verdicts). Read nothing else and change no file
-except the one you are asked to write.
+except the one you are asked to write. You cannot hear the narration or the music: judge delivery only from the words
+and the measurements, and say so; never claim how the voice sounds.
 
 Judge it against what each part was meant to feel like (listed below), not against a generic checklist:
 1. Did each part deliver what it set out to do?
@@ -8405,18 +8427,19 @@ Judge it against what each part was meant to feel like (listed below), not again
 11. Drawings and movement: where they make a relationship, a change or a direction clear, and where they only
    decorate.
 
-Findings (at most 12), each with "at" as "mm:ss-mm:ss", severity "major" (a viewer would likely leave, get lost
-or stop trusting it there) or "minor", the problem, what you think causes it (likely_cause: for example "the
-picture repeats the words", "no new information for a minute", "too much on screen to read", "a name with no
-face"), why it matters to a viewer, and a suggestion.
+Findings, the most important first, each with "at" as "mm:ss-mm:ss", severity "major" (a viewer would likely
+leave, get lost or stop trusting it there) or "minor", the problem, what you think causes it (likely_cause: for
+example "the picture repeats the words", "no new information for a minute", "too much on screen to read", "a name
+with no face"), why it matters to a viewer, and a suggestion. Report every major problem, however many there are;
+group small polish points together rather than leave out anything serious.
 
 {HOUSE_RULES}
 
 Write your answer as JSON, and nothing else, to: {OUT}
 {{
   "reviewer": "fresh final reviewer",
-  "verdict": {{"delivered": "...", "keep_watching_1_10": 7, "why": "..."}},
-  "findings": [{{"id": "F1", "severity": "major", "at": "03:10-04:05", "problem": "...",
+  "verdict": {{"delivered": "...", "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
+  "findings": [{{"id": "F1", "severity": "major or minor", "at": "mm:ss-mm:ss", "problem": "...",
                  "likely_cause": "...", "viewer_impact": "...", "suggestion": "..."}}]
 }}
 """
@@ -8472,23 +8495,24 @@ def cmd_review_packet(args):
         lines = script.get('lines') or []
         snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
         holds = hold_snapshot(lines)
-        text = _fill(SCRIPT_BRIEF, TITLE=title, MINUTES=minutes, OUT=out_path)
-        # The cold reader gets the title, the words and the silences only: no house rules or exclusion records (the
-        # editorial and compliance stages check those), no picture or sound plans. What it is shown is the silence a
-        # viewer would hear: the whole of it, the voice's own gap included (an older added-on-top value is shown with
-        # that gap added). No reference pause length is shown: a length is set by its own moment.
+        ids = list(snapshot)
+        ex_k = max(0, min(len(ids) - 4, len(ids) // 3))
+        ex_range = f'{ids[ex_k]}-{ids[min(len(ids) - 1, ex_k + 3)]}' if ids else 'L001-L004'
+        text = _fill(SCRIPT_BRIEF, TITLE=title, MINUTES=minutes, OUT=out_path, EX_RANGE=ex_range,
+                     EX_LINE=ids[min(len(ids) - 1, 2)] if ids else 'L003')
+        # The cold reader gets the title, the words and each intended silence only: no house rules or exclusion
+        # records (the editorial and compliance stages check those), no picture or sound plans, no count or sum of
+        # the silences and no baseline gap to measure them against (the user, 2026-11-22: no priming). Each silence
+        # is shown whole, the voice's own gap included (an older added-on-top value with that gap added).
         pp = {p['line']: p for p in script_pause_plan(lines)[0]}
         gap = (voice_measurement(rd, n) or {}).get('natural_gap_s') or DEFAULT_NATURAL_GAP_S
         whole = {lid: (p['seconds'] if p['form'] == 'total' or p['via'] == 'tag' else p['seconds'] + gap)
                  for lid, p in pp.items()}
-        text += (f'Silences in this script: {len(pp)}, about {sum(whole.values()):.0f} s in all. A narrator\'s own '
-                 f'gap between two lines is about {gap:.1f} s; a silence longer than that is a held moment.\n\n')
+        text += '\n'
         for lid, t in snapshot.items():
             text += f'{lid} {t}\n'
             if lid in pp:
-                p = pp[lid]
-                how = 'the voice pauses' if p['via'] == 'tag' else 'the voice stops, the picture stays'
-                text += f'      (silence: about {whole[lid]:.1f} s in all, {how}.)\n'
+                text += f'      (silence after this line: about {whole[lid]:.1f} s in all)\n'
         meta.update({'subject_sha256': script_hash(lines), 'subject_snapshot': snapshot, 'holds_snapshot': holds})
     elif kind == 'treatment':
         df = direction_facts(rd, n)
@@ -8556,10 +8580,23 @@ def cmd_review_packet(args):
             shift += float(h.get('hold_s') or 0)
         text += ('\n## Held silences in this cut\n' + ('\n'.join(held_rows) if held_rows else
                  '- none: every pause is the voice\'s own') + '\n')
-        text += '\n## Watch sheets, in order\n' + '\n'.join(f'- {p}' for p in prof.get('sheets') or []) + '\n'
+        # The sheets go with the packet into the reader's own folder: a confined reader (review-read) can open them,
+        # and the packet names no path inside the run.
+        def isolated_copies(paths, sub):
+            out = []
+            (iso / sub).mkdir(parents=True, exist_ok=True)
+            for k, p in enumerate(paths or [], 1):
+                src = Path(p)
+                dst = iso / sub / f'{k:03d}-{src.name}'
+                if src.is_file():
+                    shutil.copyfile(src, dst)
+                    out.append(str(dst))
+            return out
+        text += ('\n## Watch sheets, in order\n' + '\n'.join(f'- {p}' for p in isolated_copies(prof.get('sheets'), 'sheets'))
+                 + '\n')
         if prof.get('shot_sheets'):
             text += ('\n## Shot sheets: every shot once, in order\n' +
-                     '\n'.join(f'- {p}' for p in prof['shot_sheets']) + '\n')
+                     '\n'.join(f'- {p}' for p in isolated_copies(prof['shot_sheets'], 'shots')) + '\n')
         text += '\n## Measurements per minute (facts, not verdicts)\n| minute | cuts | moving | wpm | pitch range st |\n|---|---|---|---|---|\n'
         wins = prof.get('windows') or []
         for m0 in range(0, int(prof.get('duration_s') or 0) + 1, 60):
@@ -8580,10 +8617,71 @@ def cmd_review_packet(args):
     (folder / f'packet-{kind}-r{rnd}.md').write_text(text, encoding='utf-8')     # the run's copy, for the record
     write_json(folder / f'packet-{kind}-r{rnd}.json', {**meta, 'packet': str(packet)})
     emit({'ok': True, 'kind': kind, 'round': rnd, 'packet': str(packet), 'findings_file': str(out_path),
-          'next': ('Spawn ONE fresh agent of type static-cold-reader (it can only Read and Write the paths it is given) '
-                   'with no other context. Its whole prompt: "Read only ' + str(packet) + ' and follow it exactly." '
-                   'Do not add your rationale, the plan, or what you hope it finds. Then review-record --kind ' + kind +
-                   '. Never edit the reviewer\'s findings.')})
+          'next': ('Run review-read --kind ' + kind + ' (the reader as its own restricted process), or spawn ONE fresh '
+                   'agent of type static-cold-reader (it can only Read and Write the paths it is given) with no other '
+                   'context, its whole prompt: "Read only ' + str(packet) + ' and follow it exactly." Do not add your '
+                   'rationale, the plan, or what you hope it finds. Then review-record --kind ' + kind + '. Never edit '
+                   'the reviewer\'s findings.')})
+
+
+READER_TIMEOUT_S = 1500
+
+
+def reader_command(packet):
+    """The command line of a fresh reader: its own Claude Code process with the Read and Write tools only, no settings,
+    hooks or MCP servers (--restricted, --strict-mcp-config), its file tools confined to the folder it starts in, and a
+    prompt that is the packet's path and nothing else. STUDIO_CLAUDE_BIN overrides the program (a path, or a JSON list
+    for a command with arguments)."""
+    env_bin = os.environ.get('STUDIO_CLAUDE_BIN') or ''
+    if env_bin.strip().startswith('['):
+        exe = json.loads(env_bin)
+    else:
+        found = env_bin or shutil.which('claude')
+        exe = [found] if found else None
+    if not exe:
+        return None
+    return exe + ['-p', f'Read only {packet} and follow it exactly.', '--restricted', '--strict-mcp-config',
+                  '--tools', 'Read,Write', '--allowedTools', 'Read,Write', '--no-session-persistence',
+                  '--output-format', 'text']
+
+
+def cmd_review_read(args):
+    """Run the fresh reader of the latest packet of a kind yourself, so what it receives is fixed by code: a new Claude
+    Code process started in the packet's isolated folder, outside the run, that can only read and write there. The
+    orchestrating agent adds nothing to its prompt. The same read as spawning the static-cold-reader agent type; use
+    either. Then review-record."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    kind = args.kind
+    recs = review_records(vd, kind)
+    rnd = recs[-1][0]['_round'] + 1 if recs else 1
+    meta = read_json(vd / 'reviews' / f'packet-{kind}-r{rnd}.json')
+    if not meta or not meta.get('isolated_dir'):
+        error(f'No isolated packet for round {rnd}: run review-packet --kind {kind} first.')
+    iso = Path(meta['isolated_dir'])
+    packet = Path(meta.get('packet') or iso / 'packet.md')
+    findings = Path(meta['findings_file'])
+    if not packet.is_file():
+        error('The packet is gone (the temp folder was cleared): run review-packet again.', str(packet))
+    if findings.exists() and not args.again:
+        error('This round already has findings: review-record them (or --again to read afresh).', str(findings))
+    cmd = reader_command(packet)
+    if not cmd:
+        error('No claude command found: spawn ONE agent of type static-cold-reader with the prompt "Read only '
+              + str(packet) + ' and follow it exactly."')
+    started = time.time()
+    try:
+        proc = subprocess.run(cmd, cwd=str(iso), capture_output=True, text=True, encoding='utf-8', errors='replace',
+                              timeout=args.timeout, stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        error(f'The reader did not finish within {args.timeout} s.', str(iso))
+    (iso / 'reader-output.txt').write_text((proc.stdout or '') + '\n' + (proc.stderr or ''), encoding='utf-8')
+    if proc.returncode != 0 or not findings.is_file():
+        error('The reader did not write its findings.', {'exit': proc.returncode,
+                                                          'output_tail': ((proc.stdout or '') + (proc.stderr or ''))[-600:]})
+    emit({'ok': True, 'kind': kind, 'round': rnd, 'findings_file': str(findings),
+          'seconds': round(time.time() - started, 1), 'next': f'review-record --kind {kind}'})
 
 
 def cmd_review_record(args):
@@ -8938,6 +9036,13 @@ def main():
     p.add_argument('--kind', required=True, choices=list(REVIEW_MAX_ROUNDS))
     p.add_argument('--findings', default='', help='Default: the findings file the packet named')
     p.set_defaults(func=cmd_review_record)
+    p = sub.add_parser('review-read', help='Run the fresh reader of the latest packet as its own restricted process '
+                       '(Read and Write only, in the packet\'s isolated folder)')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--kind', required=True, choices=list(REVIEW_MAX_ROUNDS))
+    p.add_argument('--timeout', type=int, default=READER_TIMEOUT_S)
+    p.add_argument('--again', action='store_true', help='Read afresh although this round already has findings')
+    p.set_defaults(func=cmd_review_read)
     p = sub.add_parser('shot-check', help='The shot plan as a visual argument, plus repetition signals')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_shot_check)

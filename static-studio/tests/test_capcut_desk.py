@@ -116,6 +116,29 @@ class SafetyTests(unittest.TestCase):
         self.assertEqual((code, ans['clicked']), (0, [960, 540]))
         self.assertEqual(send.call_count, 1)
 
+    def test_the_screen_is_shared_never_pulled_from_someone_using_it_and_never_captured(self):
+        m = self.m
+        other = {'hwnd': 1, 'title': 'my private letter.docx - Word', 'process': 'WINWORD.EXE', 'pid': 7,
+                 'rect': [0, 0, 1920, 1080], 'front': True}
+        mine = {'hwnd': 2, 'title': 'CapCut', 'process': 'CapCut.exe', 'pid': 9, 'rect': [0, 0, 1920, 1080], 'front': False}
+        with mock.patch.object(m, 'capcut_in_front', return_value=False), \
+                mock.patch.object(m, 'capcut_windows', return_value=[mine]), \
+                mock.patch.object(m, 'idle_seconds', return_value=4.0), \
+                mock.patch.object(m, 'user32') as u32, mock.patch.object(m, '_send', side_effect=AssertionError('no keys')):
+            code, ans = run(m.cmd_focus, when_idle=120)
+        self.assertEqual(code, 2)                                   # someone typed 4 s ago: CapCut stays behind
+        u32.SetForegroundWindow.assert_not_called()
+        with mock.patch.object(m, 'capcut_in_front', return_value=False), \
+                mock.patch.object(m, 'list_windows', return_value=[other, mine]):
+            code, ans = run(m.cmd_shot, out=None, region=None, scale=None, any_window=False)
+            self.assertEqual((code, ans['front_process']), (2, 'WINWORD.EXE'))   # no shot of the user's screen
+            code, ans = run(m.cmd_windows, capcut=False)
+        titles = {w['process']: w['title'] for w in ans['windows']}
+        self.assertEqual(titles, {'WINWORD.EXE': '', 'CapCut.exe': 'CapCut'})   # another program's title stays private
+        with mock.patch.object(m, 'idle_seconds', side_effect=[30.0, 200.0]), mock.patch.object(m.time, 'sleep'):
+            code, ans = run(m.cmd_idle, wait=600, at_least=120)
+        self.assertEqual((code, ans['idle_s']), (0, 200.0))
+
     def test_keys_and_typing_are_refused_unless_capcut_is_in_front(self):
         m = self.m
         with mock.patch.object(m, 'capcut_in_front', return_value=False), \
