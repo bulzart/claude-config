@@ -39,7 +39,9 @@ def save(path, d):
 # What every planned pause has to say besides its length (03): what it is for, what is seen, what is heard.
 HELD = {'pause_purpose': 'the viewer looks at the map for a while',
         'pause_picture': 'the map of the valley with the new road drawn in',
-        'pause_sound': 'the low pulse of the bed goes on'}
+        'pause_sound': 'the low pulse of the bed goes on',
+        'pause_landing': 'the line lands flat and final on its last word',
+        'pause_resume': 'the next line starts again with a fresh lift'}
 
 
 class StaticStudioTests(unittest.TestCase):
@@ -903,6 +905,7 @@ class StaticStudioTests(unittest.TestCase):
         vd=self.write_plan(review_script=False)
         script=json.loads((vd/'script.json').read_text())
         script['lines'][0]['text']='[curious] Somewhere near Hagaru the road narrows, '+script['lines'][0]['text']
+        script['lines'][0]['cue_scope']='this first line only; the next line is plain again'
         script['lines'][12]['text']+=' [pause]'
         script['lines'][12].update({'pause_after_s':2,'pause_via':'tag','pause_purpose':'the cost of the choice lands first',
                                     'pause_picture':'the map stays on the crossing they chose',
@@ -2348,6 +2351,86 @@ class StaticStudioTests(unittest.TestCase):
         cli('retime-shots','--run',self.run,'--video',1)
         plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
         self.assertTrue(check(0.0,plan['edit_duration_s']))                 # a bed playing under a bare silence: caught
+
+    def test_performance_plan_cues_and_bands(self):
+        core=self.load_core()
+        # A planned silence (whole-silence form) plans its performance: how the line lands, how the next starts.
+        bare={k:v for k,v in HELD.items() if k not in ('pause_landing','pause_resume')}
+        iss=core.script_pause_plan([{'id':'L001','text':'A line.','pause_total_s':2.0,'pause_via':'edit',**bare}])[1]
+        self.assertIn('pause_L001_needs_how_the_line_lands',iss)
+        self.assertIn('pause_L001_needs_how_the_next_line_starts',iss)
+        self.assertEqual(core.script_pause_plan([{'id':'L001','text':'A line.','pause_total_s':2.0,'pause_via':'edit',
+                                                   **HELD}])[1],[])
+        # The older form keeps resuming as written (nothing new asked of it).
+        self.assertEqual(core.script_pause_plan([{'id':'L001','text':'A line.','pause_after_s':2.0,'pause_via':'edit',
+                                                   **bare}])[1],[])
+        # A delivery cue and an edit hold serve different purposes; a pause cue and an edit hold are one silence twice.
+        soft=[{'id':'L001','text':'[softly] It went quiet.','pause_total_s':2.0,'pause_via':'edit',**HELD},
+              {'id':'L002','text':'Then the phone rang.'}]
+        self.assertEqual(core.script_pause_plan(soft)[1],[])
+        short=[{'id':'L001','text':'It went quiet. [short pause]','pause_total_s':2.0,'pause_via':'edit',**HELD},
+               {'id':'L002','text':'Then the phone rang.'}]
+        self.assertTrue(any('is_an_edit_hold_and_a_pause_tag_at_once' in x for x in core.script_pause_plan(short)[1]))
+        # Cue estimates are bands from evidence: another voice's catalogue value, a labelled assumption, this voice.
+        b=core.tag_estimate('[short pause]','pause',{})
+        self.assertEqual((b['low_s'],b['high_s'],b['n']),(0.75,2.25,0))
+        self.assertIn('another voice',b['basis'])
+        d=core.tag_estimate('[softly]','delivery',{})
+        self.assertEqual((d['low_s'],d['high_s']),core.TAG_BAND_DELIVERY_S)
+        m=core.tag_estimate('[short pause]','pause',{'cue_observations':[{'tag':'[short pause]','excess_s':0.9},
+                                                                         {'tag':'[short pause]','excess_s':1.4}]})
+        self.assertEqual((m['low_s'],m['high_s'],m['n']),(0.9,1.4,2))
+        md=core.tag_estimate('[softly]','delivery',{'cue_observations':[{'tag':'[softly]','line_extra_s':0.35}]})
+        self.assertEqual((md['low_s'],md['high_s']),(0.35,0.35))
+        # plan-check: a delivery cue names its scope, and the forecast carries the cues as a band.
+        vd=self.tagged_plan()
+        res=cli('plan-check','--run',self.run,'--video',1)
+        low,high=res['tag_time_range_s']
+        self.assertLessEqual(low,res['tag_time_s']); self.assertGreaterEqual(high,res['tag_time_s'])
+        self.assertEqual({e['tag'] for e in res['tag_estimates']},{'[curious]','[pause]'})
+        script=json.loads((vd/'script.json').read_text()); script['lines'][0].pop('cue_scope'); save(vd/'script.json',script)
+        self.assertIn('tag_L001_needs_its_scope',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
+
+    def test_parts_break_only_at_chapter_turns(self):
+        core=self.load_core()
+        lines=[{'id':f'L{i:03d}','text':('word '*60).strip()+'.'} for i in range(1,13)]          # ~300 characters each
+        beats=[{'id':f'B{k}','line_start':3*k-2,'line_end':3*k} for k in range(1,5)]
+        plain=[(p['line_start'],p['line_end']) for p in core.chunks_for_beats(lines,beats,target=700,hard_max=10000)]
+        beats[0]['chapter_start']=True; beats[2]['chapter_start']=True
+        parts=core.chunks_for_beats(lines,beats,target=700,hard_max=10000)
+        self.assertEqual([(p['line_start'],p['line_end']) for p in parts],[(1,6),(7,12)])
+        self.assertTrue(all(p['chapter'] for p in parts))
+        self.assertNotEqual(plain,[(1,6),(7,12)])                    # size alone would have cut inside a chapter
+        # A chapter too long for one request is split between its beats, and says so.
+        big=[{'id':f'L{i:03d}','text':('word '*400).strip()+'.'} for i in range(1,13)]          # ~2,000 characters each
+        parts=core.chunks_for_beats(big,beats,target=3500,hard_max=10000)
+        self.assertTrue(any(p.get('split_inside_chapter') for p in parts))
+        self.assertTrue(all(len(p['text'])<=10000 for p in parts))
+        self.assertEqual([parts[0]['line_start'],parts[-1]['line_end']],[1,12])
+
+    def test_join_effects_are_listed_not_judged(self):
+        core=self.load_core()
+        usual={'last_vowel_fall_st':-6.3,'next_reset_st':7.7}
+        self.assertEqual(core.seam_boundary_effects({'last_vowel_fall_st':-6.0,'next_reset_st':8.0},usual),[])
+        fx=core.seam_boundary_effects({'last_vowel_fall_st':-10.1,'next_reset_st':16.0},usual)
+        self.assertEqual(len(fx),2)
+        self.assertIn('ending',fx[0]); self.assertIn('fresh beginning',fx[1])
+        self.assertEqual(core.seam_boundary_effects({},usual),[])
+
+    def test_dry_run_credits_use_verified_billing(self):
+        import math
+        self.write_plan()
+        (self.run/'logs').mkdir(exist_ok=True)
+        with open(self.run/'logs/elevenlabs-ledger.jsonl','a',encoding='utf-8') as f:
+            f.write(json.dumps({'kind':'tts','model_id':'eleven_v4','ok':True,'phase':'done','characters':1000,
+                                'character_cost_header':400})+'\n')
+        save(self.run/'logs/elevenlabs-models.json',{'fetched_at':'2026-11-22T00:00:00+00:00',
+                                                      'models':{'eleven_v4':{'model_rates':{'character_cost_multiplier':1.0}}}})
+        dry=cli('tts','--run',self.run,'--video',1,'--voice-id','TESTID','--model-id','eleven_v4')
+        ce=dry['credit_estimate']
+        self.assertEqual((ce['verified_credits_per_character'],ce['verified_requests']),(0.4,1))
+        self.assertEqual(ce['expected_credits'],math.ceil(dry['characters_to_record']*0.4))
+        self.assertEqual(ce['upper_bound_at_documented_rate'],dry['characters_to_record'])
 
 
 class AvToolsTests(unittest.TestCase):
