@@ -542,8 +542,18 @@ class StaticStudioTests(unittest.TestCase):
         self.assertGreaterEqual(prof['profiles']['video-01']['sheets'],1)
         self.assertGreaterEqual(prof['profiles']['video-01']['shot_sheets'],1)        # every shot once, for the reviewer
         self.assertIn('final_review_missing',cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)['issues'])
-        pk,rec=self.review('final',[{'id':'F1','severity':'minor','at':'00:01-00:03, 00:05',
-                                    'problem':'the opening picture holds too long'}],file=exp)
+        pk=cli('review-packet','--run',self.run,'--video',1,'--kind','final','--file',exp)
+        worded=[{'id':'F1','severity':'minor','at':'Held silences 00:01-00:03, 00:05',
+                 'problem':'the opening picture holds too long'}]
+        save(Path(pk['findings_file']),{'reviewer':'test reader','findings':worded})
+        bad=cli('review-record','--run',self.run,'--video',1,'--kind','final',expected=2)
+        self.assertIn('--normalize-at',' '.join(bad['details']))                # words around the times: refused...
+        rec=cli('review-record','--run',self.run,'--video',1,'--kind','final','--normalize-at')
+        sealed=json.loads(Path(rec['record']).read_text(encoding='utf-8'))      # ...or only the times are kept,
+        self.assertEqual(sealed['at_normalized'],['F1'])                           # the reviewer's words beside them
+        self.assertEqual(sealed['findings'][0]['at'],'00:01-00:03, 00:05')
+        self.assertEqual(sealed['findings'][0]['at_original'],'Held silences 00:01-00:03, 00:05')
+        self.assertEqual(sealed['findings'][0]['problem'],'the opening picture holds too long')   # its judgement untouched
         ptext=Path(pk['packet']).read_text(encoding='utf-8')
         self.assertIn('## Shot sheets: every shot once, in order',ptext)
         listed=[x[2:] for x in ptext.splitlines() if x.startswith('- ') and x.lower().endswith(('.jpg','.png'))]
