@@ -221,9 +221,10 @@ These are craft principles. Each one says when it applies.
   not yet recorded, write the ending to land (a full stop, a short last clause, a tag only where the writing cannot do
   it); in recorded parts, a shorter silence, the picture or the bed usually serves before any paid re-recording. The
   edit never fades a syllable, a release or a breath, and never adds sound to hide an empty moment (05).
-- **Delivery comes from the writing.** In TTS the voice and its settings set the character; the text sets the
-  performance: punctuation, sentence length, line breaks, a question, direct address, and now and then a delivery
-  tag where the register changes (05's catalogue). After the calibration part, `narration-measure` writes
+- **Delivery comes from the writing and its cues.** In TTS the voice and its settings set the character; the text
+  sets the performance: punctuation, sentence length, line breaks, a question, direct address, and a delivery or
+  pause cue wherever it gets a moment directly (05's catalogue; its scope stated, 05). Plan each important moment
+  as a performance: how the line lands, the silence and what it holds, how the next line starts again. After the calibration part, `narration-measure` writes
   `delivery.json`: pitch range and movement, loudness contrast and rate per beat, next to what each beat asked for and
   to the references' numbers. A beat asked to lift that measures flat gets rewritten in the parts not yet recorded:
   shorter sentences, a turn of phrase, a question, a tag. The audio is never edited to fake it.

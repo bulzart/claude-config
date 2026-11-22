@@ -894,6 +894,27 @@ def tag_cost_s(tag, measured_costs=None):
     return 2.0 if 'pause' in tag else 0.0
 
 
+SEAM_FALL_RATIO, SEAM_RESET_RATIO = 1.5, 1.6
+
+
+def seam_boundary_effects(last_cad, usual):
+    """How a join between two recorded parts may have changed the delivery (05): the last line of a part falling much
+    harder than this voice usually lands a line (it can sound like an ending), and the next part starting much higher
+    than its usual restart (a fresh beginning). Facts to listen for, never a verdict: at a chapter turn a fresh start
+    belongs; inside a scene it is the recording boundary showing."""
+    out = []
+    if not last_cad or not usual:
+        return out
+    f, uf = last_cad.get('last_vowel_fall_st'), usual.get('last_vowel_fall_st')
+    if isinstance(f, (int, float)) and isinstance(uf, (int, float)) and uf < 0 and f <= uf * SEAM_FALL_RATIO:
+        out.append(f'the part ends with a harder fall than usual ({f:+.1f} st against {uf:+.1f}): it may sound like an ending')
+    r, ur = last_cad.get('next_reset_st'), usual.get('next_reset_st')
+    if isinstance(r, (int, float)) and isinstance(ur, (int, float)) and ur > 0 and r >= ur * SEAM_RESET_RATIO:
+        out.append(f'the next part starts higher than usual ({r:+.1f} st against {ur:+.1f}): it may sound like a fresh '
+                   'beginning')
+    return out
+
+
 def tag_estimate(tag, category, measured=None):
     """What one cue may add to the narration, as a band (05): this voice setup's own observations when a take has
     measured it (the silence a pause cue left beyond the usual gap; the time a delivery cue added to its line), else
@@ -3483,8 +3504,7 @@ def chunks_for_beats(lines, beats, target=PART_TARGET_CHARS, hard_max=10000):
             size = sum(sizes[lo - 1:hi])
             if size <= min(PART_CHAPTER_MAX, hard_max):
                 out.append({'line_start': lo, 'line_end': hi, 'beats': [b for _, _, b in ch], 'chapter': True,
-                            'text': '
-'.join(str(r['text']).strip() for r in lines[lo - 1:hi])})
+                            'text': '\n'.join(str(r['text']).strip() for r in lines[lo - 1:hi])})
             else:          # a chapter too long for one request: split between its beats (flagged, listened to)
                 sub = chunks_for_beats(lines[lo - 1:hi], [{'id': b, 'line_start': a - lo + 1, 'line_end': z - lo + 1}
                                                           for a, z, b in ch], target, hard_max)
@@ -3714,7 +3734,8 @@ def credit_preflight(rd, key, model_id, characters, safety, assume_ratio=None, k
            'ratio_source': 'assumed (--assume-cost-ratio)' if assume_ratio is not None else 'ElevenLabs model rates',
            'documented_credits_per_character': rates['credits_per_character'],
            'measured_credits_per_character': measured, 'measured_requests': samples,
-           'expected_credits': expected, 'safety_factor': safety, 'keep_credits': int(keep or 0),
+           'expected_credits': expected,
+           'expected_credits_verified': math.ceil(characters * measured) if measured is not None else None, 'safety_factor': safety, 'keep_credits': int(keep or 0),
            'required_available': required, 'available': bal['available'],
            'left_after_expected': bal['available'] - expected, 'next_reset_unix': bal['next_reset_unix'],
            'max_characters_per_request': rates['maximum_text_length_per_request']}
@@ -4992,17 +5013,26 @@ def cmd_tts(args):
     if not args.execute:
         per_char = cached_model_rates(rd, model_id)
         chars = sum(s['characters'] for s in todo)
+        verified, v_n = measured_cost_ratio(rd, model_id)
         emit({'ok': True, 'mode': 'dry_run_no_charges', 'video': n, 'parts': len(chunks),
               'characters_total': sum(s['characters'] for s in spec['chunks']),
               'parts_to_record': [s['id'] for s in todo], 'changed_recorded_parts': changed,
               'pronunciation_changed_parts': pron_changed, 'parts_recorded_with_another_voice_setup': other_setup,
               'parts_made_for_an_earlier_direction': outdated, 'parts_asked_to_rerecord': asked,
               'starts_over': start_over, 'characters_to_record': chars,
-              'credit_estimate': ({'credits_per_character': per_char, 'expected_credits': math.ceil(chars * per_char),
-                                   'basis': 'the model rates last read for this run; --execute reads them again with '
-                                            'the live balance'} if per_char is not None else
-                                  {'expected_credits': None, 'basis': 'not read yet: --execute reads the model\'s '
-                                                                      'credits per character and the live balance first'}),
+              'credit_estimate': {
+                  'expected_credits': (math.ceil(chars * verified) if verified is not None else
+                                       math.ceil(chars * per_char) if per_char is not None else None),
+                  'basis': (f'verified billing on this account: {verified} credits per character sent, median of '
+                            f'{v_n} billed request(s) in the ledger (the cost header)' if verified is not None else
+                            'the model rates last read for this run (no billed request in the ledger yet)'
+                            if per_char is not None else
+                            'not read yet: --execute reads the credits per character and the live balance first'),
+                  'verified_credits_per_character': verified, 'verified_requests': v_n,
+                  'documented_credits_per_character': per_char,
+                  'upper_bound_at_documented_rate': math.ceil(chars * per_char) if per_char is not None else None,
+                  'note': 'characters = the exact text sent (tags and pronunciation forms included); --execute checks '
+                          'the live balance against the documented rate times the safety factor'},
               'calibrated': voice_calibrated(rd, n, voice_id, model_id, settings),
               'voice': {'voice_id': voice_id, 'model_id': model_id, 'settings': settings,
                         'voice_rev': vf['voice_rev'], 'older_run_level_lock': vf['legacy']},
@@ -5053,7 +5083,8 @@ def cmd_tts(args):
     if start_over and existing:
         archive = narrdir.with_name(f'{narrdir.name}-archive-{stamp}')
         shutil.move(str(narrdir), str(archive))
-        history = [{'at': now(), 'archived_previous_take_to': str(archive)}]
+        history = [{'at': now(), 'archived_previous_take_to': str(archive),
+                    'reason': (getattr(args, 'reason', None) or None)}]
         existing = {}
     narrdir.mkdir(parents=True, exist_ok=True)
     if redo:
@@ -6284,6 +6315,43 @@ def cmd_narration_measure(args):
         except (RuntimeError, ValueError, OSError, ImportError, KeyError) as exc:
             delivery_error = f'{type(exc).__name__}: {str(exc)[:200]}'
     shutil.rmtree(tmpdir, ignore_errors=True)
+    # Each cue as it came out on this take (05): the silence a pause cue left beyond the voice's usual gap, the time a
+    # delivery cue added to its own line against this voice's pace, how that line ended, and whether the next line
+    # carried the change on (spill). Kept with the voice setup and the take, so takes can be compared.
+    setup = {'voice_id': manifest.get('voice_id'), 'model_id': manifest.get('model_id'),
+             'settings': manifest.get('voice_settings') or {}}
+    def _extra(li):
+        r = rows.get(li)
+        if not r or r.get('start_s') is None or r.get('end_s') is None or not forecast_wpm:
+            return None
+        w = count_words(lines[li - 1].get('text') or '')
+        return round((r['end_s'] - r['start_s']) - w * 60 / forecast_wpm, 2) if w else None
+    cue_obs = []
+    for t in tag_rows:
+        li, r = t['li'], rows.get(t['li']) or {}
+        m = next((x for x in measured_tags if x['line'] == t['line'] and x['tag'] == t['tag']), None)
+        nxt = rows.get(li + 1) or {}
+        cue_obs.append({'tag': t['tag'], 'category': t.get('category'), 'line': t['line'],
+                        'at': 'start' if t['at_start'] else 'end' if t['at_end'] else 'inside',
+                        'excess_s': m['excess_s'] if m else None, 'gap_s': m['gap_s'] if m else None,
+                        'line_extra_s': _extra(li), 'end_level_db': (r.get('cadence') or {}).get('end_level_db'),
+                        'next_line_extra_s': _extra(li + 1),
+                        'next_end_level_db': (nxt.get('cadence') or {}).get('end_level_db'),
+                        'usual_end_level_db': cadence_usual.get('end_level_db') if cadence_usual else None,
+                        'take': prints.get(r.get('part')), **setup, 'measured_at': now()})
+    # The joins: did the recording boundary change the delivery where the story goes on (not at a chapter turn)?
+    chapter_first = set()
+    for b in read_json(vd / 'beat-map.json').get('beats') or []:
+        try:
+            if b.get('chapter_start'):
+                chapter_first.add(int(b['line_start']))
+        except (KeyError, TypeError, ValueError):
+            pass
+    by_id = {str(rows[li]['id']): li for li in order}
+    for sm in seams:
+        li_last = by_id.get(str(sm['after_line']))
+        sm['chapter_break'] = (li_last + 1) in chapter_first if li_last else False
+        sm['boundary_effects'] = seam_boundary_effects((rows.get(li_last) or {}).get('cadence') or {}, cadence_usual)
     for r in rows.values():
         # each comparable token's [start, end] on the narration (None where Whisper did not hear it): the captions'
         # word times
@@ -6296,7 +6364,7 @@ def cmd_narration_measure(args):
            'natural_line_gap_median_s': round(natural_gap, 3), 'per_line_overhead_s': per_line,
            'line_gaps_from_audio': gaps_now, 'line_gaps_error': gap_error, 'cadence_usual': cadence_usual,
            'alignment_match_ratio': round(ratio_all, 3), 'tags_measured': measured_tags,
-           'unheard_lines': unheard, 'rechecked_lines': rechecks, 'tags_read_aloud': read_aloud,
+           'cue_observations': cue_obs, 'unheard_lines': unheard, 'rechecked_lines': rechecks, 'tags_read_aloud': read_aloud,
            'possible_repeats': repeats, 'seams': seams, 'beats': beat_rows, 'pronunciation_heard': pron_heard,
            'pause_profile': profile, 'lines': [rows[li] for li in order], 'measured_at': now(),
            'method': 'transcribe() + wpm_from_transcript_raw on each part, exactly as on the references; lines '
@@ -6323,18 +6391,28 @@ def cmd_narration_measure(args):
                 and (prev.get('settings') or {}) == settings)
         tag_costs = dict(prev.get('tag_costs_s') or {}) if same else {}
         tag_costs.update(costs)
+        keep = {(o.get('tag'), o.get('line'), o.get('take')) for o in cue_obs}
+        observations = ([o for o in prev.get('cue_observations') or []
+                         if (o.get('tag'), o.get('line'), o.get('take')) not in keep] if same else []) + cue_obs
         vl['measured'] = {'voice_id': manifest['voice_id'], 'model_id': manifest['model_id'], 'settings': settings,
                           'wpm': wpm, 'words': int(tot_words), 'script_words': script_words,
                           'forecast_wpm': forecast_wpm, 'overall_wpm': overall_wpm, 'speech_s': round(tot_speech, 2),
                           'duration_s': round(tot_dur, 2), 'lines': nlines, 'per_line_overhead_s': per_line,
                           'natural_gap_s': gaps_now.get('median_s') or round(natural_gap, 3),
-                          'tag_costs_s': tag_costs, 'parts': [p['id'] for p in per_part], 'measured_at': now(),
+                          'tag_costs_s': tag_costs, 'cue_observations': observations[-120:],
+                          'parts': [p['id'] for p in per_part], 'measured_at': now(),
                           'method': out['method']}
         for k in ('measured_wpm', 'measured_overhead_s', 'measured_overhead_lines', 'measured_wpm_source'):
             vl.pop(k, None)
         write_json(vl_path, vl)
         wrote = True
     warnings = []
+    for sm in seams:
+        if sm.get('boundary_effects') and not sm.get('chapter_break'):
+            warnings.append(f"part join after {sm['after_line']} at {_mmss(sm['at_s'])} (not a chapter turn): "
+                            + '; '.join(sm['boundary_effects'])
+                            + '. Listen there; if the narrator concludes or restarts mid-scene, re-record with the '
+                              'parts split at chapter turns (beat-map chapter_start).')
     if ratio_all < 0.9:
         warnings.append('Under 90% of the script words were matched: listen for missing or extra words, or a script edit.')
     for m in measured_tags:
