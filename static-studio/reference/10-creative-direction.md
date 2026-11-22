@@ -51,7 +51,10 @@ The measurements give you the parts you can't perceive directly:
 
 These are proxies, not taste. A narrator who moves a lot can still be tiring; a narrow one can be intimate. Label what
 you write: `[O]` observed at a timestamp (a measurement included), `[I]` your inference about why it works, `[U]`
-unknown. View counts and popularity prove nothing about any single technique.
+unknown. View counts and popularity prove nothing about any single technique. A pattern several references share is
+evidence of a convention and of what it can do, not proof that it caused anyone to keep watching: read it in its scene,
+for the experience it serves. An idea of ours that no reference uses is welcome: say it is ours, what it should give
+the viewer, and judge it in context.
 
 Write what you learn into the cards (`audiovisual_moments`, `narration_delivery`, `delight`: 01) and the cluster's
 creative profile (02): what makes these videos *enjoyable*, not only what they contain, and what remains unexplored.
@@ -80,7 +83,12 @@ Each treatment decides:
 - **audiovisual_relationship**: when the picture carries what the words leave unsaid, and when the two meet.
 - **emotional_course**: how the feeling moves across the whole runtime.
 - **evidence_used** and **departures**: which reference observations support it, and where it deliberately does
-  something the references don't, and why.
+  something the references don't, and why. Consequential choices (the approach, the treatment, the narrator, the
+  picture device, how music and silence are used) name their evidence and reasoning briefly, here or in the review
+  files, keeping observation, interpretation and our own idea apart; small choices need no citation. The same reasoning
+  carries through every later stage (delivery and tags, pauses, stills, drawings and moves, music, captions, cuts),
+  so all of them serve one viewing experience: polish that keeps personality, clarity and surprise, with humour,
+  intensity or drama where the material calls for them.
 - **risks**: how this treatment could get boring, cute, theatrical or monotonous over twenty minutes.
 
 Then write its **samples**: the opening, a quiet middle and the turning point, each as the narration (50+ words) and
@@ -198,7 +206,9 @@ These are craft principles. Each one says when it applies.
   - *the rhythm around it*: does it make the line before land and the next one more wanted, or does it delay
     information, break momentum, slow a deadpan joke into waiting for a laugh, or stall the opening hook?
   The same length can be right in one scene and dead air in another. No quota, no escalation, no length per kind of
-  moment, nothing copied from a reference, never runtime. A length written in the script is a proposal: it is decided
+  moment, never runtime. The voice's usual gaps are the baseline to judge from, not a ceiling. A reference's silences
+  are evidence to read in their scenes (what the viewer was processing, what the picture and the sound did), never
+  lengths to copy. A length written in the script is a proposal: it is decided
   on the recorded voice (its real gap there, a listening preview) and again with the picture (05, `holds`,
   `hold-decide`).
 - **The way into a silence and out of it is part of the performance.** A silence reads as meant when the voice lands
