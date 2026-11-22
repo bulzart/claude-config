@@ -2887,6 +2887,25 @@ class BedBakeTests(unittest.TestCase):
             self.assertEqual(rec['derivation']['src_start_s'], 1.0)
 
 
+class RecheckWordsTests(unittest.TestCase):
+    """A line heard whole on its second listen keeps that listen's word times (2026-11-22, L013)."""
+
+    def test_second_listen_word_times_replace_a_sparse_long_pass(self):
+        spec = importlib.util.spec_from_file_location('static_core_recheck', TOOL)
+        core = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(core)
+        row = {'_tok': [(66.2, 66.5), (66.5, 66.7), (66.7, 67.2), (71.8, 72.4), None, None, None], 'matched_words': 4}
+        rec = {'tok_times': [[23.9, 24.1], [24.1, 24.4], [24.4, 24.9], [25.6, 25.8], [25.8, 26.1], [26.1, 26.5], [27.0, 27.4]]}
+        self.assertEqual(core.merge_recheck_words(row, rec, 42.4), 7)
+        self.assertAlmostEqual(row['_tok'][3][0], 68.0)
+        self.assertTrue(row['words_from_recheck'])
+        # a second listen that heard fewer words, or other words than the line has, changes nothing
+        row2 = {'_tok': [(1.0, 1.2), (1.2, 1.4)], 'matched_words': 2}
+        self.assertEqual(core.merge_recheck_words(row2, {'tok_times': [[0.1, 0.2], None]}, 0.0), 0)
+        self.assertEqual(core.merge_recheck_words(row2, {'tok_times': [[0.1, 0.2]]}, 0.0), 0)
+        self.assertEqual(row2['_tok'], [(1.0, 1.2), (1.2, 1.4)])
+
+
 class StillTouchupTests(unittest.TestCase):
     """still_touchup.py: a local fix to a generated still keeps the original and records the edit (manual 04)."""
 

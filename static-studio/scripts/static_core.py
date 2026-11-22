@@ -6233,6 +6233,21 @@ def confirmations_path(folder):
     return folder / 'listening-confirmations.json'
 
 
+def merge_recheck_words(row, rec, offset):
+    """A line found on its own second listen keeps the word times that listen heard, where the long pass had none or
+    fewer (2026-11-22: L013 "They said no. He tried again. No. He tried a third time. Still no." was heard whole on the
+    second listen, but only its start and end were kept: ten of its words had no time and the captions squeezed them
+    into its last 0.4 s). Returns how many tokens it gave a time."""
+    toks = rec.get('tok_times') or []
+    old = row.get('_tok') or []
+    if len(toks) != len(old) or sum(1 for x in toks if x) <= sum(1 for x in old if x):
+        return 0
+    row['_tok'] = [None if x is None else (offset + x[0], offset + x[1]) for x in toks]
+    row['matched_words'] = sum(1 for x in toks if x)
+    row['words_from_recheck'] = True
+    return row['matched_words']
+
+
 def recheck_line(part_file, a, b, line_text, wdir, lid, args, language):
     """A line the long Whisper pass did not hear, listened to again on its own: Whisper medium on a short window
     of the part around where the line should be. Found, it was a transcription miss; still missing, the line may
@@ -6253,7 +6268,9 @@ def recheck_line(part_file, a, b, line_text, wdir, lid, args, language):
     got = [x for x in d['tok_time'][0] if x]
     return {'line': lid, 'window_s': window, 'matched': round(d['ratio'], 2), 'found': d['ratio'] >= 0.6,
             'heard': ' '.join(str(w['text']).strip() for w in words)[:300],
-            'times': [a + got[0][0], a + max(x[1] for x in got)] if got else None}
+            'times': [a + got[0][0], a + max(x[1] for x in got)] if got else None,
+            # each of the line's tokens as this listen heard it, on the part's clock (None where it did not)
+            'tok_times': [None if x is None else [a + x[0], a + x[1]] for x in d['tok_time'][0]]}
 
 
 def cmd_narration_measure(args):
@@ -6351,6 +6368,7 @@ def cmd_narration_measure(args):
                 if rec['found'] and rec.get('times'):
                     r['start_s'], r['end_s'] = round(offset + rec['times'][0], 3), round(offset + rec['times'][1], 3)
                     r['heard_on_recheck'] = True
+                    merge_recheck_words(r, rec, offset)
             rec['part'] = c['id']
             rechecks.append(rec)
         all_words += [{'start_s': w['start_s'] + offset, 'end_s': w['end_s'] + offset, 'text': w['text']} for w in words]

@@ -121,5 +121,27 @@ class PhotoDurationTests(unittest.TestCase):
             self.assertEqual(ct._photo_durations(d)['fixed'], 0)       # a second pass finds nothing to do
 
 
+
+class AudioMaterialTests(unittest.TestCase):
+    """capcut-repair's audio-materials step: an audio clip in CapCut's own form, or CapCut shows the track empty (2026-11-22)."""
+
+    def test_an_unknown_audio_type_becomes_extract_music_named_after_its_file(self):
+        ct = load_module()
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td)
+            content = {'materials': {'audios': [
+                {'id': 'n', 'type': 'audio', 'path': 'C:/run/50-audio/narration-edit.wav', 'material_name': 'narration-edit.wav'},
+                {'id': 'm', 'type': 'extract_music', 'path': 'C:/run/music/M1.wav', 'name': 'M1.wav', 'category_name': 'local'},
+                {'id': 'u', 'type': 'audio', 'path': 'https://example.org/a.mp3'}]}, 'tracks': []}
+            (d / 'draft_content.json').write_text(json.dumps(content), encoding='utf-8')
+            res = ct._audio_materials(d)
+            back = {m['id']: m for m in json.loads((d / 'draft_content.json').read_text(encoding='utf-8'))['materials']['audios']}
+            self.assertEqual((back['n']['type'], back['n']['name'], back['n']['category_name']),
+                             ('extract_music', 'narration-edit.wav', 'local'))
+            self.assertEqual(back['m'], content['materials']['audios'][1])         # already CapCut's form: untouched
+            self.assertEqual(back['u']['type'], 'audio')                            # not a local file: left alone
+            self.assertGreater(res['fixed'], 0)
+            self.assertEqual(ct._audio_materials(d)['fixed'], 0)                    # a second pass finds nothing to do
+
 if __name__ == '__main__':
     unittest.main()

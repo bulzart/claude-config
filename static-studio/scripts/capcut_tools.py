@@ -455,10 +455,43 @@ def _photo_durations(d: Path) -> dict:
     return {"fixed": total, "files": files}
 
 
+AUDIO_TYPES = {"extract_music", "music", "sound", "record", "text_to_audio", "video_original_sound"}
+
+
+def _audio_materials(d: Path) -> dict:
+    """An audio clip CapCut can show: its material in CapCut's own form for a local file (type "extract_music", named after
+    its file, category "local"), as capcut-cli writes it. Found 2026-11-22: the MCP's capcut_add_audio writes type "audio",
+    which CapCut 9.x does not know: on open it rewrote the type to "none" and showed every audio track empty (no narration,
+    no music). Only audio materials of a type CapCut does not know are changed; everything else stays as it is."""
+    files, total = [], 0
+    for p in _draft_contents(d):
+        content = json.loads(p.read_text(encoding="utf-8"))
+        n = 0
+        for m in content.get("materials", {}).get("audios") or []:
+            path = m.get("path")
+            if not isinstance(path, str) or not path or re.match(r"(?i)^https?://", path):
+                continue
+            if m.get("type") not in AUDIO_TYPES:
+                m["type"] = "extract_music"
+                n += 1
+            if not m.get("name"):
+                m["name"] = Path(path).name
+                n += 1
+            if not m.get("category_name"):
+                m["category_name"] = "local"
+        if n:
+            shutil.copyfile(p, p.with_name(p.name + ".audio.bak"))
+            write_text(p, json.dumps(content, ensure_ascii=False))
+        files.append({"file": str(p), "fixed": n})
+        total += n
+    return {"fixed": total, "files": files}
+
+
 def cmd_capcut_repair(a):
     """After every capcut_save: the house text style on every text layer (capcut-text-style), then
     `capcut register --apply --materials` (identity from draft_content.json,
-    the media list CapCut needs, the store index), CapCut's duration on every still added without one (_photo_durations), the media
+    the media list CapCut needs, the store index), CapCut's own form for every audio material (_audio_materials, before
+    register), CapCut's duration on every still added without one (_photo_durations), the media
     links CapCut 9.3+ opens clips by (_link_local_materials),
     `capcut sync-timelines --nested --apply` (the nested
     timeline copy CapCut 9.x reads first) and `capcut lint`. register rewrites the store's SHARED
@@ -477,15 +510,16 @@ def cmd_capcut_repair(a):
     steps = ([{"step": "text-style", "exit": 0, "result": "kept: the draft's own text look (--keep-text)"}] if getattr(a, "keep_text", False)
              else [{"step": "text-style", "exit": 0, "result": _text_style_pass(d, write=True)}])   # before sync-timelines
     with FileLock(lock, timeout=900):
-        for name, args in (("register", ["register", str(d), "--apply", "--materials"]),
+        for name, args in (("audio-materials", None),
+                           ("register", ["register", str(d), "--apply", "--materials"]),
                            ("photo-durations", None),
                            ("link", None),
                            ("sync-timelines", ["sync-timelines", str(d), "--nested", "--apply"]),
                            ("lint", ["lint", str(d)])):
             if args is None:   # still durations, then the media links CapCut 9.3+ opens a clip by, from the entries register just wrote
                 try:
-                    steps.append({"step": name, "exit": 0,
-                                  "result": _photo_durations(d) if name == "photo-durations" else _link_local_materials(d)})
+                    fix = {"audio-materials": _audio_materials, "photo-durations": _photo_durations}.get(name, _link_local_materials)
+                    steps.append({"step": name, "exit": 0, "result": fix(d)})
                 except (OSError, ValueError) as e:
                     steps.append({"step": name, "exit": 1, "result": f"{type(e).__name__}: {e}"})
                     break
@@ -497,7 +531,8 @@ def cmd_capcut_repair(a):
             if name != "lint" and cp.returncode != 0:
                 break
     codes = {s["step"]: s["exit"] for s in steps}
-    ok = (codes.get("register") == 0 and codes.get("photo-durations") == 0 and codes.get("link") == 0
+    ok = (codes.get("audio-materials") == 0 and codes.get("register") == 0 and codes.get("photo-durations") == 0
+          and codes.get("link") == 0
           and codes.get("sync-timelines") == 0 and codes.get("lint") in (0, 1))
     res = {"ok": ok, "draft": str(d), "steps": steps}
     if not ok:
