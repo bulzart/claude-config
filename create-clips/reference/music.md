@@ -181,6 +181,11 @@ fragments, the stream's words about a song, the times to look at. The agent, for
    an EDL changed after `--apply` gets `--apply` again (cached: seconds); the patch is replaced, never stacked.
 4. The report lists every interval: its output time, removed (with SAM: listen before publishing) / UNRESOLVED / left as it is with its outcome, and
    why. A music line never fails a video and never drops a moment.
+5. After the export, `T export-check` MEASURES each removal in the MP4 (`music_removed`): at the best offset within 20 ms the sound there must
+   match the cleaned audio (correlation 0.9 or more) and what is left once it is taken out must be at least 20 dB below the original sound of
+   the stretch. Measured on LT2 (2026-11-22): the export before the silent copy 0 dB below (the original still there), after it 28 dB. A failure
+   is `attention`: rebuild with the current toolkit (edl-check, captions, capcut-build) and export again. Never call a removal done from the
+   project or the cleaned file alone: only the exported MP4 says what plays.
 
 ## Never
 - Never remove or mute music on a guess, because a song sounds famous, because it was recognised, or because the game is known for licensed radio: only

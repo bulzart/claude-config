@@ -31,7 +31,8 @@ user-invocable: false
      from posting.md>"`'s file name (select it all, type), the resolution its canvas (shorts 1080x1920, long videos 1920x1080), 30 fps; Export;
      wait, with a screenshot every 10-30 s, until the done dialog; close it; Menu > Back to home page. Then
      `T export-check --run RUN --video <id> --file "<RUN\deliverables\name.mp4>" --title "<the title>" --set-state` and look at the frames it lists
-     (captions, blur, removed music). A failed check is `attention`, never silently `verified`.
+     (captions, blur). A removed song is not looked at but measured by the check itself (`music_removed`: the MP4's sound there must be
+     the cleaned audio alone, the original at least 20 dB down; 2026-11-22). A failed check is `attention`, never silently `verified`.
    - `T capcut-app quit` (CapCut's own close, never a kill), `T capcut-app export-path --restore`, `T gpu --release capcut-export`.
    - A dialog that is not in this procedure (an update offer, a sign-in, a crash notice): close it when that is safe, else stop, leave the video
      `built` and say what the screen showed. With `export` not `gui`, or without any desktop control: say so in one line; the projects are ready, the
