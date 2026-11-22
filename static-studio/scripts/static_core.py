@@ -5689,8 +5689,13 @@ def cmd_captions_plan(args):
     counts = {'whisper': 0, 'shared': 0, 'between': 0}
     for i, line in enumerate(lines, 1):
         r = rows.get(i) or {}
-        ws, prob = cap.line_words(line.get('text') or '', r.get('word_times'), (r.get('start_s'), r.get('end_s')),
-                                  tokens_of, strip_tags, language)
+        # the line's spoken span: from its first timed word to where the audio's own silence after it begins, when Whisper
+        # missed its last words (2026-11-22: "Pas de Calais", heard as "Pada Kalei", ended the line at "the" and the three
+        # words got no room)
+        gap0 = (r.get('gap_span_s') or [None])[0]
+        end = max(r.get('end_s'), gap0) if gap0 is not None and r.get('end_s') is not None else r.get('end_s')
+        ws, prob = cap.line_words(line.get('text') or '', r.get('word_times'), (r.get('start_s'), end),
+                                  tokens_of, strip_tags, language, line_token_map)
         if prob:
             problems.append({'line': line.get('id'), 'problem': prob})
             continue
@@ -5866,6 +5871,190 @@ def narration_track_issues(rd, segs, expect):
     return out
 
 
+def capcut_project_timeline(rd, video, draft, sounds=None):
+    """timeline.json written from a saved CapCut project, never from the plan (manual 05): every picture clip on the main
+    video track traced to its shot by its start (within half a frame) and its file (a callback shows its source's still),
+    every overlay on another video track, every audio clip as the narration, a music bed (its beats from
+    music-provenance.json) or a sound named in `sounds` ({file name: {"kind", "beats", "purpose"}}). What cannot be traced
+    is listed in `problems`, never guessed."""
+    n = int(video)
+    d = Path(str(draft)).expanduser()
+    content = json.loads((d / 'draft_content.json').read_text(encoding='utf-8'))
+    plan = read_json(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json')
+    sp = {str(s.get('id')): s for s in read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []}
+    music = read_json(artifact_path(rd, n, 'music')).get('tracks') or {}
+    sounds = {str(k).lower(): v for k, v in (sounds or {}).items()}
+    mats = {}
+    for items in (content.get('materials') or {}).values():
+        if isinstance(items, list):
+            for m in items:
+                if isinstance(m, dict) and m.get('id'):
+                    mats[m['id']] = m
+
+    def info(seg):
+        m = mats.get(seg.get('material_id')) or {}
+        tg, src = seg.get('target_timerange') or {}, seg.get('source_timerange') or {}
+        a, la = int(tg.get('start') or 0) / 1e6, int(tg.get('duration') or 0) / 1e6
+        b, lb = int(src.get('start') or 0) / 1e6, int(src.get('duration') or 0) / 1e6
+        return {'start_s': round(a, 3), 'end_s': round(a + la, 3), 'file': str(m.get('path') or '').replace(chr(92), '/'),
+                'source_start_s': round(b, 3), 'source_end_s': round(b + lb, 3), 'speed': seg.get('speed', 1),
+                'volume': seg.get('volume', 1)}
+
+    def by_start(t):
+        return sorted(t.get('segments') or [], key=lambda x: (x.get('target_timerange') or {}).get('start', 0))
+    vtracks = [t for t in content.get('tracks') or [] if t.get('type') == 'video']
+    problems, visual, overlays, audio = [], [], [], []
+    shots = plan.get('shots') or []
+    stills_dir = artifact_path(rd, n, 'shot-plan').parent / 'stills'
+    if vtracks:
+        for seg in by_start(vtracks[0]):
+            c = info(seg)
+            shot = next((x for x in shots if abs(float(x.get('start_s') or 0) - c['start_s']) <= 1 / 60), None)
+            if not shot:
+                problems.append(f'picture clip at {c["start_s"]} s matches no shot of the edit plan')
+                continue
+            sid = str(shot.get('id'))
+            want = stills_dir / f'{(sp.get(sid) or {}).get("reuses") or sid}.png'
+            if _pkey(c['file']) != _pkey(want):
+                problems.append(f'{sid}: the clip shows {c["file"]}, its still is {want.as_posix()}')
+            visual.append({'start_s': c['start_s'], 'end_s': c['end_s'], 'shot_id': sid, 'asset_path': c['file'],
+                           'beat_id': shot.get('beat_id'), 'purpose': (sp.get(sid) or {}).get('new_thing') or ''})
+        seen = {v['shot_id'] for v in visual}
+        problems += [f'{x.get("id")}: no picture clip in the project' for x in shots if str(x.get('id')) not in seen]
+        for t in vtracks[1:]:
+            for seg in by_start(t):
+                c = info(seg)
+                overlays.append({'track': t.get('name'), 'start_s': c['start_s'], 'end_s': c['end_s'], 'file': c['file']})
+    narr = _pkey(_run_file(rd, (plan.get('narration_for_edit') or {}).get('file') or ''))
+    for t in content.get('tracks') or []:
+        if t.get('type') != 'audio':
+            continue
+        for seg in by_start(t):
+            c = info(seg)
+            k = _pkey(c['file'])
+            if k == narr:
+                audio.append({'kind': 'narration', 'file': c['file'], 'start_s': c['start_s'], 'end_s': c['end_s'],
+                              'source_start_s': c['source_start_s'], 'source_end_s': c['source_end_s'], 'speed': c['speed']})
+            elif k in music:
+                audio.append({'kind': 'music', 'file': c['file'], 'start_s': c['start_s'], 'end_s': c['end_s'],
+                              'beats': list((music[k] or {}).get('beats') or []), 'volume': c['volume'], 'track': t.get('name')})
+            elif Path(c['file']).name.lower() in sounds:
+                x = sounds[Path(c['file']).name.lower()]
+                audio.append({'kind': str(x.get('kind') or 'sfx'), 'file': c['file'], 'start_s': c['start_s'],
+                              'end_s': c['end_s'], 'beats': list(x.get('beats') or []), 'purpose': x.get('purpose', ''),
+                              'volume': c['volume'], 'track': t.get('name')})
+            else:
+                problems.append(f'audio clip {c["file"]} at {c["start_s"]} s is not the narration, a recorded music bed '
+                                f'or a named sound')
+    cc = content.get('canvas_config') or {}
+    return {'canvas': f'{cc.get("width")}x{cc.get("height")}', 'fps': content.get('fps', 30),
+            'project_file': str(d / 'draft_content.json'), 'capcut_draft': str(d), 'visual_segments': visual,
+            'overlays': overlays, 'audio_tracks': audio, 'problems': problems,
+            'note': 'Derived from the saved CapCut project (timeline-write). A CapCut project is not an exported file.'}
+
+
+def cmd_timeline_write(args):
+    rd, st = run_folder(args)
+    sounds = read_json(Path(args.sounds)) if args.sounds else {}
+    try:
+        tl = capcut_project_timeline(rd, args.video, args.draft, sounds)
+    except (OSError, ValueError) as exc:
+        emit({'ok': False, 'error': f'project unreadable: {exc}'}, 2)
+    extra = read_json(Path(args.extra)) if args.extra else {}
+    tl.update({k: v for k, v in extra.items() if k not in ('visual_segments', 'audio_tracks', 'capcut_draft', 'problems')})
+    out = rd / '70-edit' / f'video-{int(args.video):02d}' / 'timeline.json'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(tl, ensure_ascii=False, indent=1), encoding='utf-8')
+    emit({'ok': not tl['problems'], 'file': str(out), 'visual_segments': len(tl['visual_segments']),
+          'overlays': len(tl['overlays']), 'audio_tracks': len(tl['audio_tracks']), 'problems': tl['problems'],
+          'next': 'timeline-check --run RUN --video N'}, 0 if not tl['problems'] else 2)
+
+
+def bed_levels(narration, tracks):
+    """The clip volume that puts each bed (or sound) a chosen number of dB under the voice, from measurements: the
+    integrated loudness (EBU R128, the same meter as loudness_stats) of the narration and of each file, never a slider
+    guessed by ear. tracks: [{"id", "file", "under_speech_db"}]. A volume above 1 would need gain CapCut cannot add here:
+    it is capped at 1 and reported."""
+    speech = loudness_stats(narration).get('integrated_lufs')
+    if speech is None:
+        raise ValueError(f'no loudness for the narration {narration}')
+    out = []
+    for t in tracks:
+        lv = loudness_stats(t['file']).get('integrated_lufs')
+        if lv is None:
+            out.append({'id': t.get('id'), 'file': t['file'], 'error': 'no loudness measured'})
+            continue
+        want = abs(float(t['under_speech_db']))                 # how far UNDER the voice: 18 means 18 dB quieter than speech
+        gain = (speech - want) - lv
+        vol = 10 ** (gain / 20)
+        row = {'id': t.get('id'), 'file': t['file'], 'file_lufs': lv, 'target_under_speech_db': want,
+               'gain_db': round(gain, 2), 'volume': round(min(1.0, vol), 3)}
+        if vol > 1.0:
+            row['note'] = f'needs {gain:+.1f} dB, more than the file holds: it plays at full volume, {gain:+.1f} dB short'
+        if t.get('why'):
+            row['why'] = t['why']
+        out.append(row)
+    return {'speech_lufs': speech, 'tracks': out}
+
+
+def bake_bed(src, out, gain_db, src_start=0.0, dur=None, fade_in=0.0, fade_out=0.0):
+    """The bed as it must play, in the file itself: the stretch [src_start, src_start + dur] of `src`, its gain and its
+    fades, written to `out` (same codec, rate and channels). A CapCut project then places it at volume 1, from 0, with no
+    fades of its own: CapCut's export was measured playing a clip whose volume was set to 0 at full level (2026-11-22,
+    video clips; lower volumes on audio clips are not verified), so the level a bed must have lives in its media."""
+    info = probe(src)
+    codec = {'pcm_f32le': 'pcm_f32le', 'pcm_s24le': 'pcm_s24le'}.get(str(info.get('audio_codec') or ''), 'pcm_s16le')
+    length = float(dur) if dur else max(0.0, float(info['duration_s']) - float(src_start))
+    af = [f'volume={float(gain_db):.2f}dB']
+    if fade_in:
+        af.append(f'afade=t=in:st=0:d={float(fade_in):.3f}')
+    if fade_out:
+        af.append(f'afade=t=out:st={max(0.0, length - float(fade_out)):.3f}:d={float(fade_out):.3f}')
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-ss', f'{float(src_start):.3f}', '-t', f'{length:.3f}',
+           '-i', str(src), '-af', ','.join(af), '-c:a', codec, str(out)]
+    cp = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
+    if cp.returncode != 0:
+        raise ValueError(f'ffmpeg could not bake {src}: {cp.stderr[-300:]}')
+    return {'file': str(out), 'src_start_s': float(src_start), 'dur_s': round(length, 3), 'gain_db': round(float(gain_db), 2),
+            'fade_in_s': float(fade_in or 0.0), 'fade_out_s': float(fade_out or 0.0)}
+
+
+def cmd_bed_levels(args):
+    plan = read_json(Path(args.plan), required=True)
+    try:
+        res = bed_levels(plan['narration'], plan['tracks'])
+    except (KeyError, TypeError, ValueError) as exc:
+        emit({'ok': False, 'error': str(exc)}, 2)
+    if args.bake:
+        # each track baked: its stretch, its gain and its fades in the file; a recorded bed's copy carries the bed's record
+        rd = Path(args.run).expanduser().resolve() if args.run else None
+        prov = read_json(artifact_path(rd, args.video, 'music')).get('tracks') or {} if rd and args.video else {}
+        derived = []
+        for t, row in zip(plan['tracks'], res['tracks']):
+            if 'error' in row:
+                continue
+            src = Path(t['file'])
+            tag = f'{row["gain_db"]:+.1f}dB'.replace('+', 'p').replace('-', 'm')
+            out = Path(args.bake) / f'{src.stem}.bed-{tag}{src.suffix}'
+            try:
+                b = bake_bed(src, out, row['gain_db'], t.get('src_start') or 0.0, t.get('dur'), t.get('fade_in') or 0.0,
+                             t.get('fade_out') or 0.0)
+            except (OSError, ValueError, KeyError) as exc:
+                row['error'] = f'bake: {exc}'
+                continue
+            row.update({'baked': b, 'volume_in_project': 1.0})
+            rec = prov.get(_pkey(src))
+            if rec:
+                derived.append({**{k: v for k, v in rec.items() if k != 'made_at'}, 'out': str(out), 'derived_from': str(src),
+                                'derivation': {k: b[k] for k in ('src_start_s', 'dur_s', 'gain_db', 'fade_in_s', 'fade_out_s')}})
+        if derived:
+            res['recorded_in'] = record_media(rd, args.video, 'music', derived)
+    if args.out:
+        Path(args.out).write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding='utf-8')
+    emit({'ok': all('error' not in t for t in res['tracks']), **res})
+
+
 def cmd_timeline_check(args):
     rd, st = run_folder(args)
     res = timeline_facts(rd, args.video)
@@ -5971,6 +6160,14 @@ def raw_tokens(text, english=True):
         if t:
             out.append(t)
     return out
+
+
+def line_token_map(text, language='en'):
+    """A line's raw word tokens and its comparable tokens over them: (raw, [(token, first_raw, last_raw)]), numbers merged in
+    English as in tokens_of. Lets a caption word be matched to the tokens it really holds (captions.line_words)."""
+    english = str(language or 'en').lower().startswith('en')
+    raw = raw_tokens(text, english)
+    return raw, (_merge_numbers(raw) if english else [(w, i, i) for i, w in enumerate(raw)])
 
 
 def tokens_of(text, language='en'):
@@ -8205,6 +8402,21 @@ def main():
     p.add_argument('--out', required=True); p.add_argument('--canvas', default='1920x1080')
     p.add_argument('--background', default=''); p.add_argument('--start', type=float, default=None)
     p.add_argument('--frames', type=int, default=8); p.set_defaults(func=cmd_captions_preview)
+    p = sub.add_parser('bed-levels', help='the clip volume that puts each music bed or sound a chosen number of dB under '
+                       'the voice, from measured loudness (EBU R128)')
+    p.add_argument('--plan', required=True, help='JSON {narration, tracks: [{id, file, under_speech_db, why}]}')
+    p.add_argument('--out', help='also write the answer here (the build reads its volumes)')
+    p.add_argument('--bake', help='a folder: write each track as it must play (its stretch src_start/dur, its gain, its fade_in/fade_out) to be placed at volume 1 with no CapCut fades')
+    p.add_argument('--run', help='with --bake: record each baked copy of a recorded music bed in music-provenance.json')
+    p.add_argument('--video', type=int)
+    p.set_defaults(func=cmd_bed_levels)
+    p = sub.add_parser('timeline-write', help='timeline.json from the saved CapCut project (each clip traced to its shot, '
+                       'still and beat; every sound to the narration, a recorded bed or a named sound)')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--draft', required=True, help='the CapCut project folder')
+    p.add_argument('--sounds', help='JSON {file name: {kind, beats, purpose}} for sounds that are not music or narration')
+    p.add_argument('--extra', help='JSON of further notes kept in timeline.json (transitions, moves, captions)')
+    p.set_defaults(func=cmd_timeline_write)
     p = sub.add_parser('timeline-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_timeline_check)
     p = sub.add_parser('export-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)

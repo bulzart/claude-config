@@ -91,6 +91,35 @@ class CaptionTimingTests(unittest.TestCase):
         # line times describing other words are refused
         self.assertIsNotNone(cap.line_words(text, times[:-1], (1.0, 3.4), core.tokens_of, core.strip_tags, 'en')[1])
 
+    def test_a_number_said_with_and_keeps_the_next_word_its_own_time(self):
+        # 2026-11-22: "a hundred and fifty thousand men" lit "men" for 60 ms and gave "and" the time of "men"
+        text = 'A whole army group, a hundred and fifty thousand men under General Patton.'
+        toks = core.tokens_of(text)
+        self.assertEqual(toks, ['a', 'whole', 'army', 'group', '150000', 'men', 'under', 'general', 'patton'])
+        times = [[0.0, 0.2], [0.2, 0.5], [0.5, 0.8], [0.8, 1.2], None, [3.0, 3.4], [3.5, 3.8], [3.8, 4.3], [4.3, 4.9]]
+        ws, prob = cap.line_words(text, times, (0.0, 4.9), core.tokens_of, core.strip_tags, 'en', core.line_token_map)
+        self.assertIsNone(prob)
+        by = {w['w']: w for w in ws}
+        self.assertEqual((by['men']['s'], by['men']['e'], by['men']['timing']), (3.0, 3.4, 'whisper'))
+        number = [w for w in ws if w['w'] in ('a', 'hundred', 'and', 'fifty', 'thousand')]
+        self.assertEqual(len(number), 5)
+        self.assertTrue(all(w['timing'] == 'between' and 1.2 <= w['s'] <= w['e'] <= 3.0 for w in number), number)
+        # a number Whisper did time: its five words share that time, the next word keeps its own
+        times[4] = [1.3, 2.9]
+        ws, _ = cap.line_words(text, times, (0.0, 4.9), core.tokens_of, core.strip_tags, 'en', core.line_token_map)
+        by = {w['w']: w for w in ws}
+        self.assertEqual((by['a']['s'], by['thousand']['e']), (1.3, 2.9))
+        self.assertEqual(by['men']['timing'], 'whisper')
+
+    def test_words_whisper_missed_at_a_lines_end_get_the_time_up_to_its_silence(self):
+        text = 'It pointed at the shortest crossing, the Pas de Calais.'
+        n = len(core.tokens_of(text))
+        times = [[0.0, 0.3], [0.3, 0.5], [0.5, 0.7], [0.7, 1.1], [1.1, 1.6], [1.6, 1.8]] + [None] * (n - 6)
+        ws, _ = cap.line_words(text, times, (0.0, 2.6), core.tokens_of, core.strip_tags, 'en', core.line_token_map)
+        tail = [w for w in ws if w['w'] in ('Pas', 'de', 'Calais.')]
+        self.assertTrue(all(w['e'] > w['s'] for w in tail), tail)          # room up to the silence, never zero length
+        self.assertAlmostEqual(tail[-1]['e'], 2.6)
+
     def test_holds_move_the_words_onto_the_edit_timeline(self):
         holds = [{'at_audio_s': 10.0, 'hold_s': 2.5}, {'at_audio_s': 20.0, 'hold_s': 0.3}]
         self.assertEqual([cap.edit_time(t, holds) for t in (9.9, 10.5, 19.9, 25.0)], [9.9, 13.0, 22.4, 27.8])
@@ -202,6 +231,15 @@ class CaptionBuildTests(unittest.TestCase):
         self.assertFalse(res['ok'])
         self.assertTrue(any(x.startswith('more_than_one_yellow_word') for x in res['issues']))
         self.assertTrue(any(x.startswith('caption_font_is_not_Montserrat-Bold.otf') for x in res['issues']))
+
+    def test_a_gap_of_exactly_the_bridge_is_judged_on_the_frame_grid_like_the_build(self):
+        # 2026-11-22: 'men' ended 0.12 s before 'under': 0.10 s on the frame grid, so the build lit it up to 'under' and
+        # the read-back, in raw seconds, called it lit after it was spoken
+        self.words = [W('fifty', 0.0, 0.5), W('thousand', 0.5, 1.0), W('men', 1.0, 1.43), W('under', 1.55, 1.9),   # 0.12 s raw, 0.10 s snapped
+                      W('Patton.', 1.9, 2.5)]
+        rec = cap.build_draft(self.d, self.plan('montserrat-highlight'), Path(self.tmp.name) / 'work')
+        self.assertTrue(rec['ok'], rec)
+        self.assertEqual(rec['check']['issues'], [])
 
     def test_luckiest_guy_word_box_unchanged_look(self):
         with self.assertRaises(RuntimeError):

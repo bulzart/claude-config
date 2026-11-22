@@ -2777,5 +2777,161 @@ class WhisperGpuTests(unittest.TestCase):
         self.assertEqual(core._CPU_APPROVAL, 'the user said: use the CPU for this run')
 
 
+class TimelineWriteTests(unittest.TestCase):
+    """timeline-write: timeline.json from the saved CapCut project, each clip traced, nothing guessed (manual 05)."""
+
+    def test_clips_traced_to_shots_stills_beds_and_named_sounds(self):
+        with tempfile.TemporaryDirectory() as td:
+            rd = Path(td)/'run'
+            vis = rd/'60-visuals/video-01'
+            (vis/'stills').mkdir(parents=True)
+            for sid in ('S001', 'S002'):
+                (vis/'stills'/f'{sid}.png').write_bytes(b'png')
+            save(rd/'state.json', {'schema': 'static-youtube-longform-v1', 'run': 'r'})
+            save(vis/'shot-plan.json', {'shots': [{'id': 'S001', 'beat_id': 'B01', 'new_thing': 'the house'},
+                                                  {'id': 'S002', 'beat_id': 'B01', 'new_thing': 'the message'},
+                                                  {'id': 'S003', 'beat_id': 'B02', 'reuses': 'S001', 'new_thing': 'the house again'}]})
+            narr = rd/'50-audio/video-01/narration-edit.wav'; narr.parent.mkdir(parents=True); narr.write_bytes(b'wav')
+            bed = rd/'70-edit/video-01/music/M1.wav'; bed.parent.mkdir(parents=True); bed.write_bytes(b'wav')
+            tap = rd/'50-audio/sfx/tap.wav'; tap.parent.mkdir(parents=True); tap.write_bytes(b'wav')
+            save(rd/'70-edit/video-01/edit-plan.json', {'narration_for_edit': {'file': str(narr)},
+                 'shots': [{'id': 'S001', 'beat_id': 'B01', 'start_s': 0.0, 'end_s': 4.0},
+                           {'id': 'S002', 'beat_id': 'B01', 'start_s': 4.0, 'end_s': 8.0},
+                           {'id': 'S003', 'beat_id': 'B02', 'start_s': 8.0, 'end_s': 12.0}]})
+            save(rd/'70-edit/video-01/music-provenance.json',
+                 {'tracks': {os.path.normcase(str(bed.resolve())): {'beats': ['B01', 'B02']}}})
+            us = lambda a, b: {'start': int(a * 1e6), 'duration': int((b - a) * 1e6)}
+            draft = Path(td)/'draft'
+            save(draft/'draft_content.json', {'canvas_config': {'width': 1920, 'height': 1080}, 'fps': 30,
+                 'materials': {'videos': [{'id': 'v1', 'path': str(vis/'stills/S001.png').replace(chr(92), '/')},
+                                          {'id': 'v2', 'path': str(vis/'stills/S002.png')},
+                                          {'id': 'v3', 'path': str(vis/'stills/S002.png')}],
+                               'audios': [{'id': 'a1', 'path': str(narr)}, {'id': 'a2', 'path': str(bed)},
+                                          {'id': 'a3', 'path': str(tap)}, {'id': 'a4', 'path': str(Path(td)/'stray.wav')}]},
+                 'tracks': [{'type': 'video', 'segments': [
+                                {'id': 's1', 'material_id': 'v1', 'target_timerange': us(0, 4), 'source_timerange': us(0, 4)},
+                                {'id': 's2', 'material_id': 'v2', 'target_timerange': us(4, 8), 'source_timerange': us(0, 4)},
+                                {'id': 's3', 'material_id': 'v3', 'target_timerange': us(8, 12), 'source_timerange': us(0, 4)}]},
+                            {'type': 'audio', 'segments': [
+                                {'id': 'n', 'material_id': 'a1', 'target_timerange': us(0, 12), 'source_timerange': us(0, 12), 'speed': 1},
+                                {'id': 'm', 'material_id': 'a2', 'target_timerange': us(1, 11), 'source_timerange': us(0, 10)},
+                                {'id': 't', 'material_id': 'a3', 'target_timerange': us(2, 3), 'source_timerange': us(0, 1)},
+                                {'id': 'x', 'material_id': 'a4', 'target_timerange': us(5, 6), 'source_timerange': us(0, 1)}]}]})
+            sounds = Path(td)/'sounds.json'
+            save(sounds, {'tap.wav': {'kind': 'sfx', 'beats': ['B01'], 'purpose': 'the key'}})
+            out = cli('timeline-write', '--run', rd, '--video', 1, '--draft', draft, '--sounds', sounds, expected=2)
+            tl = json.loads((rd/'70-edit/video-01/timeline.json').read_text(encoding='utf-8'))
+            self.assertEqual([v['shot_id'] for v in tl['visual_segments']], ['S001', 'S002', 'S003'])
+            kinds = [a['kind'] for a in tl['audio_tracks']]
+            self.assertEqual(kinds, ['narration', 'music', 'sfx'])
+            self.assertEqual(tl['audio_tracks'][1]['beats'], ['B01', 'B02'])
+            self.assertEqual(tl['capcut_draft'], str(draft))
+            # the callback S003 shows S002's still instead of S001's, and a sound nobody named: both reported, not guessed
+            self.assertTrue(any(p.startswith('S003: the clip shows') for p in out['problems']), out['problems'])
+            self.assertTrue(any('stray.wav' in p for p in out['problems']), out['problems'])
+
+
+class BedLevelsTests(unittest.TestCase):
+    """bed-levels: "under_speech_db" N means N dB quieter than the narration, by the same loudness meter (2026-11-22)."""
+
+    def test_a_bed_lands_the_asked_number_of_db_under_the_voice(self):
+        with tempfile.TemporaryDirectory() as td:
+            t = Path(td)
+            for name, vol in (('voice.wav', 0.5), ('bed.wav', 0.5), ('soft.wav', 0.005)):
+                subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i',
+                                f'sine=frequency=440:duration=4,volume={vol}', str(t/name)], check=True)
+            save(t/'plan.json', {'narration': str(t/'voice.wav'),
+                                 'tracks': [{'id': 'bed', 'file': str(t/'bed.wav'), 'under_speech_db': 20},
+                                            {'id': 'soft', 'file': str(t/'soft.wav'), 'under_speech_db': 10}]})
+            out = cli('bed-levels', '--plan', t/'plan.json', '--out', t/'levels.json')
+            rows = {r['id']: r for r in out['tracks']}
+            self.assertAlmostEqual(rows['bed']['gain_db'], -20.0, delta=0.3)     # as loud as the voice: 20 dB down
+            self.assertAlmostEqual(rows['bed']['volume'], 0.1, delta=0.01)
+            self.assertEqual(rows['soft']['volume'], 1.0)                       # 40 dB down already: needs gain, capped
+            self.assertIn('note', rows['soft'])
+            self.assertTrue((t/'levels.json').is_file())
+
+
+class BedBakeTests(unittest.TestCase):
+    """bed-levels --bake: the bed as it must play lives in its file (stretch, gain, fades), recorded against its source."""
+
+    def test_baked_copy_lands_under_the_voice_and_keeps_the_beds_record(self):
+        with tempfile.TemporaryDirectory() as td:
+            t = Path(td)
+            rd = t/'run'
+            save(rd/'state.json', {'schema': 'static-youtube-longform-v1'})
+            mus = rd/'70-edit/video-01/music'; mus.mkdir(parents=True)
+            for name, vol, d in (('voice.wav', 0.5, 6), ('M1.wav', 0.5, 6)):
+                subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i',
+                                f'sine=frequency=440:duration={d},volume={vol}', str((mus if name == 'M1.wav' else t)/name)], check=True)
+            save(rd/'70-edit/video-01/music-provenance.json',
+                 {'video': 1, 'tracks': {os.path.normcase(str((mus/'M1.wav').resolve())): {'beats': ['B01'], 'production_rev': 3}}})
+            save(t/'plan.json', {'narration': str(t/'voice.wav'),
+                                 'tracks': [{'id': 'M1', 'file': str(mus/'M1.wav'), 'under_speech_db': 20,
+                                             'src_start': 1.0, 'dur': 4.0, 'fade_in': 0.2, 'fade_out': 0.5}]})
+            out = cli('bed-levels', '--plan', t/'plan.json', '--bake', mus, '--run', rd, '--video', 1)
+            row = out['tracks'][0]
+            baked = Path(row['baked']['file'])
+            self.assertTrue(baked.is_file())
+            self.assertEqual(row['volume_in_project'], 1.0)
+            r = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', str(baked)],
+                               capture_output=True, text=True)
+            self.assertAlmostEqual(float(r.stdout), 4.0, delta=0.05)                     # its stretch only
+            save(t/'check.json', {'narration': str(t/'voice.wav'), 'tracks': [{'id': 'b', 'file': str(baked), 'under_speech_db': 0}]})
+            chk = cli('bed-levels', '--plan', t/'check.json')
+            self.assertAlmostEqual(chk['tracks'][0]['file_lufs'] - chk['speech_lufs'], -20.0, delta=1.0)   # 20 dB under the voice
+            prov = json.loads((rd/'70-edit/video-01/music-provenance.json').read_text(encoding='utf-8'))['tracks']
+            rec = prov[os.path.normcase(str(baked.resolve()))]
+            self.assertEqual(rec['beats'], ['B01'])
+            self.assertEqual(rec['production_rev'], 3)
+            self.assertEqual(rec['derivation']['src_start_s'], 1.0)
+
+
+class StillTouchupTests(unittest.TestCase):
+    """still_touchup.py: a local fix to a generated still keeps the original and records the edit (manual 04)."""
+
+    def test_erase_soften_and_text_keep_the_original_and_record_the_edit(self):
+        from PIL import Image, ImageDraw
+        with tempfile.TemporaryDirectory() as td:
+            run = Path(td)/'run'
+            stills = run/'60-visuals/video-01/stills'
+            stills.mkdir(parents=True)
+            im = Image.new('RGB', (320, 180), (200, 190, 170))
+            d = ImageDraw.Draw(im)
+            for x in range(40, 140, 12):                      # thin dark strokes: made-up lettering on a plain plate
+                d.line([(x, 40), (x + 4, 60)], fill=(20, 20, 20), width=2)
+            im.save(stills/'S001.png')
+            before = (stills/'S001.png').read_bytes()
+            spec = Path(td)/'spec.json'
+            save(spec, {'shot': 'S001', 'why': 'made-up lettering on the plate',
+                        'regions': [{'mode': 'erase', 'size': 15, 'feather': 2, 'poly': [[30, 30], [160, 30], [160, 70], [30, 70]]},
+                                    {'mode': 'soften', 'sigma': 3, 'poly': [[200, 100], [300, 100], [300, 170], [200, 170]]},
+                                    {'mode': 'text', 'text': '9', 'at': [250, 50], 'size': 30}]})
+            tool = ROOT/'scripts'/'still_touchup.py'
+            run_tool = lambda *a: subprocess.run([sys.executable, str(tool), '--run', str(run), '--video', '1', '--spec', str(spec), *a],
+                                                 capture_output=True, text=True, encoding='utf-8')
+            r = run_tool()
+            out = json.loads(r.stdout.strip().splitlines()[-1])
+            self.assertTrue(out['ok']); self.assertFalse(out['applied'])
+            self.assertEqual((stills/'S001.png').read_bytes(), before)        # a preview changes nothing
+            r = run_tool('--apply')
+            out = json.loads(r.stdout.strip().splitlines()[-1])
+            self.assertTrue(out['applied'])
+            hist = run/'60-visuals/video-01/stills-history/S001-before-touchup-1.png'
+            self.assertEqual(hist.read_bytes(), before)                        # the original is kept untouched
+            fixed = Image.open(stills/'S001.png').convert('L')
+            strokes = [fixed.getpixel((x + 2, 50)) for x in range(40, 140, 12)]
+            self.assertGreater(min(strokes), 120)                              # the strokes are gone
+            self.assertLess(min(fixed.crop((238, 36, 262, 64)).getdata()), 90)  # the painted numeral is there
+            rec = json.loads((run/'60-visuals/video-01/stills-postprocess.json').read_text(encoding='utf-8'))
+            self.assertEqual(rec['edits'][0]['shot_id'], 'S001')
+            self.assertIn('content-review', out['next'])
+            run_tool('--apply')                                                # a second fix never overwrites the first original
+            self.assertTrue((run/'60-visuals/video-01/stills-history/S001-before-touchup-2.png').is_file())
+            save(spec, {'shot': 'S001', 'regions': []})
+            r = run_tool('--apply')
+            self.assertEqual(r.returncode, 2)                                  # no "why": refused, nothing written
+
+
 if __name__=='__main__':
     unittest.main()

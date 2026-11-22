@@ -118,9 +118,27 @@ def display_words(text, strip_tags):
     return out
 
 
-def _token_owners(words, tokens_of, language):
-    """Which of the line's comparable tokens each display word holds, counted on the growing line, so a number written
-    over two words ('twenty five' -> 25) is one token both words share. [(first, end, shared_with_the_word_before)]."""
+def _token_owners(words, tokens_of, language, token_map=None):
+    """Which of the line's comparable tokens each display word holds, so a number written over several words ('twenty
+    five' -> 25) is one token those words share. [(first, end, shared_with_the_word_before)].
+
+    With token_map(text, language) -> (raw tokens, [(token, first_raw, last_raw)]) each word owns exactly the tokens whose
+    raw words it holds (2026-11-22: counting tokens on the growing line goes wrong where a number merges backwards, 'a hundred
+    and' -> '100', 'and' then 'a hundred and fifty' -> '150': the word after the number was marked as sharing it and 'and'
+    took that word's time). Without it, the older count on the growing line."""
+    if token_map is not None:
+        _, merged = token_map(' '.join(words), language)
+        spans, r0, last = [], 0, 0
+        for k in range(len(words)):
+            r1 = max(r0, len(token_map(' '.join(words[:k + 1]), language)[0]))
+            ms = [m for m, (_t, f, l) in enumerate(merged) if f < r1 and l >= r0]
+            if ms:
+                spans.append((ms[0], ms[-1] + 1, merged[ms[0]][1] < r0))   # shared: its first token began in an earlier word
+                last = ms[-1] + 1
+            else:
+                spans.append((last, last, False))                            # no token of its own (a lone dash): no time
+            r0 = r1
+        return spans, len(merged)
     spans, prev = [], 0
     for k in range(len(words)):
         n = len(tokens_of(' '.join(words[:k + 1]), language))
@@ -132,7 +150,7 @@ def _token_owners(words, tokens_of, language):
     return spans, prev
 
 
-def line_words(text, word_times, line_span, tokens_of, strip_tags, language):
+def line_words(text, word_times, line_span, tokens_of, strip_tags, language, token_map=None):
     """One script line's display words with their narration times: [{'w', 's', 'e', 'timing'}] where timing is
     'whisper' (its own tokens' times), 'shared' (a number written over two words: its time split by length) or
     'between' (no time from Whisper: placed between its timed neighbours, or in the line's own span, by length).
@@ -140,7 +158,7 @@ def line_words(text, word_times, line_span, tokens_of, strip_tags, language):
     words = display_words(text, strip_tags)
     if not words:
         return [], None
-    spans, n_tok = _token_owners(words, tokens_of, language)
+    spans, n_tok = _token_owners(words, tokens_of, language, token_map)
     if word_times is not None and len(word_times) != n_tok:
         return [], 'the line times hold other words than the script line has now'
     rows = []
@@ -739,8 +757,11 @@ def check_draft(d, plan, fps=None):
                 if lit[j][0] - w['s'] > 0.25:
                     late.append(w['w'])
                 allowed = max(w['e'], lit[j][0] + look['min_lit_frames'] * frame)
-                if wi + 1 < len(words) and words[wi + 1]['s'] - w['e'] < look['bridge_s']:
-                    allowed = max(allowed, words[wi + 1]['s'])
+                # the bridge decided as the builder decides it: on the frame grid (2026-11-22: a gap of exactly 0.12 s is
+                # 0.10 s once both ends are snapped, so the builder bridged it and the check, in raw seconds, did not)
+                snap = lambda x: round(round(x / frame) * frame, 6)  # noqa: E731
+                if wi + 1 < len(words) and snap(words[wi + 1]['s']) - snap(w['e']) < look['bridge_s'] - 1e-9:
+                    allowed = max(allowed, snap(words[wi + 1]['s']))
                 if lit[j][1] > allowed + 2 * frame:
                     overlong.append(w['w'])
                 j += 1

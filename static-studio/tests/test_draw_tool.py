@@ -76,5 +76,26 @@ class DrawToolTests(unittest.TestCase):
         self.assertFalse(r['ok'])
 
 
+
+class DrawFramingTests(unittest.TestCase):
+    """A drawing placed on its still follows the still's framing in the edit (2026-11-22)."""
+
+    def test_positions_and_sizes_follow_the_still_scale_and_shift(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('draw_tool_under_test', Path(__file__).resolve().parents[1] / 'scripts' / 'draw_tool.py')
+        dt = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(dt)
+        els = [{'id': 'a', 'type': 'line', 'points': [[0.5, 0.5], [0.75, 0.25]]},
+               {'id': 'b', 'type': 'rect', 'center': [0.25, 0.75], 'w': 0.1, 'h': 0.05},
+               {'id': 'c', 'type': 'text', 'at': [0.6, 0.4], 'size': 0.03}]
+        out = dt.apply_framing(els, {'scale': 1.1, 'x': 0.02, 'y': -0.04})
+        self.assertEqual(out[0]['points'][0], [0.51, 0.52])                  # the centre moves only by the shift
+        self.assertAlmostEqual(out[0]['points'][1][0], 0.5 + 0.01 + 0.25 * 1.1)
+        self.assertAlmostEqual(out[1]['w'], 0.11)
+        self.assertAlmostEqual(out[2]['size'], 0.033)
+        self.assertEqual(els[0]['points'][0], [0.5, 0.5])                    # the spec itself is left as it was
+        self.assertIs(dt.apply_framing(els, None), els)
+        self.assertIs(dt.apply_framing(els, {'scale': 1.0}), els)
+
 if __name__ == '__main__':
     unittest.main()

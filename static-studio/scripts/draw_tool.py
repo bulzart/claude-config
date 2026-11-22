@@ -253,6 +253,34 @@ def render_element(draw, el, t, frame_idx, canvas_w, canvas_h, dur_s):
         raise ValueError(f'unknown element type: {kind!r}')
 
 
+def apply_framing(elements, framing):
+    """A drawing placed on its still (positions in fractions of the still) follows the still as the edit frames it:
+    framing = {"scale": s, "x": dx, "y": dy} is the still's scale (1 = it covers the canvas) and the shift of its centre
+    in CapCut's half-canvas units (x to the right, y up), as the moves file holds it. Every position moves out from the
+    centre by s and with the shift; every size (w, h, size, width of a stroke is kept) grows by s. Without a framing, or
+    at scale 1 and no shift, the elements are returned unchanged."""
+    if not framing:
+        return elements
+    s = float(framing.get('scale', 1.0))
+    dx, dy = float(framing.get('x', 0.0)) / 2, -float(framing.get('y', 0.0)) / 2
+    if abs(s - 1.0) < 1e-9 and not dx and not dy:
+        return elements
+    t = lambda p: [round(0.5 + dx + (p[0] - 0.5) * s, 5), round(0.5 + dy + (p[1] - 0.5) * s, 5)]
+    out = []
+    for el in elements:
+        e = json.loads(json.dumps(el))
+        if 'points' in e:
+            e['points'] = [t(p) for p in e['points']]
+        for k in ('at', 'center'):
+            if k in e:
+                e[k] = t(e[k])
+        for k in ('w', 'h', 'size'):
+            if k in e:
+                e[k] = round(float(e[k]) * s, 5)
+        out.append(e)
+    return out
+
+
 def cmd_render(args):
     spec = json.loads(Path(args.spec).read_text(encoding='utf-8'))
     try:
@@ -264,6 +292,8 @@ def cmd_render(args):
     elements = spec.get('elements') or []
     if not elements:
         error('spec.elements is empty: nothing to render')
+    # spec.still_framing: the elements were placed on the still itself; draw them where the edit shows the still
+    elements = apply_framing(elements, spec.get('still_framing') if spec.get('framing_applied') is not True else None)
     n_frames = max(1, round(dur_s * fps))
     outdir = Path(args.out).expanduser().resolve()
     outdir.parent.mkdir(parents=True, exist_ok=True)

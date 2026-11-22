@@ -430,10 +430,36 @@ def _link_local_materials(d: Path) -> dict:
     return {"linked": total, "files": files, "media_without_entry": sorted(no_entry)}
 
 
+PHOTO_DURATION_US = 10800000000   # what CapCut writes on a still it imports itself (3 hours)
+
+
+def _photo_durations(d: Path) -> dict:
+    """A still added through the MCP has no duration of its own (ffprobe answers N/A for a PNG, so the material's duration is saved
+    as null): CapCut's own still materials carry PHOTO_DURATION_US. Found 2026-11-22; this writes that value on every photo material
+    whose duration is missing, zero or not a number, in every timeline document of the draft, and leaves everything else as it is."""
+    files, total = [], 0
+    for p in _draft_contents(d):
+        content = json.loads(p.read_text(encoding="utf-8"))
+        n = 0
+        for m in content.get("materials", {}).get("videos") or []:
+            if m.get("type") == "photo":
+                v = m.get("duration")
+                if not isinstance(v, (int, float)) or isinstance(v, bool) or v != v or v <= 0:
+                    m["duration"] = PHOTO_DURATION_US
+                    n += 1
+        if n:
+            shutil.copyfile(p, p.with_name(p.name + ".photo.bak"))
+            write_text(p, json.dumps(content, ensure_ascii=False))
+        files.append({"file": str(p), "fixed": n})
+        total += n
+    return {"fixed": total, "files": files}
+
+
 def cmd_capcut_repair(a):
     """After every capcut_save: the house text style on every text layer (capcut-text-style), then
     `capcut register --apply --materials` (identity from draft_content.json,
-    the media list CapCut needs, the store index), the media links CapCut 9.3+ opens clips by (_link_local_materials),
+    the media list CapCut needs, the store index), CapCut's duration on every still added without one (_photo_durations), the media
+    links CapCut 9.3+ opens clips by (_link_local_materials),
     `capcut sync-timelines --nested --apply` (the nested
     timeline copy CapCut 9.x reads first) and `capcut lint`. register rewrites the store's SHARED
     root_meta_info.json, so all three run under one machine-wide lock: production agents assemble their
@@ -452,12 +478,14 @@ def cmd_capcut_repair(a):
              else [{"step": "text-style", "exit": 0, "result": _text_style_pass(d, write=True)}])   # before sync-timelines
     with FileLock(lock, timeout=900):
         for name, args in (("register", ["register", str(d), "--apply", "--materials"]),
+                           ("photo-durations", None),
                            ("link", None),
                            ("sync-timelines", ["sync-timelines", str(d), "--nested", "--apply"]),
                            ("lint", ["lint", str(d)])):
-            if args is None:   # the media links CapCut 9.3+ opens a clip by, from the entries register just wrote
+            if args is None:   # still durations, then the media links CapCut 9.3+ opens a clip by, from the entries register just wrote
                 try:
-                    steps.append({"step": name, "exit": 0, "result": _link_local_materials(d)})
+                    steps.append({"step": name, "exit": 0,
+                                  "result": _photo_durations(d) if name == "photo-durations" else _link_local_materials(d)})
                 except (OSError, ValueError) as e:
                     steps.append({"step": name, "exit": 1, "result": f"{type(e).__name__}: {e}"})
                     break
@@ -469,7 +497,8 @@ def cmd_capcut_repair(a):
             if name != "lint" and cp.returncode != 0:
                 break
     codes = {s["step"]: s["exit"] for s in steps}
-    ok = codes.get("register") == 0 and codes.get("link") == 0 and codes.get("sync-timelines") == 0 and codes.get("lint") in (0, 1)
+    ok = (codes.get("register") == 0 and codes.get("photo-durations") == 0 and codes.get("link") == 0
+          and codes.get("sync-timelines") == 0 and codes.get("lint") in (0, 1))
     res = {"ok": ok, "draft": str(d), "steps": steps}
     if not ok:
         res["action"] = ("a step refused or lint found errors: CapCut running → close it and run this again; "

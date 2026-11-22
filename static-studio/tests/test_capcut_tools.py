@@ -98,5 +98,28 @@ class CapcutToolkitTests(unittest.TestCase):
         self.assertTrue(lock.parent.is_dir(), 'the lock sits in a folder that exists')
 
 
+class PhotoDurationTests(unittest.TestCase):
+    """capcut-repair's photo-durations step: a still added without a duration gets CapCut's own still duration (2026-11-22)."""
+
+    def test_missing_still_durations_get_capcuts_value_and_nothing_else_changes(self):
+        ct = load_module()
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td)
+            content = {'materials': {'videos': [
+                {'id': 'a', 'type': 'photo', 'duration': None, 'path': 'S001.png'},
+                {'id': 'b', 'type': 'photo', 'duration': float('nan'), 'path': 'S002.png'},
+                {'id': 'c', 'type': 'photo', 'duration': 10800000000, 'path': 'S003.png'},
+                {'id': 'd', 'type': 'video', 'duration': 12533333, 'path': 'D01.mov'}]}, 'tracks': []}
+            raw = json.dumps(content).replace('NaN', 'NaN')
+            (d / 'draft_content.json').write_text(raw, encoding='utf-8')
+            res = ct._photo_durations(d)
+            self.assertEqual(res['fixed'], 2)
+            back = json.loads((d / 'draft_content.json').read_text(encoding='utf-8'))
+            durs = {m['id']: m['duration'] for m in back['materials']['videos']}
+            self.assertEqual(durs, {'a': ct.PHOTO_DURATION_US, 'b': ct.PHOTO_DURATION_US, 'c': 10800000000, 'd': 12533333})
+            self.assertTrue((d / 'draft_content.json.photo.bak').is_file())
+            self.assertEqual(ct._photo_durations(d)['fixed'], 0)       # a second pass finds nothing to do
+
+
 if __name__ == '__main__':
     unittest.main()
