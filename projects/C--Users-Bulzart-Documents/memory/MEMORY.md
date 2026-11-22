@@ -80,6 +80,7 @@
 - [create-clips: whole watches](create-clips-long-videos-whole-watches.md) — user 2026-11-14: ~25 min-1 h per video by content, borders between acts; total never a target
 - [create-clips: one project per match](create-clips-game-one-project-per-match.md) — user 2026-11-14, game mode: each game of each match = its own video and CapCut project
 - [create-clips: shorts edit freedom](create-clips-shorts-edit-freedom.md) — user 2026-11-14: zoom, sfx, words per caption are the agents' call, never forced
+- [caseoh run: shorts fit, no zoom-ins](caseoh-run-shorts-fit-no-zoom.md) — user 2026-11-22: all 10 caseoh shorts fit frame, no crop and no punch-ins, sfx allowed, exported; not yet a rule for other runs
 - [create-clips: shorts level](create-clips-shorts-level.md) — user 2026-11-14: Concentrated (1-3) or Normal (~5-10), state.shorts_level; never a quota
 - [create-clips: shorts 9:16, whole picture](create-clips-shorts-always-9-16.md) — user 2026-11-14/21: a short is ALWAYS 1080x1920 and shows the whole source fitted, black above and below (crop only on the user's pick); captions in the band
 - [create-clips: spoken language](create-clips-spoken-language.md) — user 2026-11-14: whisper.language auto, first sure detection locked; transcribe, never translate
