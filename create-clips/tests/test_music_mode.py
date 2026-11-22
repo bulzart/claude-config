@@ -389,6 +389,54 @@ def main():
         check(leg.get("ok") and not leg.get("bypassed") and leg.get("music_intervals"),
               "no key (an older run): not bypassed, the detection runs as it always did: " + json.dumps(leg.get("music_intervals"))[:60])
 
+        # ------------------------------------------------------------ export-check measures a removed song in the MP4 (no CapCut needed: two stand-in exports)
+        set_mode_raw(run, "isolation")
+        wj(out_l / "edl.json", patched)
+        cc("edl-check", "--run", run, "--edl", out_l / "edl.json")
+        res_ = rj(out_l / "resolved.json")
+        plan_ = rj(out_l / "mcp-plan.json")
+        lane_ = next(o for o in plan_["ops"] if o.get("music_clean"))
+        # the cleaned audio of a real removal is not a copy of the original (the stand-in separation above is one, scaled): the lane gets its own
+        # signal here, a voice-like tone that the original does not hold
+        standin = tmp / "cleaned-standin.wav"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"sine=frequency=660:sample_rate=44100:duration={lane_['durSec']}", "-af",
+                        "volume=0.3,tremolo=f=4:d=0.7", "-ac", "2", str(standin)], check=True)
+        lane_["file"] = str(standin).replace(chr(92), "/")
+        wj(out_l / "mcp-plan.json", plan_)
+        tot = float(res_["totals"]["duration_s"])
+        def stand_in_export(name, keep_original):
+            # the video's sound as CapCut would mix it: every piece's own sound (a muted piece: its original, or silence), then the cleaned lane added
+            parts, d0 = [], tmp / f"exp-{name}"
+            d0.mkdir(exist_ok=True)
+            for i, p in enumerate(res_["pieces"]):
+                src_ = p.get("silent_copy_of") if (p.get("muted") and keep_original) else p["file"]
+                w = d0 / f"p{i:03d}.wav"
+                subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{p['src_from']:.3f}", "-t", f"{p['dur_src']:.3f}", "-i", str(src_), "-vn", "-ac", "2", "-ar", "48000",
+                                str(w)], check=True)
+                parts.append(w)
+            lst = d0 / "list.txt"
+            lst.write_text("".join(f"file '{str(w)}'" + chr(10) for w in parts), encoding="utf-8")
+            base = d0 / "base.wav"
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(base)], check=True)
+            mp4 = d0 / f"{name}.mp4"
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c=black:s=320x180:r=30:d={tot}", "-i", str(base), "-i", lane_["file"],
+                            "-filter_complex", f"[2:a]adelay={int(lane_['atSec'] * 1000)}:all=1[l];[1:a][l]amix=inputs=2:normalize=0:duration=first[a]",
+                            "-map", "0:v", "-map", "[a]", "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac", "-b:a", "192k", "-shortest", str(mp4)], check=True)
+            return mp4
+        good, bad = stand_in_export("removed", False), stand_in_export("left-in", True)
+        eg = cc("export-check", "--run", run, "--video", "L01", "--file", good, "--report", tmp / "ec-good.json")
+        eb = cc("export-check", "--run", run, "--video", "L01", "--file", bad, "--report", tmp / "ec-bad.json")
+        mg, mb = (eg.get("checks") or {}).get("music_removed") or {}, (eb.get("checks") or {}).get("music_removed") or {}
+        check(mg.get("ok") is True and mb.get("ok") is False and (mb.get("stretches") or [{}])[0].get("why")
+              and ((mg.get("stretches") or [{}])[0].get("original_left_db_below") or 0) >= 20,
+              "export-check measures the removed song in the MP4: the song taken out passes "
+              f"({(mg.get('stretches') or [{}])[0].get('original_left_db_below')} dB below the original), the original left under the cleaned audio fails "
+              f"({(mb.get('stretches') or [{}])[0].get('original_left_db_below')} dB)")
+        wj(out_l / "edl.json", long_edl)
+        st_ = rj(run / "state.json")
+        st_.pop("music_isolation_mode", None)
+        wj(run / "state.json", st_)
+
         # ------------------------------------------------------------ an UNRESOLVED song never asks for another cut (the modes keep the same cuts)
         wj(out_l / "edl.json", long_edl)
         M.separate_spans = fake_sep
