@@ -3265,6 +3265,22 @@ class ReadabilityAndAnchorTests(unittest.TestCase):
             self.assertFalse([w for w in core.drawing_readability([{'file': str(mov)}], captions_on=False)
                               if 'caption band' in w])
 
+    def test_stamps_counters_and_cards_are_read_where_the_moving_still_puts_them(self):
+        core = self.core()
+        with tempfile.TemporaryDirectory() as td:
+            mov = Path(td)/'D09.mov'
+            save(mov.with_suffix('.json'), {'dur_s': 4.0, 'still_motion': {'scale': [1.0, 1.2], 'x': [0, 0], 'y': [0, 0]},
+                                            'elements': [
+                {'type': 'stamp', 'id': 's', 'text': 'INVENTED', 'size': 0.03, 'at': [0.5, 0.75], 'in': {'start_s': 0.5}},
+                {'type': 'counter', 'id': 'n', 'from': 0, 'to': 1500, 'suffix': ' MEN', 'size': 0.018, 'at': [0.5, 0.3],
+                 'in': {'start_s': 0.5, 'dur_s': 1.0}},
+                {'type': 'card', 'id': 'c', 'center': [0.5, 0.45], 'lines': ['A NAME'], 'text_size': 0.03,
+                 'in': {'kind': 'drop', 'start_s': 0.2}}]})
+            out = core.drawing_readability([{'file': str(mov)}], captions_on=True)
+            self.assertTrue(any('"INVENTED"' in w and 'caption band' in w for w in out), out)   # only at the end of the push
+            self.assertTrue(any('"1,500 MEN"' in w and 'small' in w for w in out), out)
+            self.assertFalse([w for w in out if '"A NAME"' in w])
+
     def test_a_sound_anchored_to_the_story_moves_when_the_narration_moves(self):
         core = self.core()
         with tempfile.TemporaryDirectory() as td:

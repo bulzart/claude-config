@@ -6308,28 +6308,53 @@ READABLE_TEXT = 0.024            # of the frame height: smaller drawn words are 
 CAPTION_BAND = (0.78, 0.95)      # where the captions sit on a 16:9 frame (captions.py LOOKS: y_rel 0.85)
 
 
+def _draw_tool():
+    """The drawing renderer (draw_tool.py, next to this file), loaded only when a drawing's words are read."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import draw_tool
+    return draw_tool
+
+
+def _drawn_words(d):
+    """Every word a drawing spec shows (text, counters, stamps, card lines), with its size, its middle's height in the
+    frame (at the clip's start and end when the drawing follows a moving still) and its time on screen."""
+    try:
+        return _draw_tool().readable_texts(d)
+    except Exception:                       # the renderer cannot be loaded: plain text elements, positions as written
+        dur = float(d.get('dur_s') or 0)
+        out = []
+        for e in d.get('elements') or []:
+            if e.get('type') != 'text':
+                continue
+            end = (e.get('out') or {}).get('start_s')
+            out.append({'text': str(e.get('text') or ''), 'size': float(e.get('size') or 0),
+                        'y': [float((e.get('at') or [0, 0])[1])], 'start_s': float((e.get('in') or {}).get('start_s') or 0),
+                        'end_s': float(end) if end is not None else dur})
+        return out
+
+
 def drawing_readability(overlays, captions_on=True, min_size=READABLE_TEXT):
-    """Words drawn on screen that a viewer is meant to read (labels, numbers, names): a size a phone shows legibly,
-    clear of the caption band, and on screen long enough to read (about 0.3 s a word, never under 1.5 s). Read from
-    each overlay's drawing spec (DNN.json beside DNN.mov, positions and sizes already in frame fractions). Facts for
-    the agent, never a gate: a word can be deliberately small (a texture, not a message)."""
+    """Words drawn on screen that a viewer is meant to read (labels, numbers, names, stamps, counters, card lines): a
+    size a phone shows legibly, clear of the caption band, and on screen long enough to read (about 0.3 s a word, never
+    under 1.5 s). Read from each overlay's drawing spec (DNN.json beside DNN.mov) through the renderer's own list of
+    its words, so a drawing that follows its still's move is read where the edit shows it. Facts for the agent, never
+    a gate: a word can be deliberately small (a texture, not a message)."""
     out = []
     for ov in overlays or []:
         spec = Path(str(ov.get('file') or '')).with_suffix('.json')
         d = read_json(spec) if spec.is_file() else {}
         dur = float(d.get('dur_s') or 0)
-        for e in d.get('elements') or []:
-            if e.get('type') != 'text':
-                continue
-            text, size = str(e.get('text') or ''), float(e.get('size') or 0)
-            y = float((e.get('at') or [0, 0])[1])
+        for w in _drawn_words(d):
+            text, size = str(w.get('text') or ''), float(w.get('size') or 0)
+            ys = [float(v) for v in (w.get('y') or [0.0])]
             if 0 < size < min_size:
                 out.append(f'{spec.stem}: "{text}" is drawn {size * 100:.1f}% of the frame high (about '
                            f'{size * 1080:.0f} px at 1080p): small to read on a phone')
-            if captions_on and CAPTION_BAND[0] <= y + size / 2 <= CAPTION_BAND[1]:
+            if captions_on and any(CAPTION_BAND[0] <= y + size / 2 <= CAPTION_BAND[1] for y in ys):
                 out.append(f'{spec.stem}: "{text}" sits in the caption band: the captions may cover it')
-            start = float((e.get('in') or {}).get('start_s') or 0)
-            end = float((e.get('out') or {}).get('start_s') or dur)
+            start, end = float(w.get('start_s') or 0), float(w.get('end_s') if w.get('end_s') is not None else dur)
             need = max(1.5, 0.3 * len(text.split()))
             if dur and end - start < need:
                 out.append(f'{spec.stem}: "{text}" is on screen {end - start:.1f} s, short for {len(text.split())} '

@@ -124,3 +124,4 @@
 - [create-video: stills one at a time](create-video-stills-one-at-a-time.md) — user 2026-11-22: one still per worker run, each looked at as it lands; lettering fixed locally (still_touchup.py), content remade
 - [MCP audio clips vanish in CapCut](capcut-mcp-audio-type.md) — 2026-11-22: MCP add_audio type "audio" -> CapCut 9.8 shows empty audio tracks; use "extract_music" (create-video capcut-repair fixes it)
 - [create-video: blind cold reader](create-video-cold-reader-blind.md) — user 2026-11-22: blind by orchestration (review-read), script-only limits, no priming, no anchoring numbers or caps
+- [create-video: advanced drawings](create-video-advanced-drawings.md) — user 2026-11-22: story locked; drawings only, more complex and fancy; draw_tool vocabulary + still_motion, preview before render
