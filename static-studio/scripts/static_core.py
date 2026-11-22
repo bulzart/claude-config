@@ -22,6 +22,7 @@ import statistics
 import subprocess
 import sys
 import tempfile
+import uuid
 import time
 import urllib.error
 import urllib.parse
@@ -1016,9 +1017,16 @@ def script_pause_plan(lines):
         tags_here = _pause_tags_around(lines, i)
         if via == 'tag' and not tags_here:
             issues.append(f'pause_{lid}_via_tag_but_no_pause_tag_at_this_line_end_or_next_line_start')
+        residual = False
         if via == 'edit' and tags_here:
-            # One silence, realised once: a pause tag the voice performs and a hold the edit adds would stack.
-            issues.append(f'pause_{lid}_is_an_edit_hold_and_a_pause_tag_at_once:choose_one')
+            if form == 'total':
+                # One silence, decided as a whole: the voice performs part of it with its pause cue, and the edit adds
+                # only what that measured pause leaves (hold-decide measures the gap the take really has). A residual,
+                # never a second pause on top.
+                residual = True
+            else:
+                # The older added-on-top form would put a full hold on top of the cue's pause: that stacks.
+                issues.append(f'pause_{lid}_is_an_edit_hold_and_a_pause_tag_at_once:choose_one')
         # A silence the story wants says what it is for, what is on screen while it lasts and what the sound does. A
         # written reason is not an approval: the length is decided against the recorded voice and the picture.
         for field, issue in PAUSE_TEXT_FIELDS:
@@ -1029,6 +1037,7 @@ def script_pause_plan(lines):
                 if n_words(row.get(field)) < MIN_NOTE_WORDS:
                     issues.append(f'pause_{lid}_{issue}')
         plan.append({'line': lid, 'index': i + 1, 'via': via, 'form': form, 'seconds': seconds,
+                     'residual_of_tag': residual,
                      'total_s': seconds if form == 'total' else None,
                      'added_s': seconds if form == 'added' else None,
                      'purpose': str(row.get('pause_purpose') or '').strip() or None,
@@ -2436,7 +2445,151 @@ def beat_map_facts(rd, video, lines=None, target=None):
             issues.append(f'beat_{n}_bad_structure')
     if timing and target is not None and (abs(cursor_s - target) > 1 or cursor_line != len(lines)):
         issues.append('beats_do_not_cover_all_time_and_lines')
+    issues += beat_dependency_issues(timing, lines)
     return issues
+
+
+def beat_dependency_issues(beats, lines):
+    """`depends_on` on a beat: what the viewer must already know for it to work, each {"what", "from"} where `from`
+    is an earlier beat id or line id. A beat that leans on a later one asks the viewer to understand something not
+    given yet, unless it is deliberately held back: {"what", "withheld": "why the uncertainty serves the story",
+    "revealed_in": a later beat or line}. Optional; checked only where written."""
+    order = {str(b.get('id')): k for k, b in enumerate(beats)}
+    line_beat = {}
+    for k, b in enumerate(beats):
+        try:
+            for i in range(int(b['line_start']), int(b['line_end']) + 1):
+                line_beat[str((lines[i - 1] or {}).get('id') or f'L{i:03d}') if i <= len(lines) else f'L{i:03d}'] = k
+        except (KeyError, TypeError, ValueError):
+            continue
+    issues = []
+    for k, b in enumerate(beats):
+        for dep in b.get('depends_on') or []:
+            if not isinstance(dep, dict) or n_words(dep.get('what')) < 2:
+                issues.append(f'beat_{b.get("id")}_depends_on_needs_what')
+                continue
+            if dep.get('withheld'):
+                if n_words(dep.get('withheld')) < 4:
+                    issues.append(f'beat_{b.get("id")}_withheld_needs_why')
+                rv = str(dep.get('revealed_in') or '')
+                at = order.get(rv, line_beat.get(rv))
+                if rv and (at is None or at < k):
+                    issues.append(f'beat_{b.get("id")}_withheld_revealed_in_{rv or "nowhere"}_is_not_later')
+                continue
+            src = str(dep.get('from') or '')
+            at = order.get(src, line_beat.get(src))
+            if at is None:
+                issues.append(f'beat_{b.get("id")}_depends_on_unknown_{src or "source"}')
+            elif at > k:
+                issues.append(f'beat_{b.get("id")}_depends_on_later_{src}:give_it_first_or_mark_it_withheld')
+    return issues
+
+
+CAPITALISED_LANGUAGES = ('en', 'fr', 'es', 'it', 'pt', 'nl', 'sv', 'no', 'da', 'pl', 'ro', 'hr', 'sq')
+CALENDAR_WORDS_EN = {'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october',
+                     'november', 'december', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'}
+NAME_JOINERS = {'de', 'la', 'del', 'von', 'van', 'of', 'the', 'da', 'di', 'le'}
+
+
+def _sentences(text):
+    return [x for x in re.split(r'(?<=[.!?:;])\s+', strip_tags(str(text or ''))) if x.strip()]
+
+
+NAME_TOKEN_RX = re.compile(r"[\w'\u2019]+(?:-[\w'\u2019]+)*")
+NAME_BREAK_RX = re.compile(r'[,;:()"\u201c\u201d\u2014\u2013]|\s-\s')
+
+
+def _tokens(sent):
+    """A sentence's words with whether punctuation separates each from the word before it."""
+    out, prev = [], None
+    for m in NAME_TOKEN_RX.finditer(sent):
+        brk = prev is not None and bool(NAME_BREAK_RX.search(sent[prev:m.start()]))
+        out.append((re.sub(r"(['\u2019]s)$", '', m.group(0)), brk))
+        prev = m.end()
+    return out
+
+
+def script_names(lines, language='en'):
+    """Each line's names as a listener meets them: runs of capitalised words (people, places, organisations, titles)
+    not broken by punctuation, a sentence's first word only when the script writes that word capitalised elsewhere
+    too. [(line id, [names])]."""
+    mid = set()
+    for row in lines:
+        for sent in _sentences(row.get('text')):
+            for k, (w, _) in enumerate(_tokens(sent)):
+                if k and w[:1].isupper():
+                    mid.add(w)
+    skip = CALENDAR_WORDS_EN if str(language or 'en').lower().startswith('en') else set()
+    out = []
+    for row in lines:
+        found = []
+        for sent in _sentences(row.get('text')):
+            toks = _tokens(sent)
+            cur = []
+
+            def flush():
+                while cur and cur[-1].lower() in NAME_JOINERS:
+                    cur.pop()
+                if cur:
+                    found.append(' '.join(cur))
+                cur.clear()
+            for k, (w, brk) in enumerate(toks):
+                if brk:
+                    flush()
+                cap = w[:1].isupper() and (k > 0 or w in mid) and w.lower() not in skip
+                joiner = (cur and w.lower() in NAME_JOINERS and k + 1 < len(toks) and not toks[k + 1][1]
+                          and toks[k + 1][0][:1].isupper())
+                if cap or joiner:
+                    cur.append(w)
+                else:
+                    flush()
+            flush()
+        out.append((str(row.get('id') or ''), found))
+    return out
+
+
+def comprehension_signals(lines, beats=None, pace_wpm=150, language='en', window_s=30.0, dense_at=4, return_after_s=180.0):
+    """Facts for the agent, never a gate (manual 03). Names the viewer is asked to hold (heard more than once in the
+    film) arriving several at a time within about window_s of planned narration, and a name coming back after a long
+    absence when it was heard only once or twice before. Whether the viewer can hold them, needs a reminder, a picture
+    or another order, or whether the density is the point, is the agent's call. Languages that capitalise every noun,
+    or have no capitals, are left alone."""
+    if str(language or 'en').lower()[:2] not in CAPITALISED_LANGUAGES or not lines:
+        return []
+    pace = float(pace_wpm or 150)
+    named = script_names(lines, language)
+    total = {}
+    for _, names in named:
+        for nm in names:
+            total[nm.lower()] = total.get(nm.lower(), 0) + 1
+    t, first, last, count, news, returns = 0.0, set(), {}, {}, [], []
+    for row, (lid, names) in zip(lines, named):
+        for nm in names:
+            key = nm.lower()
+            if key not in first:
+                first.add(key)
+                if total[key] > 1:
+                    news.append((t, lid, nm))
+            elif t - last[key] > return_after_s and count[key] <= 2:
+                returns.append((lid, nm, round((t - last[key]) / 60, 1)))
+            last[key] = t
+            count[key] = count.get(key, 0) + 1
+        t += len(strip_tags(str(row.get('text') or '')).split()) * 60.0 / pace + 0.6
+    out, i = [], 0
+    while i < len(news):
+        j = i
+        while j + 1 < len(news) and news[j + 1][0] - news[i][0] <= window_s:
+            j += 1
+        if j - i + 1 >= dense_at:
+            out.append(f'{news[i][1]}-{news[j][1]}: {j - i + 1} names to hold arrive in about {window_s:g} s '
+                       f'({", ".join(e[2] for e in news[i:j + 1])}). Can a first-time viewer hold them, and does each '
+                       'matter yet? A picture, a reminder or another order can help; keep it when the density is the point.')
+            i = j + 1
+        else:
+            i += 1
+    out += [f'{lid}: "{nm}" returns after about {mins} min, heard only once or twice before. Does the viewer still know '
+            'who or what it is?' for lid, nm, mins in returns]
+    return out
 
 
 def _norm(text):
@@ -3285,6 +3438,14 @@ def plan_facts(rd, video):
     tags, tag_issues = script_tags(lines)
     pause_plan, pause_issues = script_pause_plan(lines)
     issues += tag_issues + pause_issues
+    # ElevenLabs v4's expressive controls are part of every narration (05): purposeful delivery or pause cues where
+    # the story calls for them, never a quota and never decoration. A script with none at all is an exception the
+    # user approves in their own words, never a silent default.
+    if lines and not tags:
+        exc = script.get('tags_exception') if isinstance(script.get('tags_exception'), dict) else {}
+        if n_words(exc.get('reason')) < 12 or n_words(exc.get('approved_by_user')) < 2:
+            issues.append('no_expressive_tags:plan_purposeful_delivery_or_pause_cues_or_record_tags_exception_'
+                          'with_the_users_approval')
     # What reaches the voice: no markup it can't take, no directions that fight each other, and the pronunciation
     # list in the form v4 documents (it changes only what is sent; the canonical text stays for the captions).
     markup_issues, markup_warnings = script_markup(lines)
@@ -3402,6 +3563,10 @@ def plan_facts(rd, video):
                         + ','.join(older) + '. Each is decided against the recorded voice (holds, hold-decide) before '
                         'the edit; a new script writes pause_total_s, the whole silence wanted')
     warnings += hold_signals(pause_plan)
+    # What a first-time viewer has to hold at once, and names coming back after a long absence (03): facts to reason
+    # about, never a gate and never a reason to simplify by default.
+    warnings += comprehension_signals(lines, beats.get('beats') or [], pace or 150,
+                                      script.get('language') or lock.get('language') or 'en')
     pp = lock.get('pace_profile') or {}
     density = {'script_words': words, 'words_per_runtime_minute': round(words / (target / 60)) if target else None,
                'references_overall_wpm': pp.get('overall_wpm'), 'references_runtime_wpm': pp.get('runtime_wpm'),
@@ -5590,6 +5755,8 @@ def timeline_facts(rd, video):
     warnings += sf['warnings']
     if track.get('canvas') not in ('1920x1080', '2560x1440', '3840x2160'):
         issues.append('canvas_not_youtube_16_9')
+    warnings += drawing_readability(track.get('overlays') or [],
+                                    str(read_json(rd / 'state.json').get('captions') or 'on') != 'off')
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'last_visual_end_s': cursor,
             'target_length_s': lock.get('target_length_s'), 'audio_ready': sound['ready']}
 
@@ -6120,6 +6287,135 @@ def cmd_timeline_check(args):
     rd, st = run_folder(args)
     res = timeline_facts(rd, args.video)
     emit(res, 0 if res['ready'] else 2)
+
+
+READABLE_TEXT = 0.024            # of the frame height: smaller drawn words are hard to read on a phone (04)
+CAPTION_BAND = (0.78, 0.95)      # where the captions sit on a 16:9 frame (captions.py LOOKS: y_rel 0.85)
+
+
+def drawing_readability(overlays, captions_on=True, min_size=READABLE_TEXT):
+    """Words drawn on screen that a viewer is meant to read (labels, numbers, names): a size a phone shows legibly,
+    clear of the caption band, and on screen long enough to read (about 0.3 s a word, never under 1.5 s). Read from
+    each overlay's drawing spec (DNN.json beside DNN.mov, positions and sizes already in frame fractions). Facts for
+    the agent, never a gate: a word can be deliberately small (a texture, not a message)."""
+    out = []
+    for ov in overlays or []:
+        spec = Path(str(ov.get('file') or '')).with_suffix('.json')
+        d = read_json(spec) if spec.is_file() else {}
+        dur = float(d.get('dur_s') or 0)
+        for e in d.get('elements') or []:
+            if e.get('type') != 'text':
+                continue
+            text, size = str(e.get('text') or ''), float(e.get('size') or 0)
+            y = float((e.get('at') or [0, 0])[1])
+            if 0 < size < min_size:
+                out.append(f'{spec.stem}: "{text}" is drawn {size * 100:.1f}% of the frame high (about '
+                           f'{size * 1080:.0f} px at 1080p): small to read on a phone')
+            if captions_on and CAPTION_BAND[0] <= y + size / 2 <= CAPTION_BAND[1]:
+                out.append(f'{spec.stem}: "{text}" sits in the caption band: the captions may cover it')
+            start = float((e.get('in') or {}).get('start_s') or 0)
+            end = float((e.get('out') or {}).get('start_s') or dur)
+            need = max(1.5, 0.3 * len(text.split()))
+            if dur and end - start < need:
+                out.append(f'{spec.stem}: "{text}" is on screen {end - start:.1f} s, short for {len(text.split())} '
+                           'word(s)')
+    return out
+
+
+def edit_landmarks(rd, video):
+    """Where each narration line sits in the edit (the edit's clock): its first word, its last word, and the silence
+    after it (a decided hold's own times, else the gap the audio measured, both moved by every hold before them).
+    What sounds are placed against, so a re-recording or a new hold moves them with the story (05)."""
+    n = int(video)
+    ep = read_json(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json')
+    holds = sorted((float(h['at_audio_s']), float(h.get('hold_s') or 0)) for h in ep.get('holds') or [])
+
+    def edit_t(t):
+        return round(float(t) + sum(a for at, a in holds if at <= float(t) + 1e-6), 3)
+    words = read_json(captions_plan_path(rd, n)).get('words') or []
+    first, last = {}, {}
+    for w in words:
+        first.setdefault(str(w['line']), float(w['s']))
+        last[str(w['line'])] = float(w['e'])
+    lt = read_json(rd / '50-audio' / f'video-{n:02d}' / 'line-times.json')
+    held = {str(h.get('after_line')): h.get('times_in_edit') or {} for h in ep.get('holds') or []}
+    marks = {}
+    for r in lt.get('lines') or []:
+        lid = str(r.get('id'))
+        m = {}
+        if lid in first:
+            m.update({'start': first[lid], 'end': last[lid]})
+        elif r.get('start_s') is not None:
+            m.update({'start': edit_t(r['start_s']), 'end': edit_t(r['end_s'])})
+        h = held.get(lid) or {}
+        g = r.get('gap_span_s')
+        if h.get('silence_from_s') is not None:
+            m.update({'silence_start': float(h['silence_from_s']), 'silence_end': float(h['silence_to_s'])})
+        elif g:
+            m.update({'silence_start': edit_t(g[0]), 'silence_end': edit_t(g[1])})
+        marks[lid] = m
+    return marks
+
+
+def anchor_for(t, marks):
+    """An edit time as an offset from the latest narration landmark at or before it (a line's start or end, or the
+    silence after it): {"line", "at", "offset_s"}."""
+    best = None
+    for lid, m in marks.items():
+        for at, v in m.items():
+            # on a tie the later landmark wins: the silence after a line over its last word, the next line's
+            # first word over the silence before it (what the sound belongs to)
+            if v is not None and v <= float(t) + 1e-6 and (best is None or v >= best[2]):
+                best = (lid, at, v)
+    if best is None:
+        return {'line': None, 'at': 'video_start', 'offset_s': round(float(t), 3)}
+    return {'line': best[0], 'at': best[1], 'offset_s': round(float(t) - best[2], 3)}
+
+
+def resolve_anchor(anchor, marks):
+    if not isinstance(anchor, dict):
+        return None
+    if anchor.get('at') == 'video_start':
+        return round(float(anchor.get('offset_s') or 0), 3)
+    v = (marks.get(str(anchor.get('line'))) or {}).get(str(anchor.get('at')))
+    return None if v is None else round(v + float(anchor.get('offset_s') or 0), 3)
+
+
+def cmd_sound_anchors(args):
+    """Sounds placed by the story, not by the clock (05): --to-anchors writes, for each item's time fields, the
+    narration landmark it follows and its offset (`<field>_anchor`); --resolve recomputes each field from its anchor
+    against the current edit, after a re-recording, a new hold or a retime. The file is any JSON with a list of items
+    (beds, sounds); the fields are named with --fields (default at,end). The previous file is kept as .bak."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    path = Path(args.file)
+    data = read_json(path, required=True)
+    key = args.list or next((k for k in ('items', 'beds', 'sfx', 'sounds') if isinstance(data.get(k), list)), None)
+    if not key:
+        error('No list of items in the file (items, beds, sfx or sounds; or name it with --list).')
+    marks = edit_landmarks(rd, n)
+    if not marks:
+        error('No narration landmarks: run captions-plan (or narration-measure and retime-shots) first.')
+    fields = [f.strip() for f in (args.fields or 'at,end').split(',') if f.strip()]
+    changes, missing = [], []
+    for it in data[key]:
+        for f in fields:
+            if args.to_anchors and it.get(f) is not None:
+                it[f + '_anchor'] = anchor_for(it[f], marks)
+            elif args.resolve and isinstance(it.get(f + '_anchor'), dict):
+                v = resolve_anchor(it[f + '_anchor'], marks)
+                if v is None:
+                    missing.append(f'{it.get("id")}.{f}')
+                    continue
+                if it.get(f) is None or abs(float(it[f]) - v) > 1e-3:
+                    changes.append({'id': it.get('id'), 'field': f, 'was': it.get(f), 'now': v})
+                it[f] = v
+    if missing:
+        error('Some anchors name a landmark the current edit does not have.', missing)
+    shutil.copyfile(path, path.with_name(path.name + '.bak'))
+    write_json(path, data)
+    emit({'ok': True, 'file': str(path), 'mode': 'to-anchors' if args.to_anchors else 'resolve', 'items': len(data[key]),
+          'changed': changes})
 
 
 MASTER_SOUND_DB = -40.0     # a 10 ms window of the mastered mix counts as sound above this (dBFS)
@@ -7967,17 +8263,17 @@ def house_rules(rd, video):
 SCRIPT_BRIEF = """# Cold read: {TITLE}
 
 You are a first-time viewer, not an editor. Below is the complete narration of a long-form YouTube video
-(about {MINUTES} minutes, narrated over illustrated stills). You get only the title and the words, on purpose:
-no plan, no rationale. Read nothing else and do not change any file except the one you are asked to write.
+(about {MINUTES} minutes, narrated over illustrated stills). You get only the title, the words and where the narrator
+falls silent, on purpose: no plan, no rationale, no earlier reader's view. Read nothing else and do not change any
+file except the one you are asked to write.
 
 Read it all the way through as someone who clicked the title and is listening. Be honest, specific and fair:
 say what works as plainly as what does not. Refer to line ids.
 
 Words in [square brackets] are delivery directions the voice receives but never says. A line followed by
-"(silence: ...)" is followed by about that much silence in all, the voice's own short gap included, with what you
-would see and hear while it lasts. The lengths are proposals, not yet fitted to the recorded voice. Judge both as
-part of what you would hear: does each direction help, or push the narration into theatre; would you want each
-silence, or would you be waiting for the voice to go on?
+"(silence: ...)" is followed by about that much silence in all, the voice's own short gap included. The lengths are
+proposals, not yet fitted to the recorded voice. Judge both as part of what you would hear: does each direction help,
+or push the narration into theatre; would you want each silence, or would you be waiting for the voice to go on?
 
 Think about:
 1. What the video promised, and whether it delivered.
@@ -7985,23 +8281,29 @@ Think about:
 3. Where your attention dropped, and why: facts with no consequence for anyone, the same point made again, a list
    read aloud, a sentence pattern repeating, textbook register, explaining what you had already felt, exposition
    before you cared. Roughly how long each stretch felt.
-4. What feels formulaic: devices used so often they stop working (count them).
-5. The strongest passages, and why they work.
-6. Whether the narrator sounds like a person you would enjoy listening to: personality, warmth, wit or emotion
+4. Following it by ear, the first time: who each person is when they matter, and what they want; what has happened
+   and what is happening now; why each new fact matters. Where did you have to stop and work something out? Where
+   did a line lean on something you were never told, or told so long before that you had lost it? Where did too
+   many new names, numbers or places arrive at once? Where was something deliberately held back, and did that feel
+   like a promise (you wanted to know) or like being lost? Complexity you enjoyed is not a problem: say so.
+5. What feels formulaic: devices used so often they stop working (count them).
+6. The strongest passages, and why they work.
+7. Whether the narrator sounds like a person you would enjoy listening to: personality, warmth, wit or emotion
    where the material invites it; or a reader of facts; or someone straining for drama.
-7. Lines hard to follow by ear: number pile-ups, very long sentences, tangled grammar, jargon.
-8. The ending: does it land; is anything after the payoff too long or too short.
-9. The delivery directions and the silences: where they help, where they are theatre or filler. For each silence:
+8. Lines hard to follow by ear: number pile-ups, very long sentences, tangled grammar, jargon.
+9. The ending: does it land and answer what the opening promised; is anything after the payoff too long or too short.
+10. The delivery directions and the silences: where they help, where they are theatre or filler. For each silence:
    does it feel needed, or does it delay the next thing you want to know? Would you become impatient? Does it help
    the joke, the reveal or the feeling, or would the line land as well with the voice going straight on? Does it make
    the narrator sound unnaturally slow? Would a first-time viewer understand why it is there? A silence you would
    cut or shorten is a finding.
 
-Then list findings (at most 12), each concrete enough to act on. Severity "major": a viewer would likely stop
-watching, lose the thread or stop trusting the video there (a long sag, a confusing stretch, a contradiction, a
-broken or unearned ending, a line breaking the house rules). "minor": polish.
+Then list findings (at most 12), each concrete enough to act on, with what you think causes it (likely_cause: for
+example "a name nobody introduced", "no consequence for anyone", "the same point again", "too much at once",
+"waiting too long for the payoff"). Severity "major": a viewer would likely stop watching, lose the thread or stop
+trusting the video there (a long sag, a confusing stretch, a contradiction, a broken or unearned ending). "minor":
+polish.
 
-{HOUSE_RULES}
 Do not invent facts. If a fix needs a new fact, write "needs a sourced detail".
 
 Write your answer as JSON, and nothing else, to: {OUT}
@@ -8010,7 +8312,7 @@ Write your answer as JSON, and nothing else, to: {OUT}
   "verdict": {{"promise": "...", "delivered": "...", "keep_watching_1_10": 7, "why": "..."}},
   "strongest": [{{"lines": "L052-L058", "why": "..."}}],
   "findings": [{{"id": "F1", "severity": "major", "lines": ["L112-L135"], "problem": "...",
-                 "viewer_impact": "...", "suggestion": "..."}}]
+                 "likely_cause": "...", "viewer_impact": "...", "suggestion": "..."}}]
 }}
 
 ## The narration
@@ -8070,9 +8372,18 @@ Judge it against what each part was meant to feel like (listed below), not again
    shot on screen and its length: would it feel like a moment worth the wait, or dead air? Would you become
    impatient there? Does it help the line before it land, or delay what comes next? You cannot hear it or see motion
    inside a shot, so say what you can judge and what you cannot. A silence you would cut or shorten is a finding.
+9. Following it as a first-time viewer: at each turn, do you know who and what matters, and why? Where does a
+   picture show a different person, place or thing than the words name? Where is a jump in place or time unclear?
+   Where did you need something the video gave too briefly, or so long before that you had lost it?
+10. What you are meant to read on screen (names, numbers, labels on maps or drawings): could you read it at this
+   size, and was it there long enough? Do the captions cover it or compete with it?
+11. Drawings and movement: where they make a relationship, a change or a direction clear, and where they only
+   decorate.
 
 Findings (at most 12), each with "at" as "mm:ss-mm:ss", severity "major" (a viewer would likely leave, get lost
-or stop trusting it there) or "minor", the problem, why it matters to a viewer, and a suggestion.
+or stop trusting it there) or "minor", the problem, what you think causes it (likely_cause: for example "the
+picture repeats the words", "no new information for a minute", "too much on screen to read", "a name with no
+face"), why it matters to a viewer, and a suggestion.
 
 {HOUSE_RULES}
 
@@ -8081,7 +8392,7 @@ Write your answer as JSON, and nothing else, to: {OUT}
   "reviewer": "fresh final reviewer",
   "verdict": {{"delivered": "...", "keep_watching_1_10": 7, "why": "..."}},
   "findings": [{{"id": "F1", "severity": "major", "at": "03:10-04:05", "problem": "...",
-                 "viewer_impact": "...", "suggestion": "..."}}]
+                 "likely_cause": "...", "viewer_impact": "...", "suggestion": "..."}}]
 }}
 """
 
@@ -8121,8 +8432,14 @@ def cmd_review_packet(args):
     if isinstance(title, dict):
         title = title.get('title') or json.dumps(title, ensure_ascii=False)
     folder = vd / 'reviews'          # created only when a packet is actually written: a refusal leaves no trace
-    out_path = folder / f'{kind}-r{rnd}-findings.json'
-    meta = {'kind': kind, 'round': rnd, 'video': n, 'created_at': now(), 'findings_file': str(out_path)}
+    # A fresh reader is isolated by where its files live, not only by what it is told: its packet and its findings
+    # go in a new folder outside the run (no path to the plan, the direction or earlier readers' findings), and it is
+    # spawned as the static-cold-reader agent, which can only Read and Write the paths it is given (no search tools).
+    # review-record fetches the findings from there and keeps a copy in the run.
+    iso = Path(tempfile.gettempdir()) / 'static-studio-reads' / uuid.uuid4().hex[:16]
+    out_path = iso / 'findings.json'
+    meta = {'kind': kind, 'round': rnd, 'video': n, 'created_at': now(), 'findings_file': str(out_path),
+            'isolated_dir': str(iso)}
     if kind == 'script':
         if not read_json(vd / 'direction-lock.json'):
             error('Lock the creative direction first (direction-lock): the script is written from it, and read after it.')
@@ -8130,10 +8447,11 @@ def cmd_review_packet(args):
         lines = script.get('lines') or []
         snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
         holds = hold_snapshot(lines)
-        text = _fill(SCRIPT_BRIEF, TITLE=title, MINUTES=minutes, HOUSE_RULES=house_rules(rd, n), OUT=out_path)
-        # What the reader is shown is the silence a viewer would hear: the whole of it, the voice's own gap included
-        # (an older added-on-top value is shown with that gap added), with what is on screen and in the sound. No
-        # reference pause length is shown: a length is set by its own moment, not matched to another film's.
+        text = _fill(SCRIPT_BRIEF, TITLE=title, MINUTES=minutes, OUT=out_path)
+        # The cold reader gets the title, the words and the silences only: no house rules or exclusion records (the
+        # editorial and compliance stages check those), no picture or sound plans. What it is shown is the silence a
+        # viewer would hear: the whole of it, the voice's own gap included (an older added-on-top value is shown with
+        # that gap added). No reference pause length is shown: a length is set by its own moment.
         pp = {p['line']: p for p in script_pause_plan(lines)[0]}
         gap = (voice_measurement(rd, n) or {}).get('natural_gap_s') or DEFAULT_NATURAL_GAP_S
         whole = {lid: (p['seconds'] if p['form'] == 'total' or p['via'] == 'tag' else p['seconds'] + gap)
@@ -8145,8 +8463,7 @@ def cmd_review_packet(args):
             if lid in pp:
                 p = pp[lid]
                 how = 'the voice pauses' if p['via'] == 'tag' else 'the voice stops, the picture stays'
-                text += (f'      (silence: about {whole[lid]:.1f} s in all, {how}. On screen: '
-                         f'{p.get("picture") or "not described"}. Sound: {p.get("sound") or "not described"}.)\n')
+                text += f'      (silence: about {whole[lid]:.1f} s in all, {how}.)\n'
         meta.update({'subject_sha256': script_hash(lines), 'subject_snapshot': snapshot, 'holds_snapshot': holds})
     elif kind == 'treatment':
         df = direction_facts(rd, n)
@@ -8231,14 +8548,17 @@ def cmd_review_packet(args):
             text += (f'| {_mmss(m0)} | {cuts} | {round(100 * statistics.mean(mo)) if mo else "-"}% | '
                      f'{round(statistics.median(wp)) if wp else "-"} | {round(statistics.median(pr), 1) if pr else "-"} |\n')
         meta.update({'subject_sha256': fp, 'file': str(f)})
-    packet = folder / f'packet-{kind}-r{rnd}.md'
+    packet = iso / 'packet.md'
+    iso.mkdir(parents=True, exist_ok=True)
     folder.mkdir(parents=True, exist_ok=True)
     packet.write_text(text, encoding='utf-8')
-    write_json(folder / f'packet-{kind}-r{rnd}.json', meta)
+    (folder / f'packet-{kind}-r{rnd}.md').write_text(text, encoding='utf-8')     # the run's copy, for the record
+    write_json(folder / f'packet-{kind}-r{rnd}.json', {**meta, 'packet': str(packet)})
     emit({'ok': True, 'kind': kind, 'round': rnd, 'packet': str(packet), 'findings_file': str(out_path),
-          'next': ('Spawn ONE fresh agent with no other context. Its whole prompt: "Read only ' + str(packet) +
-                   ' and follow it exactly." Do not add your rationale, the plan, or what you hope it finds. Then '
-                   'review-record --kind ' + kind + '. Never edit the reviewer\'s findings.')})
+          'next': ('Spawn ONE fresh agent of type static-cold-reader (it can only Read and Write the paths it is given) '
+                   'with no other context. Its whole prompt: "Read only ' + str(packet) + ' and follow it exactly." '
+                   'Do not add your rationale, the plan, or what you hope it finds. Then review-record --kind ' + kind +
+                   '. Never edit the reviewer\'s findings.')})
 
 
 def cmd_review_record(args):
@@ -8256,6 +8576,8 @@ def cmd_review_record(args):
         error(f'No packet for round {rnd}: run review-packet --kind {kind} first and give it to a fresh reviewer.')
     fpath = Path(args.findings).expanduser() if args.findings else Path(meta['findings_file'])
     raw = read_json(fpath, required=True)
+    if meta.get('isolated_dir') and not args.findings:
+        write_json(folder / f'{kind}-r{rnd}-findings.json', raw)     # the isolated reader's findings, kept in the run
     findings = raw.get('findings')
     if not isinstance(findings, list):
         error('The findings file has no "findings" list.', str(fpath))
@@ -8681,6 +9003,13 @@ def main():
     p.set_defaults(func=cmd_timeline_check)
     p = sub.add_parser('export-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--file', required=True); p.add_argument('--deep', action='store_true'); p.set_defaults(func=cmd_export_check)
+    p = sub.add_parser('sound-anchors', help='Place sounds by the story: times as offsets from narration landmarks '
+                       '(--to-anchors), recomputed against the current edit (--resolve)')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--file', required=True); p.add_argument('--list'); p.add_argument('--fields')
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument('--to-anchors', action='store_true'); g.add_argument('--resolve', action='store_true')
+    p.set_defaults(func=cmd_sound_anchors)
     p = sub.add_parser('master-sound', help='The export\'s mix brought to the loudness the references are mastered at '
                        '(one gain and a peak limiter; the picture copied untouched; the export kept)')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)

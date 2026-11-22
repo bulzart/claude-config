@@ -37,6 +37,8 @@ def save(path, d):
 
 
 # What every planned pause has to say besides its length (03): what it is for, what is seen, what is heard.
+TAG_EXCEPTION = {'reason': 'a test fixture of plain repeated sentences: no moment in it calls for a delivery or pause cue',
+                 'approved_by_user': 'test fixture approval'}
 HELD = {'pause_purpose': 'the viewer looks at the map for a while',
         'pause_picture': 'the map of the valley with the new road drawn in',
         'pause_sound': 'the low pulse of the bed goes on',
@@ -219,7 +221,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(len(words.split()),26)
         lines=[{'id':f'L{i:03}','text':words+ ' changed.', 'pause_after_s':0} for i in range(1,53)]
         # Each line 27 spoken tokens x 52 = 1404: about 581 seconds at 145 wpm.
-        save(vd/'script.json',{'language':'en','pace_wpm':145,'lines':lines})
+        save(vd/'script.json',{'language':'en','pace_wpm':145,'lines':lines,'tags_exception':TAG_EXCEPTION})
         beats=[{'id':f'B{i:02}','start_s':(i-1)*120, 'end_s':i*120,
                 'line_start':(i-1)*10+1 if i<5 else 41,
                 'line_end':i*10 if i<5 else 52,
@@ -590,6 +592,43 @@ class StaticStudioTests(unittest.TestCase):
         shots[2]['start_word']=5; shots[2]['line_start']='L016'     # a cut word starts inside the line S2 ends on
         save(plan,{'video':1,'shots':shots})
         self.assertIn('shot_S3_lines_not_contiguous',cli('shot-check','--run',self.run,'--video',1,expected=None)['issues'])
+
+    def test_every_narration_uses_expressive_cues_or_an_approved_exception(self):
+        vd=self.write_plan()
+        script=json.loads((vd/'script.json').read_text(encoding='utf-8'))
+        script.pop('tags_exception')
+        save(vd/'script.json',script)
+        issues=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertTrue(any(x.startswith('no_expressive_tags') for x in issues))
+        script['tags_exception']={'reason':'too short','approved_by_user':''}          # an exception needs a reason
+        save(vd/'script.json',script)                                                  # and the user's own words
+        issues=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertTrue(any(x.startswith('no_expressive_tags') for x in issues))
+        script.pop('tags_exception')
+        script['lines'][9]['text']='[thoughtful] '+script['lines'][9]['text']           # one purposeful cue, explained
+        script['lines'][9]['cue_scope']='the whole line, then back to the level voice'
+        save(vd/'script.json',script)
+        (vd/'editorial-review.md').write_text('## Self-audit\nNotes.\n## Delivery and tags\nL010: the turn is a '
+                                              'reflection, so the line settles thoughtfully.\n',encoding='utf-8')
+        issues=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in issues if x.startswith('no_expressive_tags')])
+        self.assertFalse([x for x in issues if x.startswith('tag_L010')])
+
+    def test_the_cold_reader_is_isolated_and_its_findings_come_back_to_the_run(self):
+        vd=self.write_plan(review_script=False)
+        packet=cli('review-packet','--run',self.run,'--video',1,'--kind','script')
+        pk,fi=Path(packet['packet']),Path(packet['findings_file'])
+        self.assertEqual(pk.parent,fi.parent)                                          # its own folder,
+        self.assertNotIn(str(self.run.resolve()),str(pk.resolve()))                    # outside the run
+        text=pk.read_text(encoding='utf-8')
+        self.assertIn('likely_cause',text)
+        self.assertIn('Following it by ear',text)
+        self.assertIn('static-cold-reader',packet['next'])
+        save(fi,{'reviewer':'test reader','findings':[{'id':'F1','severity':'minor','lines':['L003'],
+                 'problem':'a name arrives with no introduction','likely_cause':'a name nobody introduced'}]})
+        cli('review-record','--run',self.run,'--video',1,'--kind','script')
+        kept=json.loads((vd/'reviews/script-r1-findings.json').read_text(encoding='utf-8'))
+        self.assertEqual(kept['findings'][0]['likely_cause'],'a name nobody introduced')
 
     def test_writing_signals_count_what_a_listener_hears(self):
         core=self.load_core()
@@ -1130,11 +1169,15 @@ class StaticStudioTests(unittest.TestCase):
         self.assertTrue(any(x.startswith('holds_changed_after_the_script_read') for x in res['issues']))   # the reader never saw them
         self.assertGreater(res['holds']['runtime_carried_by_holds_s'],100)
         self.assertTrue(any(x.startswith('runtime_reached_with_held_silence') for x in res['issues']))
-        # The packet puts each silence in front of the reader as a viewer would hear it: the whole of it, with what is
-        # seen and heard, and no other film's pause length to measure it against.
+        # The packet puts each silence in front of the reader as a viewer would hear it: the whole of it, and no
+        # other film's pause length to measure it against. The cold reader gets the words and the silences only:
+        # no picture or sound plan, no house rules, in a folder outside the run.
         packet=cli('review-packet','--run',self.run,'--video',1,'--kind','script')
         text=Path(packet['packet']).read_text(encoding='utf-8')
-        self.assertIn('(silence: about 3.8 s in all, the voice stops, the picture stays. On screen: '+HELD['pause_picture'],text)
+        self.assertIn('(silence: about 3.8 s in all, the voice stops, the picture stays.)',text)
+        self.assertNotIn(HELD['pause_picture'],text)
+        self.assertNotIn('House rules',text)
+        self.assertNotIn(str(self.run),str(packet['packet']))
         self.assertIn('Silences in this script: 51',text)
         self.assertNotIn('longest pause',text)
         # A reader who saw every hold does not make silence a way to reach the length: still blocked.
@@ -3028,6 +3071,135 @@ class CaptionOnsetTests(unittest.TestCase):
         whole = [{'w': 'No.', 's': 5.0, 'e': 5.3}, {'w': 'Then', 's': 6.2, 'e': 6.5}]
         core.clamp_line_onset(whole, 5.6)                                       # the whole word was before the voice
         self.assertEqual((whole[0]['s'], whole[0]['e']), (5.6, 6.2))
+
+
+class ComprehensionAndPauseTests(unittest.TestCase):
+    """Brief #4 (2026-11-22): what a first-time viewer must hold, what a beat leans on, and a pause cue whose
+    measured silence the edit tops up (a residual, never a second pause)."""
+
+    def core(self):
+        spec = importlib.util.spec_from_file_location('static_core_brief4', TOOL)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+
+    def test_many_names_to_hold_at_once_are_named_and_a_simple_story_is_left_alone(self):
+        core = self.core()
+        dense = [{'id': 'L001', 'text': 'In Vienna, Anna met Boris, Carla and Dmitri at the station.'},
+                 {'id': 'L002', 'text': 'Boris carried the money. Carla carried the papers.'},
+                 {'id': 'L003', 'text': 'Dmitri watched Anna. Nobody in Vienna watched Dmitri.'}]
+        out = core.comprehension_signals(dense, [], 150, 'en')
+        self.assertTrue(any('names to hold' in w and 'Dmitri' in w for w in out), out)
+        simple = [{'id': 'L001', 'text': 'The cat sat on the warm mat.'},
+                  {'id': 'L002', 'text': 'It slept all afternoon, and nothing else happened.'}]
+        self.assertEqual(core.comprehension_signals(simple, [], 150, 'en'), [])
+        passing = [{'id': 'L001', 'text': 'He read Proust, Joyce, Woolf and Mann that winter.'}]   # heard once: no load
+        self.assertEqual(core.comprehension_signals(passing, [], 150, 'en'), [])
+        self.assertEqual(core.comprehension_signals(dense, [], 150, 'de'), [])                    # every noun capitalised
+
+    def test_a_name_returning_after_a_long_absence_is_named(self):
+        core = self.core()
+        filler = ' '.join(['the river kept on rising through the long wet spring'] * 50)
+        lines = [{'id': 'L001', 'text': 'Eliza wrote the first letter.'}, {'id': 'L002', 'text': filler},
+                 {'id': 'L003', 'text': 'Then Eliza wrote again.'}]
+        out = core.comprehension_signals(lines, [], 150, 'en')
+        self.assertTrue(any('"Eliza" returns' in w for w in out), out)
+
+    def test_a_beat_leans_only_on_what_came_before_unless_it_is_held_back_on_purpose(self):
+        core = self.core()
+        lines = [{'id': f'L{i:03d}', 'text': 'words'} for i in range(1, 7)]
+        beats = [{'id': 'B1', 'line_start': 1, 'line_end': 2},
+                 {'id': 'B2', 'line_start': 3, 'line_end': 4, 'depends_on': [{'what': 'who the courier is', 'from': 'B1'}]},
+                 {'id': 'B3', 'line_start': 5, 'line_end': 6}]
+        self.assertEqual(core.beat_dependency_issues(beats, lines), [])
+        beats[1]['depends_on'] = [{'what': 'the courier is the sister', 'from': 'B3'}]
+        self.assertTrue(any('depends_on_later_B3' in x for x in core.beat_dependency_issues(beats, lines)))
+        beats[1]['depends_on'] = [{'what': 'the courier is the sister', 'withheld': 'the reveal lands harder if the viewer '
+                                   'meets her as a stranger first', 'revealed_in': 'L006'}]
+        self.assertEqual(core.beat_dependency_issues(beats, lines), [])                # a mystery on purpose
+        beats[1]['depends_on'] = [{'what': 'the courier is the sister', 'withheld': 'later', 'revealed_in': 'B1'}]
+        out = core.beat_dependency_issues(beats, lines)
+        self.assertTrue(any('withheld_needs_why' in x for x in out) and any('is_not_later' in x for x in out), out)
+
+    def test_a_pause_cue_topped_up_by_the_edit_is_a_residual_only_in_the_whole_silence_form(self):
+        core = self.core()
+        why = {'pause_purpose': 'the reveal needs a moment to land with the viewer',
+               'pause_picture': 'the empty chair stays on screen the whole time',
+               'pause_sound': 'the bed carries on quietly under the silence',
+               'pause_landing': 'the line falls and settles on its last word',
+               'pause_resume': 'the next line starts again plainly and quietly'}
+        lines = [{'id': 'L001', 'text': 'He asked them to stand by.', 'pause_total_s': 1.6, 'pause_via': 'edit', **why},
+                 {'id': 'L002', 'text': '[pause] Nobody answered.'}]
+        plan, issues = core.script_pause_plan(lines)
+        self.assertEqual(issues, [])
+        self.assertTrue(plan[0]['residual_of_tag'])
+        older = [dict(lines[0], pause_total_s=None, pause_after_s=1.5), lines[1]]
+        older[0].pop('pause_total_s')
+        plan, issues = core.script_pause_plan(older)
+        self.assertTrue(any('edit_hold_and_a_pause_tag_at_once' in x for x in issues), issues)
+
+
+class ReadabilityAndAnchorTests(unittest.TestCase):
+    """Brief #4 (2026-11-22): drawn words a viewer can read, and sounds that move with the story when the narration is
+    re-recorded or a hold changes."""
+
+    def core(self):
+        spec = importlib.util.spec_from_file_location('static_core_w67', TOOL)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+
+    def test_small_short_or_covered_words_are_named_and_a_clear_label_is_not(self):
+        core = self.core()
+        with tempfile.TemporaryDirectory() as td:
+            mov = Path(td)/'D01.mov'
+            save(mov.with_suffix('.json'), {'dur_s': 6.0, 'elements': [
+                {'type': 'text', 'text': 'CALAIS', 'size': 0.018, 'at': [0.6, 0.3], 'in': {'start_s': 1.0}},
+                {'type': 'text', 'text': 'TWO HUNDRED SHIPS', 'size': 0.04, 'at': [0.3, 0.84], 'in': {'start_s': 1.0}},
+                {'type': 'text', 'text': 'GONE', 'size': 0.04, 'at': [0.3, 0.2], 'in': {'start_s': 1.0},
+                 'out': {'start_s': 1.6}},
+                {'type': 'text', 'text': 'LONDON', 'size': 0.035, 'at': [0.4, 0.3], 'in': {'start_s': 0.5}},
+                {'type': 'line', 'points': [[0, 0], [1, 1]]}]})
+            out = core.drawing_readability([{'file': str(mov)}], captions_on=True)
+            self.assertTrue(any('"CALAIS"' in w and 'small' in w for w in out), out)
+            self.assertTrue(any('"TWO HUNDRED SHIPS"' in w and 'caption band' in w for w in out), out)
+            self.assertTrue(any('"GONE"' in w and 'on screen 0.6 s' in w for w in out), out)
+            self.assertFalse([w for w in out if '"LONDON"' in w])
+            self.assertFalse([w for w in core.drawing_readability([{'file': str(mov)}], captions_on=False)
+                              if 'caption band' in w])
+
+    def test_a_sound_anchored_to_the_story_moves_when_the_narration_moves(self):
+        core = self.core()
+        with tempfile.TemporaryDirectory() as td:
+            rd = Path(td)/'run'
+            save(rd/'state.json', {'schema': 'static-youtube-longform-v1', 'run': 'r'})
+            ep = rd/'70-edit/video-01/edit-plan.json'
+            cap = rd/'70-edit/video-01/captions.json'
+            lt = rd/'50-audio/video-01/line-times.json'
+            save(ep, {'holds': [{'after_line': 'L001', 'at_audio_s': 2.5, 'hold_s': 1.0,
+                                 'times_in_edit': {'silence_from_s': 2.2, 'silence_to_s': 3.8}}]})
+            save(cap, {'words': [{'w': 'One', 'line': 'L001', 's': 0.2, 'e': 2.2},
+                                 {'w': 'Two', 'line': 'L002', 's': 3.8, 'e': 6.0}]})
+            save(lt, {'lines': [{'id': 'L001', 'start_s': 0.2, 'end_s': 2.2, 'gap_span_s': [2.2, 2.8]},
+                                {'id': 'L002', 'start_s': 2.8, 'end_s': 5.0, 'gap_span_s': [5.0, 5.6]}]})
+            beds = Path(td)/'beds.json'
+            save(beds, {'beds': [{'id': 'M1', 'at': 2.6, 'end': 6.3}]})
+            res = cli('sound-anchors', '--run', rd, '--video', 1, '--file', beds, '--to-anchors')
+            b = json.loads(beds.read_text(encoding='utf-8'))['beds'][0]
+            self.assertEqual(b['at_anchor'], {'line': 'L001', 'at': 'silence_start', 'offset_s': 0.4})
+            self.assertEqual(b['end_anchor']['line'], 'L002')
+            # a re-recording makes L001 1.5 s longer: the bed enters at the same moment of the story
+            save(ep, {'holds': [{'after_line': 'L001', 'at_audio_s': 4.0, 'hold_s': 1.0,
+                                 'times_in_edit': {'silence_from_s': 3.7, 'silence_to_s': 5.3}}]})
+            save(cap, {'words': [{'w': 'One', 'line': 'L001', 's': 0.2, 'e': 3.7},
+                                 {'w': 'Two', 'line': 'L002', 's': 5.3, 'e': 7.5}]})
+            save(lt, {'lines': [{'id': 'L001', 'start_s': 0.2, 'end_s': 3.7, 'gap_span_s': [3.7, 4.3]},
+                                {'id': 'L002', 'start_s': 4.3, 'end_s': 6.5, 'gap_span_s': [6.5, 7.1]}]})
+            res = cli('sound-anchors', '--run', rd, '--video', 1, '--file', beds, '--resolve')
+            b = json.loads(beds.read_text(encoding='utf-8'))['beds'][0]
+            self.assertAlmostEqual(b['at'], 4.1)
+            self.assertAlmostEqual(b['end'], 7.8)
+            self.assertEqual(len(res['changed']), 2)
 
 
 class StillTouchupTests(unittest.TestCase):
