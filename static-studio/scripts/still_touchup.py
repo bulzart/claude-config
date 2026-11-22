@@ -10,6 +10,8 @@ mode.
           print, too small to read.
   text    paint a corrected character or word (`text`, `at` [x, y] centre, `size` px, `fill`, optional `font` file),
           for example a clock numeral the model doubled. Erase the wrong one first with an `erase` region.
+  paint   a filled shape in one colour (`poly`, `fill`, softened by `soft` px like a drawn stroke): a pointer or a clock
+          hand the model put in the wrong place, after an `erase` of the wrong one.
 Masks are feathered (`feather` px) and can be shrunk (`shrink` px) so the region's own edges stay sharp.
 
   python still_touchup.py --run RUN --video N --spec SPEC.json            preview only (jobs/SHOT-touchup-preview.png)
@@ -60,8 +62,19 @@ def apply_regions(im, regions):
             base.alpha_composite(layer)
             out = base.convert('RGB')
             continue
+        if mode == 'paint':
+            shape = [tuple(int(v) for v in p) for p in r['poly']]
+            if len(shape) < 3:
+                raise ValueError('a painted shape needs a polygon of at least three points')
+            layer = Image.new('RGBA', out.size, (0, 0, 0, 0))
+            ImageDraw.Draw(layer).polygon(shape, fill=r.get('fill', '#2b2b2b'))
+            layer = layer.filter(ImageFilter.GaussianBlur(float(r.get('soft', 0.6))))
+            base = out.convert('RGBA')
+            base.alpha_composite(layer)
+            out = base.convert('RGB')
+            continue
         if mode not in ('erase', 'soften'):
-            raise ValueError(f'unknown mode {mode!r} (erase, soften or text)')
+            raise ValueError(f'unknown mode {mode!r} (erase, soften, text or paint)')
         poly = [tuple(int(v) for v in p) for p in r['poly']]
         if len(poly) < 3:
             raise ValueError('a region needs a polygon of at least three points')

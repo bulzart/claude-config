@@ -8427,8 +8427,8 @@ Judge it against what each part was meant to feel like (listed below), not again
 11. Drawings and movement: where they make a relationship, a change or a direction clear, and where they only
    decorate.
 
-Findings, the most important first, each with "at" as "mm:ss-mm:ss", severity "major" (a viewer would likely
-leave, get lost or stop trusting it there) or "minor", the problem, what you think causes it (likely_cause: for
+Findings, the most important first, each with "at" as "mm:ss-mm:ss" (a problem that recurs: several, comma-
+separated), severity "major" (a viewer would likely leave, get lost or stop trusting it there) or "minor", the problem, what you think causes it (likely_cause: for
 example "the picture repeats the words", "no new information for a minute", "too much on screen to read", "a name
 with no face"), why it matters to a viewer, and a suggestion. Report every major problem, however many there are;
 group small polish points together rather than leave out anything serious.
@@ -8684,6 +8684,9 @@ def cmd_review_read(args):
           'seconds': round(time.time() - started, 1), 'next': f'review-record --kind {kind}'})
 
 
+AT_RX = r'\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?(\s*,\s*\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?)*'
+
+
 def cmd_review_record(args):
     """Seal a reviewer's findings for the current round (they can no longer change without plan-check noticing) and
     start the answers file: every finding gets revised (with its lines), kept or disputed (with a reason)."""
@@ -8704,6 +8707,17 @@ def cmd_review_record(args):
     findings = raw.get('findings')
     if not isinstance(findings, list):
         error('The findings file has no "findings" list.', str(fpath))
+    # A final reviewer who wrote words around its times ("Held silences 00:29, 05:15") is not asked again and its text is
+    # never edited: with --normalize-at the times alone become "at" and its own words stay in "at_original".
+    normalized = []
+    if kind == 'final' and getattr(args, 'normalize_at', False):
+        for f in findings:
+            at = str((f or {}).get('at') or '').strip() if isinstance(f, dict) else ''
+            if at and not re.fullmatch(AT_RX, at):
+                times = re.findall(r'\d{1,3}:\d{2}(?:\s*-\s*\d{1,3}:\d{2})?', at)
+                if times:
+                    f['at_original'], f['at'] = at, ', '.join(times)
+                    normalized.append(str(f.get('id')))
     problems, seen = [], set()
     order = list((meta.get('subject_snapshot') or {}).keys())
     for f in findings:
@@ -8724,8 +8738,10 @@ def cmd_review_record(args):
                 problems.append(f'{fid}: "treatment" must be one of the packet\'s labels')
             else:
                 f['treatment_id'] = meta['labels'][str(f['treatment']).strip().upper()]
-        elif not re.fullmatch(r'\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?', str(f.get('at') or '').strip()):
-            problems.append(f'{fid}: "at" must be mm:ss or mm:ss-mm:ss')
+        # a recurring problem may name several moments: mm:ss or mm:ss-mm:ss, comma-separated
+        elif not re.fullmatch(AT_RX, str(f.get('at') or '').strip()):
+            problems.append(f'{fid}: "at" must be mm:ss or mm:ss-mm:ss (several moments comma-separated); when the '
+                            'reviewer only wrote words around its times, review-record --normalize-at keeps them')
     if problems:
         error('The findings file does not follow the packet\'s format. Ask the reviewer to fix the format; never '
               'rewrite its judgement.', problems)
@@ -8735,6 +8751,7 @@ def cmd_review_record(args):
            'labels': meta.get('labels'), 'file': meta.get('file'), 'reviewer': raw.get('reviewer') or 'unstated',
            'verdict': raw.get('verdict') or {k: raw.get(k) for k in ('would_watch', 'why', 'per_treatment') if k in raw},
            'strongest': raw.get('strongest'), 'findings': findings, 'findings_sha256': canonical_sha(findings),
+           'at_normalized': normalized,
            'recorded_at': now()}
     write_json(folder / f'{kind}-r{rnd}.json', rec)
     ans_path = folder / f'{kind}-r{rnd}-answers.json'
@@ -9035,6 +9052,8 @@ def main():
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--kind', required=True, choices=list(REVIEW_MAX_ROUNDS))
     p.add_argument('--findings', default='', help='Default: the findings file the packet named')
+    p.add_argument('--normalize-at', action='store_true', help='final review: take only the times from an "at" the '
+                   'reviewer wrote words around, keeping its own text in at_original (its judgement is never edited)')
     p.set_defaults(func=cmd_review_record)
     p = sub.add_parser('review-read', help='Run the fresh reader of the latest packet as its own restricted process '
                        '(Read and Write only, in the packet\'s isolated folder)')

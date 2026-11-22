@@ -542,7 +542,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertGreaterEqual(prof['profiles']['video-01']['sheets'],1)
         self.assertGreaterEqual(prof['profiles']['video-01']['shot_sheets'],1)        # every shot once, for the reviewer
         self.assertIn('final_review_missing',cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)['issues'])
-        pk,rec=self.review('final',[{'id':'F1','severity':'minor','at':'00:01-00:03',
+        pk,rec=self.review('final',[{'id':'F1','severity':'minor','at':'00:01-00:03, 00:05',
                                     'problem':'the opening picture holds too long'}],file=exp)
         ptext=Path(pk['packet']).read_text(encoding='utf-8')
         self.assertIn('## Shot sheets: every shot once, in order',ptext)
@@ -3299,6 +3299,19 @@ class ReadabilityAndAnchorTests(unittest.TestCase):
 
 class StillTouchupTests(unittest.TestCase):
     """still_touchup.py: a local fix to a generated still keeps the original and records the edit (manual 04)."""
+
+    def test_paint_puts_a_shape_where_the_model_drew_it_wrong(self):
+        spec = importlib.util.spec_from_file_location('still_touchup_paint', TOOL.parent / 'still_touchup.py')
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        from PIL import Image
+        im = Image.new('RGB', (200, 100), (240, 235, 220))
+        out = m.apply_regions(im, [{'mode': 'paint', 'fill': '#202020', 'soft': 0,
+                                    'poly': [[100, 48], [170, 50], [100, 52]]}])
+        self.assertLess(sum(out.getpixel((140, 50))), 200)            # the hand is there, pointing right
+        self.assertEqual(out.getpixel((140, 20)), (240, 235, 220))    # nothing else changed
+        with self.assertRaises(ValueError):
+            m.apply_regions(im, [{'mode': 'paint', 'poly': [[0, 0], [1, 1]]}])
 
     def test_erase_soften_and_text_keep_the_original_and_record_the_edit(self):
         from PIL import Image, ImageDraw
