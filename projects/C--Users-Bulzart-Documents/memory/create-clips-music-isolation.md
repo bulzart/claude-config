@@ -10,7 +10,7 @@ metadata:
 
 The user, 2026-11-21 (four specs): never remove all music, never drop a strong highlight over a song, decide on evidence only, recognition never
 removes by itself, never call a video copyright-safe, the risk score is an index (never "a 90% chance"), no paid service or sending audio out without
-approval, no manual catalogue, never invent a title to avoid "unknown". Shorts: never touched ([[create-clips-shorts-never-touch-music]]).
+approval, no manual catalogue, never invent a title to avoid "unknown". Shorts: never touched ([[create-clips-shorts-never-touch-music]]). Since 2026-11-22 the whole step runs only in an Isolation run ([[create-clips-music-mode]]).
 
 Built (round 4, tag `create-clips-music-scores-20261121` + the SAM commit): `cc_songid` scores per interval: Song Identification Confidence (items of one
 method count once; independent methods combine; 80 cap without version-specific evidence; a close supported competitor caps at 60) and YouTube
