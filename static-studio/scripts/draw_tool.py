@@ -818,10 +818,20 @@ def fmt_number(v, el):
 
 
 def counter_text(el, t):
+    """The counter's words at t: it lands exactly on `to` at the end of its window (never a frame of 149,999 for
+    150,000), and a big count moves in round steps (`step`, by default a thousandth of the range rounded to a power of
+    ten once the range is 10,000 or more)."""
     a = el.get('in') or {}
     p = clamp(anim_p(a, t, a.get('ease', 'out3'))) if a else 1.0
     v0, v1 = float(el.get('from', 0)), float(el.get('to', 0))
-    return fmt_number(v0 + (v1 - v0) * p, el)
+    if p >= 0.985:
+        return fmt_number(v1, el)
+    span = abs(v1 - v0)
+    step = float(el.get('step') or (10 ** max(0, len(str(int(span))) - 3) if span >= 10000 else 1))
+    v = v0 + (v1 - v0) * p
+    if not int(el.get('decimals', 0) or 0):
+        v = round(v / step) * step
+    return fmt_number(v, el)
 
 
 def r_counter(ctx, el):

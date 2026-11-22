@@ -228,6 +228,13 @@ class AdvancedDrawingTests(unittest.TestCase):
         self.assertEqual(self.dt.counter_text(c, 0.5), '250+')
         self.assertEqual(self.dt.counter_text(c, 2.0), '500+')
 
+    def test_a_counter_lands_exactly_and_counts_big_numbers_in_round_steps(self):
+        c = {'type': 'counter', 'from': 0, 'to': 150000, 'suffix': ' MEN', 'in': {'start_s': 0.0, 'dur_s': 1.0}}
+        shown = [self.dt.counter_text(c, k / 100) for k in range(0, 121)]
+        self.assertEqual(shown[-1], '150,000 MEN')
+        self.assertNotIn('149,999 MEN', shown)
+        self.assertTrue(all(x.split(' ')[0].endswith('000') or x.startswith('0') for x in shown), shown)
+
     def test_a_traveller_arrives_and_morse_marks_light_in_time(self):
         spec = {'canvas': '400x200', 'fps': 10, 'dur_s': 2.0, 'elements': [
             {'id': 't', 'type': 'travel', 'points': [[0.1, 0.5], [0.9, 0.5]], 'icon': 'dot', 'icon_size': 0.1,
