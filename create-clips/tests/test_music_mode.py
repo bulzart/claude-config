@@ -351,6 +351,16 @@ def main():
         leg = cc("music", "--run", run, "--spans", "0-120", "--no-analysis")
         check(leg.get("ok") and not leg.get("bypassed") and leg.get("music_intervals"),
               "no key (an older run): not bypassed, the detection runs as it always did: " + json.dumps(leg.get("music_intervals"))[:60])
+
+        # ------------------------------------------------------------ an UNRESOLVED song never asks for another cut (the modes keep the same cuts)
+        wj(out_l / "edl.json", long_edl)
+        M.separate_spans = fake_sep
+        M.verify = lambda *a_, **k_: {"ok": False, "checks": {"duration": {"ok": True}, "sync": {"ok": True}, "singer_under_speech": {"ok": False}}}
+        M.sam_ready = lambda c: {"ok": False, "why": "not needed in this test"}
+        M._music(run, cfg, adir, TM.args([out_l / "edl.json"], apply=True, force=True))
+        un = rj(out_l / "music.json")["music"][0]
+        check(un.get("unresolved") and "the cut stays as planned" in un["status"] and "shorten" not in un["status"] and rj(out_l / "edl.json") == long_edl,
+              "Isolation, a song no method cleans: UNRESOLVED, the original audio kept, and the line never asks for a cut: " + un["status"][-70:])
     finally:
         for k, f in real.items():
             setattr(M, k, f)
