@@ -149,6 +149,25 @@ says:
 - `sound_direction`: music, bed, silence, a single sound with a job.
 - `pace`: brisk, unhurried, quickening, a held breath.
 
+**What happens, why it matters, what it pays.** A viewer can follow every event and still not feel why the important
+ones matter; they can know why and still not get the reward. These fail separately, and an accurate, coherent script
+can fail the second without anyone noticing, least of all a reader who already knows the subject. For the few beats
+the film is built around (`key_moment`), decide all three before the script, in `significance`: `matters_because`
+(why it matters inside this video, in the viewer's terms: what is at risk or gained, what question it answers, what
+setup it pays, what the viewer can now do or see differently), `reward` (what the viewer gets there: an answer,
+relief, a laugh, a skill, awe, a feeling), and what they must already know for it to land, its `depends_on` (given
+earlier, or withheld on purpose) or `self_contained` (why it needs nothing earlier). Significance is whatever this
+viewer came for: a joke's lies in its setup, a tutorial step's in the problem it solves, a reveal's in what it
+changes, a quiet scene's in what it lets the viewer feel. Never manufacture danger, conflict or a twist the material
+does not have, and never claim more than the evidence: a contested consequence stays contested (`certainty:
+"contested"` with `hedge`, the line that keeps it honest). Then plan where the viewer learns what they need: before
+the moment, enough to recognise what it means when it comes, without explaining the payoff in advance; a mystery held
+on purpose stays held. When a moment is understood but not felt, find the cause before the cure: context missing or
+given too late, a consequence never shown, a relation the picture never makes, too much at once, a payoff that
+answers no expectation, a weak idea. Fix that cause with the means that fits it (one clearer line, a picture or
+drawing that shows the relation, another order, a stronger setup, a different idea); more narration, a louder
+delivery, a diagram or a pause is never the default.
+
 Let the treatment evolve with the story: more distance in one beat, more intimacy in the next, a lighter touch after a
 heavy one. Consistency means one world, one narrator and one visual logic, not one intensity. Never schedule
 humour, suspense or "a reset" at fixed intervals: place them where the material earns them.

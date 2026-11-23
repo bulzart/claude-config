@@ -2456,6 +2456,7 @@ def beat_map_facts(rd, video, lines=None, target=None):
     if timing and target is not None and (abs(cursor_s - target) > 1 or cursor_line != len(lines)):
         issues.append('beats_do_not_cover_all_time_and_lines')
     issues += beat_dependency_issues(timing, lines)
+    issues += beat_significance_issues(timing, lines)
     return issues
 
 
@@ -2492,6 +2493,37 @@ def beat_dependency_issues(beats, lines):
                 issues.append(f'beat_{b.get("id")}_depends_on_unknown_{src or "source"}')
             elif at > k:
                 issues.append(f'beat_{b.get("id")}_depends_on_later_{src}:give_it_first_or_mark_it_withheld')
+    return issues
+
+
+def beat_significance_issues(beats, lines):
+    """A key moment (`key_moment`) says what it means for the viewer inside this video, decided before the script:
+    `significance` = {"matters_because": why it matters here, in the viewer's terms (what is at risk or gained, what
+    question it answers, what setup it pays, what the viewer can now do or see), "reward": what the viewer gets at that
+    moment}, and what the viewer must already know for it to land: its `depends_on` (given earlier, or withheld on
+    purpose) or `significance.self_contained` (why it needs nothing earlier). A consequence the evidence leaves open
+    stays open: "certainty": "contested" names the line that keeps it honest ("hedge"). Following what happens is not
+    feeling why it matters (10 §4); significance is whatever this video's viewer came for, never manufactured stakes."""
+    ids = {str((l or {}).get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)}
+    issues = []
+    for b in beats:
+        km = b.get('key_moment')
+        if km is None or km is False or not str(km).strip():
+            continue
+        bid = b.get('id')
+        sg = b.get('significance')
+        if not isinstance(sg, dict) or n_words(sg.get('matters_because')) < 5:
+            issues.append(f'beat_{bid}_key_moment_needs_what_it_means:significance.matters_because')
+            continue
+        if n_words(sg.get('reward')) < 2:
+            issues.append(f'beat_{bid}_key_moment_needs_its_reward:significance.reward')
+        if not (b.get('depends_on') or []) and n_words(sg.get('self_contained')) < 4:
+            issues.append(f'beat_{bid}_key_moment_needs_what_the_viewer_must_know_first:depends_on_or_self_contained')
+        cert = str(sg.get('certainty') or 'established').strip().lower()
+        if cert not in ('established', 'contested'):
+            issues.append(f'beat_{bid}_significance_certainty_must_be_established_or_contested')
+        elif cert == 'contested' and str(sg.get('hedge') or '') not in ids:
+            issues.append(f'beat_{bid}_contested_significance_needs_the_line_that_hedges_it:significance.hedge')
     return issues
 
 
@@ -8381,6 +8413,13 @@ Think about:
    next? Would you become impatient? Does it help the joke, the reveal or the feeling, or would the line land as well
    going straight on? Would it make the narrator sound unnaturally slow? Would a first-time viewer understand why it
    is there? A silence you would cut or shorten is a finding.
+11. The developments that matter most in this video, up to six, in order: whatever its reward is (an event, a
+   turn, a discovery, an explanation that clicks, a joke's payoff, a solution, a feeling). Keep three judgements apart
+   for each, because they fail separately: what happened (could you retell it?); why it matters within this video (in
+   your own words, using ONLY what the narration told you: if you know why from your own knowledge and the words never
+   gave it, say so, because a first-time viewer may not know it); and whether it paid off for you. Not every video
+   needs danger, a conflict or a twist: name the reward this one offers. Something held back on purpose that you want
+   to learn later is not a failure: mark it "withheld".
 
 Then list your findings, the most important first, each concrete enough to act on: what you noticed, what you think
 causes it (likely_cause: for example "a name nobody introduced", "no consequence for anyone", "the same point again",
@@ -8396,6 +8435,10 @@ Write your answer as JSON, and nothing else, to: {OUT}
   "reviewer": "fresh cold reader",
   "verdict": {{"promise": "...", "delivered": "...", "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
   "strongest": [{{"lines": "{EX_RANGE}", "why": "..."}}],
+  "developments": [{{"lines": "{EX_RANGE}", "what_happened": "...", "why_it_matters": "... (or: I could not tell)",
+                    "why_from": "the video | my own knowledge | unclear", "event": "clear | partly | unclear",
+                    "significance": "clear | partly | unclear | withheld",
+                    "reward": "landed | partly | missed | not the point here", "note": "..."}}],
   "findings": [{{"id": "F1", "severity": "major or minor", "lines": ["{EX_LINE}"], "problem": "...",
                  "likely_cause": "...", "viewer_impact": "...", "suggestion": "..."}}]
 }}
@@ -8467,6 +8510,13 @@ Judge it against what each part was meant to feel like (listed below), not again
    size, and was it there long enough? Do the captions cover it or compete with it?
 11. Drawings and movement: where they make a relationship, a change or a direction clear, and where they only
    decorate.
+12. The developments that matter most in this video, up to six, in order: whatever its reward is (an event, a
+   turn, a discovery, an explanation that clicks, a joke's payoff, a solution, a feeling). Keep three judgements apart
+   for each, because they fail separately: what happened (could you retell it?); why it matters within this video (in
+   your own words, using ONLY what the video's words and pictures gave you: if you know why from your own knowledge and
+   the video never gave it, say so, because a first-time viewer may not know it); and whether it paid off. Not every
+   video needs danger, a conflict or a twist: name the reward this one offers. Something held back on purpose that you
+   want to learn later is not a failure: mark it "withheld".
 
 Findings, the most important first, each with "at" as "mm:ss-mm:ss" (a problem that recurs: several, comma-
 separated), severity "major" (a viewer would likely leave, get lost or stop trusting it there) or "minor", the problem, what you think causes it (likely_cause: for
@@ -8480,6 +8530,10 @@ Write your answer as JSON, and nothing else, to: {OUT}
 {{
   "reviewer": "fresh final reviewer",
   "verdict": {{"delivered": "...", "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
+  "developments": [{{"at": "mm:ss-mm:ss", "what_happened": "...", "why_it_matters": "... (or: I could not tell)",
+                    "why_from": "the video | my own knowledge | unclear", "event": "clear | partly | unclear",
+                    "significance": "clear | partly | unclear | withheld",
+                    "reward": "landed | partly | missed | not the point here", "note": "..."}}],
   "findings": [{{"id": "F1", "severity": "major or minor", "at": "mm:ss-mm:ss", "problem": "...",
                  "likely_cause": "...", "viewer_impact": "...", "suggestion": "..."}}]
 }}
@@ -8528,7 +8582,7 @@ def cmd_review_packet(args):
     iso = Path(tempfile.gettempdir()) / 'static-studio-reads' / uuid.uuid4().hex[:16]
     out_path = iso / 'findings.json'
     meta = {'kind': kind, 'round': rnd, 'video': n, 'created_at': now(), 'findings_file': str(out_path),
-            'isolated_dir': str(iso)}
+            'isolated_dir': str(iso), 'brief_version': BRIEF_VERSION}
     if kind == 'script':
         if not read_json(vd / 'direction-lock.json'):
             error('Lock the creative direction first (direction-lock): the script is written from it, and read after it.')
@@ -8728,6 +8782,165 @@ def cmd_review_read(args):
 AT_RX = r'\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?(\s*,\s*\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?)*'
 
 
+# ---------------------------------------------------------------- what happened, why it matters, whether it paid
+# The user, 2026-11-23, after watching a finished film several times: the deception was easy to follow, why it mattered
+# was not, and no review had said so. Fresh readers know a great deal, so they supply the significance from their own
+# knowledge. Readers now name the developments that matter most and keep three judgements apart for each (what
+# happened / why it matters, from the video alone / whether it paid off); review-record turns a gap into a finding
+# answered like any other. Not every video needs danger or a twist: the reward is the video's own (10 §4, 06).
+BRIEF_VERSION = 2
+DEV_EVENT = ('clear', 'partly', 'unclear')
+DEV_SIGNIFICANCE = ('clear', 'partly', 'unclear', 'withheld')
+DEV_REWARD = ('landed', 'partly', 'missed', 'not the point here')
+DEV_FROM = ('the video', 'my own knowledge', 'unclear')
+
+
+def _choice(value, allowed):
+    s = re.sub(r'\s+', ' ', str(value or '').strip().lower())
+    return next((a for a in allowed if s == a or s.startswith(a)), None)
+
+
+def _at_ranges(at):
+    """'05:16-06:07, 07:11' -> [(316, 367), (431, 431)] in seconds."""
+    out = []
+    for part in str(at or '').split(','):
+        secs = [int(m) * 60 + int(s) for m, s in re.findall(r'(\d{1,3}):(\d{2})', part)]
+        if secs:
+            out.append((min(secs), max(secs)))
+    return out
+
+
+def development_problems(kind, devs, order):
+    """Why a reader's `developments` do not follow the packet's format (empty: they do)."""
+    if not isinstance(devs, list) or not devs:
+        return ['"developments" must name the developments that matter most in this video (at least one)']
+    out = []
+    for k, d in enumerate(devs, 1):
+        if not isinstance(d, dict):
+            out.append(f'development {k} is not an object')
+            continue
+        if kind == 'script':
+            if not d.get('lines') or expand_lines(d.get('lines'), order) is None:
+                out.append(f'development {k}: "lines" must name lines of the reviewed script (L005 or L005-L009)')
+        elif not re.fullmatch(AT_RX, str(d.get('at') or '').strip()):
+            out.append(f'development {k}: "at" must be mm:ss or mm:ss-mm:ss')
+        if n_words(d.get('what_happened')) < 3:
+            out.append(f'development {k}: "what_happened" is not told')
+        for key, allowed in (('event', DEV_EVENT), ('significance', DEV_SIGNIFICANCE), ('reward', DEV_REWARD),
+                             ('why_from', DEV_FROM)):
+            if _choice(d.get(key), allowed) is None:
+                out.append(f'development {k}: "{key}" must be one of: ' + ', '.join(allowed))
+    return out
+
+
+def development_findings(kind, devs, taken):
+    """The reader's developments where following what happened did not carry why it matters, or the payoff did not
+    land, as findings answered like any other. The reader's own words are quoted, never rewritten. A development held
+    back on purpose ("withheld") is not a finding: productive uncertainty stays."""
+    out, k = [], 0
+    for i, d in enumerate(devs or [], 1):
+        ev, sg = _choice(d.get('event'), DEV_EVENT), _choice(d.get('significance'), DEV_SIGNIFICANCE)
+        rw, fr = _choice(d.get('reward'), DEV_REWARD), _choice(d.get('why_from'), DEV_FROM)
+        what = str(d.get('what_happened') or '').strip()
+        why = str(d.get('why_it_matters') or '').strip() or 'nothing'
+        if ev == 'unclear':
+            sev, cause = 'major', 'what happened is not clear here'
+            prob = f'The reader could not follow what happened at a development that matters: "{what}".'
+        elif sg == 'withheld':
+            continue
+        elif sg == 'unclear':
+            sev, cause = 'major', 'what it means was never established for the viewer'
+            prob = (f'The reader followed what happened ("{what}") but could not tell why it matters (their words: '
+                    f'"{why}").')
+        elif fr == 'my own knowledge':
+            sev, cause = 'major', 'the video leans on knowledge it never gives'
+            prob = (f'The reader knew why this matters only from their own knowledge, not from the video: "{what}" '
+                    f'matters because "{why}". A first-time viewer may not know it.')
+        elif sg == 'partly' or fr == 'unclear':
+            sev, cause = 'minor', 'what it means is established weakly, or too late'
+            prob = f'The reader only partly saw why this matters: "{what}" (their words: "{why}").'
+        elif rw == 'missed':
+            sev, cause = 'minor', 'the setup or the moment itself does not pay'
+            prob = f'The reader understood "{what}" and why it matters, but the payoff did not land for them.'
+        else:
+            continue
+        k += 1
+        while f'S{k}' in taken:
+            k += 1
+        f = {'id': f'S{k}', 'severity': sev, 'problem': prob,
+             'likely_cause': str(d.get('note') or '').strip() or cause,
+             'viewer_impact': ('the viewer loses the thread at a development that matters' if ev == 'unclear' else
+                               'the viewer can follow the events without feeling why they matter' if sev == 'major'
+                               else 'the moment gives less than it is there to give'),
+             'suggestion': ('Find what the viewer must already know for this to matter and give it before the moment, by '
+                            'the means that fits the cause (one clearer line, a picture or drawing that shows the '
+                            'relation, another order, a stronger setup, a different idea), without explaining the payoff '
+                            'in advance; or dispute it with the reason (a mystery held on purpose, a reward that is not '
+                            'this).'),
+             'derived_from': {'development': i, **{key: d.get(key) for key in (
+                 'what_happened', 'why_it_matters', 'why_from', 'event', 'significance', 'reward', 'note')}}}
+        f['lines' if kind == 'script' else 'at'] = d.get('lines') if kind == 'script' else str(d.get('at')).strip()
+        out.append(f)
+    return out
+
+
+def key_moment_findings(rd, vd, n, kind, devs, order, taken):
+    """Key moments of the beat map that the reader did not name among the developments that mattered: a check, not a
+    verdict (the reader may have chosen others), answered with a reason either way."""
+    beats = read_json(vd / 'beat-map.json').get('beats') or []
+    keys = [b for b in beats if b.get('key_moment') not in (None, False) and str(b.get('key_moment')).strip()]
+    if not keys:
+        return []
+    if kind == 'script':
+        idx = {lid: i + 1 for i, lid in enumerate(order)}
+        hit = {idx[x] for d in devs or [] for x in (expand_lines(d.get('lines'), order) or []) if x in idx}
+
+        def covered(b):
+            try:
+                return any(int(b['line_start']) <= c <= int(b['line_end']) for c in hit)
+            except (KeyError, TypeError, ValueError):
+                return True
+    else:
+        plan = read_json(rd / '70-edit' / f'video-{int(n):02d}' / 'edit-plan.json')
+        spans = {}
+        for s in plan.get('shots') or []:
+            bid = str(s.get('beat_id'))
+            lo, hi = spans.get(bid, (float(s['start_s']), float(s['end_s'])))
+            spans[bid] = (min(lo, float(s['start_s'])), max(hi, float(s['end_s'])))
+        times = [r for d in devs or [] for r in _at_ranges(d.get('at'))]
+
+        def covered(b):
+            sp = spans.get(str(b.get('id')))
+            return sp is None or any(a <= sp[1] + 1 and c >= sp[0] - 1 for a, c in times)
+    out, k = [], 0
+    for b in keys:
+        if covered(b):
+            continue
+        k += 1
+        while f'K{k}' in taken:
+            k += 1
+        means = (b.get('significance') or {}).get('matters_because') or 'not stated in the beat map'
+        f = {'id': f'K{k}', 'severity': 'minor',
+             'problem': (f'The reader did not name the key moment {b.get("id")} ("{b.get("key_moment")}") among the '
+                         f'developments that mattered. It is meant to matter because: {means}.'),
+             'likely_cause': 'it may not read as important to a first-time viewer, or the reader chose others',
+             'viewer_impact': 'a moment the film is built around may pass without weight',
+             'suggestion': ('Check from the reader\'s account whether the moment registers; revise what makes it matter, '
+                            'or keep it with the reason.'),
+             'derived_from': {'key_moment': b.get('id')}}
+        if kind == 'script':
+            try:
+                lo, hi = int(b['line_start']), int(b['line_end'])
+                f['lines'] = [f'{order[lo - 1]}-{order[hi - 1]}']
+            except (KeyError, TypeError, ValueError, IndexError):
+                f['lines'] = [order[0]] if order else []
+        else:
+            sp = spans.get(str(b.get('id'))) or (0.0, 0.0)
+            f['at'] = f'{_mmss(sp[0])}-{_mmss(sp[1])}'
+        out.append(f)
+    return out
+
+
 def cmd_review_record(args):
     """Seal a reviewer's findings for the current round (they can no longer change without plan-check noticing) and
     start the answers file: every finding gets revised (with its lines), kept or disputed (with a reason)."""
@@ -8783,9 +8996,19 @@ def cmd_review_record(args):
         elif not re.fullmatch(AT_RX, str(f.get('at') or '').strip()):
             problems.append(f'{fid}: "at" must be mm:ss or mm:ss-mm:ss (several moments comma-separated); when the '
                             'reviewer only wrote words around its times, review-record --normalize-at keeps them')
+    devs = raw.get('developments')
+    three_ways = kind in ('script', 'final') and int(meta.get('brief_version') or 1) >= 2
+    if three_ways:
+        problems += development_problems(kind, devs, order)
     if problems:
         error('The findings file does not follow the packet\'s format. Ask the reviewer to fix the format; never '
               'rewrite its judgement.', problems)
+    derived = []
+    if three_ways:
+        taken = {str(f.get('id')) for f in findings}
+        derived = development_findings(kind, devs, taken)
+        derived += key_moment_findings(rd, vd, n, kind, devs, order, taken | {f['id'] for f in derived})
+        findings = findings + derived
     rec = {'kind': kind, 'round': rnd, 'video': n, 'packet': str(folder / f'packet-{kind}-r{rnd}.md'),
            'subject_sha256': meta['subject_sha256'], 'subject_snapshot': meta.get('subject_snapshot'),
            'holds_snapshot': meta.get('holds_snapshot'),
@@ -8793,6 +9016,7 @@ def cmd_review_record(args):
            'verdict': raw.get('verdict') or {k: raw.get(k) for k in ('would_watch', 'why', 'per_treatment') if k in raw},
            'strongest': raw.get('strongest'), 'findings': findings, 'findings_sha256': canonical_sha(findings),
            'at_normalized': normalized,
+           'developments': devs if three_ways else None, 'derived_findings': [f['id'] for f in derived],
            'recorded_at': now()}
     write_json(folder / f'{kind}-r{rnd}.json', rec)
     ans_path = folder / f'{kind}-r{rnd}-answers.json'

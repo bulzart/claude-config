@@ -12,6 +12,10 @@ remade with the still):
 
   python still_touchup.py --run RUN --video N --spec SPEC.json            preview only (jobs/SHOT-touchup-preview.png)
   python still_touchup.py --run RUN --video N --spec SPEC.json --apply    write the still
+  python still_touchup.py --run RUN --video N --replace FILE --shot S014 --kind user_supplied|edited --why "..." [--apply]
+          a picture the user supplies, or a legitimate edit made elsewhere (a crop, a colour correction):
+          checked (it opens, the still's shape, enough pixels), kept beside the original, recorded, looked at
+          again. Legitimate editing comes in this way; hiding something never does.
 
 SPEC: {"shot": "S059", "why": "...", "regions": [{"mode": "text", "text": "3", "at": [x, y], "size": 50}, ...]}
 --apply keeps the original in 60-visuals/video-NN/stills-history/ (never overwritten), records the edit in
@@ -72,14 +76,104 @@ def apply_regions(im, regions):
     return out
 
 
+def keep_original(vis, src, shot, tag):
+    hist_dir = vis / 'stills-history'
+    hist_dir.mkdir(parents=True, exist_ok=True)
+    k = 1
+    while (hist_dir / f'{shot}-before-{tag}-{k}.png').exists():
+        k += 1
+    hist = hist_dir / f'{shot}-before-{tag}-{k}.png'
+    shutil.copy2(src, hist)
+    return hist
+
+
+def move_fingerprint(vis, src):
+    """The still's provenance fingerprint follows a recorded change, so timeline-check knows it (anything else that
+    changes a still after the generator made it is refused there: manual 04)."""
+    prov_p = vis / 'stills-provenance.json'
+    if not prov_p.is_file():
+        return False
+    prov = json.loads(prov_p.read_text(encoding='utf-8'))
+    me, hit = os.path.normcase(str(src.resolve())), False
+    for k, v in (prov.get('images') or {}).items():
+        if os.path.normcase(str(Path(k).resolve())) == me and isinstance(v, dict) and v.get('file_sha256'):
+            v['file_sha256'] = hashlib.sha256(src.read_bytes()).hexdigest()
+            v['changed_after_generation_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
+            hit = True
+    if hit:
+        prov_p.write_text(json.dumps(prov, ensure_ascii=False, indent=1), encoding='utf-8')
+    return hit
+
+
+def record_edit(vis, entry):
+    rec = vis / 'stills-postprocess.json'
+    d = json.loads(rec.read_text(encoding='utf-8')) if rec.is_file() else {
+        'note': 'Changes made to stills after generation (still_touchup.py): crisp marks and recorded replacements; '
+                'each keeps its original in stills-history/.', 'edits': []}
+    d['edits'].append({**entry, 'at': datetime.now(timezone.utc).isoformat(timespec='seconds')})
+    rec.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding='utf-8')
+
+
+def replace_still(a, vis):
+    """A replacement picture for a still: one the user supplies, or a legitimate edit made elsewhere (a crop, a colour
+    or contrast correction, a retouch that makes the picture right). Checked (it opens, it has the still's shape and
+    enough pixels), kept beside the original, recorded with what it is and why, and looked at again before use. Never
+    a way to blur or cover something the picture should not show: that is generated again (manual 04)."""
+    shot, why = str(a.shot or '').strip(), str(a.why or '').strip()
+    if not shot or not a.kind or len(why.split()) < 4:
+        emit({'ok': False, 'error': '--replace needs --shot, --kind (user_supplied or edited) and --why (what the new '
+                                    'picture is and why it replaces the still)'}, 2)
+    src = vis / 'stills' / f'{shot}.png'
+    if not src.is_file():
+        emit({'ok': False, 'error': f'no still {src}'}, 2)
+    new_path = Path(a.replace).expanduser()
+    try:
+        new = Image.open(new_path)
+        new.load()
+        new = new.convert('RGB')
+    except (OSError, ValueError) as e:
+        emit({'ok': False, 'error': f'the replacement does not open as a picture: {e}'}, 2)
+    cur = Image.open(src)
+    want, got = cur.width / cur.height, new.width / new.height
+    if abs(got - want) > 0.02 * want:
+        emit({'ok': False, 'error': f'the replacement is {new.width}x{new.height}, the still {cur.width}x{cur.height}: '
+                                    'crop it to the still\'s shape first (it would be stretched)'}, 2)
+    if new.width < 0.75 * cur.width:
+        emit({'ok': False, 'error': f'the replacement is {new.width} px wide, the still {cur.width}: too small for the '
+                                    'frame it fills'}, 2)
+    if new.size != cur.size:
+        new = new.resize(cur.size, Image.Resampling.LANCZOS)
+    if not a.apply:
+        p = vis / 'jobs' / f'{shot}-replace-preview.png'
+        p.parent.mkdir(parents=True, exist_ok=True)
+        new.save(p)
+        emit({'ok': True, 'applied': False, 'preview': str(p), 'next': 'look at it at full size, then --apply'})
+    hist = keep_original(vis, src, shot, 'replace')
+    new.save(src)
+    move_fingerprint(vis, src)
+    record_edit(vis, {'shot_id': shot, 'file': str(src.relative_to(Path(a.run))).replace('\\', '/'),
+                      'original': str(hist.relative_to(Path(a.run))).replace('\\', '/'), 'why': why,
+                      'mode': 'replace', 'kind': a.kind, 'from': str(new_path.resolve())})
+    emit({'ok': True, 'applied': True, 'file': str(src), 'original': str(hist),
+          'next': 'record the still\'s look again (content-review --pictures): the earlier look was for the old file'})
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('--run', required=True)
     ap.add_argument('--video', required=True, type=int)
-    ap.add_argument('--spec', required=True)
+    ap.add_argument('--spec', help='crisp marks: {"shot", "why", "regions": [...]}')
+    ap.add_argument('--replace', help='a replacement picture for the still: user-supplied, or an edit made elsewhere')
+    ap.add_argument('--shot', help='with --replace: the still it replaces (S014)')
+    ap.add_argument('--kind', choices=('user_supplied', 'edited'), help='with --replace: where the picture comes from')
+    ap.add_argument('--why', help='with --replace: what the new picture is and why it replaces the still')
     ap.add_argument('--apply', action='store_true')
     a = ap.parse_args()
     vis = Path(a.run) / '60-visuals' / f'video-{a.video:02d}'
+    if a.replace:
+        replace_still(a, vis)
+    if not a.spec:
+        emit({'ok': False, 'error': 'give --spec (crisp marks) or --replace (a recorded replacement)'}, 2)
     try:
         spec = json.loads(Path(a.spec).read_text(encoding='utf-8'))
         shot = str(spec['shot'])
@@ -100,35 +194,12 @@ def main():
         p.parent.mkdir(parents=True, exist_ok=True)
         out.save(p)
         emit({'ok': True, 'applied': False, 'preview': str(p), 'next': 'look at the preview at full size, then --apply'})
-    hist_dir = vis / 'stills-history'
-    hist_dir.mkdir(parents=True, exist_ok=True)
-    k = 1
-    while (hist_dir / f'{shot}-before-touchup-{k}.png').exists():
-        k += 1
-    hist = hist_dir / f'{shot}-before-touchup-{k}.png'
-    shutil.copy2(src, hist)
+    hist = keep_original(vis, src, shot, 'touchup')
     out.save(src)
-    # The still's provenance fingerprint follows this recorded mark, so timeline-check knows the change (anything
-    # else that changes a still after the generator made it is refused there: manual 04).
-    prov_p = vis / 'stills-provenance.json'
-    if prov_p.is_file():
-        prov = json.loads(prov_p.read_text(encoding='utf-8'))
-        me, hit = os.path.normcase(str(src.resolve())), False
-        for k, v in (prov.get('images') or {}).items():
-            if os.path.normcase(str(Path(k).resolve())) == me and isinstance(v, dict) and v.get('file_sha256'):
-                v['file_sha256'] = hashlib.sha256(src.read_bytes()).hexdigest()
-                v['touched_up_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
-                hit = True
-        if hit:
-            prov_p.write_text(json.dumps(prov, ensure_ascii=False, indent=1), encoding='utf-8')
-    rec = vis / 'stills-postprocess.json'
-    d = json.loads(rec.read_text(encoding='utf-8')) if rec.is_file() else {
-        'note': 'Local fixes made to generated stills after generation (still_touchup.py); each keeps its original in '
-                'stills-history/.', 'edits': []}
-    d['edits'].append({'shot_id': shot, 'file': str(src.relative_to(Path(a.run))).replace('\\', '/'),
-                       'original': str(hist.relative_to(Path(a.run))).replace('\\', '/'), 'why': spec['why'],
-                       'regions': regions, 'at': datetime.now(timezone.utc).isoformat(timespec='seconds')})
-    rec.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding='utf-8')
+    move_fingerprint(vis, src)
+    record_edit(vis, {'shot_id': shot, 'file': str(src.relative_to(Path(a.run))).replace('\\', '/'),
+                      'original': str(hist.relative_to(Path(a.run))).replace('\\', '/'), 'why': spec['why'],
+                      'regions': regions})
     emit({'ok': True, 'applied': True, 'file': str(src), 'original': str(hist),
           'next': 'record the still\'s look again (content-review --pictures): the earlier look was for the old file'})
 

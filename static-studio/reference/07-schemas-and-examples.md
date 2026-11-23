@@ -244,7 +244,12 @@ Minimal `40-plans/video-01/blueprint.json`:
      "narration_direction": "Slower, plainer; let the picture explain",
      "visual_intent": "Reconstruct logistics and compare alternatives with a drawn overlay",
      "sound_direction": "No music under the explanation",
-     "pace": "unhurried"}
+     "pace": "unhurried",
+     "key_moment": "the constraint revealed",
+     "significance": {"matters_because": "the plan everyone trusted could never have worked, so the choice the viewer weighed in B01 was made blind",
+                      "reward": "the oh of seeing the hidden constraint",
+                      "certainty": "established"},
+     "depends_on": [{"what": "the choice and what it was meant to achieve", "from": "B01"}]}
   ]
 }
 ```
