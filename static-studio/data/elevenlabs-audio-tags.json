@@ -1,189 +1,1112 @@
 {
-  "title": "ElevenLabs audio tags for narration (Eleven v4 / Eleven v4 Turbo)",
-  "verified": "2026-11-22",
-  "sources": {
-    "v4_docs": "https://elevenlabs.io/docs/best-practices/prompting/eleven-v4",
-    "tags_list": "https://elevenlabs.io/blog/elevenlabs-audio-tags-list",
-    "v3_tags": "https://elevenlabs.io/blog/v3-audiotags"
+ "title": "ElevenLabs audio tags for narration (Eleven v4 / Eleven v4 Turbo)",
+ "verified": "2026-11-22",
+ "sources": {
+  "v4_docs": "https://elevenlabs.io/docs/best-practices/prompting/eleven-v4",
+  "tags_list": "https://elevenlabs.io/blog/elevenlabs-audio-tags-list",
+  "v3_tags": "https://elevenlabs.io/blog/v3-audiotags"
+ },
+ "refresh": "Re-read the three sources (WebFetch) when this file is more than ~60 days old, when a tag behaves unexpectedly, or when the user changes model. Update entries and 'verified'; keep 'measured_on_this_setup' as measured.",
+ "models": [
+  "eleven_v4",
+  "eleven_v4_turbo"
+ ],
+ "how_agents_use_this": "This file is information, not a template. 05-voice-and-edit.md -> 'Inline audio tags' is how a video's agents decide which tags, if any, fit THIS story's creative strategy (02), its pause intent (03) and the references' measured delivery (01, narration-measure). plan-check refuses only tags whose pipeline_status is not_for_narration and broken brackets, and adds each tag's time to the forecast; everything else is the agents' call. A tag not listed here is allowed ('custom') and judged on the calibration part (narration-measure flags a pause tag that made no pause; delivery.json shows whether the voice moved where a tag asked).",
+ "how_tags_behave": [
+  "A tag is written in square brackets inline in the sent text, before the words it affects (\"Place a tag before the words it affects\", tags_list). A pause cue goes before the words that follow the silence (the docs' examples: \"[pause]Then the phone rang.\", or a tag on its own line); a pause cue at the end of a line is undocumented and measured weak (measured_on_this_setup, 2026-11-22). It is sent exactly as written; never parentheses or curly braces.",
+  "A tag's emotion carries through the rest of its line; add a new tag only where the delivery should change (tags_list).",
+  "One tag per clause: contrasting tags on the same words blur the performance. Several qualities go inside one bracket, comma-separated: [tense, cautious] (tags_list).",
+  "Open vocabulary: any clear natural-language instruction can be a tag ([hushed and reverent, like a nature documentary narrator]). Describe the voice quality, not something that sounds like a sound cue, or it may be rendered as a sound effect (v4_docs).",
+  "Voice-dependent: tags land readily when the delivery is in the voice's training data; outside it they are 'less reliable, and the result may not be optimal' (v4_docs). A serious voice may not respond to playful tags; a voice that conflicts with a tag can read it ALOUD as text (v3_tags). A malformed or unsupported tag is read aloud (tags_list).",
+  "No SSML on v4 (no <break>, no <phoneme>): plan-check refuses markup in a line. Pauses come from pause tags, punctuation and text structure; a held silence is an edit hold (v4_docs, v3_tags). Re-read 2026-11-22: the v4 page's Info box says \"Eleven v4 and Eleven v3 do not support SSML break tags\" and v3_tags says the same, while the same v4 page's Pauses section still shows <break time=\"1.5s\" /> (up to 3 s): treated as unsupported. No page gives a pause tag's length in seconds or a way to set one; \"Different voices may handle pauses differently\" (v4_docs).",
+  "Pronunciation on v4: IPA between forward slashes inside the text, as ElevenLabs' examples write it (\"/ˌbaɪoʊˈkemɪstri/\"), or a respelling; phoneme tags work on eleven_flash_v2 only. In this pipeline the form lives in 40-plans/video-NN/pronunciation.json and is applied only to what is sent (best practices).",
+  "Punctuation shapes pacing without any tag: comma = short pause; ellipsis = trailing pause with weight; dash = a beat; full stop = sentence rhythm; CAPITALS = emphasis; a line break = a longer beat (v4_docs, v3_tags).",
+  "Eleven v4 performs better with more context; up to 10,000 characters per request (tags_list).",
+  "Iterate: if a delivery misses, swap a neighbouring emotion and regenerate; results vary, test the specific tags and phrasing (v4_docs, tags_list)."
+ ],
+ "pipeline_rules": [
+  "not_for_narration (refused by plan-check): distress tags (02: extreme distress is never shown or told), crude/novelty tags (family audience), sound-effect tags (sound design lives on the edit's own sound layer where it can be levelled, moved or removed; baked into the voice track it can only be fixed by re-recording, and the docs say tags should describe the voice), national accents (caricature of a real people), dialogue tags (single narrator). Playful persona tags ([pirate voice], [robotic voice], [sings], [woo]) are use_with_care: a light video may want a brief aside, the narrator persona stays.",
+  "A tag never forces overall pace: measured here, pace tags did not change the sustained rate over a real chunk (see measured_on_this_setup).",
+  "A tag never replaces writing: a line that needs a tag to land usually needs rewriting first.",
+  "Every tag the agents keep has a one-line story reason in editorial-review.md, and its real time cost is counted: approx_cost_s here until narration-measure has measured this voice (voice-lock.json -> measured.tag_costs_s)."
+ ],
+ "measured_on_this_setup": [
+  "2026-11-19, eleven_v4: a pace tag prepended to every ~8,000-character chunk ([quick, measured pace]; [quickly, steady narration]) made no measurable difference to the real rate (185-187 WPM both times) although each measured 199-203 WPM on a short probe.",
+  "2026-11-19, eleven_v4, voice UNbOi86R1a0f3ypyTCp4: [long pause] + [slightly pause] in one 56-line chunk added 12.3 s against the untagged take; five tags (2 [long pause], 2 [pause], 1 [slightly pause]) added 19.7 s to the full narration. Separate generations, so per-tag values are approximate: [long pause] roughly 6-8 s, [pause] ~2 s, [slightly pause] ~1-2 s. narration-measure measures the real gap at every tag of a real take; prefer those numbers.",
+  "2026-11-19, one run's references only (re-measure each run's own with pace-profile): those narrators (V017, V018) paused little: average gap between spoken segments 0.23-0.40 s, 90th percentile 0.40-0.70 s, longest 1.3-2.0 s, at most 1.2 gaps over 0.8 s per minute. A [long pause] is three to six times longer than anything those narrators do.",
+  "2026-11-19: script lines joined with newlines vs spaces gave overall 167.3 vs 168.9 WPM on the same voice (different passages): about 1%, not a meaningful pace lever.",
+  "2026-11-20, ElevenLabs' own v4 pages: \"Both variants use two voice settings: Stability and Similarity\"; \"Style and Speed sliders are not available in Eleven v4, and SSML is not supported\"; the migration guide: \"Eleven v4 doesn't apply voice_settings.speed\". The general speed page (0.7-1.2) is not about v4. So there is no supported speed control on v4: pace comes from the voice and the writing, and is measured, never steered.",
+  "2026-11-22, eleven_v4, voice JBFqnCBsd6RMkjVDRZzb (George, 0.5/0.8), one take each: [short pause] at the END of a line left 0.82 s against his usual 0.62 s (+0.2 s, audio-measured; Whisper's word ends alone had said 0.38 s). [softly] at the start of the last line of a part: that line came out 1.8 s quicker than his pace would give and ended louder than his usual endings (-1.8 dB against -7.7) with no fall; the same line without a tag in an earlier take also ended weakly. Single observations: bands, not values.",
+  "2026-11-23, eleven_v4, voice JBFqnCBsd6RMkjVDRZzb (George, 0.5/0.8), one take: [unhurried] (custom) at the start of a line ran that line at 214 wpm against his usual 173 (the opposite of the cue); [softly] at the start of a sentence inside a line gave no clear level change (-0.45 dB), while [softly] on a whole short line again lowered it (-5.3 dB) and [quietly] did (-3.3 dB). What slowed a passage here was the writing (shorter sentences) and edit holds, not a pace cue. Single observations: bands, not values."
+ ],
+ "contrast_axes_note": "Opposite poles of one delivery axis. Asked for together on the same words ([whispering, shouting], or [calm] [excited] stacked) they contradict each other, which ElevenLabs says blurs the performance; plan-check refuses that. A change from one pole to the other across a line or a beat is normal delivery.",
+ "contrast_axes": {
+  "volume": {
+   "low": [
+    "whisper",
+    "whispers",
+    "whispering",
+    "whispered",
+    "softly",
+    "soft",
+    "quietly",
+    "quiet",
+    "hushed",
+    "barely audible",
+    "murmur",
+    "murmurs",
+    "murmuring"
+   ],
+   "high": [
+    "shout",
+    "shouts",
+    "shouting",
+    "booming",
+    "loud",
+    "loudly",
+    "yelling",
+    "yells"
+   ]
   },
-  "refresh": "Re-read the three sources (WebFetch) when this file is more than ~60 days old, when a tag behaves unexpectedly, or when the user changes model. Update entries and 'verified'; keep 'measured_on_this_setup' as measured.",
-  "models": ["eleven_v4", "eleven_v4_turbo"],
-  "how_agents_use_this": "This file is information, not a template. 05-voice-and-edit.md -> 'Inline audio tags' is how a video's agents decide which tags, if any, fit THIS story's creative strategy (02), its pause intent (03) and the references' measured delivery (01, narration-measure). plan-check refuses only tags whose pipeline_status is not_for_narration and broken brackets, and adds each tag's time to the forecast; everything else is the agents' call. A tag not listed here is allowed ('custom') and judged on the calibration part (narration-measure flags a pause tag that made no pause; delivery.json shows whether the voice moved where a tag asked).",
-  "how_tags_behave": [
-    "A tag is written in square brackets inline in the sent text, before the words it affects (\"Place a tag before the words it affects\", tags_list). A pause cue goes before the words that follow the silence (the docs' examples: \"[pause]Then the phone rang.\", or a tag on its own line); a pause cue at the end of a line is undocumented and measured weak (measured_on_this_setup, 2026-11-22). It is sent exactly as written; never parentheses or curly braces.",
-    "A tag's emotion carries through the rest of its line; add a new tag only where the delivery should change (tags_list).",
-    "One tag per clause: contrasting tags on the same words blur the performance. Several qualities go inside one bracket, comma-separated: [tense, cautious] (tags_list).",
-    "Open vocabulary: any clear natural-language instruction can be a tag ([hushed and reverent, like a nature documentary narrator]). Describe the voice quality, not something that sounds like a sound cue, or it may be rendered as a sound effect (v4_docs).",
-    "Voice-dependent: tags land readily when the delivery is in the voice's training data; outside it they are 'less reliable, and the result may not be optimal' (v4_docs). A serious voice may not respond to playful tags; a voice that conflicts with a tag can read it ALOUD as text (v3_tags). A malformed or unsupported tag is read aloud (tags_list).",
-    "No SSML on v4 (no <break>, no <phoneme>): plan-check refuses markup in a line. Pauses come from pause tags, punctuation and text structure; a held silence is an edit hold (v4_docs, v3_tags). Re-read 2026-11-22: the v4 page's Info box says \"Eleven v4 and Eleven v3 do not support SSML break tags\" and v3_tags says the same, while the same v4 page's Pauses section still shows <break time=\"1.5s\" /> (up to 3 s): treated as unsupported. No page gives a pause tag's length in seconds or a way to set one; \"Different voices may handle pauses differently\" (v4_docs).",
-    "Pronunciation on v4: IPA between forward slashes inside the text, as ElevenLabs' examples write it (\"/ˌbaɪoʊˈkemɪstri/\"), or a respelling; phoneme tags work on eleven_flash_v2 only. In this pipeline the form lives in 40-plans/video-NN/pronunciation.json and is applied only to what is sent (best practices).",
-    "Punctuation shapes pacing without any tag: comma = short pause; ellipsis = trailing pause with weight; dash = a beat; full stop = sentence rhythm; CAPITALS = emphasis; a line break = a longer beat (v4_docs, v3_tags).",
-    "Eleven v4 performs better with more context; up to 10,000 characters per request (tags_list).",
-    "Iterate: if a delivery misses, swap a neighbouring emotion and regenerate; results vary, test the specific tags and phrasing (v4_docs, tags_list)."
-  ],
-  "pipeline_rules": [
-    "not_for_narration (refused by plan-check): distress tags (02: extreme distress is never shown or told), crude/novelty tags (family audience), sound-effect tags (sound design lives on the edit's own sound layer where it can be levelled, moved or removed; baked into the voice track it can only be fixed by re-recording, and the docs say tags should describe the voice), national accents (caricature of a real people), dialogue tags (single narrator). Playful persona tags ([pirate voice], [robotic voice], [sings], [woo]) are use_with_care: a light video may want a brief aside, the narrator persona stays.",
-    "A tag never forces overall pace: measured here, pace tags did not change the sustained rate over a real chunk (see measured_on_this_setup).",
-    "A tag never replaces writing: a line that needs a tag to land usually needs rewriting first.",
-    "Every tag the agents keep has a one-line story reason in editorial-review.md, and its real time cost is counted: approx_cost_s here until narration-measure has measured this voice (voice-lock.json -> measured.tag_costs_s)."
-  ],
-  "measured_on_this_setup": [
-    "2026-11-19, eleven_v4: a pace tag prepended to every ~8,000-character chunk ([quick, measured pace]; [quickly, steady narration]) made no measurable difference to the real rate (185-187 WPM both times) although each measured 199-203 WPM on a short probe.",
-    "2026-11-19, eleven_v4, voice UNbOi86R1a0f3ypyTCp4: [long pause] + [slightly pause] in one 56-line chunk added 12.3 s against the untagged take; five tags (2 [long pause], 2 [pause], 1 [slightly pause]) added 19.7 s to the full narration. Separate generations, so per-tag values are approximate: [long pause] roughly 6-8 s, [pause] ~2 s, [slightly pause] ~1-2 s. narration-measure measures the real gap at every tag of a real take; prefer those numbers.",
-    "2026-11-19, one run's references only (re-measure each run's own with pace-profile): those narrators (V017, V018) paused little: average gap between spoken segments 0.23-0.40 s, 90th percentile 0.40-0.70 s, longest 1.3-2.0 s, at most 1.2 gaps over 0.8 s per minute. A [long pause] is three to six times longer than anything those narrators do.",
-    "2026-11-19: script lines joined with newlines vs spaces gave overall 167.3 vs 168.9 WPM on the same voice (different passages): about 1%, not a meaningful pace lever.",
-    "2026-11-20, ElevenLabs' own v4 pages: \"Both variants use two voice settings: Stability and Similarity\"; \"Style and Speed sliders are not available in Eleven v4, and SSML is not supported\"; the migration guide: \"Eleven v4 doesn't apply voice_settings.speed\". The general speed page (0.7-1.2) is not about v4. So there is no supported speed control on v4: pace comes from the voice and the writing, and is measured, never steered.",
-    "2026-11-22, eleven_v4, voice JBFqnCBsd6RMkjVDRZzb (George, 0.5/0.8), one take each: [short pause] at the END of a line left 0.82 s against his usual 0.62 s (+0.2 s, audio-measured; Whisper's word ends alone had said 0.38 s). [softly] at the start of the last line of a part: that line came out 1.8 s quicker than his pace would give and ended louder than his usual endings (-1.8 dB against -7.7) with no fall; the same line without a tag in an earlier take also ended weakly. Single observations: bands, not values."
-  ],
-  "contrast_axes_note": "Opposite poles of one delivery axis. Asked for together on the same words ([whispering, shouting], or [calm] [excited] stacked) they contradict each other, which ElevenLabs says blurs the performance; plan-check refuses that. A change from one pole to the other across a line or a beat is normal delivery.",
-  "contrast_axes": {"volume": {"low": ["whisper", "whispers", "whispering", "whispered", "softly", "soft", "quietly", "quiet", "hushed", "barely audible", "murmur", "murmurs", "murmuring"], "high": ["shout", "shouts", "shouting", "booming", "loud", "loudly", "yelling", "yells"]}, "energy": {"low": ["calm", "calmly", "peaceful", "tired", "bored", "sleepy", "subdued", "relaxed", "weary", "deadpan"], "high": ["excited", "excitedly", "energetic", "frantic", "thrilled", "ecstatic", "hyped", "amazed"]}, "tempo": {"slow": ["slowly", "slow", "drawn out", "unhurried", "leisurely"], "fast": ["rushed", "quickly", "quick", "snappy", "speedy", "fast", "rapid", "rapidly", "hurried"]}},
-  "statuses": {
-    "usable": "Fits single-narrator documentary narration when the story's own moment calls for it.",
-    "use_with_care": "Register- and voice-dependent: listen to the calibration chunk; one-off moments; never at a moment of suffering; never mocking a real person or group.",
-    "not_for_narration": "Excluded by a pipeline rule (see pipeline_rules); plan-check refuses it."
+  "energy": {
+   "low": [
+    "calm",
+    "calmly",
+    "peaceful",
+    "tired",
+    "bored",
+    "sleepy",
+    "subdued",
+    "relaxed",
+    "weary",
+    "deadpan"
+   ],
+   "high": [
+    "excited",
+    "excitedly",
+    "energetic",
+    "frantic",
+    "thrilled",
+    "ecstatic",
+    "hyped",
+    "amazed"
+   ]
   },
-  "tags": [
-    {"tag": "[pause]", "approx_cost_s": 2.0, "category": "pause", "effect": "Inserts a pause.", "example": "[pause]Then the phone rang.", "source": "tags_list, v3_tags", "pipeline_status": "usable", "notes": "Measured ~2 s here (approximate). About the length of the niche references' longest pauses."},
-    {"tag": "[pauses]", "approx_cost_s": 2.0, "category": "pause", "effect": "A pause, as the docs' example spelling.", "source": "v4_docs", "pipeline_status": "usable", "notes": "Variant spelling; exact spelling may matter."},
-    {"tag": "[short pause]", "approx_cost_s": 1.5, "category": "pause", "effect": "A short pause.", "source": "v4_docs (enhancement list)", "pipeline_status": "usable", "notes": "Grammatical alternative to [slightly pause]. Listed only in v4_docs' Enhance-prompt tag list; [pause] is the pause tag the pages document and show in examples. Measured 2026-11-22 on George (JBFqnCBsd6RMkjVDRZzb, eleven_v4, 0.5/0.8) placed at a line's END: a 0.82 s gap against his usual 0.62 s (+0.2 s, read from the audio)."},
-    {"tag": "[brief pause]", "approx_cost_s": 1.5, "category": "pause", "effect": "A brief pause.", "source": "v4_docs", "pipeline_status": "usable", "notes": "Docs capitalise it [Brief pause]; matching here is case-insensitive."},
-    {"tag": "[slightly pause]", "approx_cost_s": 1.5, "category": "pause", "effect": "A small hitch.", "source": "tags_list (spelled this way)", "pipeline_status": "usable", "notes": "Measured ~1-2 s here (approximate)."},
-    {"tag": "[long pause]", "approx_cost_s": 7.0, "category": "pause", "effect": "A long pause.", "source": "tags_list, v4_docs (enhancement list)", "pipeline_status": "use_with_care", "notes": "Measured roughly 6-8 s here: longer than any silence in the niche references. A closing hold after the last line belongs to the edit (the last still held), not to this tag."},
-    {"tag": "[pause, then normally]", "approx_cost_s": 2.0, "category": "pause", "effect": "A pause, then the normal delivery resumes.", "source": "v4_docs", "pipeline_status": "usable"},
-    {"tag": "[gentle pause, then quiet realization]", "approx_cost_s": 2.0, "category": "pause", "effect": "A soft pause into a quiet, realizing delivery.", "source": "v4_docs", "pipeline_status": "usable"},
-
-    {"tag": "[slowly]", "category": "pacing", "effect": "Slows the speech rate.", "example": "[slowly]And the winner is...", "source": "tags_list, v3_tags", "pipeline_status": "use_with_care", "notes": "Local effect on a phrase at most; never a way to set the video's overall pace."},
-    {"tag": "[drawn out]", "category": "pacing", "effect": "Stretches the words.", "example": "[drawn out]Nooo way.", "source": "tags_list, v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[rushed]", "category": "pacing", "effect": "Speeds up the speech rate.", "example": "[rushed] Sorry, I'm late, the train broke down...", "source": "tags_list, v3_tags", "pipeline_status": "use_with_care", "notes": "Measured: pace tags did not sustain over a real chunk."},
-    {"tag": "[snappy]", "category": "pacing", "effect": "Quick, crisp delivery.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[speedy]", "category": "pacing", "effect": "Fast delivery.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[building tension, measured pace]", "category": "pacing", "effect": "Descriptive pacing instruction.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-
-    {"tag": "[softly]", "category": "delivery", "effect": "Reduces volume and intensity; lower pitch.", "example": "[softly] You did everything you could.", "source": "tags_list, v3_tags", "pipeline_status": "usable"},
-    {"tag": "[quietly]", "category": "delivery", "effect": "Hushed, low-volume delivery.", "example": "[quietly] I think they've gone.", "source": "tags_list, v3_tags", "pipeline_status": "usable"},
-    {"tag": "[hushed]", "category": "delivery", "effect": "Hushed delivery.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[whispers]", "category": "delivery", "effect": "Drops to a whisper.", "example": "[whispers] Don't move, it's right behind you.", "source": "tags_list, v3_tags, v4_docs", "pipeline_status": "use_with_care", "notes": "A strong effect for a narrator; variants [whisper], [whispering]."},
-    {"tag": "[whispering]", "category": "delivery", "effect": "Whispered delivery.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[whisper]", "category": "delivery", "effect": "Whispered delivery.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[barely audible]", "category": "delivery", "effect": "Very quiet.", "source": "tags_list", "pipeline_status": "use_with_care", "notes": "Can become inaudible under music."},
-    {"tag": "[booming]", "category": "delivery", "effect": "Loud, powerful delivery.", "source": "tags_list, v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[shouts]", "category": "delivery", "effect": "Raises volume and force.", "example": "[shouts] Everybody evacuate the building, now!", "source": "tags_list, v3_tags", "pipeline_status": "use_with_care", "notes": "Never as screaming or panic (02)."},
-    {"tag": "[shouting]", "category": "delivery", "effect": "Shouted, urgent delivery.", "source": "v3_tags, v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[low, threatening]", "category": "delivery", "effect": "Low, menacing tone.", "example": "[low, threatening] You really shouldn't have come here.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[low, gravelly voice]", "category": "delivery", "effect": "Describes a voice quality.", "source": "tags_list, v4_docs", "pipeline_status": "use_with_care", "notes": "Changes the narrator's colour; keep the persona consistent."},
-    {"tag": "[low, steady voice, restrained urgency]", "category": "delivery", "effect": "Descriptive delivery instruction.", "source": "v4_docs", "pipeline_status": "usable"},
-    {"tag": "[hushed and reverent, like a nature documentary narrator]", "category": "delivery", "effect": "Descriptive delivery instruction.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[slow and suspenseful]", "category": "delivery", "effect": "Descriptive delivery instruction.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[disbelief]", "category": "delivery", "effect": "Incredulous delivery.", "source": "tags_list", "pipeline_status": "use_with_care"},
-
-    {"tag": "[thoughtful]", "category": "emotion_calm", "effect": "Reflective colour.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[curious]", "category": "emotion_calm", "effect": "Inquisitive colour.", "source": "tags_list, v4_docs", "pipeline_status": "usable"},
-    {"tag": "[peaceful]", "category": "emotion_calm", "effect": "Calm colour.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[content]", "category": "emotion_calm", "effect": "Contented colour.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[trusting]", "category": "emotion_calm", "effect": "Open, trusting colour.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[awe]", "category": "emotion_calm", "effect": "Conveys wonder.", "source": "v3_tags", "pipeline_status": "usable"},
-    {"tag": "[intrigued]", "category": "emotion_calm", "effect": "Intrigued colour.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[hopeful]", "category": "emotion_calm", "effect": "Hopeful colour.", "source": "tags_list", "pipeline_status": "usable"},
-
-    {"tag": "[excited]", "category": "emotion_high_energy", "effect": "Raises the energy; higher pitch.", "source": "tags_list, v3_tags, v4_docs", "pipeline_status": "usable", "notes": "Register-dependent."},
-    {"tag": "[playful]", "category": "emotion_high_energy", "effect": "Playful colour.", "source": "tags_list", "pipeline_status": "usable", "notes": "Playful registers only; a serious voice may read it aloud."},
-    {"tag": "[amazed]", "category": "emotion_high_energy", "effect": "Amazed colour.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[powerful]", "category": "emotion_high_energy", "effect": "Strong, forceful colour.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[proud]", "category": "emotion_high_energy", "effect": "Proud colour.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[optimistic]", "category": "emotion_high_energy", "effect": "Optimistic colour.", "source": "tags_list", "pipeline_status": "usable"},
-    {"tag": "[triumphant]", "category": "emotion_high_energy", "effect": "Triumphant colour.", "source": "tags_list", "pipeline_status": "use_with_care", "notes": "Easily reads as unearned triumphalism (06)."},
-    {"tag": "[happily]", "category": "emotion_high_energy", "effect": "Upbeat colour.", "source": "v3_tags", "pipeline_status": "usable"},
-    {"tag": "[startled]", "category": "emotion_high_energy", "effect": "Startled colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-
-    {"tag": "[mad]", "category": "emotion_heated", "effect": "Angry colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[angry]", "category": "emotion_heated", "effect": "Intense, angry colour.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[aggressive]", "category": "emotion_heated", "effect": "Aggressive colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[bitter]", "category": "emotion_heated", "effect": "Bitter colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[critical]", "category": "emotion_heated", "effect": "Critical colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[repelled]", "category": "emotion_heated", "effect": "Repelled colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[annoyed]", "category": "emotion_heated", "effect": "Irritated colour.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[dismissive]", "category": "emotion_heated", "effect": "Dismissive stance.", "source": "v3_tags, v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[sarcastic]", "category": "emotion_heated", "effect": "Sarcastic delivery.", "source": "v4_docs", "pipeline_status": "use_with_care", "notes": "Never aimed at a real person or group (02)."},
-    {"tag": "[sarcastically]", "category": "emotion_heated", "effect": "Sarcastic delivery.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[smug]", "category": "emotion_heated", "effect": "Smug colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[cheeky]", "category": "emotion_heated", "effect": "Cheeky stance.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[mischievously]", "category": "emotion_heated", "effect": "Mischievous delivery.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[mischievous]", "category": "emotion_heated", "effect": "Mischievous colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[disgusted]", "category": "emotion_heated", "effect": "Disgusted colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-
-    {"tag": "[anxious]", "category": "emotion_tense", "effect": "Anxious colour.", "source": "tags_list", "pipeline_status": "use_with_care", "notes": "Worry and alarm are fine; never terror or panic (02)."},
-    {"tag": "[stressed]", "category": "emotion_tense", "effect": "Stressed colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[scared]", "category": "emotion_tense", "effect": "Fearful colour.", "source": "tags_list", "pipeline_status": "use_with_care", "notes": "Short of terror."},
-    {"tag": "[threatened]", "category": "emotion_tense", "effect": "Threatened colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[vulnerable]", "category": "emotion_tense", "effect": "Vulnerable colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[confused]", "category": "emotion_tense", "effect": "Confused colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[busy]", "category": "emotion_tense", "effect": "Busy, preoccupied colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[worried]", "category": "emotion_tense", "effect": "Shifts the line toward anxiety.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[nervous]", "category": "emotion_tense", "effect": "Nervous colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[jittery]", "category": "emotion_tense", "effect": "Jittery colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[frazzled]", "category": "emotion_tense", "effect": "Frazzled colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[cautiously]", "category": "emotion_tense", "effect": "Cautious stance.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[tense, cautious]", "category": "emotion_tense", "effect": "Combined qualities.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[panicking]", "category": "emotion_tense", "effect": "Panicked delivery.", "source": "v3_tags", "pipeline_status": "not_for_narration", "notes": "Panic is extreme distress (02)."},
-
-    {"tag": "[tired]", "category": "emotion_low", "effect": "Shifts the line toward fatigue.", "source": "tags_list, v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[bored]", "category": "emotion_low", "effect": "Bored colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[distant]", "category": "emotion_low", "effect": "Distant, detached colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[let down]", "category": "emotion_low", "effect": "Disappointed colour.", "source": "tags_list", "pipeline_status": "use_with_care"},
-    {"tag": "[sad]", "category": "emotion_low", "effect": "Somber colour.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[sorrowful]", "category": "emotion_low", "effect": "Sorrowful colour; lower pitch.", "source": "v3_tags", "pipeline_status": "use_with_care", "notes": "Sorrow in measure is fine; never despair or sobbing (02)."},
-    {"tag": "[upset]", "category": "emotion_low", "effect": "Shifts the line toward distress.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[despair]", "category": "emotion_low", "effect": "Despairing colour.", "source": "tags_list", "pipeline_status": "not_for_narration", "notes": "Despair is extreme distress (02)."},
-    {"tag": "[crying]", "category": "emotion_low", "effect": "Crying delivery.", "example": "[crying] I didn't think you'd come back.", "source": "tags_list, v4_docs", "pipeline_status": "not_for_narration", "notes": "Sobbing is extreme distress (02)."},
-    {"tag": "[starts crying]", "category": "emotion_low", "effect": "Begins crying.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-
-    {"tag": "[sighs]", "approx_cost_s": 1.0, "category": "reaction", "effect": "Adds a sigh.", "example": "[sighs] Fine. I'll do the dishes.", "source": "tags_list, v3_tags, v4_docs", "pipeline_status": "use_with_care", "notes": "Variants [sigh], [sighing]; exact spelling may matter."},
-    {"tag": "[sigh]", "approx_cost_s": 1.0, "category": "reaction", "effect": "Adds a sigh.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[sighing]", "approx_cost_s": 1.0, "category": "reaction", "effect": "Delivers the line with an audible sigh.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[exhales]", "approx_cost_s": 1.0, "category": "reaction", "effect": "Audible exhale.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[gasps]", "approx_cost_s": 0.8, "category": "reaction", "effect": "Sharp, surprised intake of breath.", "example": "[gasps] Is that a real diamond?", "source": "tags_list, v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[clears throat]", "approx_cost_s": 1.0, "category": "reaction", "effect": "Throat-clearing sound.", "source": "tags_list, v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[laughs]", "approx_cost_s": 1.5, "category": "reaction", "effect": "Laughter.", "example": "[laughs] You actually fell for that?", "source": "tags_list, v3_tags, v4_docs", "pipeline_status": "use_with_care", "notes": "Playful registers; never at suffering."},
-    {"tag": "[laughing]", "approx_cost_s": 1.5, "category": "reaction", "effect": "Laughing delivery.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[chuckles]", "approx_cost_s": 1.0, "category": "reaction", "effect": "Light laughter.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[laughs harder]", "approx_cost_s": 2.0, "category": "reaction", "effect": "Stronger laughter.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[starts laughing]", "approx_cost_s": 1.5, "category": "reaction", "effect": "Begins laughing.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[big laugh]", "approx_cost_s": 2.0, "category": "reaction", "effect": "A large, full laugh.", "source": "v3_tags", "pipeline_status": "use_with_care"},
-    {"tag": "[giggles]", "approx_cost_s": 1.0, "category": "reaction", "effect": "Giggling.", "source": "v4_docs", "pipeline_status": "use_with_care", "notes": "The docs warn a serious voice may not respond to it."},
-    {"tag": "[snorts]", "approx_cost_s": 0.5, "category": "reaction", "effect": "A snort.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[swallows]", "approx_cost_s": 0.5, "category": "reaction", "effect": "Swallowing sound.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[gulps]", "approx_cost_s": 0.5, "category": "reaction", "effect": "Gulping sound.", "source": "v4_docs", "pipeline_status": "use_with_care"},
-    {"tag": "[coughing]", "category": "reaction", "effect": "Adds a cough.", "source": "v3_tags", "pipeline_status": "not_for_narration", "notes": "Reads as a defect or illness in a narration track."},
-    {"tag": "[wheezing]", "category": "reaction", "effect": "Wheezing.", "source": "v4_docs", "pipeline_status": "not_for_narration", "notes": "Illness/distress sound."},
-
-    {"tag": "[jumping in]", "category": "dialogue", "effect": "Marks a line as jumping in.", "source": "v3_tags", "pipeline_status": "not_for_narration", "notes": "Single narrator."},
-    {"tag": "[interrupting]", "category": "dialogue", "effect": "Marks an interruption.", "source": "v3_tags", "pipeline_status": "not_for_narration"},
-    {"tag": "[overlapping]", "category": "dialogue", "effect": "Marks overlapping speech.", "source": "v3_tags", "pipeline_status": "not_for_narration"},
-    {"tag": "[beginning to speak]", "category": "dialogue", "effect": "Signals a speaker starting.", "source": "v3_tags", "pipeline_status": "not_for_narration"},
-
-    {"tag": "[strong x accent]", "category": "accent_character", "effect": "Accent shift (X = a nationality).", "source": "v4_docs", "pipeline_status": "not_for_narration", "notes": "One consistent narrator; accent tags risk caricaturing a real nationality."},
-    {"tag": "[british accent]", "category": "accent_character", "effect": "British accent.", "source": "tags_list, v3_tags", "pipeline_status": "not_for_narration"},
-    {"tag": "[french accent]", "category": "accent_character", "effect": "French accent.", "source": "tags_list, v3_tags", "pipeline_status": "not_for_narration"},
-    {"tag": "[australian accent]", "category": "accent_character", "effect": "Australian accent.", "source": "tags_list, v3_tags", "pipeline_status": "not_for_narration"},
-    {"tag": "[irish accent]", "category": "accent_character", "effect": "Irish accent.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-    {"tag": "[pirate voice]", "category": "accent_character", "effect": "Pirate persona.", "source": "tags_list, v3_tags", "pipeline_status": "use_with_care", "notes": "A brief, clearly framed playful aside in a light video (a quoted machine, a joke at nobody's expense); never the narrator's main voice, never at a serious moment. Voice-dependent: hear it on a probe or the calibration part."},
-    {"tag": "[robotic voice]", "category": "accent_character", "effect": "Robotic persona.", "source": "v4_docs", "pipeline_status": "use_with_care", "notes": "A brief, clearly framed playful aside in a light video (a quoted machine, a joke at nobody's expense); never the narrator's main voice, never at a serious moment. Voice-dependent: hear it on a probe or the calibration part."},
-    {"tag": "[sings]", "category": "novelty", "effect": "Singing.", "source": "v4_docs", "pipeline_status": "use_with_care", "notes": "A brief, clearly framed playful aside in a light video (a quoted machine, a joke at nobody's expense); never the narrator's main voice, never at a serious moment. Voice-dependent: hear it on a probe or the calibration part."},
-    {"tag": "[woo]", "category": "novelty", "effect": "A 'woo' exclamation.", "source": "v4_docs", "pipeline_status": "use_with_care", "notes": "A brief, clearly framed playful aside in a light video (a quoted machine, a joke at nobody's expense); never the narrator's main voice, never at a serious moment. Voice-dependent: hear it on a probe or the calibration part."},
-    {"tag": "[fart]", "category": "novelty", "effect": "Crude sound.", "source": "v4_docs", "pipeline_status": "not_for_narration", "notes": "Family audience (02)."},
-
-    {"tag": "[gunshot]", "category": "sound_effect", "effect": "Inserts a gunshot sound.", "source": "v3_tags, v4_docs", "pipeline_status": "not_for_narration", "notes": "Sound design belongs on the edit's sound layer; also violence-as-it-happens (02)."},
-    {"tag": "[explosion]", "category": "sound_effect", "effect": "Inserts an explosion sound.", "source": "v3_tags, v4_docs", "pipeline_status": "not_for_narration"},
-    {"tag": "[applause]", "category": "sound_effect", "effect": "Applause.", "source": "v4_docs", "pipeline_status": "not_for_narration"},
-    {"tag": "[clapping]", "category": "sound_effect", "effect": "Clapping.", "source": "tags_list, v3_tags, v4_docs", "pipeline_status": "not_for_narration"},
-    {"tag": "[thunder rumbling]", "category": "sound_effect", "effect": "Thunder.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-    {"tag": "[footsteps]", "category": "sound_effect", "effect": "Footsteps.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-    {"tag": "[many footsteps]", "category": "sound_effect", "effect": "Many footsteps.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-    {"tag": "[door creaking]", "category": "sound_effect", "effect": "A creaking door.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-    {"tag": "[owl hooting]", "category": "sound_effect", "effect": "An owl.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-    {"tag": "[twig snapping]", "category": "sound_effect", "effect": "A snapping twig.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-    {"tag": "[zipper opening]", "category": "sound_effect", "effect": "A zipper.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-    {"tag": "[dog barking]", "category": "sound_effect", "effect": "A dog barking.", "source": "tags_list", "pipeline_status": "not_for_narration"},
-    {"tag": "[binary beeping]", "category": "sound_effect", "effect": "Electronic beeping.", "source": "v4_docs", "pipeline_status": "not_for_narration"}
-  ]
+  "tempo": {
+   "slow": [
+    "slowly",
+    "slow",
+    "drawn out",
+    "unhurried",
+    "leisurely"
+   ],
+   "fast": [
+    "rushed",
+    "quickly",
+    "quick",
+    "snappy",
+    "speedy",
+    "fast",
+    "rapid",
+    "rapidly",
+    "hurried"
+   ]
+  }
+ },
+ "statuses": {
+  "usable": "Fits single-narrator documentary narration when the story's own moment calls for it.",
+  "use_with_care": "Register- and voice-dependent: listen to the calibration chunk; one-off moments; never at a moment of suffering; never mocking a real person or group.",
+  "not_for_narration": "Excluded by a pipeline rule (see pipeline_rules); plan-check refuses it."
+ },
+ "tags": [
+  {
+   "tag": "[pause]",
+   "approx_cost_s": 2.0,
+   "category": "pause",
+   "effect": "Inserts a pause.",
+   "example": "[pause]Then the phone rang.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "usable",
+   "notes": "Measured ~2 s here (approximate). About the length of the niche references' longest pauses."
+  },
+  {
+   "tag": "[pauses]",
+   "approx_cost_s": 2.0,
+   "category": "pause",
+   "effect": "A pause, as the docs' example spelling.",
+   "source": "v4_docs",
+   "pipeline_status": "usable",
+   "notes": "Variant spelling; exact spelling may matter."
+  },
+  {
+   "tag": "[short pause]",
+   "approx_cost_s": 1.5,
+   "category": "pause",
+   "effect": "A short pause.",
+   "source": "v4_docs (enhancement list)",
+   "pipeline_status": "usable",
+   "notes": "Grammatical alternative to [slightly pause]. Listed only in v4_docs' Enhance-prompt tag list; [pause] is the pause tag the pages document and show in examples. Measured 2026-11-22 on George (JBFqnCBsd6RMkjVDRZzb, eleven_v4, 0.5/0.8) placed at a line's END: a 0.82 s gap against his usual 0.62 s (+0.2 s, read from the audio)."
+  },
+  {
+   "tag": "[brief pause]",
+   "approx_cost_s": 1.5,
+   "category": "pause",
+   "effect": "A brief pause.",
+   "source": "v4_docs",
+   "pipeline_status": "usable",
+   "notes": "Docs capitalise it [Brief pause]; matching here is case-insensitive."
+  },
+  {
+   "tag": "[slightly pause]",
+   "approx_cost_s": 1.5,
+   "category": "pause",
+   "effect": "A small hitch.",
+   "source": "tags_list (spelled this way)",
+   "pipeline_status": "usable",
+   "notes": "Measured ~1-2 s here (approximate)."
+  },
+  {
+   "tag": "[long pause]",
+   "approx_cost_s": 7.0,
+   "category": "pause",
+   "effect": "A long pause.",
+   "source": "tags_list, v4_docs (enhancement list)",
+   "pipeline_status": "use_with_care",
+   "notes": "Measured roughly 6-8 s here: longer than any silence in the niche references. A closing hold after the last line belongs to the edit (the last still held), not to this tag."
+  },
+  {
+   "tag": "[pause, then normally]",
+   "approx_cost_s": 2.0,
+   "category": "pause",
+   "effect": "A pause, then the normal delivery resumes.",
+   "source": "v4_docs",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[gentle pause, then quiet realization]",
+   "approx_cost_s": 2.0,
+   "category": "pause",
+   "effect": "A soft pause into a quiet, realizing delivery.",
+   "source": "v4_docs",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[slowly]",
+   "category": "pacing",
+   "effect": "Slows the speech rate.",
+   "example": "[slowly]And the winner is...",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "use_with_care",
+   "notes": "Local effect on a phrase at most; never a way to set the video's overall pace. A neighbouring custom cue, [unhurried], ran a line FASTER on George (2026-11-23)."
+  },
+  {
+   "tag": "[drawn out]",
+   "category": "pacing",
+   "effect": "Stretches the words.",
+   "example": "[drawn out]Nooo way.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[rushed]",
+   "category": "pacing",
+   "effect": "Speeds up the speech rate.",
+   "example": "[rushed] Sorry, I'm late, the train broke down...",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "use_with_care",
+   "notes": "Measured: pace tags did not sustain over a real chunk."
+  },
+  {
+   "tag": "[snappy]",
+   "category": "pacing",
+   "effect": "Quick, crisp delivery.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[speedy]",
+   "category": "pacing",
+   "effect": "Fast delivery.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[building tension, measured pace]",
+   "category": "pacing",
+   "effect": "Descriptive pacing instruction.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[softly]",
+   "category": "delivery",
+   "effect": "Reduces volume and intensity; lower pitch.",
+   "example": "[softly] You did everything you could.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[quietly]",
+   "category": "delivery",
+   "effect": "Hushed, low-volume delivery.",
+   "example": "[quietly] I think they've gone.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[hushed]",
+   "category": "delivery",
+   "effect": "Hushed delivery.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[whispers]",
+   "category": "delivery",
+   "effect": "Drops to a whisper.",
+   "example": "[whispers] Don't move, it's right behind you.",
+   "source": "tags_list, v3_tags, v4_docs",
+   "pipeline_status": "use_with_care",
+   "notes": "A strong effect for a narrator; variants [whisper], [whispering]."
+  },
+  {
+   "tag": "[whispering]",
+   "category": "delivery",
+   "effect": "Whispered delivery.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[whisper]",
+   "category": "delivery",
+   "effect": "Whispered delivery.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[barely audible]",
+   "category": "delivery",
+   "effect": "Very quiet.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care",
+   "notes": "Can become inaudible under music."
+  },
+  {
+   "tag": "[booming]",
+   "category": "delivery",
+   "effect": "Loud, powerful delivery.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[shouts]",
+   "category": "delivery",
+   "effect": "Raises volume and force.",
+   "example": "[shouts] Everybody evacuate the building, now!",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "use_with_care",
+   "notes": "Never as screaming or panic (02)."
+  },
+  {
+   "tag": "[shouting]",
+   "category": "delivery",
+   "effect": "Shouted, urgent delivery.",
+   "source": "v3_tags, v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[low, threatening]",
+   "category": "delivery",
+   "effect": "Low, menacing tone.",
+   "example": "[low, threatening] You really shouldn't have come here.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[low, gravelly voice]",
+   "category": "delivery",
+   "effect": "Describes a voice quality.",
+   "source": "tags_list, v4_docs",
+   "pipeline_status": "use_with_care",
+   "notes": "Changes the narrator's colour; keep the persona consistent."
+  },
+  {
+   "tag": "[low, steady voice, restrained urgency]",
+   "category": "delivery",
+   "effect": "Descriptive delivery instruction.",
+   "source": "v4_docs",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[hushed and reverent, like a nature documentary narrator]",
+   "category": "delivery",
+   "effect": "Descriptive delivery instruction.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[slow and suspenseful]",
+   "category": "delivery",
+   "effect": "Descriptive delivery instruction.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[disbelief]",
+   "category": "delivery",
+   "effect": "Incredulous delivery.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[thoughtful]",
+   "category": "emotion_calm",
+   "effect": "Reflective colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[curious]",
+   "category": "emotion_calm",
+   "effect": "Inquisitive colour.",
+   "source": "tags_list, v4_docs",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[peaceful]",
+   "category": "emotion_calm",
+   "effect": "Calm colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[content]",
+   "category": "emotion_calm",
+   "effect": "Contented colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[trusting]",
+   "category": "emotion_calm",
+   "effect": "Open, trusting colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[awe]",
+   "category": "emotion_calm",
+   "effect": "Conveys wonder.",
+   "source": "v3_tags",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[intrigued]",
+   "category": "emotion_calm",
+   "effect": "Intrigued colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[hopeful]",
+   "category": "emotion_calm",
+   "effect": "Hopeful colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[excited]",
+   "category": "emotion_high_energy",
+   "effect": "Raises the energy; higher pitch.",
+   "source": "tags_list, v3_tags, v4_docs",
+   "pipeline_status": "usable",
+   "notes": "Register-dependent."
+  },
+  {
+   "tag": "[playful]",
+   "category": "emotion_high_energy",
+   "effect": "Playful colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable",
+   "notes": "Playful registers only; a serious voice may read it aloud."
+  },
+  {
+   "tag": "[amazed]",
+   "category": "emotion_high_energy",
+   "effect": "Amazed colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[powerful]",
+   "category": "emotion_high_energy",
+   "effect": "Strong, forceful colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[proud]",
+   "category": "emotion_high_energy",
+   "effect": "Proud colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[optimistic]",
+   "category": "emotion_high_energy",
+   "effect": "Optimistic colour.",
+   "source": "tags_list",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[triumphant]",
+   "category": "emotion_high_energy",
+   "effect": "Triumphant colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care",
+   "notes": "Easily reads as unearned triumphalism (06)."
+  },
+  {
+   "tag": "[happily]",
+   "category": "emotion_high_energy",
+   "effect": "Upbeat colour.",
+   "source": "v3_tags",
+   "pipeline_status": "usable"
+  },
+  {
+   "tag": "[startled]",
+   "category": "emotion_high_energy",
+   "effect": "Startled colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[mad]",
+   "category": "emotion_heated",
+   "effect": "Angry colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[angry]",
+   "category": "emotion_heated",
+   "effect": "Intense, angry colour.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[aggressive]",
+   "category": "emotion_heated",
+   "effect": "Aggressive colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[bitter]",
+   "category": "emotion_heated",
+   "effect": "Bitter colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[critical]",
+   "category": "emotion_heated",
+   "effect": "Critical colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[repelled]",
+   "category": "emotion_heated",
+   "effect": "Repelled colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[annoyed]",
+   "category": "emotion_heated",
+   "effect": "Irritated colour.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[dismissive]",
+   "category": "emotion_heated",
+   "effect": "Dismissive stance.",
+   "source": "v3_tags, v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[sarcastic]",
+   "category": "emotion_heated",
+   "effect": "Sarcastic delivery.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care",
+   "notes": "Never aimed at a real person or group (02)."
+  },
+  {
+   "tag": "[sarcastically]",
+   "category": "emotion_heated",
+   "effect": "Sarcastic delivery.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[smug]",
+   "category": "emotion_heated",
+   "effect": "Smug colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[cheeky]",
+   "category": "emotion_heated",
+   "effect": "Cheeky stance.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[mischievously]",
+   "category": "emotion_heated",
+   "effect": "Mischievous delivery.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[mischievous]",
+   "category": "emotion_heated",
+   "effect": "Mischievous colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[disgusted]",
+   "category": "emotion_heated",
+   "effect": "Disgusted colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[anxious]",
+   "category": "emotion_tense",
+   "effect": "Anxious colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care",
+   "notes": "Worry and alarm are fine; never terror or panic (02)."
+  },
+  {
+   "tag": "[stressed]",
+   "category": "emotion_tense",
+   "effect": "Stressed colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[scared]",
+   "category": "emotion_tense",
+   "effect": "Fearful colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care",
+   "notes": "Short of terror."
+  },
+  {
+   "tag": "[threatened]",
+   "category": "emotion_tense",
+   "effect": "Threatened colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[vulnerable]",
+   "category": "emotion_tense",
+   "effect": "Vulnerable colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[confused]",
+   "category": "emotion_tense",
+   "effect": "Confused colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[busy]",
+   "category": "emotion_tense",
+   "effect": "Busy, preoccupied colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[worried]",
+   "category": "emotion_tense",
+   "effect": "Shifts the line toward anxiety.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[nervous]",
+   "category": "emotion_tense",
+   "effect": "Nervous colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[jittery]",
+   "category": "emotion_tense",
+   "effect": "Jittery colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[frazzled]",
+   "category": "emotion_tense",
+   "effect": "Frazzled colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[cautiously]",
+   "category": "emotion_tense",
+   "effect": "Cautious stance.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[tense, cautious]",
+   "category": "emotion_tense",
+   "effect": "Combined qualities.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[panicking]",
+   "category": "emotion_tense",
+   "effect": "Panicked delivery.",
+   "source": "v3_tags",
+   "pipeline_status": "not_for_narration",
+   "notes": "Panic is extreme distress (02)."
+  },
+  {
+   "tag": "[tired]",
+   "category": "emotion_low",
+   "effect": "Shifts the line toward fatigue.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[bored]",
+   "category": "emotion_low",
+   "effect": "Bored colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[distant]",
+   "category": "emotion_low",
+   "effect": "Distant, detached colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[let down]",
+   "category": "emotion_low",
+   "effect": "Disappointed colour.",
+   "source": "tags_list",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[sad]",
+   "category": "emotion_low",
+   "effect": "Somber colour.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[sorrowful]",
+   "category": "emotion_low",
+   "effect": "Sorrowful colour; lower pitch.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care",
+   "notes": "Sorrow in measure is fine; never despair or sobbing (02)."
+  },
+  {
+   "tag": "[upset]",
+   "category": "emotion_low",
+   "effect": "Shifts the line toward distress.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[despair]",
+   "category": "emotion_low",
+   "effect": "Despairing colour.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration",
+   "notes": "Despair is extreme distress (02)."
+  },
+  {
+   "tag": "[crying]",
+   "category": "emotion_low",
+   "effect": "Crying delivery.",
+   "example": "[crying] I didn't think you'd come back.",
+   "source": "tags_list, v4_docs",
+   "pipeline_status": "not_for_narration",
+   "notes": "Sobbing is extreme distress (02)."
+  },
+  {
+   "tag": "[starts crying]",
+   "category": "emotion_low",
+   "effect": "Begins crying.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[sighs]",
+   "approx_cost_s": 1.0,
+   "category": "reaction",
+   "effect": "Adds a sigh.",
+   "example": "[sighs] Fine. I'll do the dishes.",
+   "source": "tags_list, v3_tags, v4_docs",
+   "pipeline_status": "use_with_care",
+   "notes": "Variants [sigh], [sighing]; exact spelling may matter."
+  },
+  {
+   "tag": "[sigh]",
+   "approx_cost_s": 1.0,
+   "category": "reaction",
+   "effect": "Adds a sigh.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[sighing]",
+   "approx_cost_s": 1.0,
+   "category": "reaction",
+   "effect": "Delivers the line with an audible sigh.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[exhales]",
+   "approx_cost_s": 1.0,
+   "category": "reaction",
+   "effect": "Audible exhale.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[gasps]",
+   "approx_cost_s": 0.8,
+   "category": "reaction",
+   "effect": "Sharp, surprised intake of breath.",
+   "example": "[gasps] Is that a real diamond?",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[clears throat]",
+   "approx_cost_s": 1.0,
+   "category": "reaction",
+   "effect": "Throat-clearing sound.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[laughs]",
+   "approx_cost_s": 1.5,
+   "category": "reaction",
+   "effect": "Laughter.",
+   "example": "[laughs] You actually fell for that?",
+   "source": "tags_list, v3_tags, v4_docs",
+   "pipeline_status": "use_with_care",
+   "notes": "Playful registers; never at suffering."
+  },
+  {
+   "tag": "[laughing]",
+   "approx_cost_s": 1.5,
+   "category": "reaction",
+   "effect": "Laughing delivery.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[chuckles]",
+   "approx_cost_s": 1.0,
+   "category": "reaction",
+   "effect": "Light laughter.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[laughs harder]",
+   "approx_cost_s": 2.0,
+   "category": "reaction",
+   "effect": "Stronger laughter.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[starts laughing]",
+   "approx_cost_s": 1.5,
+   "category": "reaction",
+   "effect": "Begins laughing.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[big laugh]",
+   "approx_cost_s": 2.0,
+   "category": "reaction",
+   "effect": "A large, full laugh.",
+   "source": "v3_tags",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[giggles]",
+   "approx_cost_s": 1.0,
+   "category": "reaction",
+   "effect": "Giggling.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care",
+   "notes": "The docs warn a serious voice may not respond to it."
+  },
+  {
+   "tag": "[snorts]",
+   "approx_cost_s": 0.5,
+   "category": "reaction",
+   "effect": "A snort.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[swallows]",
+   "approx_cost_s": 0.5,
+   "category": "reaction",
+   "effect": "Swallowing sound.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[gulps]",
+   "approx_cost_s": 0.5,
+   "category": "reaction",
+   "effect": "Gulping sound.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care"
+  },
+  {
+   "tag": "[coughing]",
+   "category": "reaction",
+   "effect": "Adds a cough.",
+   "source": "v3_tags",
+   "pipeline_status": "not_for_narration",
+   "notes": "Reads as a defect or illness in a narration track."
+  },
+  {
+   "tag": "[wheezing]",
+   "category": "reaction",
+   "effect": "Wheezing.",
+   "source": "v4_docs",
+   "pipeline_status": "not_for_narration",
+   "notes": "Illness/distress sound."
+  },
+  {
+   "tag": "[jumping in]",
+   "category": "dialogue",
+   "effect": "Marks a line as jumping in.",
+   "source": "v3_tags",
+   "pipeline_status": "not_for_narration",
+   "notes": "Single narrator."
+  },
+  {
+   "tag": "[interrupting]",
+   "category": "dialogue",
+   "effect": "Marks an interruption.",
+   "source": "v3_tags",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[overlapping]",
+   "category": "dialogue",
+   "effect": "Marks overlapping speech.",
+   "source": "v3_tags",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[beginning to speak]",
+   "category": "dialogue",
+   "effect": "Signals a speaker starting.",
+   "source": "v3_tags",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[strong x accent]",
+   "category": "accent_character",
+   "effect": "Accent shift (X = a nationality).",
+   "source": "v4_docs",
+   "pipeline_status": "not_for_narration",
+   "notes": "One consistent narrator; accent tags risk caricaturing a real nationality."
+  },
+  {
+   "tag": "[british accent]",
+   "category": "accent_character",
+   "effect": "British accent.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[french accent]",
+   "category": "accent_character",
+   "effect": "French accent.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[australian accent]",
+   "category": "accent_character",
+   "effect": "Australian accent.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[irish accent]",
+   "category": "accent_character",
+   "effect": "Irish accent.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[pirate voice]",
+   "category": "accent_character",
+   "effect": "Pirate persona.",
+   "source": "tags_list, v3_tags",
+   "pipeline_status": "use_with_care",
+   "notes": "A brief, clearly framed playful aside in a light video (a quoted machine, a joke at nobody's expense); never the narrator's main voice, never at a serious moment. Voice-dependent: hear it on a probe or the calibration part."
+  },
+  {
+   "tag": "[robotic voice]",
+   "category": "accent_character",
+   "effect": "Robotic persona.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care",
+   "notes": "A brief, clearly framed playful aside in a light video (a quoted machine, a joke at nobody's expense); never the narrator's main voice, never at a serious moment. Voice-dependent: hear it on a probe or the calibration part."
+  },
+  {
+   "tag": "[sings]",
+   "category": "novelty",
+   "effect": "Singing.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care",
+   "notes": "A brief, clearly framed playful aside in a light video (a quoted machine, a joke at nobody's expense); never the narrator's main voice, never at a serious moment. Voice-dependent: hear it on a probe or the calibration part."
+  },
+  {
+   "tag": "[woo]",
+   "category": "novelty",
+   "effect": "A 'woo' exclamation.",
+   "source": "v4_docs",
+   "pipeline_status": "use_with_care",
+   "notes": "A brief, clearly framed playful aside in a light video (a quoted machine, a joke at nobody's expense); never the narrator's main voice, never at a serious moment. Voice-dependent: hear it on a probe or the calibration part."
+  },
+  {
+   "tag": "[fart]",
+   "category": "novelty",
+   "effect": "Crude sound.",
+   "source": "v4_docs",
+   "pipeline_status": "not_for_narration",
+   "notes": "Family audience (02)."
+  },
+  {
+   "tag": "[gunshot]",
+   "category": "sound_effect",
+   "effect": "Inserts a gunshot sound.",
+   "source": "v3_tags, v4_docs",
+   "pipeline_status": "not_for_narration",
+   "notes": "Sound design belongs on the edit's sound layer; also violence-as-it-happens (02)."
+  },
+  {
+   "tag": "[explosion]",
+   "category": "sound_effect",
+   "effect": "Inserts an explosion sound.",
+   "source": "v3_tags, v4_docs",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[applause]",
+   "category": "sound_effect",
+   "effect": "Applause.",
+   "source": "v4_docs",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[clapping]",
+   "category": "sound_effect",
+   "effect": "Clapping.",
+   "source": "tags_list, v3_tags, v4_docs",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[thunder rumbling]",
+   "category": "sound_effect",
+   "effect": "Thunder.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[footsteps]",
+   "category": "sound_effect",
+   "effect": "Footsteps.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[many footsteps]",
+   "category": "sound_effect",
+   "effect": "Many footsteps.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[door creaking]",
+   "category": "sound_effect",
+   "effect": "A creaking door.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[owl hooting]",
+   "category": "sound_effect",
+   "effect": "An owl.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[twig snapping]",
+   "category": "sound_effect",
+   "effect": "A snapping twig.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[zipper opening]",
+   "category": "sound_effect",
+   "effect": "A zipper.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[dog barking]",
+   "category": "sound_effect",
+   "effect": "A dog barking.",
+   "source": "tags_list",
+   "pipeline_status": "not_for_narration"
+  },
+  {
+   "tag": "[binary beeping]",
+   "category": "sound_effect",
+   "effect": "Electronic beeping.",
+   "source": "v4_docs",
+   "pipeline_status": "not_for_narration"
+  }
+ ]
 }
