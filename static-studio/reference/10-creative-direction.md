@@ -63,7 +63,7 @@ creative profile (02): what makes these videos *enjoyable*, not only what they c
 
 ## 2. From the story approach to an audiovisual treatment
 
-02 chooses the *story*: the subject, the angle, the five approaches and why one wins. The **treatment** decides how
+02 finds the *subject* (topic discovery: `subject`, what it offers this audience and the value the film must carry) and chooses the *story*: the angle, the five approaches and why one wins. The **treatment** decides how
 that story sounds and looks, as one idea. Write two or three treatments of the chosen approach that genuinely
 differ: different narrators, different relationships between picture and word, different emotional temperatures.
 Not one treatment at three intensities.

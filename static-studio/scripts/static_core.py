@@ -2099,6 +2099,194 @@ def _jaccard(a, b):
     return len(a & b) / len(a | b) if (a | b) else 0.0
 
 
+# ---------------------------------------------------------------- the subject, before the approaches
+# Topic discovery (2026-11-24): what the user's scope leaves open, which subjects were researched, what each could give
+# its viewer and on what evidence, whether it fills the locked length, which was chosen over which and why, and the
+# researched value the film must carry (02 "Finding the subject"). The code checks that this reasoning exists, is tied
+# to recorded sources and references, keeps the user's scope and reaches the beat map and the shots; whether a subject
+# is worth a viewer's time is the director's judgement, never a score.
+SUBJECT_SCOPES = ('niche', 'subject', 'topic', 'story')
+CERTAINTIES = ('established', 'contested', 'speculative', 'invented')
+SUBJECT_TEXT_KEYS = ('subject', 'value_form', 'what_happens', 'why_it_matters', 'reward')
+MATERIAL_SHORT_SHARE = 0.9      # material for under 90% of the locked length is reported and decided, never padded
+
+
+def source_ids(text):
+    return set(re.findall(r'\bS\d+\b', str(text or '')))
+
+
+def material_issues(prefix, items, known, factual, id_key=None):
+    """Each researched item says what it is and how sure we are, tied to the sources ledger: established -> a recorded
+    source; contested -> how the film keeps it honest; speculative -> how it is framed; invented -> only in a subject
+    that is not factual (a comedy's premise, a fiction)."""
+    out = []
+    for i, m in enumerate(items, 1):
+        tag = f'{prefix}_{m.get(id_key) if id_key else i}'
+        if n_words(m.get('what')) < 3:
+            out.append(f'{tag}_missing_what')
+        cert = str(m.get('certainty') or '').strip().lower()
+        if cert not in CERTAINTIES:
+            out.append(f'{tag}_certainty_must_be:' + '/'.join(CERTAINTIES))
+            continue
+        srcs = {str(s).strip() for s in m.get('sources') or [] if str(s).strip()}
+        if cert == 'established':
+            if not srcs:
+                out.append(f'{tag}_established_needs_a_source')
+            elif not known:
+                out.append(f'{tag}_cites_sources_but_the_ledger_is_empty:30-research/video-NN/sources.md')
+            elif not srcs <= known:
+                out.append(f'{tag}_cites_sources_not_in_the_ledger:' + ','.join(sorted(srcs - known)))
+        elif cert == 'contested' and n_words(m.get('hedge')) < 4:
+            out.append(f'{tag}_contested_needs_how_it_is_kept_honest:hedge')
+        elif cert == 'speculative' and n_words(m.get('framed_as')) < 4:
+            out.append(f'{tag}_speculative_needs_how_it_is_framed:framed_as')
+        elif cert == 'invented' and factual is not False:
+            out.append(f'{tag}_invented_material_only_in_a_subject_that_is_not_factual')
+    return out
+
+
+def subject_issues(subj, sources_text='', locked_s=None, refs=(), locked_niche=None):
+    """(issues, warnings) for direction.json -> subject. Presence, links and scope only: the chosen candidate's
+    research must hold; the others were considered, so their gaps are warnings."""
+    iss, warn = [], []
+    if not isinstance(subj, dict):
+        return ['direction_needs_subject_research:subject'], warn
+    known = source_ids(sources_text)
+    sc = subj.get('scope') if isinstance(subj.get('scope'), dict) else {}
+    kind = str(sc.get('kind') or '').strip().lower()
+    if kind not in SUBJECT_SCOPES:
+        iss.append('subject_scope_kind_must_be:' + '/'.join(SUBJECT_SCOPES))
+    if n_words(sc.get('user_words')) < 1:
+        iss.append('subject_scope_needs_the_users_own_words:user_words')
+    if locked_niche and str(sc.get('niche') or '').strip().lower() != str(locked_niche).strip().lower():
+        iss.append(f'subject_scope_niche_must_be_the_locked_niche:{locked_niche}')
+    if n_words(subj.get('audience_value')) < MIN_FIELD_WORDS:
+        iss.append('subject_missing_audience_value')
+    # what the processed references show about how this audience is rewarded: observed apart from interpreted
+    fr = [x for x in subj.get('from_references') or [] if isinstance(x, dict)]
+    refset = {str(r).strip().upper() for r in refs or []}
+    if refset and not fr:
+        iss.append('subject_needs_from_references:what_the_references_show_about_this_audiences_rewards')
+    for i, x in enumerate(fr, 1):
+        v = str(x.get('ref') or '').strip().upper()
+        if refset and v not in refset:
+            iss.append(f'subject_from_references_{i}_names_a_reference_not_in_the_evidence:{v}')
+        if parse_span(x.get('at'))[0] is None:
+            iss.append(f'subject_from_references_{i}_needs_a_time:at')
+        if n_words(x.get('observed')) < 4:
+            iss.append(f'subject_from_references_{i}_needs_what_is_observed')
+        if n_words(x.get('interpretation')) < 4:
+            iss.append(f'subject_from_references_{i}_needs_its_interpretation_apart')
+    cands = [c for c in subj.get('candidates') or [] if isinstance(c, dict)]
+    ids = [str(c.get('id') or '').strip() for c in cands]
+    if not cands or len(set(ids)) != len(ids) or '' in ids:
+        iss.append('subject_needs_researched_candidates_with_distinct_ids')
+    sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
+    chosen = str(sel.get('candidate') or '').strip()
+    if chosen not in ids:
+        iss.append('subject_selection_must_name_a_listed_candidate')
+    for k in ('why', 'over_alternatives'):
+        if n_words(sel.get(k)) < MIN_FIELD_WORDS:
+            iss.append(f'subject_selection_missing_{k}')
+    if kind in ('topic', 'story') and (sel.get('keeps_user_scope') is not True
+                                       or n_words(sel.get('how_scope_kept')) < MIN_FIELD_WORDS):
+        # an exact topic or story is developed, never replaced (the user's direction)
+        iss.append(f'subject_exact_{kind}_must_be_kept:selection.keeps_user_scope_and_how_scope_kept')
+    for c in cands:
+        cid = str(c.get('id'))
+        mine = iss if cid == chosen else warn
+        for k in SUBJECT_TEXT_KEYS:
+            if n_words(c.get(k)) < (2 if k in ('subject', 'value_form') else 4):
+                mine.append(f'subject_candidate_{cid}_missing_{k}')
+        if not isinstance(c.get('factual'), bool):
+            mine.append(f'subject_candidate_{cid}_must_say_factual_true_or_false')
+        mats = [m for m in c.get('strongest_material') or [] if isinstance(m, dict)]
+        if not mats:
+            mine.append(f'subject_candidate_{cid}_names_no_strongest_material')
+        mine += material_issues(f'subject_candidate_{cid}_material', mats, known, c.get('factual'))
+        rt = c.get('runtime') if isinstance(c.get('runtime'), dict) else {}
+        if not isinstance(rt.get('material_minutes'), (int, float)) or n_words(rt.get('why')) < 4:
+            mine.append(f'subject_candidate_{cid}_needs_runtime:material_minutes_and_why')
+        if n_words(c.get('feasibility')) < 4:
+            mine.append(f'subject_candidate_{cid}_missing_feasibility')
+    ch = next((c for c in cands if str(c.get('id')) == chosen), None)
+    if ch is not None and locked_s:
+        rt = ch.get('runtime') if isinstance(ch.get('runtime'), dict) else {}
+        mm = rt.get('material_minutes')
+        if (isinstance(mm, (int, float)) and mm * 60 < MATERIAL_SHORT_SHARE * float(locked_s)
+                and n_words(subj.get('runtime_decision')) < MIN_FIELD_WORDS):
+            iss.append(f'subject_material_short_of_locked_length:{mm:g}_of_{float(locked_s) / 60:.1f}_min:'
+                       'report_it_and_record_the_users_decision_in_runtime_decision:never_pad')
+    vals = [v for v in subj.get('value_to_carry') or [] if isinstance(v, dict)]
+    vids = [str(v.get('id') or '').strip() for v in vals]
+    if not vals or len(set(vids)) != len(vids) or '' in vids:
+        iss.append('subject_needs_value_to_carry_with_distinct_ids')
+    iss += material_issues('subject_value', vals, known, (ch or {}).get('factual'), id_key='id')
+    for v in vals:
+        if n_words(v.get('why_it_matters')) < 4:
+            iss.append(f'subject_value_{v.get("id")}_missing_why_it_matters')
+    if kind in ('topic', 'story') and ch is not None:
+        want, got = _content_tokens(sc.get('user_words')), _content_tokens(ch.get('subject'))
+        if want and not (want & got):
+            warn.append(f'the chosen subject shares no word with the user\'s {kind} ("{sc.get("user_words")}"): '
+                        'is it still theirs?')
+    return iss, warn
+
+
+def card_moment_issues(card, ident):
+    """How a reference makes its developments matter, from its card: timed, observed apart from interpreted (01)."""
+    ms = [m for m in (card or {}).get('moments_that_matter') or [] if isinstance(m, dict)]
+    if not ms:
+        return [f'reference_{ident}_card_has_no_moments_that_matter']
+    return [f'reference_{ident}_moment_{i}_needs_at_observed_and_interpretation' for i, m in enumerate(ms, 1)
+            if parse_span(m.get('at'))[0] is None or n_words(m.get('observed')) < 4
+            or n_words(m.get('interpretation')) < 4]
+
+
+def subject_handoff_issues(direction, beats):
+    """The researched value reaches the film: each value_to_carry item is carried by a beat (`carries`) or dropped with
+    a reason; at least one key moment carries researched value; a contested item carried by a key moment keeps that
+    moment contested (and so hedged)."""
+    subj = (direction or {}).get('subject')
+    if not isinstance(subj, dict):
+        return []
+    vals = {str(v.get('id')): v for v in subj.get('value_to_carry') or [] if isinstance(v, dict)}
+    dropped = {str(x.get('id')) for x in subj.get('dropped') or [] if isinstance(x, dict) and n_words(x.get('why')) >= 4}
+    carried, iss = {}, []
+    is_key = lambda b: b.get('key_moment') not in (None, False) and bool(str(b.get('key_moment')).strip())
+    for b in beats or []:
+        for r in b.get('carries') or []:
+            r = str(r).strip()
+            if r not in vals:
+                iss.append(f'beat_{b.get("id")}_carries_unknown_value:{r}')
+            carried.setdefault(r, []).append(b)
+    for rid, v in vals.items():
+        if rid not in carried and rid not in dropped:
+            iss.append(f'researched_value_{rid}_reaches_no_beat:carry_it_or_drop_it_with_the_reason_in_subject.dropped')
+        for b in carried.get(rid, []):
+            if (is_key(b) and str(v.get('certainty') or '').lower() == 'contested'
+                    and str((b.get('significance') or {}).get('certainty') or 'established').lower() != 'contested'):
+                iss.append(f'beat_{b.get("id")}_carries_contested_{rid}_but_states_it_as_established')
+    if vals and not any(is_key(b) and b.get('carries') for b in beats or []):
+        iss.append('no_key_moment_carries_researched_value:mark_where_the_researched_value_lands')
+    return iss
+
+
+def key_moment_shot_issues(direction, beats, shots):
+    """Each key moment's significance reaches the picture: at least one of its shots says how the picture carries it
+    (a face, a contrast, a map, a held still; never a forced diagram)."""
+    if not isinstance((direction or {}).get('subject'), dict):
+        return []
+    out = []
+    for b in beats or []:
+        if b.get('key_moment') in (None, False) or not str(b.get('key_moment')).strip():
+            continue
+        mine = [s for s in shots or [] if str(s.get('beat_id')) == str(b.get('id'))]
+        if mine and not any(n_words(s.get('carries_significance')) >= 4 for s in mine):
+            out.append(f'key_moment_{b.get("id")}_no_shot_says_how_the_picture_carries_it:carries_significance')
+    return out
+
+
 def direction_facts(rd, video):
     """Structure of 40-plans/video-NN/direction.json (10-creative-direction.md): evidence read from measured
     references, five approaches that differ in how the story is told, the episode strategy, two or three
@@ -2149,6 +2337,20 @@ def direction_facts(rd, video):
         iss.append('direction_evidence_needs_3_timed_observations')
     if not ev.get('unknowns'):
         iss.append('direction_evidence_lists_no_unknowns')
+    # The subject (topic discovery): required for a direction not locked yet; a direction locked before it existed
+    # keeps working, with a warning.
+    lock_now = read_json(vd / 'direction-lock.json')
+    ll = read_json(vd / 'length-lock.json')
+    if 'subject' in d or not lock_now:
+        src_p = rd / '30-research' / f'video-{int(video):02d}' / 'sources.md'
+        s_iss, s_warn = subject_issues(d.get('subject'), src_p.read_text(encoding='utf-8', errors='replace')
+                                       if src_p.is_file() else '', ll.get('target_length_s'), refs, ll.get('niche'))
+        iss += s_iss
+        warn += s_warn
+        for v in refs:
+            iss += card_moment_issues(read_json(rd / '20-analysis' / 'cards' / f'{v}.json'), v)
+    else:
+        warn.append('this direction was locked before topic discovery existed (no subject research on record)')
     apps = [a for a in d.get('approaches') or [] if isinstance(a, dict)]
     ids = [str(a.get('id') or '').strip() for a in apps]
     if len(apps) < 5 or len(set(ids)) != len(ids) or '' in ids:
@@ -2240,11 +2442,16 @@ FIELD_EFFECTS = {
     'treatment.sound': ('beat-map', 'music', 'edit'),
     'treatment.audiovisual_relationship': ('beat-map', 'shot-plan', 'edit'),
     'treatment.emotional_course': ('beat-map', 'script'),
+    # another subject is another film; the researched value is what the beat map, script and shots must carry
+    'subject.selection.candidate': ALL_ARTIFACTS,
+    'subject.value_to_carry': ('beat-map', 'script', 'shot-plan'),
 }
 NO_EFFECT = ('evidence', 'approaches', 'other_treatments', 'decision.reasons', 'chosen_approach.why',
              'chosen_approach.runner_up', 'chosen_approach.why_not_runner_up', 'strategy.why_this_idea',
              'strategy.fits_and_forced', 'strategy.distinct_from_references', 'treatment.name',
-             'treatment.evidence_used', 'treatment.departures', 'treatment.risks', 'treatment.samples')
+             'treatment.evidence_used', 'treatment.departures', 'treatment.risks', 'treatment.samples',
+             'subject.scope', 'subject.audience_value', 'subject.from_references', 'subject.candidates',
+             'subject.selection.reasons', 'subject.runtime_decision', 'subject.dropped')
 TREATMENT_REREAD_BELOW = 0.7   # under this share of its blind read's vocabulary, the chosen treatment is a new one
 
 
@@ -2296,8 +2503,16 @@ def direction_sections(d):
         for k, v in (part if isinstance(part, dict) else {}).items():
             if not (group == 'treatment' and k == 'id'):
                 out[f'{group}.{k}'] = canonical_sha(v)
+    subj = d.get('subject') if isinstance(d.get('subject'), dict) else None
+    if subj is not None:
+        sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
+        out['subject.selection.candidate'] = canonical_sha(sel.get('candidate'))
+        out['subject.selection.reasons'] = canonical_sha({k: v for k, v in sel.items() if k != 'candidate'})
+        for k, v in subj.items():
+            if k != 'selection':
+                out['subject.' + k] = canonical_sha(v)
     for k, v in d.items():
-        if k not in ('evidence', 'approaches', 'treatments', 'decision', 'chosen_approach', 'strategy'):
+        if k not in ('evidence', 'approaches', 'treatments', 'decision', 'chosen_approach', 'strategy', 'subject'):
             out['other.' + k] = canonical_sha(v)
     return out
 
@@ -2744,9 +2959,13 @@ def media_gate(job, kind):
                      if k not in prompt_flags(s.get('frame_prompt') or s.get('prompt'), themes_now)]
             iss += prompt_flag_issues(f'item_{i}_style_words', extra, it.get('content_note'))
             b = beats.get(str(s.get('beat_id'))) or {}
-            out['direction']['items'].append({'shot_id': str(s.get('id')), 'beat_id': str(s.get('beat_id')),
-                                              'new_thing': s.get('new_thing'), 'visual_intent': b.get('visual_intent'),
-                                              'experience': b.get('experience')})
+            item = {'shot_id': str(s.get('id')), 'beat_id': str(s.get('beat_id')), 'new_thing': s.get('new_thing'),
+                    'visual_intent': b.get('visual_intent'), 'experience': b.get('experience')}
+            if b.get('key_moment') not in (None, False) and str(b.get('key_moment')).strip():
+                item.update({'key_moment': b.get('key_moment'),
+                             'matters_because': (b.get('significance') or {}).get('matters_because'),
+                             'carries_significance': s.get('carries_significance')})
+            out['direction']['items'].append(item)
             out['records'].append({'shot_id': str(s.get('id')), 'beat_id': str(s.get('beat_id')),
                                    'frame_prompt_sha256': hashlib.sha256(fp.encode('utf-8')).hexdigest(),
                                    'production_rev': rev, 'treatment': treatment})
@@ -3260,6 +3479,7 @@ def shot_facts(rd, video):
                 out['warnings'].append(f'{len(run)} shots in a row of the same composition "{prev}": {run[0]}-{run[-1]}')
             run = [s.get('id')] if fam else []
         prev = fam
+    out['issues'] += key_moment_shot_issues(read_json(video_dir(rd, n) / 'direction.json'), beat_rows, shots)
     out['overlays'] = sum(1 for s in shots if str(s.get('diagram_or_overlay')).lower() not in ('', 'false', 'none', '0'))
     out['ready'] = not out['issues']
     return out
@@ -3514,15 +3734,20 @@ def plan_facts(rd, video):
         issues.append('missing_or_invalid_script_lines')
         lines = []
     required_blue = ('audience_promise', 'narrative_approach', 'why_this_length', 'original_angle',
-                     'ending_payoff', 'visual_grammar', 'factuality')
+                     'visual_grammar', 'factuality')
     for f in required_blue:
         if not str(blue.get(f, '')).strip():
             issues.append('blueprint_missing_' + f)
+    # an ending payoff where the video has one; a video whose value builds up (a tutorial, a tour of a mechanism, a
+    # run of jokes) says how instead, in reward_shape (2026-11-24: no conventional ending forced on every format)
+    if not str(blue.get('ending_payoff', '')).strip() and n_words(blue.get('reward_shape')) < MIN_FIELD_WORDS:
+        issues.append('blueprint_missing_ending_payoff_or_reward_shape')
     if blue.get('factuality') == 'factual' and not blue.get('research_sources'):
         issues.append('factual_video_requires_independent_research_sources')
     if str(script.get('language') or '').lower() != str(lock.get('language') or '').lower():
         issues.append('script_language_differs_from_length_lock')
     issues += beat_map_facts(rd, video, lines, lock['target_length_s'])
+    issues += subject_handoff_issues(read_json(vd / 'direction.json'), (beats or {}).get('beats') or [])
     # Spoken words only: inline [audio tags] are sent to ElevenLabs but never spoken (count_words strips them).
     words = sum(count_words(x.get('text', '')) for x in lines)
     tags, tag_issues = script_tags(lines)

@@ -4,11 +4,58 @@
 
 Do not write a ten-minute Wikipedia paraphrase, fake-suspense documentary, or robotic succession of image prompts. Aim for a piece that rewards the viewer's *time*, not only their click: a satisfying question, a surprising but earned path to understanding, emotional and human texture, a credible worldview, visual thought, and an ending that recontextualizes the beginning. Genuine interest and clarity are not enemies of entertainment. Different niches warrant different densities, levels of humor, and narrator distance. Be inviting without sounding like a school assignment, and expressive without manufacturing drama.
 
-The user chooses a **niche**, not a forced title or story form. The writer has creative discretion over a *new* angle inside it. For every video brainstorm **five substantively different** options before choosing: contrast perspective (insider vs bystander), scale (one decision vs whole system), structure (event chronology vs consequence-first), voice (practical guide vs intimate inquiry), and visualization (diagram-led vs artifact-led). At least one candidate should challenge the most obvious reference formula. Reject near-identical variants where only a person/date/location changed: five battles told the same way are one approach, not five. Record the five in `40-plans/video-NN/direction.json` → `approaches` (10, 07): what each `changes` (perspective, scale, structure, voice, visualization; at least three of these across the five), its `pitch`, its `strongest_case`, its `long_form_risk`, and whether it `challenges_reference_formula` (at least one does). Then `chosen_approach` with its `runner_up` and why it lost: the comparison is the reasoning, not a score. Rank **not by mathematical virality scores** but by: genuine open question, richness of evidence, ability to sustain locked duration, human consequence, visual potential, unique viewpoint, feasibility and earned conclusion.
+The user chooses a **niche**, not a forced title or story form. The writer has creative discretion over a *new* subject and angle inside it ("Finding the subject" below). For the chosen subject, brainstorm **five substantively different** ways of telling it before choosing: contrast perspective (insider vs bystander), scale (one decision vs whole system), structure (event chronology vs consequence-first), voice (practical guide vs intimate inquiry), and visualization (diagram-led vs artifact-led). At least one candidate should challenge the most obvious reference formula. Reject near-identical variants where only a person/date/location changed: five battles told the same way are one approach, not five. Record the five in `40-plans/video-NN/direction.json` → `approaches` (10, 07): what each `changes` (perspective, scale, structure, voice, visualization; at least three of these across the five), its `pitch`, its `strongest_case`, its `long_form_risk`, and whether it `challenges_reference_formula` (at least one does). Then `chosen_approach` with its `runner_up` and why it lost: the comparison is the reasoning, not a score. Rank **not by mathematical virality scores** but by: genuine open question, richness of evidence, ability to sustain locked duration, human consequence, visual potential, unique viewpoint, feasibility and earned conclusion.
 
 No title, hook or narrator performance can save a premise with only three minutes of substance. If research finds no depth, return to topic exploration *before recording*. Never add invented “facts,” pointless facts, filler, machine-gun rhetorical questions or theatrical fake stakes to reach the duration.
 
 **Comprehension without simplification.** A first-time viewer should always know who matters, what is happening and why it matters, while the film keeps its complexity, wit and surprises. Confusion is a cause to find (a name never set up, too much at once, a payoff too far from its set-up, a picture that shows something else), not a reason to explain everything; a mystery the viewer wants solved is a promise, and stays (03 "What the viewer knows at each turn").
+
+## Finding the subject (topic discovery)
+
+Before any approach or treatment, find the strongest subject the user's scope allows, and write the reasoning in
+`direction.json` → `subject` (07). A weak subject is rarely rescued by production; an ordinary-looking one may hold an
+exceptional explanation. Polish does not decide this, the material does.
+
+- **Scope first.** The user gave a niche, a subject inside it, an exact topic, or an exact story or concept
+  (`scope.kind`; their own words in `user_words`; the locked niche in `niche`). Inside a niche or a subject, the subject
+  is ours to find. An exact topic or story is kept and developed (`selection.keeps_user_scope`, `how_scope_kept`): never
+  swapped for something more sensational, never moved to another niche. A limit it has is said plainly (below).
+- **What this audience values.** Read it from the references and the niche, never from one niche's idea of interesting:
+  a history video may reward consequential decisions, a geography video an extraordinary phenomenon understood, a
+  biology video a surprising mechanism, a tutorial a problem solved, a "what if" its logically developed consequences,
+  a comedy its premise and timing (examples, not categories). Write it in `audience_value`.
+- **References as evidence.** Each card's `moments_that_matter` (01) records, with times, what a reference does to make a
+  development matter (observed) and why that may work (interpretation, kept apart). `from_references` names those that
+  shaped the search. They show where value may lie; they never confine us to their subjects, and a technique seen in a
+  successful video is not why it succeeded unless evidence says so.
+- **Research the material, not titles.** For each promising candidate (an event, a mechanism, a phenomenon, a problem
+  and its solution, a question, a relationship, a transformation, a concept), find what genuinely makes it worth a
+  viewer's time: `what_happens` (what is discovered, explained, shown or experienced), `why_it_matters` (within this
+  subject and experience), `reward`, and its `strongest_material`, each item with its `certainty`: established (with
+  sources in the ledger, `30-research/video-NN/sources.md`), contested (how the film keeps it honest, `hedge`),
+  speculative (how it is framed, `framed_as`) or invented (only where the subject is not factual: a comedy's premise, a
+  fiction). Inside a broad subject look for the strongest angle, not the most famous event or a whole chronology; read
+  a timeline for turning points and dependencies when the subject has one.
+- **Magnitude is not sensationalism.** Death, war, huge numbers or a shocking claim are not value by themselves; an
+  ingenious mechanism or a useful solution can be the bigger reward. A candidate whose exciting version needs
+  exaggeration is not the one. A long build-up must be worth its reward, unless the journey itself is the value; many
+  videos reward continuously (discovery, cumulative understanding, progress, humour) rather than once.
+- **Enough for the locked length.** `runtime.material_minutes` and `why`: what fills the length without padding. Below 90%
+  of the lock, report it and record the user's decision (`runtime_decision`): another candidate, a wider or narrower
+  angle, or a length revision through the lock. Never invented developments, repetition, slower speech or pauses.
+- **Can we make it?** `feasibility`: whether stills, drawings, maps, voice and music can carry it.
+- **How many.** No fixed number: research until a strong decision is supported, and stop there. When the scope is open,
+  compare genuinely different alternatives, not five versions of one idea.
+- **Choose in words.** `selection`: the candidate, `why` it is the strongest opportunity in scope, `over_alternatives`
+  (why not the others, or why none was needed). Say when it was close. No scores, weights or thresholds.
+- **Carry the value forward.** `value_to_carry`: the findings the film must deliver (`what`, `why_it_matters`,
+  `certainty`, sources; what the viewer must know first in `needs_first`). Each is carried by a beat (`carries` in the
+  beat map), at least one of them by a key moment, whose shots say how the picture carries it (`carries_significance`);
+  one the film no longer needs goes in `dropped` with the reason. The readers then test whether the film delivers it
+  (06). Research identifies the opportunity; the director decides how to realise it.
+
+`direction-lock`, `plan-check` and `shot-check` check that this reasoning exists, is sourced, keeps the scope and reaches
+the beat map and the shots. Whether the subject is worth a viewer's time is the director's judgement, not theirs.
 
 ## The story engine (author before script)
 

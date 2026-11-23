@@ -175,7 +175,7 @@ Minimal `40-plans/video-01/blueprint.json`:
   "narrative_approach": "Decision-reconstruction narrative following a commander through incomplete information",
   "why_this_length": "The answer requires three meaningful discoveries and context",
   "original_angle": "Follow the overlooked supply decision, not just the battle",
-  "ending_payoff": "Return to the opening dilemma with new evidence",
+  "ending_payoff": "Return to the opening dilemma with new evidence (a video whose value builds up instead gives reward_shape)",
   "visual_grammar": "Earth-tone maps, aerial diagrams, restrained artifact illustration",
   "factuality": "factual",
   "research_sources": ["S1", "S2", "S3"],
@@ -246,6 +246,7 @@ Minimal `40-plans/video-01/blueprint.json`:
      "sound_direction": "No music under the explanation",
      "pace": "unhurried",
      "key_moment": "the constraint revealed",
+     "carries": ["R1"],
      "significance": {"matters_because": "the plan everyone trusted could never have worked, so the choice the viewer weighed in B01 was made blind",
                       "reward": "the oh of seeing the hidden constraint",
                       "certainty": "established"},
@@ -342,6 +343,23 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
 ```json
 {
   "video": 1,
+  "subject": {
+    "scope": {"kind": "niche", "user_words": "geography", "niche": "geography"},
+    "audience_value": "this audience comes to understand how a place works, not to collect facts about it",
+    "from_references": [{"ref": "V017", "at": "02:10-02:40", "observed": "the map zooms out as the cause is named",
+                         "interpretation": "the relation is shown before it is explained, so it lands"}],
+    "candidates": [
+      {"id": "C1", "subject": "why one lake turns animals to stone", "value_form": "a natural phenomenon explained",
+       "factual": true, "what_happens": "...", "why_it_matters": "...", "reward": "...",
+       "strongest_material": [{"what": "the water's chemistry preserves bodies", "certainty": "established", "sources": ["S1"]},
+                              {"what": "how long a body keeps its shape", "certainty": "contested", "hedge": "..."}],
+       "runtime": {"material_minutes": 12, "why": "..."}, "feasibility": "..."}
+    ],
+    "selection": {"candidate": "C1", "why": "...", "over_alternatives": "..."},
+    "value_to_carry": [{"id": "R1", "what": "...", "why_it_matters": "...", "certainty": "established",
+                        "sources": ["S1"], "needs_first": "..."}],
+    "dropped": []
+  },
   "evidence": {
     "references": ["V017", "V018"],
     "observations": [{"ref": "V017", "at": "04:00-05:00", "what": "the voice confides while the picture holds one face", "label": "O"}],
@@ -367,8 +385,14 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
 }
 ```
 
-Five approaches (at least three of perspective/scale/structure/voice/visualization among them, at least one that
-challenges the references' formula), two or three treatments. `direction-lock.json` keeps the hash, the time, the
+`subject` comes first (02 "Finding the subject"): the user's scope, what this audience values, what the references
+show (observed apart from interpreted), the researched candidates (each strongest-material item established with
+ledger sources, contested with its `hedge`, speculative with its `framed_as`, or invented in a non-factual subject),
+the material against the locked length (`runtime_decision` when short), the choice in words, and `value_to_carry`,
+which the beat map `carries` and the key moments' shots show (`carries_significance`). A direction locked before
+`subject` existed keeps working, with a warning. Five approaches (at least three of
+perspective/scale/structure/voice/visualization among them, at least one that challenges the references' formula), two
+or three treatments. `direction-lock.json` keeps the hash, the time, the
 treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
 follows: `production_rev` (raised by a change that alters what production must do), `sections` (one hash per field,
 so a revision knows exactly what changed), `required` (per artifact, the revision that last touched it and, for a

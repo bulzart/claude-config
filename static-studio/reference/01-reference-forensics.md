@@ -47,6 +47,10 @@ A detailed card in `20-analysis/cards/V###.json` should include these additional
      "emotional_turn": "...", "visual_function": "...", "breathing_room": "...",
      "evidence": "[O] V001 00:14–00:32; [I] ..."}
   ],
+  "moments_that_matter": [
+    {"at": "04:10-04:40", "observed": "the cost of the plan is named before the plan is shown",
+     "interpretation": "[I] the viewer weighs the plan knowing what it risks, so the turn lands"}
+  ],
   "narrator_character": "Conversational/inquisitive/grounded, with examples",
   "narration_delivery": {"from_words": "[I] dry asides, direct address, short punchlines after long setups",
                          "measured": "[O] av-profile: pitch range ~12 st per window, rate 190-245 wpm, a music bed under the voice"},

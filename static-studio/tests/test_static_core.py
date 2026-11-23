@@ -69,8 +69,13 @@ class StaticStudioTests(unittest.TestCase):
         for i in range(1,4):
             card={'reference_id':f'V{i:03}', 'niches':['military history'] if i<=2 else ['how-to'],
                   'story_form':'historical narrative' if i<=2 else 'tutorial',
-                  'viewer_experience':[{'start_s':0, 'end_s':50,'question':'why','evidence':'[O] source'}]}
+                  'viewer_experience':[{'start_s':0, 'end_s':50,'question':'why','evidence':'[O] source'}],
+                  'moments_that_matter':[{'at':'00:10-00:30','observed':'the narrator names the cost before the decision',
+                                          'interpretation':'the stakes come before the turn, so the turn lands'}]}
             save(self.run/f'20-analysis/cards/V{i:03}.json',card)
+        src=self.run/'30-research/video-01'; src.mkdir(parents=True,exist_ok=True)
+        (src/'sources.md').write_text('### S1. A primary record of the order\n### S2. A later study of the campaign\n',
+                                      encoding='utf-8')
 
     def test_prepare_index_and_images_dry_run(self):
         self.assertTrue(cli('prepare','--run',self.run,'--ids','V001','--skip-whisper')['ok'])
@@ -166,7 +171,28 @@ class StaticStudioTests(unittest.TestCase):
                 'samples':{m:{'narration':sample(tid,m),
                               'picture':f'{tid} picture for the {m}: a wide frame with one figure and the road ahead.'}
                            for m in ('opening','quiet_middle','turning_point')}})
+        def cand(cid, subject, source):
+            return {'id':cid,'subject':subject,'value_form':'a consequential decision','factual':True,
+                    'what_happens':say('an order moves the depots before the march'),
+                    'why_it_matters':say('without the depots the army could not have moved at all'),
+                    'reward':say('the viewer sees how a quiet order decided a loud battle'),
+                    'strongest_material':[{'what':'the order that moved the depots','certainty':'established',
+                                           'sources':[source]}],
+                    'runtime':{'material_minutes':12,'why':say('three discoveries and their context fill it')},
+                    'feasibility':say('maps and period artifacts can show every step')}
+        subject={'scope':{'kind':'niche','user_words':'military history','niche':'military history'},
+                 'audience_value':say('viewers of this niche come for decisions whose consequences they can follow'),
+                 'from_references':[{'ref':'V001','at':'00:10-00:30','observed':'the narrator names the cost before the decision',
+                                     'interpretation':'the stakes come before the turn, so the turn lands'}],
+                 'candidates':[cand('C1','a supply decision before a battle','S1'),
+                               cand('C2','a forgotten map error','S2')],
+                 'selection':{'candidate':'C1','why':say('its consequence is clear and well sourced'),
+                              'over_alternatives':say('the map error rests on one later study only')},
+                 'value_to_carry':[{'id':'R1','what':'the supply decision decided the battle',
+                                    'why_it_matters':'without it the army could not have moved',
+                                    'certainty':'established','sources':['S1']}]}
         return {'video':1,
+                'subject':subject,
                 'evidence':{'references':['V001','V002'],
                             'observations':[{'ref':'V001','at':'00:00-00:30','what':'the narrator opens on a detail','label':'O'},
                                             {'ref':'V002','at':'02:10-02:40','what':'the picture holds while the voice slows','label':'O'},
@@ -245,6 +271,11 @@ class StaticStudioTests(unittest.TestCase):
                 'narrative_job':'genuinely deliver new evidence','visual_intent':'a purposeful comparison',
                 'experience':'the viewer understands a new constraint','narration_direction':'curious, quickening',
                 'sound_direction':'room tone, then a low pulse','pace':'brisk'} for i in range(1,6)]
+        # the ending is where the researched value lands (topic discovery: a key moment carries it)
+        beats[4].update({'key_moment':'the earned conclusion','carries':['R1'],
+                         'significance':{'matters_because':'the conclusion shows what the quiet decision cost and saved',
+                                         'reward':'an earned answer','certainty':'established',
+                                         'self_contained':'everything it needs is given inside this beat'}})
         save(vd/'beat-map.json',{'target_length_s':600,'beats':beats})
         (vd/'editorial-review.md').write_text('## Self-audit\nNotes.\n',encoding='utf-8')
         if lock and review_script:
@@ -783,6 +814,7 @@ class StaticStudioTests(unittest.TestCase):
                 'new_thing':f'what the viewer learns in beat {i} that the words leave out',
                 'frame_prompt':f'a distinct picture {i} of the valley, {["dawn","noon","dusk","night","rain"][i-1]} light, one clear subject'}
                for i in range(1,6)]
+        shots[4]['carries_significance']='the closing map shows the depots that made the march possible'
         save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
         return shots
 
@@ -894,11 +926,27 @@ class StaticStudioTests(unittest.TestCase):
              'event':'clear','significance':'clear','reward':'landed'}
         packet,rec=self.review('script',[],developments=[dev])
         sealed=json.loads(Path(rec['record']).read_text(encoding='utf-8'))
-        self.assertEqual(sealed['derived_findings'],['S1'])
+        # S1 for the reason known only from outside; K1 because the ending is a key moment this reader never named
+        self.assertEqual(sealed['derived_findings'],['S1','K1'])
         self.assertEqual((sealed['findings'][0]['severity'],sealed['findings'][0]['lines']),('major','L010-L020'))
         self.assertEqual(rec['major'],['S1'])
         self.assertIn('S1',json.loads(Path(rec['answers_file']).read_text(encoding='utf-8'))['answers'])
         self.assertEqual(sealed['developments'][0]['why_from'],'my own knowledge')      # the reader's words kept
+
+    def test_topic_discovery_gates_the_direction_and_the_blueprint(self):
+        vd=self.write_plan()
+        self.assertTrue(cli('plan-check','--run',self.run,'--video',1)['ready'])
+        # a value only an ending can give is not forced on every format: reward_shape says how value builds up
+        blue=json.loads((vd/'blueprint.json').read_text()); blue.pop('ending_payoff'); save(vd/'blueprint.json',blue)
+        self.assertIn('blueprint_missing_ending_payoff_or_reward_shape',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
+        blue['reward_shape']='each step leaves the viewer able to do one more thing, in order'; save(vd/'blueprint.json',blue)
+        self.assertTrue(cli('plan-check','--run',self.run,'--video',1)['ready'])
+        # the lock refuses a chosen subject resting on sources the ledger does not hold
+        d=json.loads((vd/'direction.json').read_text())
+        d['subject']['candidates'][0]['strongest_material'][0]['sources']=['S9']
+        save(vd/'direction.json',d)
+        res=cli('direction-lock','--run',self.run,'--video',1,'--revise','a sensational source',expected=2)
+        self.assertIn('cites_sources_not_in_the_ledger:S9',json.dumps(res))
 
     def look_at_pictures(self, files, result='clean', expected=0, **extra):
         lp=self.home/'looks.json'
@@ -3756,6 +3804,209 @@ class StillTouchupTests(unittest.TestCase):
             save(spec, {'shot': 'S001', 'regions': []})
             r = run_tool('--apply')
             self.assertEqual(r.returncode, 2)                                  # no "why": refused, nothing written
+
+
+class TopicDiscoveryTests(unittest.TestCase):
+    """Topic discovery (2026-11-24): the subject is researched, compared and chosen within the user's scope, tied to
+    recorded sources and references, checked against the locked length, and its researched value carried into the
+    beat map and the shots. Each scenario below is a different niche or scope; the checks never ask for drama, a
+    conflict or a climax, only for reasoning that exists, is sourced and keeps the user's scope."""
+
+    LEDGER = '### S1. A primary record\n### S2. A field study\n### S3. A textbook chapter\n'
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location('static_core_topics', TOOL)
+        cls.core = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.core)
+
+    @staticmethod
+    def say(*parts):
+        return ' '.join(parts) + ' for this audience and this length.'
+
+    def cand(self, cid, subject, value_form, factual=True, material=None, minutes=12, **kw):
+        c = {'id': cid, 'subject': subject, 'value_form': value_form, 'factual': factual,
+             'what_happens': self.say('what is shown', subject), 'why_it_matters': self.say('why', subject, 'matters'),
+             'reward': self.say('what the viewer takes away from', subject),
+             'strongest_material': material if material is not None else
+             [{'what': f'the core of {subject}', 'certainty': 'established', 'sources': ['S1']}],
+             'runtime': {'material_minutes': minutes, 'why': self.say('enough steps to fill it without padding')},
+             'feasibility': self.say('stills, maps and drawings can show it')}
+        c.update(kw)
+        return c
+
+    def subj(self, cands, chosen='C1', kind='niche', user_words='geography', values=None, **kw):
+        s = {'scope': {'kind': kind, 'user_words': user_words, 'niche': kw.pop('niche', 'geography')},
+             'audience_value': self.say('this audience comes for understanding how the world works'),
+             'from_references': [{'ref': 'V001', 'at': '01:10-01:40', 'observed': 'the map zooms out as the cause is named',
+                                  'interpretation': 'the relation is shown before it is explained'}],
+             'candidates': cands,
+             'selection': {'candidate': chosen, 'why': self.say('its strongest material is the most surprising and sourced'),
+                           'over_alternatives': self.say('the others are thinner or already well known')},
+             'value_to_carry': values if values is not None else
+             [{'id': 'R1', 'what': 'the core finding of the chosen subject', 'why_it_matters': 'it changes how the viewer sees it',
+               'certainty': 'established', 'sources': ['S1']}]}
+        s.update(kw)
+        return s
+
+    def check(self, subject, locked_s=600, refs=('V001',), niche='geography'):
+        return self.core.subject_issues(subject, self.LEDGER, locked_s, refs, niche)
+
+    # ---- different niches: different kinds of value, none of them asked for stakes or a climax
+    def test_each_niche_brings_its_own_kind_of_value(self):
+        for niche, subject, form in (
+                ('history', 'the quiet supply order that decided a campaign', 'a consequential decision'),
+                ('geography', 'why a lake turns animals to stone', 'a natural phenomenon explained'),
+                ('biology', 'how an octopus changes colour without seeing colour', 'a surprising mechanism'),
+                ('science', 'the accident that revealed the microwave background', 'a surprising discovery'),
+                ('how-to', 'fixing a squeaking door for good', 'a practical solution')):
+            iss, warn = self.check(self.subj([self.cand('C1', subject, form)], niche=niche, user_words=niche), niche=niche)
+            self.assertEqual(iss, [], (niche, iss))
+
+    def test_a_hypothetical_keeps_facts_and_reasoned_possibilities_apart(self):
+        mat = [{'what': 'the Moon raises the tides we have', 'certainty': 'established', 'sources': ['S3']},
+               {'what': 'tides would shrink to the Sun alone', 'certainty': 'speculative',
+                'framed_as': 'a reasoned possibility from tidal physics'}]
+        vals = [{'id': 'R1', 'what': 'what the tides would become', 'why_it_matters': 'coasts and life follow the tides',
+                 'certainty': 'speculative', 'framed_as': 'a reasoned possibility, said as one'}]
+        s = self.subj([self.cand('C1', 'what if the Moon vanished', 'logically developed consequences', factual=False,
+                                 material=mat)], niche='science', user_words='science', values=vals)
+        self.assertEqual(self.check(s, niche='science')[0], [])
+        mat[1].pop('framed_as')                                   # a guess stated like a fact: refused
+        self.assertIn('subject_candidate_C1_material_2_speculative_needs_how_it_is_framed:framed_as',
+                      self.check(s, niche='science')[0])
+
+    def test_a_comedy_needs_no_stakes_and_may_invent(self):
+        mat = [{'what': 'a cat runs a tiny bakery badly', 'certainty': 'invented'}]
+        vals = [{'id': 'R1', 'what': 'the cat sells the last croissant to itself', 'why_it_matters': 'the setup pays as a joke',
+                 'certainty': 'invented'}]
+        s = self.subj([self.cand('C1', 'a cat runs a bakery', 'comic premise and its payoffs', factual=False,
+                                 material=mat)], niche='comedy', user_words='comedy', values=vals)
+        self.assertEqual(self.check(s, niche='comedy')[0], [])
+        s['candidates'][0]['factual'] = True                      # invention is not allowed in a factual subject
+        self.assertTrue(any('invented_material_only' in x for x in self.check(s, niche='comedy')[0]))
+
+    def test_an_ordinary_topic_with_a_real_angle_passes_on_its_substance(self):
+        s = self.subj([self.cand('C1', 'why toast lands butter side down', 'an everyday puzzle with a real mechanism')],
+                      niche='science', user_words='science')
+        self.assertEqual(self.check(s, niche='science')[0], [])   # no magnitude, danger or famous name required
+
+    def test_a_sensational_candidate_with_weak_evidence_cannot_be_chosen(self):
+        weak = self.cand('C2', 'the secret city under the desert', 'a shocking claim',
+                         material=[{'what': 'a whole city lies under the sand', 'certainty': 'established', 'sources': ['S9']},
+                                   {'what': 'the government hid it', 'certainty': 'contested'}])
+        solid = self.cand('C1', 'how dunes sing in the wind', 'a natural phenomenon explained')
+        chosen_weak = self.check(self.subj([solid, weak], chosen='C2'))[0]
+        self.assertIn('subject_candidate_C2_material_1_cites_sources_not_in_the_ledger:S9', chosen_weak)
+        self.assertIn('subject_candidate_C2_material_2_contested_needs_how_it_is_kept_honest:hedge', chosen_weak)
+        iss, warn = self.check(self.subj([solid, weak], chosen='C1'))
+        self.assertEqual(iss, [])                                 # considered and set aside: its gaps are only noted
+        self.assertTrue(any('C2' in w for w in warn))
+
+    def test_several_candidates_are_compared_in_words_not_scores(self):
+        cs = [self.cand('C1', 'how a glacier carves a valley', 'a slow mechanism made visible'),
+              self.cand('C2', 'the village that moved for a glacier', 'a human story'),
+              self.cand('C3', 'reading a landscape on a walk', 'a practical skill')]
+        s = self.subj(cs, chosen='C2')
+        self.assertEqual(self.check(s)[0], [])
+        s['selection'].pop('over_alternatives')
+        self.assertIn('subject_selection_missing_over_alternatives', self.check(s)[0])
+        self.assertFalse(any(k in json.dumps(s) for k in ('score', 'weight')))   # nothing numeric decides
+
+    def test_an_exact_topic_is_developed_never_replaced(self):
+        c = self.cand('C1', 'the history of salt as money', 'a surprising relationship')
+        s = self.subj([c], kind='topic', user_words='the history of salt', niche='history')
+        self.assertIn('subject_exact_topic_must_be_kept:selection.keeps_user_scope_and_how_scope_kept',
+                      self.check(s, niche='history')[0])
+        s['selection'].update({'keeps_user_scope': True,
+                               'how_scope_kept': self.say('the angle is salt itself, followed as money')})
+        iss, warn = self.check(s, niche='history')
+        self.assertEqual((iss, warn), ([], []))
+        s['candidates'][0]['subject'] = 'the first banknotes of China'   # quietly swapped for another subject
+        self.assertTrue(any('is it still theirs' in w for w in self.check(s, niche='history')[1]))
+
+    def test_a_broad_niche_stays_inside_the_locked_niche(self):
+        s = self.subj([self.cand('C1', 'how rivers choose their path', 'a natural process')])
+        self.assertEqual(self.check(s)[0], [])
+        self.assertIn('subject_scope_niche_must_be_the_locked_niche:history', self.check(s, niche='history')[0])
+
+    def test_too_little_material_for_the_locked_length_is_reported_not_padded(self):
+        s = self.subj([self.cand('C1', 'a single rare cloud', 'a natural phenomenon', minutes=4)])
+        self.assertIn('subject_material_short_of_locked_length:4_of_10.0_min:'
+                      'report_it_and_record_the_users_decision_in_runtime_decision:never_pad', self.check(s)[0])
+        s['runtime_decision'] = self.say('the user chose a wider angle: every rare cloud type, same length')
+        self.assertEqual(self.check(s)[0], [])
+
+    def test_references_inform_the_discovery_observed_apart_from_interpreted(self):
+        s = self.subj([self.cand('C1', 'how fog forms in valleys', 'a natural phenomenon')])
+        s['from_references'] = []
+        self.assertIn('subject_needs_from_references:what_the_references_show_about_this_audiences_rewards',
+                      self.check(s)[0])
+        s['from_references'] = [{'ref': 'V009', 'at': '00:20', 'observed': 'the narrator asks a question',
+                                 'interpretation': ''}]
+        iss = self.check(s)[0]
+        self.assertIn('subject_from_references_1_names_a_reference_not_in_the_evidence:V009', iss)
+        self.assertIn('subject_from_references_1_needs_its_interpretation_apart', iss)
+        c = self.core
+        self.assertEqual(c.card_moment_issues({}, 'V001'), ['reference_V001_card_has_no_moments_that_matter'])
+        good = {'moments_that_matter': [{'at': '01:00-01:20', 'observed': 'the reveal follows the question it answers',
+                                         'interpretation': 'curiosity is set before it is paid'}]}
+        self.assertEqual(c.card_moment_issues(good, 'V001'), [])
+
+    # ---- the researched value reaches the film
+    def test_researched_value_is_carried_by_beats_and_key_moments(self):
+        c = self.core
+        vals = [{'id': 'R1', 'what': 'a', 'certainty': 'established'}, {'id': 'R2', 'what': 'b', 'certainty': 'contested'}]
+        direction = {'subject': {'value_to_carry': vals}}
+        sig = {'matters_because': 'x y z w v', 'reward': 'an answer', 'self_contained': 'all of it inside'}
+        beats = [{'id': 'B01', 'carries': ['R1']},
+                 {'id': 'B02', 'key_moment': 'the turn', 'significance': dict(sig), 'carries': ['R2']}]
+        self.assertIn('beat_B02_carries_contested_R2_but_states_it_as_established', c.subject_handoff_issues(direction, beats))
+        beats[1]['significance']['certainty'] = 'contested'
+        self.assertEqual(c.subject_handoff_issues(direction, beats), [])
+        beats[0]['carries'] = []
+        self.assertIn('researched_value_R1_reaches_no_beat:carry_it_or_drop_it_with_the_reason_in_subject.dropped',
+                      c.subject_handoff_issues(direction, beats))
+        direction['subject']['dropped'] = [{'id': 'R1', 'why': 'the cut runs long and R2 carries the point'}]
+        self.assertEqual(c.subject_handoff_issues(direction, beats), [])
+        beats[1].pop('key_moment')                               # researched value, but no key moment marks where it lands
+        self.assertIn('no_key_moment_carries_researched_value:mark_where_the_researched_value_lands',
+                      c.subject_handoff_issues(direction, beats))
+        beats[1]['carries'] = ['R9']
+        self.assertTrue(any('carries_unknown_value:R9' in x for x in c.subject_handoff_issues(direction, beats)))
+        self.assertEqual(c.subject_handoff_issues({}, beats), [])   # a direction made before topic discovery
+
+    def test_cumulative_value_needs_no_single_payoff(self):
+        # a tutorial whose value builds step by step: one key moment for its strongest step, the rest ordinary beats
+        c = self.core
+        vals = [{'id': f'R{i}', 'what': f'step {i} works', 'certainty': 'established'} for i in range(1, 4)]
+        sig = {'matters_because': 'the hardest step is where most attempts fail', 'reward': 'a working fix',
+               'self_contained': 'shown whole inside the beat'}
+        beats = [{'id': 'B01', 'carries': ['R1']},
+                 {'id': 'B02', 'key_moment': 'the hard step', 'significance': sig, 'carries': ['R2']},
+                 {'id': 'B03', 'carries': ['R3']}]
+        self.assertEqual(c.subject_handoff_issues({'subject': {'value_to_carry': vals}}, beats), [])
+
+    def test_a_key_moment_reaches_a_picture(self):
+        c = self.core
+        direction = {'subject': {}}
+        beats = [{'id': 'B01'}, {'id': 'B02', 'key_moment': 'the turn'}]
+        shots = [{'id': 'S1', 'beat_id': 'B01'}, {'id': 'S2', 'beat_id': 'B02'}]
+        self.assertEqual(c.key_moment_shot_issues(direction, beats, shots),
+                         ['key_moment_B02_no_shot_says_how_the_picture_carries_it:carries_significance'])
+        shots[1]['carries_significance'] = 'the empty harbour holds while the words land'
+        self.assertEqual(c.key_moment_shot_issues(direction, beats, shots), [])
+        self.assertEqual(c.key_moment_shot_issues({}, beats, [{'id': 'S2', 'beat_id': 'B02'}]), [])   # older run
+
+    def test_a_change_of_subject_reopens_everything_and_research_notes_nothing(self):
+        c = self.core
+        self.assertEqual(c.field_effects('subject.selection.candidate'), c.ALL_ARTIFACTS)
+        self.assertEqual(c.field_effects('subject.value_to_carry'), ('beat-map', 'script', 'shot-plan'))
+        for k in ('subject.candidates', 'subject.scope', 'subject.selection.reasons', 'subject.from_references'):
+            self.assertEqual(c.field_effects(k), ())
+        secs = c.direction_sections({'subject': {'selection': {'candidate': 'C1', 'why': 'x'}, 'candidates': []}})
+        self.assertIn('subject.selection.candidate', secs)
+        self.assertNotIn('other.subject', secs)
 
 
 if __name__=='__main__':
