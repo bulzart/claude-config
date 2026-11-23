@@ -23,3 +23,5 @@ Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing i
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: router item 38 (/create-clips: rule 16, added 2026-11-14); every run keeps RUN/todo.md and every agent its video todo.md, read first on resume; the resume hook names /create-static and /create-clips runs too; a record, never a gate
 
 Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: every run keeps RUN/todo.md (+ each agent's own), read first on resume; /create-clips rule 16, the resume hook covers all five commands; never a gate
+
+**2026-11-24, development work too:** the user asked "use TaskList and todo list and create todo items for better and easier control" on a long workflow assignment. This CLI session had no TaskList/TodoWrite tool (searched), so the list lived in a file outside the repos (C:\Users\Bulzart\Documents\create-video-dev\todo-topic-discovery.md: [x] [~] [ ], grouped by phase), ticked at each step and named in replies. Do the same from the start of any long assignment.
