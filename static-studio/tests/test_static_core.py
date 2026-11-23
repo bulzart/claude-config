@@ -840,6 +840,19 @@ class StaticStudioTests(unittest.TestCase):
         self.assertNotIn('stills',cli('direction-lock','--run',self.run,'--video',1,'--revise','a drier narrator')['affects'])
         self.assertEqual(core.stills_facts(self.run,1)['issues'],[])
         self.assertEqual(cli('direction-lock','--run',self.run,'--video',1)['unchanged'],True)   # nothing new: nothing to do
+        # A still is never changed after the generator made it, and never carries a blur or an erase: no reapproval
+        # accepts either (the user, 2026-11-23: never blur; manual 04). S5 shows S1's still.
+        s1=stills/'S1.png'; raw=s1.read_bytes()
+        s1.write_bytes(raw+b'blurred')
+        self.assertIn('stills_changed_after_the_generator_made_them:S1,S5',core.stills_facts(self.run,1)['issues'])
+        s1.write_bytes(raw)
+        self.assertEqual(core.stills_facts(self.run,1)['issues'],[])
+        log=self.run/'60-visuals/video-01/stills-postprocess.json'
+        save(log,{'edits':[{'shot_id':'S1','regions':[{'mode':'soften','sigma':3,'poly':[[0,0],[9,0],[9,9]]}]}]})
+        self.assertIn('stills_carry_a_blur_or_erase_touchup:S1,S5',core.stills_facts(self.run,1)['issues'])
+        save(log,{'edits':[{'shot_id':'S1','superseded_at':'2026-11-23T00:00:00+00:00',
+                            'regions':[{'mode':'soften','sigma':3,'poly':[[0,0],[9,0],[9,9]]}]}]})
+        self.assertEqual(core.stills_facts(self.run,1)['issues'],[])        # made again: the old touch-up is history
 
     def look_at_pictures(self, files, result='clean', expected=0, **extra):
         lp=self.home/'looks.json'
@@ -3324,7 +3337,7 @@ class ReadabilityAndAnchorTests(unittest.TestCase):
 
 
 class StillTouchupTests(unittest.TestCase):
-    """still_touchup.py: a local fix to a generated still keeps the original and records the edit (manual 04)."""
+    """still_touchup.py: never blurs or erases; a crisp mark keeps the original and records the edit (manual 04)."""
 
     def test_paint_puts_a_shape_where_the_model_drew_it_wrong(self):
         spec = importlib.util.spec_from_file_location('still_touchup_paint', TOOL.parent / 'still_touchup.py')
@@ -3339,43 +3352,65 @@ class StillTouchupTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             m.apply_regions(im, [{'mode': 'paint', 'poly': [[0, 0], [1, 1]]}])
 
-    def test_erase_soften_and_text_keep_the_original_and_record_the_edit(self):
-        from PIL import Image, ImageDraw
+    def make_still(self, td):
+        from PIL import Image
+        run = Path(td)/'run'
+        stills = run/'60-visuals/video-01/stills'
+        stills.mkdir(parents=True)
+        Image.new('RGB', (320, 180), (200, 190, 170)).save(stills/'S001.png')
+        tool = ROOT/'scripts'/'still_touchup.py'
+        spec = Path(td)/'spec.json'
+        run_tool = lambda *a: subprocess.run([sys.executable, str(tool), '--run', str(run), '--video', '1', '--spec', str(spec), *a],
+                                             capture_output=True, text=True, encoding='utf-8')
+        return run, stills, spec, run_tool
+
+    def test_blur_and_erase_are_refused_and_the_still_is_untouched(self):
         with tempfile.TemporaryDirectory() as td:
-            run = Path(td)/'run'
-            stills = run/'60-visuals/video-01/stills'
-            stills.mkdir(parents=True)
-            im = Image.new('RGB', (320, 180), (200, 190, 170))
-            d = ImageDraw.Draw(im)
-            for x in range(40, 140, 12):                      # thin dark strokes: made-up lettering on a plain plate
-                d.line([(x, 40), (x + 4, 60)], fill=(20, 20, 20), width=2)
-            im.save(stills/'S001.png')
+            run, stills, spec, run_tool = self.make_still(td)
             before = (stills/'S001.png').read_bytes()
-            spec = Path(td)/'spec.json'
-            save(spec, {'shot': 'S001', 'why': 'made-up lettering on the plate',
-                        'regions': [{'mode': 'erase', 'size': 15, 'feather': 2, 'poly': [[30, 30], [160, 30], [160, 70], [30, 70]]},
-                                    {'mode': 'soften', 'sigma': 3, 'poly': [[200, 100], [300, 100], [300, 170], [200, 170]]},
-                                    {'mode': 'text', 'text': '9', 'at': [250, 50], 'size': 30}]})
-            tool = ROOT/'scripts'/'still_touchup.py'
-            run_tool = lambda *a: subprocess.run([sys.executable, str(tool), '--run', str(run), '--video', '1', '--spec', str(spec), *a],
-                                                 capture_output=True, text=True, encoding='utf-8')
+            for region in ({'mode': 'soften', 'sigma': 3, 'poly': [[200, 100], [300, 100], [300, 170]]},
+                           {'mode': 'erase', 'size': 15, 'poly': [[30, 30], [160, 30], [160, 70]]}):
+                save(spec, {'shot': 'S001', 'why': 'made-up print on the newspaper', 'regions': [region]})
+                for extra in ((), ('--apply',)):
+                    r = run_tool(*extra)
+                    self.assertEqual(r.returncode, 2, r.stdout)
+                    self.assertIn('refused', json.loads(r.stdout.strip().splitlines()[-1])['error'])
+            self.assertEqual((stills/'S001.png').read_bytes(), before)            # nothing blurred or erased
+            self.assertFalse((run/'60-visuals/video-01/stills-postprocess.json').exists())
+            self.assertFalse((run/'60-visuals/video-01/stills-history').exists())
+
+    def test_a_crisp_mark_keeps_the_original_records_the_edit_and_moves_the_fingerprint(self):
+        import hashlib
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as td:
+            run, stills, spec, run_tool = self.make_still(td)
+            f = stills/'S001.png'
+            before = f.read_bytes()
+            key = os.path.normcase(str(f.resolve()))
+            save(run/'60-visuals/video-01/stills-provenance.json',
+                 {'images': {key: {'shot_id': 'S001', 'file_sha256': hashlib.sha256(before).hexdigest()}}})
+            save(spec, {'shot': 'S001', 'why': 'the clock needs its three o\'clock dot',
+                        'regions': [{'mode': 'text', 'text': '9', 'at': [250, 50], 'size': 30},
+                                    {'mode': 'paint', 'fill': '#202020', 'soft': 0, 'poly': [[100, 98], [170, 100], [100, 102]]}]})
             r = run_tool()
             out = json.loads(r.stdout.strip().splitlines()[-1])
             self.assertTrue(out['ok']); self.assertFalse(out['applied'])
-            self.assertEqual((stills/'S001.png').read_bytes(), before)        # a preview changes nothing
+            self.assertEqual(f.read_bytes(), before)                          # a preview changes nothing
             r = run_tool('--apply')
             out = json.loads(r.stdout.strip().splitlines()[-1])
             self.assertTrue(out['applied'])
             hist = run/'60-visuals/video-01/stills-history/S001-before-touchup-1.png'
             self.assertEqual(hist.read_bytes(), before)                        # the original is kept untouched
-            fixed = Image.open(stills/'S001.png').convert('L')
-            strokes = [fixed.getpixel((x + 2, 50)) for x in range(40, 140, 12)]
-            self.assertGreater(min(strokes), 120)                              # the strokes are gone
+            fixed = Image.open(f).convert('L')
             self.assertLess(min(fixed.crop((238, 36, 262, 64)).getdata()), 90)  # the painted numeral is there
+            self.assertLess(fixed.getpixel((140, 100)), 90)                    # and the shape
+            self.assertEqual(fixed.getpixel((40, 160)), Image.open(hist).convert('L').getpixel((40, 160)))   # nothing else
             rec = json.loads((run/'60-visuals/video-01/stills-postprocess.json').read_text(encoding='utf-8'))
             self.assertEqual(rec['edits'][0]['shot_id'], 'S001')
             self.assertIn('content-review', out['next'])
-            run_tool('--apply')                                                # a second fix never overwrites the first original
+            prov = json.loads((run/'60-visuals/video-01/stills-provenance.json').read_text(encoding='utf-8'))
+            self.assertEqual(prov['images'][key]['file_sha256'], hashlib.sha256(f.read_bytes()).hexdigest())
+            run_tool('--apply')                                                # a second mark never overwrites the first original
             self.assertTrue((run/'60-visuals/video-01/stills-history/S001-before-touchup-2.png').is_file())
             save(spec, {'shot': 'S001', 'regions': []})
             r = run_tool('--apply')

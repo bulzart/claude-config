@@ -19,6 +19,6 @@ picture, not a batch, and a fault is caught before more of the same.
 them, review each still (full size for lettering, edges, hands, insignia) when its done-line arrives. Model reload per still is
 the accepted cost. A guard stop mid-run is usually another heavy app opening (CapCut ~2 GB): the next still waits until it
 closes (jobs/resume_when_free.sh in the Garbo run). A fault in what a still SHOWS is remade (reworded frame_prompt, new seed,
-or a "keep ... exactly; change only ..." edit); made-up LETTERING on an otherwise right still is fixed locally with
-static-studio/scripts/still_touchup.py (preview, look, then --apply; original kept). Related: [[local-ai-installs]],
+or a "keep ... exactly; change only ..." edit). Made-up LETTERING is never blurred or erased any more (user 2026-11-23):
+the frame prompt leaves it out and the still is remade, see [[create-video-never-blur-stills]]. Related: [[local-ai-installs]],
 [[awl-memory-is-a-fact]], [[capcut-export-ignores-clip-volume]].

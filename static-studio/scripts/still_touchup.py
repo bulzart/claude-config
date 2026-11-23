@@ -1,36 +1,34 @@
 #!/usr/bin/env python3
-"""still_touchup.py - a local fix to a generated still, region by region, with its original kept (manual 04).
+"""still_touchup.py - a small crisp mark painted onto a generated still, with its original kept (manual 04).
 
-Image models write legible nonsense into titles, mastheads, plates and print, and an edit made with the still itself as the
-reference keeps that lettering. When the still is otherwise right, the fix is local: each region is a pixel polygon with a
-mode.
-  erase   a median filter of `size` px over the region: thin strokes (letters) go, the ground's own colour stays. For a
-          title or a plate on a fairly plain ground; on busy texture it leaves a smudge (look at the preview).
-  soften  a Gaussian blur of `sigma` px with fresh paper grain (`grain`, std in 8-bit levels, default 2): print stays
-          print, too small to read.
-  text    paint a corrected character or word (`text`, `at` [x, y] centre, `size` px, `fill`, optional `font` file),
-          for example a clock numeral the model doubled. Erase the wrong one first with an `erase` region.
-  paint   a filled shape in one colour (`poly`, `fill`, softened by `soft` px like a drawn stroke): a pointer or a clock
-          hand the model put in the wrong place, after an `erase` of the wrong one.
-Masks are feathered (`feather` px) and can be shrunk (`shrink` px) so the region's own edges stay sharp.
+Nothing in a still is ever blurred, erased or covered (the user, 2026-11-23: "never blur anything, if there's
+something to be blurred then instruct in the image generation so that it avoids that thing"). Made-up lettering, a
+place name on a map, a badge or a seal emblem is kept out by the frame prompt and the still is generated again; the
+`erase` and `soften` modes this tool had (a median filter and a Gaussian blur) are refused. What is left paints
+something the picture needs, on top, in its own crisp stroke, never over a fault (a wrong numeral, hand or word is
+remade with the still):
+  text    a character or word (`text`, `at` [x, y] centre, `size` px, `fill`, optional `font` file).
+  paint   a filled shape in one colour (`poly`, `fill`, its edge softened by `soft` px like a drawn stroke).
 
   python still_touchup.py --run RUN --video N --spec SPEC.json            preview only (jobs/SHOT-touchup-preview.png)
   python still_touchup.py --run RUN --video N --spec SPEC.json --apply    write the still
 
-SPEC: {"shot": "S014", "why": "...", "regions": [{"mode": "soften", "sigma": 4.5, "poly": [[x, y], ...]}, ...]}
+SPEC: {"shot": "S059", "why": "...", "regions": [{"mode": "text", "text": "3", "at": [x, y], "size": 50}, ...]}
 --apply keeps the original in 60-visuals/video-NN/stills-history/ (never overwritten), records the edit in
-60-visuals/video-NN/stills-postprocess.json and changes nothing else: the still keeps its provenance record (the shot it
-was made for), and its look must be recorded again (content-review --pictures), because a look holds for an exact file.
+60-visuals/video-NN/stills-postprocess.json and moves the still's provenance fingerprint to the touched file, so the
+change is known as this recorded one (any other change to a still is refused by timeline-check); the still keeps its
+shot, and its look must be recorded again (content-review --pictures), because a look holds for an exact file.
 Prints one JSON object on its last line. Exit 0 = done, 2 = refused (nothing written).
 """
 import argparse
+import hashlib
 import json
+import os
 import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 DEFAULT_FONT = r'C:\Windows\Fonts\times.ttf'
@@ -39,13 +37,6 @@ DEFAULT_FONT = r'C:\Windows\Fonts\times.ttf'
 def emit(obj, code=0):
     print(json.dumps(obj, ensure_ascii=False))
     sys.exit(code)
-
-
-def _grain(shape, std, seed=7):
-    """Paper grain for a softened area: fresh luminance noise. (Grain taken from the area itself would carry the very strokes
-    the soften is meant to hide back into it.)"""
-    n = np.random.default_rng(seed).normal(0.0, std, shape[:2])
-    return np.repeat(n[:, :, None], shape[2], axis=2)
 
 
 def apply_regions(im, regions):
@@ -73,29 +64,11 @@ def apply_regions(im, regions):
             base.alpha_composite(layer)
             out = base.convert('RGB')
             continue
-        if mode not in ('erase', 'soften'):
-            raise ValueError(f'unknown mode {mode!r} (erase, soften, text or paint)')
-        poly = [tuple(int(v) for v in p) for p in r['poly']]
-        if len(poly) < 3:
-            raise ValueError('a region needs a polygon of at least three points')
-        mask = Image.new('L', out.size, 0)
-        ImageDraw.Draw(mask).polygon(poly, fill=255)
-        if r.get('shrink'):
-            mask = mask.filter(ImageFilter.MinFilter(2 * int(r['shrink']) + 1))
-        mask = mask.filter(ImageFilter.GaussianBlur(float(r.get('feather', 4))))
-        xs, ys = [p[0] for p in poly], [p[1] for p in poly]
-        pad = 40
-        box = (max(0, min(xs) - pad), max(0, min(ys) - pad), min(out.width, max(xs) + pad), min(out.height, max(ys) + pad))
-        part = out.crop(box)
-        if mode == 'erase':
-            size = int(r.get('size', 19)) | 1
-            fixed = part.filter(ImageFilter.MedianFilter(size)).filter(ImageFilter.GaussianBlur(1.0))
-        else:
-            b = np.asarray(part.filter(ImageFilter.GaussianBlur(float(r.get('sigma', 4.0)))), dtype=float)
-            fixed = Image.fromarray(np.clip(b + _grain(b.shape, float(r.get('grain', 2.0))), 0, 255).astype(np.uint8))
-        full = out.copy()
-        full.paste(fixed, box[:2])
-        out = Image.composite(full, out, mask)
+        if mode in ('erase', 'soften'):
+            raise ValueError(f'{mode!r} is refused: nothing in a still is blurred, erased or covered (the user, '
+                             f'2026-11-23). Write the frame prompt so the thing is not made, and generate the '
+                             f'still again (manual 04)')
+        raise ValueError(f'unknown mode {mode!r} (text or paint)')
     return out
 
 
@@ -135,6 +108,19 @@ def main():
     hist = hist_dir / f'{shot}-before-touchup-{k}.png'
     shutil.copy2(src, hist)
     out.save(src)
+    # The still's provenance fingerprint follows this recorded mark, so timeline-check knows the change (anything
+    # else that changes a still after the generator made it is refused there: manual 04).
+    prov_p = vis / 'stills-provenance.json'
+    if prov_p.is_file():
+        prov = json.loads(prov_p.read_text(encoding='utf-8'))
+        me, hit = os.path.normcase(str(src.resolve())), False
+        for k, v in (prov.get('images') or {}).items():
+            if os.path.normcase(str(Path(k).resolve())) == me and isinstance(v, dict) and v.get('file_sha256'):
+                v['file_sha256'] = hashlib.sha256(src.read_bytes()).hexdigest()
+                v['touched_up_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
+                hit = True
+        if hit:
+            prov_p.write_text(json.dumps(prov, ensure_ascii=False, indent=1), encoding='utf-8')
     rec = vis / 'stills-postprocess.json'
     d = json.loads(rec.read_text(encoding='utf-8')) if rec.is_file() else {
         'note': 'Local fixes made to generated stills after generation (still_touchup.py); each keeps its original in '

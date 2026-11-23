@@ -2737,7 +2737,12 @@ def record_media(run, video, kind, entries):
     data = read_json(p) or {'video': n}
     data.setdefault(key, {})
     for e in entries:
-        data[key][_pkey(e['out'])] = {**{k: v for k, v in e.items() if k != 'out'}, 'made_at': now()}
+        rec = {**{k: v for k, v in e.items() if k != 'out'}, 'made_at': now()}
+        if kind == 'stills' and Path(str(e['out'])).is_file():
+            # the file exactly as the generator wrote it: a still changed afterwards (blurred, erased or painted over
+            # by anything but a recorded mark) is refused by stills_facts (the user, 2026-11-23: never blur)
+            rec['file_sha256'] = file_sha256(Path(str(e['out'])))
+        data[key][_pkey(e['out'])] = rec
     write_json(p, data)
     return str(p)
 
@@ -2754,8 +2759,13 @@ def stills_facts(rd, video):
     by_shot = {}
     for path, rec in prov.items():
         if Path(path).is_file():
-            by_shot.setdefault(str(rec.get('shot_id')), []).append((str(rec.get('made_at') or ''), rec))
-    missing, changed, older = [], [], []
+            by_shot.setdefault(str(rec.get('shot_id')), []).append((str(rec.get('made_at') or ''), rec, path))
+    # Nothing in a still is blurred, erased or covered (the user, 2026-11-23): a blur or an erase still in force in the
+    # touch-up log, or a file changed since the generator made it, is refused, and no reapproval accepts it.
+    post = read_json(artifact_path(rd, n, 'shot-plan').parent / 'stills-postprocess.json').get('edits') or []
+    blurred_src = {str(e.get('shot_id')) for e in post if isinstance(e, dict) and not e.get('superseded_at')
+                   and any((r or {}).get('mode') in ('erase', 'soften') for r in e.get('regions') or [])}
+    missing, changed, older, touched, blurred = [], [], [], [], []
     for s in shots:
         sid = str(s.get('id'))
         src = by_id.get(str(s.get('reuses') or sid)) or s
@@ -2763,7 +2773,11 @@ def stills_facts(rd, video):
         if not recs:
             missing.append(sid)
             continue
-        rec = recs[-1][1]
+        rec, rec_path = recs[-1][1], recs[-1][2]
+        if rec.get('file_sha256') and file_sha256(Path(rec_path)) != rec['file_sha256']:
+            touched.append(sid)
+        if str(src.get('id')) in blurred_src:
+            blurred.append(sid)
         fp = hashlib.sha256(_norm(src.get('frame_prompt') or src.get('prompt')).encode('utf-8')).hexdigest()
         if rec.get('frame_prompt_sha256') != fp:
             changed.append(sid)
@@ -2778,6 +2792,8 @@ def stills_facts(rd, video):
             out['warnings'].append('stills accepted as they are by explicit reapproval: ' + str(ra.get('reason')))
     else:
         out['issues'] += [f'{name}:' + ','.join(ids[:15]) + ('...' if len(ids) > 15 else '') for name, ids in found if ids]
+    never = [('stills_changed_after_the_generator_made_them', touched), ('stills_carry_a_blur_or_erase_touchup', blurred)]
+    out['issues'] += [f'{name}:' + ','.join(ids[:15]) + ('...' if len(ids) > 15 else '') for name, ids in never if ids]
     return out
 
 

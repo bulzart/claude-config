@@ -121,7 +121,8 @@
 - [create-clips: Shorts never touch music](create-clips-shorts-never-touch-music.md) — user 2026-11-21: a short's audio stays exactly as recorded; no identification, risk analysis or separation
 - [create-clips: no detached judges](create-clips-no-detached-judges.md) — user 2026-11-21: no blind/pairwise judges, second planners or compare-builds; context checks + validators
 - [create-video: held silences](create-video-held-silences.md) — user 2026-11-21: pause_total_s = whole silence, decided on the recorded voice then with the picture (holds, hold-decide); transitions clean by default, fades only on audible room tone, bed per silence; 2026-11-22: voice gaps = baseline not ceiling, reference pauses = evidence not values
-- [create-video: stills one at a time](create-video-stills-one-at-a-time.md) — user 2026-11-22: one still per worker run, each looked at as it lands; lettering fixed locally (still_touchup.py), content remade
+- [create-video: stills one at a time](create-video-stills-one-at-a-time.md) — user 2026-11-22: one still per worker run, each looked at as it lands; a fault is remade, never patched
 - [MCP audio clips vanish in CapCut](capcut-mcp-audio-type.md) — 2026-11-22: MCP add_audio type "audio" -> CapCut 9.8 shows empty audio tracks; use "extract_music" (create-video capcut-repair fixes it)
 - [create-video: blind cold reader](create-video-cold-reader-blind.md) — user 2026-11-22: blind by orchestration (review-read), script-only limits, no priming, no anchoring numbers or caps
 - [create-video: advanced drawings](create-video-advanced-drawings.md) — user 2026-11-22: story locked; drawings only, more complex and fancy; draw_tool vocabulary + still_motion, preview before render
+- [create-video: never blur a still](create-video-never-blur-stills.md) — user 2026-11-23: no blur, erase or cover; prompt the thing out and remake; timeline-check refuses a changed or blurred still
