@@ -162,7 +162,7 @@ changes, a quiet scene's in what it lets the viewer feel. Never manufacture dang
 does not have, and never claim more than the evidence: a contested consequence stays contested (`certainty:
 "contested"` with `hedge`, the line that keeps it honest). Then plan where the viewer learns what they need: before
 the moment, enough to recognise what it means when it comes, without explaining the payoff in advance; a mystery held
-on purpose stays held. When a moment is understood but not felt, find the cause before the cure: context missing or
+on purpose stays held. A verdict afterwards ("historians judged it decisive") confirms a meaning the viewer already felt; it cannot give the moment the weight it lacked when it happened. When a moment is understood but not felt, find the cause before the cure: context missing or
 given too late, a consequence never shown, a relation the picture never makes, too much at once, a payoff that
 answers no expectation, a weak idea. Fix that cause with the means that fits it (one clearer line, a picture or
 drawing that shows the relation, another order, a stronger setup, a different idea); more narration, a louder

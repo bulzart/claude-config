@@ -187,6 +187,7 @@ class StaticStudioTests(unittest.TestCase):
     def clear_development(self, kind):
         """A reader for whom the whole video is clear and pays: the three judgements given, nothing to find."""
         d={'what_happened':'the whole story is easy to follow','why_it_matters':'each turn changes what the people can do',
+           'would_be_different':'without each turn the people would be stuck','learned_when':'before',
            'why_from':'the video','event':'clear','significance':'clear','reward':'landed'}
         if kind=='final':
             return [dict(d,at='00:00-59:59')]
@@ -680,6 +681,7 @@ class StaticStudioTests(unittest.TestCase):
                         'assert prompt.startswith("Read only ") and os.path.samefile(os.path.dirname(prompt[10:].split(" and follow")[0]),os.getcwd()), (prompt,os.getcwd())\n'
                         'json.dump({"reviewer":"stub","developments":[{"lines":"L001-L052","what_happened":"a whole '
                         'story is told","why_it_matters":"each turn changes what they can do","why_from":"the video",'
+                        '"would_be_different":"they would be stuck","learned_when":"before",'
                         '"event":"clear","significance":"clear","reward":"landed"}],'
                         '"findings":[{"id":"F1","severity":"minor","lines":["L002"],'
                         '"problem":"the second line repeats the first one","likely_cause":"the same point again"}]},'
@@ -875,6 +877,7 @@ class StaticStudioTests(unittest.TestCase):
         vd=self.write_plan(review_script=False)
         dev={'lines':'L010-L020','what_happened':'the plan is dropped at the last minute',
              'why_it_matters':'it was the only way to save the season','why_from':'my own knowledge',
+             'would_be_different':'the season would have been lost','learned_when':'never',
              'event':'clear','significance':'clear','reward':'landed'}
         packet,rec=self.review('script',[],developments=[dev])
         sealed=json.loads(Path(rec['record']).read_text(encoding='utf-8'))
@@ -3382,6 +3385,7 @@ class SignificanceTests(unittest.TestCase):
 
     def dev(self, **kw):
         d = {'lines': 'L007-L012', 'what_happened': 'the bridge plan is abandoned', 'why_it_matters': 'the town stays cut off',
+             'would_be_different': 'the town would have its bridge by winter', 'learned_when': 'before',
              'why_from': 'the video', 'event': 'clear', 'significance': 'clear', 'reward': 'landed'}
         d.update(kw)
         return d
@@ -3441,6 +3445,29 @@ class SignificanceTests(unittest.TestCase):
         bad = c.development_problems('script', [self.dev(lines='L099', significance='sort of')], order)
         self.assertTrue(any('"lines"' in x for x in bad) and any('"significance"' in x for x in bad))
         self.assertEqual(c.development_problems('final', [dict(self.dev(), at='05:16-06:07')], order), [])
+        # The two answers added by brief 3 are owed only by readers who were asked them (round 8 was brief 2).
+        old = {k: v for k, v in self.dev().items() if k not in ('would_be_different', 'learned_when')}
+        self.assertEqual(c.development_problems('script', [old], order, 2), [])
+        self.assertTrue(any('learned_when' in x for x in c.development_problems('script', [old], order, 3)))
+
+    def test_a_reason_that_arrives_only_afterwards_is_major_on_a_key_moment(self):
+        # The real case (2026-11-23): the trick's result was clear, why it mattered came 40 s later as a verdict.
+        c = self.core
+        order = [f'L{i:03}' for i in range(1, 13)]
+        key = {'id': 'B02', 'key_moment': 'the turning point'}
+        late = self.dev(learned_when='only afterwards', why_it_matters='the generals said it tipped the balance')
+        on_key = c.development_findings('script', [late], set(), [(key, 7, 12)], order)
+        self.assertEqual((on_key[0]['severity'], on_key[0]['lines']), ('major', 'L007-L012'))
+        self.assertIn('B02', on_key[0]['problem'])
+        elsewhere = c.development_findings('script', [late], set(), [(key, 1, 3)], order)
+        self.assertEqual(elsewhere[0]['severity'], 'minor')
+        self.assertEqual(c.development_findings('script', [self.dev(learned_when='never')], set())[0]['severity'],
+                         'major')
+        # Case C again: a mystery held on purpose is never a finding, whenever its reason comes.
+        held = self.dev(significance='withheld', learned_when='only afterwards')
+        self.assertEqual(c.development_findings('script', [held], set(), [(key, 7, 12)], order), [])
+        # Case B: given before the moment, nothing is asked for.
+        self.assertEqual(c.development_findings('script', [self.dev()], set(), [(key, 7, 12)], order), [])
 
     def test_a_key_moment_the_reader_never_named_is_checked(self):
         c = self.core
@@ -3457,7 +3484,8 @@ class SignificanceTests(unittest.TestCase):
 
     def test_both_readers_are_asked_the_three_things(self):
         for brief in (self.core.SCRIPT_BRIEF, self.core.FINAL_BRIEF):
-            for want in ('why_from', 'my own knowledge', 'withheld', 'not the point here', 'ONLY what'):
+            for want in ('why_from', 'my own knowledge', 'withheld', 'not the point here', 'ONLY what',
+                         'would_be_different', 'learned_when', 'only afterwards', 'first language'):
                 self.assertIn(want, brief)
 
 

@@ -126,3 +126,4 @@
 - [create-video: blind cold reader](create-video-cold-reader-blind.md) — user 2026-11-22: blind by orchestration (review-read), script-only limits, no priming, no anchoring numbers or caps
 - [create-video: advanced drawings](create-video-advanced-drawings.md) — user 2026-11-22: story locked; drawings only, more complex and fancy; draw_tool vocabulary + still_motion, preview before render
 - [create-video: never blur a still](create-video-never-blur-stills.md) — user 2026-11-23: no blur, erase or cover; prompt the thing out and remake; timeline-check refuses a changed or blurred still
+- [create-video: why it matters, not only what happened](create-video-significance.md) — user 2026-11-23, brief #5: key moments plan significance; readers give would_be_different + learned_when; gaps = findings; judge for a non-native first-time viewer
