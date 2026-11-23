@@ -8910,14 +8910,16 @@ def development_findings(kind, devs, taken, spans=(), order=()):
             sev, cause = 'major', 'the video leans on knowledge it never gives'
             prob = (f'The reader knew why this matters only from their own knowledge, not from the video: "{what}" '
                     f'matters because "{why}". A first-time viewer may not know it.')
-        elif when == 'only afterwards':
-            sev = 'major' if keys else 'minor'
+        elif when == 'only afterwards' and keys:
+            # a key moment must carry its meaning when it happens; elsewhere a setup that is clear at the time and pays
+            # off later is ordinary craft (reader test D, 2026-11-23: a planted rule called back in the last line)
+            sev = 'major'
             cause = 'why it matters arrives only after the moment, so the moment itself passes without its weight'
             prob = (f'The reader learned why "{what}" matters only afterwards (their words: "{why}"; without it: '
-                    f'"{diff or "not told"}").' + (f' It is a key moment ({", ".join(str(b.get("id")) for b in keys)}).'
-                                                   if keys else ''))
+                    f'"{diff or "not told"}"). It is a key moment ({", ".join(str(b.get("id")) for b in keys)}).')
         elif sg == 'partly' or fr == 'unclear':
-            sev, cause = 'minor', 'what it means is established weakly, or too late'
+            sev, cause = 'minor', ('why it matters arrives only after the moment' if when == 'only afterwards' else
+                                   'what it means is established weakly, or too late')
             prob = f'The reader only partly saw why this matters: "{what}" (their words: "{why}").'
         elif rw == 'missed':
             sev, cause = 'minor', 'the setup or the moment itself does not pay'

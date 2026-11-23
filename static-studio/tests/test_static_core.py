@@ -3459,8 +3459,11 @@ class SignificanceTests(unittest.TestCase):
         on_key = c.development_findings('script', [late], set(), [(key, 7, 12)], order)
         self.assertEqual((on_key[0]['severity'], on_key[0]['lines']), ('major', 'L007-L012'))
         self.assertIn('B02', on_key[0]['problem'])
-        elsewhere = c.development_findings('script', [late], set(), [(key, 1, 3)], order)
-        self.assertEqual(elsewhere[0]['severity'], 'minor')
+        # Elsewhere, a setup clear at the time that pays off later is ordinary craft (reader test D: a planted rule
+        # called back in the last line); only partly clear at the time, it is a minor finding.
+        self.assertEqual(c.development_findings('script', [late], set(), [(key, 1, 3)], order), [])
+        partly = dict(late, significance='partly')
+        self.assertEqual(c.development_findings('script', [partly], set(), [(key, 1, 3)], order)[0]['severity'], 'minor')
         self.assertEqual(c.development_findings('script', [self.dev(learned_when='never')], set())[0]['severity'],
                          'major')
         # Case C again: a mystery held on purpose is never a finding, whenever its reason comes.
