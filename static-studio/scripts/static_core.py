@@ -8918,9 +8918,13 @@ def development_findings(kind, devs, taken, spans=(), order=()):
             prob = (f'The reader learned why "{what}" matters only afterwards (their words: "{why}"; without it: '
                     f'"{diff or "not told"}"). It is a key moment ({", ".join(str(b.get("id")) for b in keys)}).')
         elif sg == 'partly' or fr == 'unclear':
-            sev, cause = 'minor', ('why it matters arrives only after the moment' if when == 'only afterwards' else
-                                   'what it means is established weakly, or too late')
-            prob = f'The reader only partly saw why this matters: "{what}" (their words: "{why}").'
+            # on a key moment, half a meaning is the film missing its point (reader test A, 2026-11-23: the 9 June
+            # message "partly", what the Germans stood to lose "left implied until late"; the user needed it explained)
+            sev = 'major' if keys else 'minor'
+            cause = ('why it matters arrives only after the moment' if when == 'only afterwards' else
+                     'what it means is established weakly, or too late')
+            prob = (f'The reader only partly saw why this matters: "{what}" (their words: "{why}").'
+                    + (f' It is a key moment ({", ".join(str(b.get("id")) for b in keys)}).' if keys else ''))
         elif rw == 'missed':
             sev, cause = 'minor', 'the setup or the moment itself does not pay'
             prob = f'The reader understood "{what}" and why it matters, but the payoff did not land for them.'

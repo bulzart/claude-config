@@ -3464,6 +3464,9 @@ class SignificanceTests(unittest.TestCase):
         self.assertEqual(c.development_findings('script', [late], set(), [(key, 1, 3)], order), [])
         partly = dict(late, significance='partly')
         self.assertEqual(c.development_findings('script', [partly], set(), [(key, 1, 3)], order)[0]['severity'], 'minor')
+        # Case A on the real failure (reader test A): the turning point only partly carried its meaning -> major there.
+        half = self.dev(significance='partly', learned_when='at the moment')
+        self.assertEqual(c.development_findings('script', [half], set(), [(key, 7, 12)], order)[0]['severity'], 'major')
         self.assertEqual(c.development_findings('script', [self.dev(learned_when='never')], set())[0]['severity'],
                          'major')
         # Case C again: a mystery held on purpose is never a finding, whenever its reason comes.
