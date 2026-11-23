@@ -903,7 +903,8 @@ class StaticStudioTests(unittest.TestCase):
         self.assertFalse([x for x in trace()[0]['issues'] if x.startswith('pictures_')])
         self.look_at_pictures([stills/'S2.png'],result='issue',category='graphic_injury')
         self.assertIn('pictures_with_a_content_issue:1:S2.png',trace()[0]['issues'])
-        (stills/'S2.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'1'*2048)                  # remade: looked at again
+        (stills/'S2.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'1'*2048)                  # remade through the gate: looked at again
+        core.record_media(gate['run'],1,'stills',[{'out':str(stills/'S2.png'),**gate['records'][1]}])
         self.assertIn('pictures_not_content_checked:1:S2.png',trace()[0]['issues'])
         self.look_at_pictures([stills/'S2.png'])
         # The bed made through the gate for the beat it scores; the gate hands the agent that beat's sound direction.
