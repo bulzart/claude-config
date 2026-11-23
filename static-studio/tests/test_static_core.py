@@ -1410,6 +1410,47 @@ class StaticStudioTests(unittest.TestCase):
         code,out=measure('--confirm','L002','--reason','the user listened at 00:02 and heard the tag performed')
         self.assertEqual((code,out['tags_read_aloud']),(0,[]))
 
+    def test_words_stacked_at_one_instant_are_not_heard(self):
+        # Whisper sometimes stacks a line's words at one instant somewhere else (no length each): that is no time, so
+        # the line is listened to again on a window between real times, and found there (2026-11-23, part 4, L065/L066).
+        core=self.load_core()
+        vd=self.write_plan()
+        lines=[{'id':'L001','text':'Twelve divisions came south that night.'},
+               {'id':'L002','text':'What would a careful spy do then?'},
+               {'id':'L003','text':'By morning the road was quiet again.'}]
+        save(vd/'script.json',{'language':'en','pace_wpm':145,'lines':lines})
+        d=self.run/'50-audio/video-01'; (d/'whisper').mkdir(parents=True)
+        def run_of(words, t0, step=0.27, length=0.22):
+            return [{'start_s':round(t0+step*i,3),'end_s':round(t0+step*i+length,3),'text':' '+w} for i,w in enumerate(words)]
+        a=run_of('12 divisions came south that night.'.split(),0.3)
+        b=[{'start_s':5.0,'end_s':5.0,'text':' '+w} for w in 'What would a careful'.split()]   # stacked, 3 s late
+        c=run_of('By morning the road was quiet again.'.split(),5.1)
+        segs=[{'start_s':x[0]['start_s'],'end_s':x[-1]['end_s'],'text':' '.join(w['text'] for w in x),'words':x} for x in (a,b,c)]
+        part=d/'part-001.mp3'
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','sine=frequency=150:sample_rate=16000',
+                        '-t','7.5','-c:a','libmp3lame','-b:a','32k',str(part)],check=True)
+        save(d/'whisper/part-001.json',{'status':'transcribed','model':'medium','segments':segs})
+        (d/'whisper/part-001.txt').write_text(chr(10).join(f"[{s['start_s']:.1f}-{s['end_s']:.1f}] {s['text']}" for s in segs),encoding='utf-8')
+        text=chr(10).join(r['text'] for r in lines)
+        save(d/'manifest.json',{'model_id':'eleven_v4','voice_id':'TESTID','language':'en','status':'complete','finished_parts':[1],
+                                'chunks':[{'id':1,'line_start':1,'line_end':3,'file':'part-001.mp3','characters':len(text),
+                                           'text_sha256':hashlib.sha256(text.encode('utf-8')).hexdigest()}]})
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(part),str(d/'narration.wav')],check=True)
+        windows=[]
+        def fake_transcribe(path,outpath,*a):           # the second listen hears the line where it really is
+            windows.append(Path(outpath).stem)
+            ws=[{'start_s':0.4+0.27*i,'end_s':0.62+0.27*i,'text':' '+w} for i,w in enumerate('What would a careful spy do then'.split())]
+            save(Path(outpath),{'status':'transcribed','model':'medium','segments':[{'start_s':0.4,'end_s':2.3,'text':'x','words':ws}]})
+            Path(outpath).with_suffix('.txt').write_text('',encoding='utf-8')
+            return 1
+        with mock.patch.object(core,'transcribe',side_effect=fake_transcribe):
+            code,out=self.core_call(core,'narration-measure','--run',self.run,'--video',1,'--no-delivery')
+        self.assertIn('recheck-L002',windows)                                   # stacked words were not taken as heard
+        rec=next(r for r in out['rechecked_lines'] if r['line']=='L002')
+        self.assertTrue(rec['found'])
+        self.assertLess(rec['window_s'][0],2.2)                                 # from the end of L001's real words
+        self.assertEqual(out['unheard_lines'],[])
+
     def test_capcut_narration_track_must_be_whole(self):
         core=self.load_core()
         f=self.home/'narration-edit.wav'

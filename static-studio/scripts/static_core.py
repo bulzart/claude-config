@@ -6934,6 +6934,12 @@ def cmd_narration_measure(args):
         words = transcript_words(tj)
         d = align_detail([str(r.get('text') or '') for r in lines[lo - 1:hi]], words, language)
         for j, tt in enumerate(d['tok_time']):
+            # A word Whisper placed with no length (several words at one instant) is a failed alignment, not a time:
+            # it counts as unheard, so its line is listened to again and the recheck windows lean on real times only
+            # (2026-11-23: "What would a perfect" stacked at one instant 6 s late hid "He would warn them, of course."
+            # and put the recheck of that line in the wrong place, although the voice had said every word).
+            tt = [x if (x and float(x[1]) - float(x[0]) > 0.005) else None for x in tt]
+            d['tok_time'][j] = tt
             got = [x for x in tt if x]
             rows[lo + j] = {'id': lines[lo + j - 1].get('id'), 'index': lo + j, 'part': c['id'],
                             'start_s': round(offset + got[0][0], 3) if got else None,
