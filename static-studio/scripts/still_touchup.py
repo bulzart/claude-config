@@ -114,6 +114,24 @@ def record_edit(vis, entry):
     rec.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding='utf-8')
 
 
+def supersede_touchups(vis, shot, why):
+    """Earlier blur or erase touch-ups of a still stop applying once a checked replacement stands in their place."""
+    rec = vis / 'stills-postprocess.json'
+    if not rec.is_file():
+        return []
+    d = json.loads(rec.read_text(encoding='utf-8'))
+    done = []
+    for e in d.get('edits') or []:
+        if (isinstance(e, dict) and str(e.get('shot_id')) == shot and not e.get('superseded_at')
+                and any((r or {}).get('mode') in ('erase', 'soften') for r in e.get('regions') or [])):
+            e['superseded_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
+            e['superseded_by'] = why
+            done.append(e.get('at'))
+    if done:
+        rec.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding='utf-8')
+    return done
+
+
 def replace_still(a, vis):
     """A replacement picture for a still: one the user supplies, or a legitimate edit made elsewhere (a crop, a colour
     or contrast correction, a retouch that makes the picture right). Checked (it opens, it has the still's shape and
@@ -151,7 +169,8 @@ def replace_still(a, vis):
     hist = keep_original(vis, src, shot, 'replace')
     new.save(src)
     move_fingerprint(vis, src)
-    record_edit(vis, {'shot_id': shot, 'file': str(src.relative_to(Path(a.run))).replace('\\', '/'),
+    gone = supersede_touchups(vis, shot, f'replaced by a checked {a.kind} picture: {why}')
+    record_edit(vis, {'shot_id': shot, 'touchups_retired': len(gone), 'file': str(src.relative_to(Path(a.run))).replace('\\', '/'),
                       'original': str(hist.relative_to(Path(a.run))).replace('\\', '/'), 'why': why,
                       'mode': 'replace', 'kind': a.kind, 'from': str(new_path.resolve())})
     emit({'ok': True, 'applied': True, 'file': str(src), 'original': str(hist),

@@ -2524,6 +2524,14 @@ def beat_significance_issues(beats, lines):
             issues.append(f'beat_{bid}_significance_certainty_must_be_established_or_contested')
         elif cert == 'contested' and str(sg.get('hedge') or '') not in ids:
             issues.append(f'beat_{bid}_contested_significance_needs_the_line_that_hedges_it:significance.hedge')
+        elif cert == 'contested':
+            # the hedge qualifies the claim where the viewer meets it: at the moment or after it, never before it
+            pos = {str((l or {}).get('id') or f'L{i + 1:03d}'): i + 1 for i, l in enumerate(lines)}
+            try:
+                if pos[str(sg.get('hedge'))] < int(b.get('line_start')):
+                    issues.append(f'beat_{bid}_hedge_comes_before_the_moment_it_qualifies:significance.hedge')
+            except (TypeError, ValueError, KeyError):
+                pass
     return issues
 
 
@@ -2795,8 +2803,26 @@ def stills_facts(rd, video):
     # Nothing in a still is blurred, erased or covered (the user, 2026-11-23): a blur or an erase still in force in the
     # touch-up log, or a file changed since the generator made it, is refused, and no reapproval accepts it.
     post = read_json(artifact_path(rd, n, 'shot-plan').parent / 'stills-postprocess.json').get('edits') or []
-    blurred_src = {str(e.get('shot_id')) for e in post if isinstance(e, dict) and not e.get('superseded_at')
-                   and any((r or {}).get('mode') in ('erase', 'soften') for r in e.get('regions') or [])}
+    made_last = {sid: max((x[0] for x in v), default='') for sid, v in by_shot.items()}
+
+    def _when(t):
+        try:
+            return dt.datetime.fromisoformat(str(t).replace('Z', '+00:00'))
+        except ValueError:
+            return None
+
+    def _in_force(e):
+        # a touch-up stops applying when the generator made the still again after it: the file it changed is gone
+        if not isinstance(e, dict) or e.get('superseded_at'):
+            return False
+        if not any((r or {}).get('mode') in ('erase', 'soften') for r in e.get('regions') or []):
+            return False
+        made, at = _when(made_last.get(str(e.get('shot_id')), '')), _when(e.get('at') or '')
+        try:
+            return not (made and at and made > at)
+        except TypeError:
+            return True
+    blurred_src = {str(e.get('shot_id')) for e in post if _in_force(e)}
     missing, changed, older, touched, blurred = [], [], [], [], []
     for s in shots:
         sid = str(s.get('id'))
@@ -2960,6 +2986,9 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
     max_r = REVIEW_MAX_ROUNDS[kind]
     for i, (rec, ans) in enumerate(recs):
         rnd, fs = rec['_round'], rec.get('findings') or []
+        if rec.get('findings_outside_reader_folder'):
+            st['warnings'].append(f'{kind} review r{rnd}: its findings were recorded from a file outside the reader\'s '
+                                  f'own folder ({rec.get("findings_from")}): say where they came from')
         if canonical_sha(fs) != rec.get('findings_sha256'):
             st['issues'].append(f'{kind}_review_r{rnd}_findings_altered')
         later = recs[i + 1][0].get('subject_snapshot') if i + 1 < len(recs) else snapshot
@@ -3009,9 +3038,9 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
                 else:
                     st['issues'].append('script_changed_after_review:' + ','.join(loose[:15])
                                         + ('...' if len(loose) > 15 else ''))
-        elif kind == 'final' and rnd >= max_r:
-            st['warnings'].append('the export changed after the last final review round')
         else:
+            # a new file gets its own read, whatever the round (command step F): after the round cap only majors are
+            # closed by decision, never a file no reader has seen (audit 2026-11-23)
             st['issues'].append(f'{kind}_review_outdated')
     return st
 
@@ -3642,6 +3671,12 @@ def plan_facts(rd, video):
                            r"eighty|ninety|hundred|thousand|million)\b", re.I)
     numbers_without_claim = [str(x.get('id')) for x in lines
                              if number_rx.search(strip_tags(x.get('text') or '')) and str(x.get('id')) not in covered]
+    beat_list = (beats or {}).get('beats') or []
+    if beat_list and not any(b.get('key_moment') not in (None, False) and str(b.get('key_moment')).strip()
+                             for b in beat_list):
+        warnings.append('no beat is marked as a key moment: name the developments this video is built around, what each '
+                        'means to its viewer and what it pays (beat map key_moment + significance), so the readers\' '
+                        'accounts can be weighed against them')
     voice_pace = measured.get('forecast_wpm') or measured.get('wpm')
     if voice_pace and script.get('pace_wpm') and abs(float(script['pace_wpm']) - float(voice_pace)) > 3:
         warnings.append(f"script pace_wpm {script['pace_wpm']} differs from the voice's measured {voice_pace} "
@@ -8428,10 +8463,11 @@ Think about:
    to learn later is not a failure: mark it "withheld".
    For each, also: what would have been different if it had not happened, or had failed, and for whom, in one plain
    sentence from the narration alone ("would_be_different"; "I could not tell" is an answer); and when the narration let
-   you know why it matters: before the moment, at the moment, only afterwards, or never ("learned_when"). That a plan
-   worked or a trick fooled someone is what happened: follow the consequence one step further. Judge as a first-time
-   viewer who knows nothing of the subject beyond these words, and whose first language may not be English: a reason
-   carried only by an idiom, a technical word or a verdict given after the fact may not reach them.
+   you know why it matters: before the moment, at the moment, only afterwards, or never ("learned_when"). That something
+   worked, failed or surprised someone is what happened: follow the consequence one step further, to what it changes
+   and for whom. Judge as a first-time viewer who knows nothing of the subject beyond these words, and who may be
+   watching in a language that is not their first: a reason carried only by an idiom, a technical word or a verdict
+   given after the fact may not reach them.
 
 Then list your findings, the most important first, each concrete enough to act on: what you noticed, what you think
 causes it (likely_cause: for example "a name nobody introduced", "no consequence for anyone", "the same point again",
@@ -8503,8 +8539,10 @@ watch-sheet frames is seen too. Below them are a few measurements per minute (fa
 except the one you are asked to write. You cannot hear the narration or the music: judge delivery only from the words
 and the measurements, and say so; never claim how the voice sounds.
 
-Judge it against what each part was meant to feel like (listed below), not against a generic checklist:
-1. Did each part deliver what it set out to do?
+Judge it as it comes to you, not against a generic checklist. You are not told what any part is meant to do or make
+you feel, on purpose: that comparison is made afterwards, from your account.
+1. Part by part (the parts are listed below by time only): what did each give you, what did you feel or understand
+   there, and where did your attention drift?
 2. Where does it get visually repetitive, or the pictures stop adding anything to the words (a slideshow)?
 3. Where do picture and words not connect, or contradict each other?
 4. Where does it feel like a lecture or a dry documentary instead of a story? Where does it drag or rush?
@@ -8532,10 +8570,11 @@ Judge it against what each part was meant to feel like (listed below), not again
    want to learn later is not a failure: mark it "withheld".
    For each, also: what would have been different if it had not happened, or had failed, and for whom, in one plain
    sentence from the video alone ("would_be_different"; "I could not tell" is an answer); and when the video let you know
-   why it matters: before the moment, at the moment, only afterwards, or never ("learned_when"). That a plan worked or a
-   trick fooled someone is what happened: follow the consequence one step further. Judge as a first-time viewer who
-   knows nothing of the subject beyond this video, and whose first language may not be English: a reason carried only by
-   an idiom, a technical word or a verdict given after the fact may not reach them.
+   why it matters: before the moment, at the moment, only afterwards, or never ("learned_when"). That something worked, failed
+   or surprised someone is what happened: follow the consequence one step further, to what it changes and for whom.
+   Judge as a first-time viewer who knows nothing of the subject beyond this video, and who may be watching in a
+   language that is not their first: a reason carried only by an idiom, a technical word or a verdict given after the
+   fact may not reach them.
 
 Findings, the most important first, each with "at" as "mm:ss-mm:ss" (a problem that recurs: several, comma-
 separated), severity "major" (a viewer would likely leave, get lost or stop trusting it there) or "minor", the problem, what you think causes it (likely_cause: for
@@ -8548,7 +8587,8 @@ group small polish points together rather than leave out anything serious.
 Write your answer as JSON, and nothing else, to: {OUT}
 {{
   "reviewer": "fresh final reviewer",
-  "verdict": {{"delivered": "...", "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
+  "verdict": {{"delivered": "what the video promised early on, in your words, and whether it kept it",
+                "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
   "developments": [{{"at": "mm:ss-mm:ss", "what_happened": "...", "why_it_matters": "... (or: I could not tell)",
                     "would_be_different": "...", "learned_when": "before | at the moment | only afterwards | never",
                     "why_from": "the video | my own knowledge | unclear", "event": "clear | partly | unclear",
@@ -8672,10 +8712,12 @@ def cmd_review_packet(args):
             lo, hi = spans.get(b, (s['start_s'], s['end_s']))
             spans[b] = (min(lo, s['start_s']), max(hi, s['end_s']))
         text = _fill(FINAL_BRIEF, TITLE=title, HOUSE_RULES=house_rules(rd, n), OUT=out_path)
-        text += '\n## What each part was meant to feel like\n'
-        for b in beats:
+        # The parts by time only: what each is meant to do stays with the director, who compares the reader's account
+        # with each beat's experience when answering (brief #5, 14.1: no rationale before the reader's own judgement)
+        text += '\n## The parts of this cut (by time only)\n'
+        for pn, b in enumerate(beats, 1):
             a_s, b_s = spans.get(str(b.get('id')), (b.get('start_s'), b.get('end_s')))
-            text += f'- {_mmss(a_s)}-{_mmss(b_s)}: {b.get("experience") or b.get("narrative_job")} (pace: {b.get("pace") or "-"})\n'
+            text += f'- part {pn}: {_mmss(a_s)}-{_mmss(b_s)}\n'
         # The silences as they are in this cut (the edit plan the project was built from): where, how long in all,
         # and the words on each side. Not the director's reasons: the reviewer judges them fresh.
         script_lines = read_json(vd / 'script.json').get('lines') or []
@@ -8730,6 +8772,13 @@ def cmd_review_packet(args):
     folder.mkdir(parents=True, exist_ok=True)
     packet.write_text(text, encoding='utf-8')
     (folder / f'packet-{kind}-r{rnd}.md').write_text(text, encoding='utf-8')     # the run's copy, for the record
+    if kind in ('script', 'final'):
+        # the key moments as they stand when the reader gets the packet: severity is weighed against these
+        # (review_spans), so a mark moved after the read cannot turn a major into a minor (audit 2026-11-23)
+        meta['key_moment_spans'] = [
+            {'beat': str(b.get('id')), 'lo': lo, 'hi': hi, 'key_moment': b.get('key_moment'),
+             'matters_because': (b.get('significance') or {}).get('matters_because')}
+            for b, lo, hi in key_moment_spans(rd, vd, n, kind, list((meta.get('subject_snapshot') or {}).keys()))]
     write_json(folder / f'packet-{kind}-r{rnd}.json', {**meta, 'packet': str(packet)})
     emit({'ok': True, 'kind': kind, 'round': rnd, 'packet': str(packet), 'findings_file': str(out_path),
           'next': ('Run review-read --kind ' + kind + ' (the reader as its own restricted process), or spawn ONE fresh '
@@ -8808,7 +8857,8 @@ AT_RX = r'\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?(\s*,\s*\d{1,3}:\d{2}(\s*-\s*\d{1,
 # knowledge. Readers now name the developments that matter most and keep three judgements apart for each (what
 # happened / why it matters, from the video alone / whether it paid off); review-record turns a gap into a finding
 # answered like any other. Not every video needs danger or a twist: the reward is the video's own (10 §4, 06).
-BRIEF_VERSION = 3          # 3 (2026-11-23): would_be_different and learned_when
+BRIEF_VERSION = 4          # 3: would_be_different, learned_when; 4 (audit 2026-11-23): the final reader is not told
+                           # the intent, why_it_matters and likely_cause are required, key moments sealed
 DEV_EVENT = ('clear', 'partly', 'unclear')
 DEV_SIGNIFICANCE = ('clear', 'partly', 'unclear', 'withheld')
 DEV_REWARD = ('landed', 'partly', 'missed', 'not the point here')
@@ -8816,9 +8866,23 @@ DEV_FROM = ('the video', 'my own knowledge', 'unclear')
 DEV_WHEN = ('before', 'at the moment', 'only afterwards', 'never')
 
 
+# Worst first: an answer that names two choices ("the video, partly my own knowledge") is read by the worse one, so a
+# mixed answer never hides a gap (audit 2026-11-23: the first words used to decide).
+_WORST_FIRST = {DEV_EVENT: ('unclear', 'partly', 'clear'),
+                DEV_SIGNIFICANCE: ('unclear', 'partly', 'withheld', 'clear'),
+                DEV_REWARD: ('missed', 'partly', 'landed', 'not the point here'),
+                DEV_FROM: ('my own knowledge', 'unclear', 'the video'),
+                DEV_WHEN: ('never', 'only afterwards', 'at the moment', 'before')}
+
+
 def _choice(value, allowed):
     s = re.sub(r'\s+', ' ', str(value or '').strip().lower())
-    return next((a for a in allowed if s == a or s.startswith(a)), None)
+    first = next((a for a in allowed if s == a or s.startswith(a)), None)
+    if first is None or s == first:
+        return first
+    named = [a for a in allowed if re.search(r'(?<![a-z])' + re.escape(a) + r'(?![a-z])', s)]
+    order = _WORST_FIRST.get(tuple(allowed))
+    return next((a for a in order if a in named), first) if order and len(named) > 1 else first
 
 
 def _at_ranges(at):
@@ -8852,6 +8916,9 @@ def development_problems(kind, devs, order, version=BRIEF_VERSION):
             keys.append(('learned_when', DEV_WHEN))
             if n_words(d.get('would_be_different')) < 3:
                 out.append(f'development {k}: "would_be_different" is not told (or "I could not tell")')
+        if int(version or 2) >= 4 and n_words(d.get('why_it_matters')) < 3:
+            # a label alone cannot be weighed: the reason in the reader's own words is what the director checks
+            out.append(f'development {k}: "why_it_matters" is not told (or "I could not tell")')
         for key, allowed in keys:
             if _choice(d.get(key), allowed) is None:
                 out.append(f'development {k}: "{key}" must be one of: ' + ', '.join(allowed))
@@ -8879,6 +8946,17 @@ def key_moment_spans(rd, vd, n, kind, order):
     return [(b, *spans[str(b.get('id'))]) for b in keys if str(b.get('id')) in spans]
 
 
+def review_spans(meta, rd, vd, n, kind, order):
+    """The key moments a read is weighed against: as sealed in its packet (a mark moved after the read changes
+    nothing), or read now for a packet made before they were sealed."""
+    sealed = (meta or {}).get('key_moment_spans')
+    if isinstance(sealed, list):
+        return [({'id': s.get('beat'), 'key_moment': s.get('key_moment'),
+                  'significance': {'matters_because': s.get('matters_because')}}, s.get('lo'), s.get('hi'))
+                for s in sealed if isinstance(s, dict)]
+    return key_moment_spans(rd, vd, n, kind, order)
+
+
 def _dev_overlaps(kind, d, spans, order):
     if kind == 'script':
         idx = {lid: i + 1 for i, lid in enumerate(order)}
@@ -8903,6 +8981,9 @@ def development_findings(kind, devs, taken, spans=(), order=()):
         why = str(d.get('why_it_matters') or '').strip() or 'nothing'
         diff = str(d.get('would_be_different') or '').strip()
         keys = _dev_overlaps(kind, d, spans, order) if spans else []
+        # "I could not tell" what would be different, or why it matters, is not "clear" whatever the label says
+        if sg == 'clear' and re.search(r"\b(could ?not|couldn'?t|cannot|can'?t) tell\b", f'{diff} {why}', re.I):
+            sg = 'partly'
         if ev == 'unclear':
             sev, cause = 'major', 'what happened is not clear here'
             prob = f'The reader could not follow what happened at a development that matters: "{what}".'
@@ -8931,24 +9012,47 @@ def development_findings(kind, devs, taken, spans=(), order=()):
                      'what it means is established weakly, or too late')
             prob = (f'The reader only partly saw why this matters: "{what}" (their words: "{why}").'
                     + (f' It is a key moment ({", ".join(str(b.get("id")) for b in keys)}).' if keys else ''))
-        elif rw == 'missed':
-            sev, cause = 'minor', 'the setup or the moment itself does not pay'
-            prob = f'The reader understood "{what}" and why it matters, but the payoff did not land for them.'
+        elif ev == 'partly':
+            # following only part of what happened is its own failure, apart from meaning and payoff (audit 2026-11-23)
+            sev = 'major' if keys else 'minor'
+            cause = 'what happened is only partly clear here'
+            prob = (f'The reader only partly followed what happened: "{what}".'
+                    + (f' It is a key moment ({", ".join(str(b.get("id")) for b in keys)}).' if keys else ''))
+        elif rw == 'missed' or (rw == 'partly' and keys):
+            # on a key moment the payoff is what the moment is for: missed is major there, half of it minor
+            sev = 'major' if (rw == 'missed' and keys) else 'minor'
+            cause = 'the setup or the moment itself does not pay'
+            prob = (f'The reader understood "{what}" and why it matters, but the payoff '
+                    + ('did not land for them.' if rw == 'missed' else 'only partly landed for them.')
+                    + (f' It is a key moment ({", ".join(str(b.get("id")) for b in keys)}).' if keys else ''))
         else:
             continue
+        if cause.startswith('what happened'):
+            impact = 'the viewer loses the thread at a development that matters'
+            suggestion = ('Make what happens here easy to follow for a first-time viewer (who is who, what changes, in '
+                          'what order), by the means that fits the cause (a clearer line, a picture that shows it, '
+                          'another order, less at once); or dispute it with the reason.')
+        elif cause.startswith('the setup'):
+            impact = ('the moment the video is built around does not pay off' if sev == 'major'
+                      else 'the moment gives less than it is there to give')
+            suggestion = ('Find why the payoff does not land (its setup, its timing, what the viewer expected by then) '
+                          'and strengthen that, not the noise around it; or dispute it with the reason (a reward that '
+                          'is not this).')
+        else:
+            impact = ('the viewer can follow the events without feeling why they matter' if sev == 'major'
+                      else 'the moment gives less than it is there to give')
+            suggestion = ('Find what the viewer must already know for this to matter and give it before the moment, by '
+                          'the means that fits the cause (one clearer line, a picture or drawing that shows the '
+                          'relation, another order, a stronger setup, a different idea), without explaining the payoff '
+                          'in advance; or dispute it with the reason (a mystery held on purpose, a reward that is not '
+                          'this).')
         k += 1
         while f'S{k}' in taken:
             k += 1
         f = {'id': f'S{k}', 'severity': sev, 'problem': prob,
              'likely_cause': str(d.get('note') or '').strip() or cause,
-             'viewer_impact': ('the viewer loses the thread at a development that matters' if ev == 'unclear' else
-                               'the viewer can follow the events without feeling why they matter' if sev == 'major'
-                               else 'the moment gives less than it is there to give'),
-             'suggestion': ('Find what the viewer must already know for this to matter and give it before the moment, by '
-                            'the means that fits the cause (one clearer line, a picture or drawing that shows the '
-                            'relation, another order, a stronger setup, a different idea), without explaining the payoff '
-                            'in advance; or dispute it with the reason (a mystery held on purpose, a reward that is not '
-                            'this).'),
+             'viewer_impact': impact,
+             'suggestion': suggestion,
              'derived_from': {'development': i, **{key: d.get(key) for key in (
                  'what_happened', 'why_it_matters', 'would_be_different', 'learned_when', 'why_from', 'event',
                  'significance', 'reward', 'note')}}}
@@ -8957,10 +9061,10 @@ def development_findings(kind, devs, taken, spans=(), order=()):
     return out
 
 
-def key_moment_findings(rd, vd, n, kind, devs, order, taken):
+def key_moment_findings(rd, vd, n, kind, devs, order, taken, spans=None):
     """Key moments of the beat map that the reader did not name among the developments that mattered: a check, not a
     verdict (the reader may have chosen others), answered with a reason either way."""
-    spans = key_moment_spans(rd, vd, n, kind, order)
+    spans = key_moment_spans(rd, vd, n, kind, order) if spans is None else spans
     out, k = [], 0
     for b, lo, hi in spans:
         if any(b in _dev_overlaps(kind, d, [(b, lo, hi)], order) for d in devs or []):
@@ -9002,6 +9106,10 @@ def cmd_review_record(args):
     if not meta:
         error(f'No packet for round {rnd}: run review-packet --kind {kind} first and give it to a fresh reviewer.')
     fpath = Path(args.findings).expanduser() if args.findings else Path(meta['findings_file'])
+    # findings from anywhere but the reader's own folder are recorded as such (release-check names them)
+    iso_dir = meta.get('isolated_dir')
+    outside = bool(args.findings) and not (iso_dir and os.path.normcase(str(fpath.resolve())).startswith(
+        os.path.normcase(str(Path(iso_dir).resolve()))))
     raw = read_json(fpath, required=True)
     if meta.get('isolated_dir') and not args.findings:
         write_json(folder / f'{kind}-r{rnd}-findings.json', raw)     # the isolated reader's findings, kept in the run
@@ -9019,6 +9127,7 @@ def cmd_review_record(args):
                 if times:
                     f['at_original'], f['at'] = at, ', '.join(times)
                     normalized.append(str(f.get('id')))
+    brief_v = int(meta.get('brief_version') or 1)
     problems, seen = [], set()
     order = list((meta.get('subject_snapshot') or {}).keys())
     for f in findings:
@@ -9031,6 +9140,8 @@ def cmd_review_record(args):
             problems.append(f'{fid}: severity must be "major" or "minor"')
         if n_words(f.get('problem')) < 4:
             problems.append(f'{fid}: the problem is not described')
+        if kind in ('script', 'final') and brief_v >= 4 and n_words(f.get('likely_cause')) < 2:
+            problems.append(f'{fid}: "likely_cause" is not given (what you think causes it)')
         if kind == 'script':
             if not f.get('lines') or expand_lines(f.get('lines'), order) is None:
                 problems.append(f'{fid}: "lines" must name lines of the reviewed script (L005 or L005-L009)')
@@ -9044,7 +9155,6 @@ def cmd_review_record(args):
             problems.append(f'{fid}: "at" must be mm:ss or mm:ss-mm:ss (several moments comma-separated); when the '
                             'reviewer only wrote words around its times, review-record --normalize-at keeps them')
     devs = raw.get('developments')
-    brief_v = int(meta.get('brief_version') or 1)
     three_ways = kind in ('script', 'final') and brief_v >= 2
     if three_ways:
         problems += development_problems(kind, devs, order, brief_v)
@@ -9054,8 +9164,9 @@ def cmd_review_record(args):
     derived = []
     if three_ways:
         taken = {str(f.get('id')) for f in findings}
-        derived = development_findings(kind, devs, taken, key_moment_spans(rd, vd, n, kind, order), order)
-        derived += key_moment_findings(rd, vd, n, kind, devs, order, taken | {f['id'] for f in derived})
+        spans = review_spans(meta, rd, vd, n, kind, order)
+        derived = development_findings(kind, devs, taken, spans, order)
+        derived += key_moment_findings(rd, vd, n, kind, devs, order, taken | {f['id'] for f in derived}, spans)
         findings = findings + derived
     rec = {'kind': kind, 'round': rnd, 'video': n, 'packet': str(folder / f'packet-{kind}-r{rnd}.md'),
            'subject_sha256': meta['subject_sha256'], 'subject_snapshot': meta.get('subject_snapshot'),
@@ -9063,7 +9174,7 @@ def cmd_review_record(args):
            'labels': meta.get('labels'), 'file': meta.get('file'), 'reviewer': raw.get('reviewer') or 'unstated',
            'verdict': raw.get('verdict') or {k: raw.get(k) for k in ('would_watch', 'why', 'per_treatment') if k in raw},
            'strongest': raw.get('strongest'), 'findings': findings, 'findings_sha256': canonical_sha(findings),
-           'at_normalized': normalized,
+           'at_normalized': normalized, 'findings_from': str(fpath), 'findings_outside_reader_folder': outside,
            'developments': devs if three_ways else None, 'derived_findings': [f['id'] for f in derived],
            'recorded_at': now()}
     write_json(folder / f'{kind}-r{rnd}.json', rec)

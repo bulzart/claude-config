@@ -198,6 +198,9 @@ class StaticStudioTests(unittest.TestCase):
         extra=['--file',file] if file else []
         packet=cli('review-packet','--run',self.run,'--video',1,'--kind',kind,*extra)
         self.assertTrue(Path(packet['packet']).is_file())
+        if kind in ('script','final'):
+            findings=[dict(f,likely_cause=f.get('likely_cause') or 'what the reader thinks causes it')
+                      if isinstance(f,dict) and 'likely_cause' not in f else f for f in findings]
         doc={'reviewer':'test reader','findings':findings}
         if kind in ('script','final'):
             doc['developments']=developments if developments is not None else self.clear_development(kind)
@@ -557,7 +560,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('final_review_missing',cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)['issues'])
         pk=cli('review-packet','--run',self.run,'--video',1,'--kind','final','--file',exp)
         worded=[{'id':'F1','severity':'minor','at':'Held silences 00:01-00:03, 00:05',
-                 'problem':'the opening picture holds too long'}]
+                 'problem':'the opening picture holds too long','likely_cause':'the hold outlasts the line'}]
         save(Path(pk['findings_file']),{'reviewer':'test reader','findings':worded,
                                         'developments':self.clear_development('final')})
         bad=cli('review-record','--run',self.run,'--video',1,'--kind','final',expected=2)
@@ -570,6 +573,10 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(sealed['findings'][0]['problem'],'the opening picture holds too long')   # its judgement untouched
         ptext=Path(pk['packet']).read_text(encoding='utf-8')
         self.assertIn('## Shot sheets: every shot once, in order',ptext)
+        self.assertNotIn('meant to feel like',ptext)                              # the intent stays with the director
+        self.assertIn('## The parts of this cut (by time only)',ptext)
+        pmeta=json.loads((self.run/'40-plans/video-01/reviews/packet-final-r1.json').read_text(encoding='utf-8'))
+        self.assertIn('key_moment_spans',pmeta)                                   # weighed as they stood at the read
         listed=[x[2:] for x in ptext.splitlines() if x.startswith('- ') and x.lower().endswith(('.jpg','.png'))]
         self.assertTrue(listed)                                                     # the sheets travel with the packet:
         for x in listed:                                                            # inside the reader's own folder
@@ -872,6 +879,12 @@ class StaticStudioTests(unittest.TestCase):
         save(log,{'edits':[{'shot_id':'S1','superseded_at':'2026-11-23T00:00:00+00:00',
                             'regions':[{'mode':'soften','sigma':3,'poly':[[0,0],[9,0],[9,9]]}]}]})
         self.assertEqual(core.stills_facts(self.run,1)['issues'],[])        # made again: the old touch-up is history
+        soft={'shot_id':'S1','regions':[{'mode':'soften','sigma':3,'poly':[[0,0],[9,0],[9,9]]}]}
+        save(log,{'edits':[dict(soft,at='2000-01-01T00:00:00+00:00')]})     # before the still was generated again
+        self.assertEqual(core.stills_facts(self.run,1)['issues'],[])
+        save(log,{'edits':[dict(soft,at='2999-01-01T00:00:00+00:00')]})     # after it: still in the picture
+        self.assertIn('stills_carry_a_blur_or_erase_touchup:S1,S5',core.stills_facts(self.run,1)['issues'])
+        save(log,{'edits':[]})
 
     def test_a_reader_who_knew_why_only_from_outside_makes_a_major_finding(self):
         vd=self.write_plan(review_script=False)
@@ -3529,11 +3542,98 @@ class SignificanceTests(unittest.TestCase):
             self.assertIn('it changes what the plan meant', miss[0]['problem'])
             self.assertEqual(c.key_moment_findings(Path(td), vd, 1, 'script', [self.dev()], order, set()), [])
 
+    def test_mixed_answers_missing_reasons_and_could_not_tell(self):
+        # Audit 2026-11-23: a label alone is not an account, and an answer naming two choices is read by the worse one.
+        c = self.core
+        self.assertEqual(c._choice('the video, partly my own knowledge', c.DEV_FROM), 'my own knowledge')
+        self.assertEqual(c._choice('clear, though only partly', c.DEV_SIGNIFICANCE), 'partly')
+        self.assertEqual(c._choice('unclear', c.DEV_SIGNIFICANCE), 'unclear')        # "clear" inside "unclear" is not read
+        self.assertEqual(c._choice('clear', c.DEV_SIGNIFICANCE), 'clear')
+        self.assertIsNone(c._choice('mostly clear', c.DEV_SIGNIFICANCE))             # not a choice: the format is asked again
+        order = [f'L{i:03}' for i in range(1, 13)]
+        silent = self.dev()
+        silent.pop('why_it_matters')
+        self.assertTrue(any('why_it_matters' in p for p in c.development_problems('script', [silent], order, 4)))
+        self.assertFalse(any('why_it_matters' in p for p in c.development_problems('script', [silent], order, 3)))
+        key = {'id': 'B02', 'key_moment': 'the turning point'}
+        blank = self.dev(would_be_different='I could not tell')                     # "clear", but no account behind it
+        self.assertEqual(c.development_findings('script', [blank], set())[0]['severity'], 'minor')
+        self.assertEqual(c.development_findings('script', [blank], set(), [(key, 7, 12)], order)[0]['severity'], 'major')
+        mixed = self.dev(why_from='the video, partly my own knowledge')
+        self.assertIn('own knowledge', c.development_findings('script', [mixed], set())[0]['problem'])
+
+    def test_what_happened_and_the_payoff_count_on_a_key_moment(self):
+        # Audit 2026-11-23: the three judgements each count; on a key moment, half-followed events and a missed payoff
+        # are major, as half a meaning already was.
+        c = self.core
+        order = [f'L{i:03}' for i in range(1, 13)]
+        key = {'id': 'B02', 'key_moment': 'the turning point'}
+        on = lambda d: [x['severity'] for x in c.development_findings('script', [d], set(), [(key, 7, 12)], order)]
+        off = lambda d: [x['severity'] for x in c.development_findings('script', [d], set())]
+        self.assertEqual((on(self.dev(event='partly')), off(self.dev(event='partly'))), (['major'], ['minor']))
+        self.assertEqual((on(self.dev(reward='missed')), off(self.dev(reward='missed'))), (['major'], ['minor']))
+        self.assertEqual((on(self.dev(reward='partly')), off(self.dev(reward='partly'))), (['minor'], []))
+        missed = c.development_findings('script', [self.dev(reward='missed')], set(), [(key, 7, 12)], order)[0]
+        self.assertIn('did not land', missed['problem'])
+        self.assertIn('B02', missed['problem'])
+        self.assertIn('payoff', missed['suggestion'])                              # the advice follows the cause
+        half = c.development_findings('script', [self.dev(event='partly')], set())[0]
+        self.assertIn('easy to follow', half['suggestion'])
+        # Case B still holds: a clear, landed development asks for nothing.
+        self.assertEqual(on(self.dev()), [])
+
+    def test_a_hedge_comes_at_or_after_the_claim_it_qualifies(self):
+        c, lines = self.core, self.lines()
+        sig = {'matters_because': 'the plan may have changed what the other side did next', 'reward': 'an honest answer',
+               'self_contained': 'everything it needs is said inside the moment', 'certainty': 'contested'}
+        beats = [{'id': 'B01', 'line_start': 1, 'line_end': 6},
+                 {'id': 'B02', 'line_start': 7, 'line_end': 12, 'key_moment': 'the turning point',
+                  'significance': dict(sig, hedge='L002')}]
+        self.assertIn('beat_B02_hedge_comes_before_the_moment_it_qualifies:significance.hedge',
+                      c.beat_significance_issues(beats, lines))
+        beats[1]['significance']['hedge'] = 'L011'
+        self.assertEqual(c.beat_significance_issues(beats, lines), [])
+
+    def test_key_moments_are_weighed_as_sealed_with_the_packet(self):
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            vd = Path(td)
+            save(vd / 'beat-map.json', {'beats': [{'id': 'B02', 'line_start': 7, 'line_end': 12}]})   # mark gone now
+            order = [f'L{i:03}' for i in range(1, 13)]
+            meta = {'key_moment_spans': [{'beat': 'B02', 'lo': 7, 'hi': 12, 'key_moment': 'the turning point',
+                                          'matters_because': 'it changes what the plan meant'}]}
+            spans = c.review_spans(meta, Path(td), vd, 1, 'script', order)
+            self.assertEqual([(b['id'], lo, hi) for b, lo, hi in spans], [('B02', 7, 12)])
+            half = self.dev(significance='partly')
+            self.assertEqual(c.development_findings('script', [half], set(), spans, order)[0]['severity'], 'major')
+            unnamed = c.key_moment_findings(Path(td), vd, 1, 'script', [self.dev(lines='L001-L003')], order, set(), spans)
+            self.assertIn('it changes what the plan meant', unnamed[0]['problem'])
+            self.assertEqual(c.review_spans({}, Path(td), vd, 1, 'script', order), [])   # an older packet: read now
+
+    def test_a_new_export_always_gets_its_own_final_read(self):
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            vd = Path(td)
+            rv = vd / 'reviews'
+            for r in (1, 2, 3):
+                save(rv / f'final-r{r}.json', {'kind': 'final', 'round': r, 'findings': [],
+                                               'findings_sha256': c.canonical_sha([]), 'subject_sha256': 'seen'})
+                save(rv / f'final-r{r}-answers.json', {'answers': {}})
+            self.assertNotIn('final_review_outdated', c.review_state(vd, 'final', 'seen')['issues'])
+            self.assertIn('final_review_outdated', c.review_state(vd, 'final', 'never-read')['issues'])   # past round 2 too
+            rec = json.loads((rv / 'final-r3.json').read_text(encoding='utf-8'))
+            save(rv / 'final-r3.json', dict(rec, findings_outside_reader_folder=True, findings_from='C:/elsewhere/f.json'))
+            self.assertTrue(any('outside the reader' in w for w in c.review_state(vd, 'final', 'seen')['warnings']))
+
     def test_both_readers_are_asked_the_three_things(self):
         for brief in (self.core.SCRIPT_BRIEF, self.core.FINAL_BRIEF):
             for want in ('why_from', 'my own knowledge', 'withheld', 'not the point here', 'ONLY what',
-                         'would_be_different', 'learned_when', 'only afterwards', 'first language'):
+                         'would_be_different', 'learned_when', 'only afterwards', 'not their first'):
                 self.assertIn(want, brief)
+            for never in ('English', 'trick fooled'):                    # no one language, no one film's failure
+                self.assertNotIn(never, brief)
+        self.assertNotIn('meant to feel like', self.core.FINAL_BRIEF)    # the final reader is not told the intent
+        self.assertIn('not told what any part is meant to do', self.core.FINAL_BRIEF)
 
 
 class StillTouchupTests(unittest.TestCase):
@@ -3602,6 +3702,9 @@ class StillTouchupTests(unittest.TestCase):
             Image.new('RGB', (640, 360), (10, 20, 30)).save(wide)
             self.assertEqual(rp('--replace', str(wide), '--shot', 'S001', '--kind', 'user_supplied', '--why',
                                 'short').returncode, 2)                        # no real reason given
+            save(run/'60-visuals/video-01/stills-postprocess.json',
+                 {'edits': [{'shot_id': 'S001', 'at': '2026-11-22T10:00:00+00:00',
+                             'regions': [{'mode': 'soften', 'sigma': 3, 'poly': [[0, 0], [9, 0], [9, 9]]}]}]})
             r = rp('--replace', str(wide), '--shot', 'S001', '--kind', 'user_supplied', '--why',
                    'the user painted this shot themselves', '--apply')
             out = json.loads(r.stdout.strip().splitlines()[-1])
@@ -3609,8 +3712,11 @@ class StillTouchupTests(unittest.TestCase):
             with Image.open(f) as im:
                 self.assertEqual(im.size, (320, 180))                           # fitted to the still's size
             self.assertEqual((run/'60-visuals/video-01/stills-history/S001-before-replace-1.png').read_bytes(), before)
-            rec = json.loads((run/'60-visuals/video-01/stills-postprocess.json').read_text(encoding='utf-8'))['edits'][-1]
+            edits = json.loads((run/'60-visuals/video-01/stills-postprocess.json').read_text(encoding='utf-8'))['edits']
+            rec = edits[-1]
             self.assertEqual((rec['mode'], rec['kind']), ('replace', 'user_supplied'))
+            self.assertTrue(edits[0].get('superseded_at'))                     # the old blur no longer stands
+            self.assertIn('replaced by a checked user_supplied picture', edits[0]['superseded_by'])
             prov = json.loads((run/'60-visuals/video-01/stills-provenance.json').read_text(encoding='utf-8'))
             self.assertEqual(prov['images'][key]['file_sha256'], hashlib.sha256(f.read_bytes()).hexdigest())
 
