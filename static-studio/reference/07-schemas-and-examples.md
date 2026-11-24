@@ -175,7 +175,7 @@ Minimal `40-plans/video-01/blueprint.json`:
   "narrative_approach": "Decision-reconstruction narrative following a commander through incomplete information",
   "why_this_length": "The answer requires three meaningful discoveries and context",
   "original_angle": "Follow the overlooked supply decision, not just the battle",
-  "ending_payoff": "Return to the opening dilemma with new evidence (a video whose value builds up instead gives reward_shape)",
+  "ending_payoff": "The constraint found in B02 settles the choice the viewer weighed in B01: the plan was never possible, so the blame moves from the commander to the map (from this story's own material; a video whose value builds up instead gives reward_shape)",
   "visual_grammar": "Earth-tone maps, aerial diagrams, restrained artifact illustration",
   "factuality": "factual",
   "research_sources": ["S1", "S2", "S3"],

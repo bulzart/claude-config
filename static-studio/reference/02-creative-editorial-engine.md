@@ -34,6 +34,14 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   development matter (observed) and why that may work (interpretation, kept apart). `from_references` names those that
   shaped the search. They show where value may lie; they never confine us to their subjects, and a technique seen in a
   successful video is not why it succeeded unless evidence says so.
+- **Search wide before you commit.** The first searches survey the scope for candidates, not the one you already
+  have in mind: a subject you remember is a lead like any other, and research that starts from it mostly confirms it.
+  Keep the trail in `30-research/video-NN/research-notes.md` (what you searched first, what each search gave, what you
+  dropped and why). Before comparing, read at least the source behind each finalist's strongest material: an
+  alternative that loses only because it was never read was never compared. The checks name one ruled out on search
+  summaries alone, and refuse an open scope where every alternative was. Comparable depth matters more than many
+  candidates. (In five research runs on 2026-11-24, three began with a search for the subject they ended up choosing,
+  read three to five sources for it and none or one for each alternative, which then lost partly for being unread.)
 - **Research the material, not titles.** For each promising candidate (an event, a mechanism, a phenomenon, a problem
   and its solution, a question, a relationship, a transformation, a concept), find what genuinely makes it worth a
   viewer's time: `what_happens` (what is discovered, explained, shown or experienced), `why_it_matters` (within this
@@ -54,8 +62,9 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   it; whether it really says what you need (the claim itself, not a nearby one; the abstract's own hedges kept);
   whether independent sources agree or disagree; and how much of it you read (`- Access:` read, indirect or snippet). A
   search summary is a lead, never a source. Each consequential claim gets its confidence in claims.json: confirmed (a
-  primary record, or two or more independent credible sources, read), likely (one credible source), disputed (credible
-  sources disagree), legend (popular, unverified). Extraordinary claims need strong support: what the choice of subject
+  primary record, or two or more independent credible sources, read), likely (one credible source: said with whose
+  finding it is, "one study found", and corroborated before a key moment rests on it alone; plan-check names such a
+  moment), disputed (credible sources disagree), legend (popular, unverified). Extraordinary claims need strong support: what the choice of subject
   rests on (`selection.decisive_material`), when it is said as established, must be confirmed. Don't dismiss the
   surprising either: a strange fact with strong evidence is exactly what this stage is looking for.
   - Science: keep the mechanism accurate and the uncertainty where the evidence leaves it (a result in cultured cells is
@@ -69,6 +78,11 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   ingenious mechanism or a useful solution can be the bigger reward. A candidate whose exciting version needs
   exaggeration is not the one. A long build-up must be worth its reward, unless the journey itself is the value; many
   videos reward continuously (discovery, cumulative understanding, progress, humour) rather than once.
+- **The ending comes from this subject.** Its last finding, a result the viewer can now use, an honest open question,
+  a consequence still unfolding, a joke's last turn: what this material ends on. A return to the opening image belongs
+  only where the return itself says something new; a device any video could use is a template, however well it
+  works once. (In the same five runs every ending, a tutorial's and a thought experiment's included, went back to its
+  opening scene "read again".)
 - **Enough for the locked length, judged from the material.** No share of minutes decides this: six minutes of notes can
   hold ten when each development opens the next, and fifteen may not when they repeat. For each candidate write its
   `runtime.progression` (what the viewer newly gets, step by step, each step resting on its material ids), a `verdict`

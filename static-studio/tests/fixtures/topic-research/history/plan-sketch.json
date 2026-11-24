@@ -1,0 +1,145 @@
+{
+  "blueprint": {
+    "ending_payoff": "Return to the opening map, unchanged. The viewer has followed the range from a traveller's gap and an English mapmaker's theory, through the forty disagreeing copies historians have gathered, past the 1830 voyage that removed its reason, to the expedition that erased it and the colony that followed. Now they read the same picture as a record of what its makers believed and whom they trusted, and the corrected map as another authority's argument."
+  },
+  "beats": [
+    {
+      "id": "B01",
+      "experience": "Intrigued and a little unsettled: a confident, beautiful map turns out to show something that was never there.",
+      "visual_intent": "The period map holds long enough to be believed; then the same frame as the land really is, with no chain. The picture sets the puzzle before the narration explains it.",
+      "carries": ["R1"]
+    },
+    {
+      "id": "B02",
+      "experience": "Close to a traveller's uncertainty: standing at a great river with no idea where it goes.",
+      "visual_intent": "Park small against the river; then his route drawn as a dotted line that stops short, the river beyond it fading into blank paper: the gap the next beat's theory fills.",
+      "carries": ["R2"]
+    },
+    {
+      "id": "B03",
+      "experience": "The quiet 'oh' of meeting the man who drew the range, far from Africa, and with a reason.",
+      "visual_intent": "Rennell at work at his desk; then his map's river turning east into an inland lake. The picture shows the theory as a line on paper.",
+      "carries": ["R2"]
+    },
+    {
+      "id": "B04",
+      "experience": "An honest pause: the film admits it does not know what Park saw.",
+      "visual_intent": "Lone rock hills on a flat plain, far off: what may have been seen, shown as a possibility and never drawn as a range.",
+      "carries": ["R3"],
+      "hedges": {"R3": "What he actually saw, nobody can say for sure. The two historians who studied these maps think it may have been a few lone rock hills rising from the plain."}
+    },
+    {
+      "id": "B05",
+      "experience": "The satisfaction of seeing the logic: a mountain range can hold up a theory.",
+      "visual_intent": "A drawn diagram on the map: the river flowing east, the range just south of it, and an arrow that tries to turn toward the sea and stops at the mountains. The picture makes the argument; the narration names it.",
+      "carries": ["R4"],
+      "hedges": {"R4": "Put the river and the range side by side on his map and you can see what the mountains do for him: with a wall to the south, the river has nowhere to go but inland."}
+    },
+    {
+      "id": "B06",
+      "experience": "Amused disbelief turning into curiosity: everyone copies the range and nobody agrees on it.",
+      "visual_intent": "Dozens of versions of the range overlaid on one map in different inks, short and long, drifting south over the decades. The disagreement shows at a glance, and the narration gives the numbers.",
+      "carries": ["R5"]
+    },
+    {
+      "id": "B07",
+      "experience": "A jolt: the reason for the mountains is gone, and they stay, with the longest version still to come.",
+      "visual_intent": "The river followed through the delta to open sea; then a mid-century map with the river right and the range longer than ever. In sequence, the two pictures make the contradiction without a word.",
+      "carries": ["R6"],
+      "key_moment": "the river reaches the sea, and the range stays",
+      "significance": {
+        "matters_because": "The river the range was drawn to keep inland has been followed to the sea, so whatever keeps the mountains on the maps from now on is not Rennell's geography. The film's question turns from how they got it wrong to why they kept it.",
+        "reward": "the jolt of seeing the longest version of the range drawn eighteen years after its reason died",
+        "certainty": "reasoned"
+      },
+      "depends_on": [
+        {"what": "Rennell's inland Niger and the range drawn beside it", "from": "B03"},
+        {"what": "the range seen working as a wall", "from": "B05"},
+        {"what": "the copies and their lengths", "from": "B06"}
+      ],
+      "hedges": {"R6": "Nobody wrote down why each mapmaker kept the range. But the reason it was first drawn for was gone by 1830, and the longest version in the historians' collection comes from 1848."}
+    },
+    {
+      "id": "B08",
+      "experience": "Recognition, a little uncomfortable: the range survived on trust, not on evidence.",
+      "visual_intent": "An engraver copying an older printed map onto a new plate: maps made from maps. The picture shows the copying the historians describe.",
+      "carries": ["R7"],
+      "hedges": {"R7": "That's the argument of the two historians who gathered these maps: people trusted maps, and the doubts never weighed as much as the printed line."}
+    },
+    {
+      "id": "B09",
+      "experience": "Relief, and a kind of awe at an empty horizon: someone finally went and looked.",
+      "visual_intent": "A small party crossing open savanna toward a flat horizon; then the old map's chain drawn faintly in the sky above the real land. The horizon carries the answer.",
+      "carries": ["R8"],
+      "key_moment": "the expedition finds no range",
+      "significance": {
+        "matters_because": "It answers the question the film opened with in the plainest way, by someone crossing the ground, and shows what was really there: some high ground to one side, real highlands far to the west, and no chain. The viewer sees the error and its correction in one place.",
+        "reward": "the relief of an answer, held on an empty horizon where the maps had built a wall",
+        "certainty": "established"
+      },
+      "depends_on": [
+        {"what": "the range on the maps and the question of how it got there", "from": "B01"},
+        {"what": "that the range had already outlived its reason", "from": "B07"}
+      ]
+    },
+    {
+      "id": "B10",
+      "experience": "A reflective close: the opening picture looks different now, and so do old maps.",
+      "visual_intent": "The corrected map, a new route crossing where the range stood and a colour wash starting at the coast; then the opening map again, unchanged, under a magnifying glass. The same picture, read anew.",
+      "carries": ["R9", "R10"],
+      "key_moment": "the opening map, read again",
+      "significance": {
+        "matters_because": "The opening map now reads as a record of what its European makers believed and whom they trusted, and the corrected map as another authority's argument, one whose author went on to govern a colony. The film's promise is answered and widened.",
+        "reward": "an earned way of reading any old map as an argument as well as a picture",
+        "certainty": "reasoned"
+      },
+      "depends_on": [
+        {"what": "the range's origin, survival and erasure", "from": "B09"},
+        {"what": "the opening map itself", "from": "B01"}
+      ],
+      "hedges": {"R10": "Put the whole story together and a map turns out to show two things: the land, and what its makers believed about it."}
+    }
+  ],
+  "shots": [
+    {"id": "S1", "beat_id": "B01", "new_thing": "the range as the old maps drew it: a long wall of hachured peaks across West Africa",
+     "frame_prompt": "Hand-drawn map in the style of an early nineteenth-century engraved atlas plate on warm parchment: the western bulge of Africa with its coastline, the Niger in fine blue ink, and a long continuous chain of hachured mountain peaks running east to west across the interior, hand-tinted in faded green and ochre washes, soft vignette, no lettering, no labels, no cartouche."},
+    {"id": "S2", "beat_id": "B01", "new_thing": "the same ground as it really is: no chain",
+     "frame_prompt": "Painted relief map of the same region in natural colours, same framing as the antique plate: savanna greens and dry ochres, the Niger as a thin silver line bending south to a delta on the coast, raised high ground only at the far west, a few isolated low hills, no continuous mountain range anywhere, no lettering."},
+    {"id": "S3", "beat_id": "B02", "new_thing": "a traveller at a river whose end he cannot see",
+     "frame_prompt": "Painterly gouache illustration: a late eighteenth-century European traveller, an adult man in a worn coat and broad-brimmed hat, seen from behind at a distance on the sandy bank of a wide brown river in open savanna at early morning, the river vanishing into haze downstream, small canoes far off, warm muted palette, no text."},
+    {"id": "S4", "beat_id": "B02", "new_thing": "his route as a dotted line that stops",
+     "frame_prompt": "Drawn map on parchment of West Africa's western bulge: a dotted route coming in from the Atlantic coast to the upper Niger, following the river a short way downstream and stopping; beyond that point the river continues only as a faint dashed line fading into blank paper, ink and watercolour, no lettering."},
+    {"id": "S5", "beat_id": "B03", "new_thing": "the map being made far from the river",
+     "frame_prompt": "Oil-painting style interior of an English study around 1798: an older adult man in a dark coat seated at a large desk, seen in three-quarter view, drawing on a large map sheet with dividers and a quill, travel journals and older maps spread around him, grey window light, no readable writing on any paper."},
+    {"id": "S6", "beat_id": "B03", "new_thing": "the river sent east into an inland lake",
+     "frame_prompt": "Drawn map in the style of a 1790s plate: the Niger rising in the west and flowing east along the southern edge of a pale desert, ending in a large inland lake far to the east and never reaching the sea, the Gulf of Guinea coast to the south left empty, brown ink and pale washes, no lettering."},
+    {"id": "S7", "beat_id": "B04", "new_thing": "lone rock hills on a plain, not a chain",
+     "frame_prompt": "Painted landscape of West African savanna in dry-season haze: two or three isolated granite rock domes rising steeply from flat grassland at a great distance, a thin line of trees in the foreground, soft light, muted earth palette, no people, no text."},
+    {"id": "S8", "beat_id": "B05", "new_thing": "the range as a barrier between the river and the sea",
+     "frame_prompt": "Clean drawn diagram over a simplified period map: the Niger in blue flowing east, a dark band of mountains just south of it, and a faint dotted arrow leaving the river toward the coast and stopping at the mountain band, the sea below in pale blue, minimal ink and flat watercolour, no lettering."},
+    {"id": "S9", "beat_id": "B06", "new_thing": "dozens of versions of the range, none agreeing",
+     "frame_prompt": "Drawn diagram on a pale base map of West Africa: many thin hand-drawn mountain bands overlaid in different faded inks (sepia, red, green, grey), each a different length and at a slightly different latitude, some short and some stretching far across the continent, together forming a blurred braid, archival paper texture, no lettering, no numbers."},
+    {"id": "S10", "beat_id": "B06", "new_thing": "the drift south over the century",
+     "frame_prompt": "The same overlaid base map: the earlier bands in faded sepia a little further north, the later bands in darker ink a little further south, one drawn arrow between the two groups pointing south, everything else unchanged, no lettering."},
+    {"id": "S11", "beat_id": "B07", "new_thing": "the river followed to open sea",
+     "frame_prompt": "Painted scene of the Niger delta in 1830: two adult travellers in a long dugout canoe gliding down a wide channel between dense mangroves and palms, the channel opening ahead onto bright open sea at the horizon, humid haze, warm greens and silver light, painterly, no text.",
+     "carries_significance": "the open sea at the end of the channel is the inland theory ending; the frame must make the sea unmistakable"},
+    {"id": "S12", "beat_id": "B07", "new_thing": "the river right and the range longer than ever, on one map",
+     "frame_prompt": "Mid-nineteenth-century style engraved map of West Africa, hand-tinted: the Niger now drawn bending south to its delta on the coast, and beside it a single enormous continuous mountain chain stretching much further across the interior than on the earlier maps, crisp later-edition lines, no lettering.",
+     "carries_significance": "the correct river and the long range in one frame let the viewer see the reason gone and the range still there, longer than ever"},
+    {"id": "S13", "beat_id": "B08", "new_thing": "maps made from maps",
+     "frame_prompt": "Oil-painting style interior of a nineteenth-century map engraver's workshop: an adult engraver bent over a copper plate with a burin, an older printed map pinned on a slanted board beside him as his model, fresh prints hanging on lines overhead, warm lamplight, no readable text."},
+    {"id": "S14", "beat_id": "B09", "new_thing": "the empty horizon where the range should be",
+     "frame_prompt": "Wide painted landscape of open West African savanna in the late 1880s: a small party of adult travellers on foot, tiny in the middle distance, walking toward a flat horizon under a huge pale sky, low hills only faintly at the far left edge, golden afternoon light, painterly, no text.",
+     "carries_significance": "the flat horizon is the answer itself: where every map put a wall of mountains, the sky simply goes on"},
+    {"id": "S15", "beat_id": "B09", "new_thing": "the old map's range as a ghost over the real land",
+     "frame_prompt": "The same savanna horizon, with a faint translucent drawing of an old map's hachured mountain chain floating in the sky above the flat land like a pencil line, the real land beneath unchanged, no lettering.",
+     "carries_significance": "the map's mountains and the real horizon in one frame show the error and its correction together"},
+    {"id": "S16", "beat_id": "B10", "new_thing": "the new map without the range, and whose it is",
+     "frame_prompt": "Drawn map of West Africa in the style of a late-1880s survey sheet: clean ink lines, the Niger correctly drawn to its delta, no mountain chain, a fresh dotted expedition route crossing the ground where the range used to be, a pale colour wash beginning along part of the coast, no lettering, no labelled borders.",
+     "carries_significance": "the corrected map is shown as another authority's work, a colonial wash beginning at the coast, so the viewer reads it as an argument too"},
+    {"id": "S17", "beat_id": "B10", "new_thing": "the opening map again, read differently",
+     "frame_prompt": "The opening antique map of West Africa with its long hachured mountain chain, now lying on a wooden desk under soft side light, a brass magnifying glass resting over the chain, the rest of the map gently out of focus, warm parchment tones, no lettering.",
+     "carries_significance": "returning to the first picture unchanged lets the viewer's new reading of it be the payoff"}
+  ]
+}

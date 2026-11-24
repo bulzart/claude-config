@@ -2207,6 +2207,55 @@ def _reason_key(text, own):
     return ' '.join(t for t in re.findall(r"[a-z0-9']+", strip_tags(str(text or '')).lower()) if t not in own)
 
 
+def candidate_read_sources(c, cidx, ledger):
+    """The sources behind a candidate's strongest material that the ledger says were read."""
+    srcs = set()
+    for m in (c or {}).get('strongest_material') or []:
+        if isinstance(m, dict):
+            srcs |= set(_ids(m.get('sources')))
+            for x in _ids(m.get('claims')):
+                srcs |= set(_ids((cidx.get(x) or {}).get('sources')))
+    return sorted(x for x in srcs if (ledger.get(x) or {}).get('access') == 'read')
+
+
+def key_moment_evidence_signals(direction, beats, claims):
+    """A key moment is where the viewer's trust is made or lost. One that carries a value said as established (or as a
+    consequence reasoned from it) on claims that each rest on a single source ('likely', none confirmed) is named, so
+    the film corroborates it or says whose finding it is ('in one experiment', 'one team found'). A signal, not a
+    gate: a single good source can carry a moment, said as what it is."""
+    subj = (direction or {}).get('subject')
+    if not isinstance(subj, dict):
+        return []
+    sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
+    ch = next((c for c in subj.get('candidates') or [] if isinstance(c, dict)
+               and str(c.get('id')) == str(sel.get('candidate'))), {})
+    mats = {str(m.get('id')).strip(): m for m in ch.get('strongest_material') or [] if isinstance(m, dict)}
+    vals = {str(v.get('id')): v for v in subj.get('value_to_carry') or [] if isinstance(v, dict)}
+    cidx = claims_index(claims)
+
+    def claims_of(mid, depth=0):
+        m = mats.get(mid) or {}
+        out = set(_ids(m.get('claims')))
+        if depth < 3:
+            for f in _ids(m.get('from')):
+                out |= claims_of(f, depth + 1)
+        return out
+    out = []
+    for b in beats or []:
+        if not is_key_moment(b):
+            continue
+        for r in (str(x).strip() for x in b.get('carries') or []):
+            v = vals.get(r)
+            if not v or str(v.get('certainty') or '').lower() not in ('established', 'reasoned'):
+                continue
+            cs = sorted(c for mid in _ids(v.get('rests_on')) for c in claims_of(mid) if c in cidx)
+            confs = {str(cidx[c].get('confidence') or '').lower() for c in cs}
+            if cs and 'confirmed' not in confs and confs <= {'likely'}:
+                out.append(f'key moment {b.get("id")} carries {r} on single-source claims only ({",".join(cs)}): '
+                           'corroborate them, or let the script say whose finding it is')
+    return out
+
+
 def material_issues(prefix, items, known, factual, claims=None, ledger=None, strict=False):
     """Each researched item says what it is and how sure the film may be of it (CERTAINTIES), tied to what supports it.
     established: claims in claims.json (strict, the chosen subject's material; recorded sources are enough for a
@@ -2408,6 +2457,20 @@ def subject_issues(subj, sources_text='', locked_s=None, refs=(), locked_niche=N
     elif kind in ('niche', 'subject', 'topic') and len(cands) < 2:
         # a choice with nothing to choose from is the first idea that came up (an exact topic compares its angles)
         iss.append(f'subject_{kind}_scope_needs_a_researched_alternative')
+    elif kind in ('niche', 'subject', 'topic'):
+        # An alternative ruled out on search summaries alone was never compared: the five exercises of 2026-11-24 read
+        # 3-5 sources for the subject they had in mind and 0-1 for the others, which then lost for being unread.
+        sel_ = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
+        chosen_id = str(sel_.get('candidate') or '').strip()
+        unread = [str(c.get('id')) for c in cands if str(c.get('id')) != chosen_id
+                  and not candidate_read_sources(c, claims_index(claims), ledger)]
+        alts_n = len([c for c in cands if str(c.get('id')) != chosen_id])
+        if alts_n and len(unread) == alts_n:
+            iss.append(f'subject_{kind}_scope_needs_an_alternative_whose_source_was_read:alternatives_seen_only_in_'
+                       'search_summaries_were_never_compared')
+        for a in unread:
+            warn.append(f'subject_alternative_{a}_ruled_out_on_search_summaries_alone:read_its_strongest_source_or_'
+                        'say_plainly_the_comparison_was_uneven')
     sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
     chosen = str(sel.get('candidate') or '').strip()
     if chosen not in ids:
@@ -4319,6 +4382,8 @@ def plan_facts(rd, video):
     rc = research_changes(rd, video, dlock)
     if rc:
         warnings.append(research_note(rc))
+    warnings += key_moment_evidence_signals(read_json(vd / 'direction.json'), (beats or {}).get('beats') or [],
+                                            read_json(claims_path(rd, video)))
     if dlock.get('late_reason'):
         warnings.append('creative direction was locked after the script existed: ' + str(dlock['late_reason']))
     # Made for an earlier direction (or before there was one): updated for real, or explicitly reapproved.

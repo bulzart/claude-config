@@ -1,0 +1,167 @@
+{
+  "subject": {
+    "scope": {"kind": "niche", "user_words": "history", "niche": "history"},
+    "audience_value": "A general YouTube history audience comes to understand how people in the past came to believe or do something that mattered, and what it changed: a real question about the past answered step by step with evidence they can see, not a list of dates or a parade of battles. No references were processed for this exercise, so this is read from the niche and from the research.",
+    "from_references": [],
+    "candidates": [
+      {
+        "id": "T1",
+        "subject": "the Mountains of Kong: a range that sat on maps of West Africa for ninety years and was never there",
+        "value_form": "a historical puzzle solved by tracing a belief from its origin to its end",
+        "factual": true,
+        "what_happens": "A Scottish traveller, Mungo Park, reaches the Niger and turns back without learning where it goes. An English mapmaker, James Rennell, draws a mountain range across the land south of the river on the 1798 map of the journey, and the range supports his theory that the river ends inland. Maps go on repeating the range through the century (the standard study gathers forty of them), each drawing it differently. In 1830 the river is followed to the sea, yet the range stays, and the longest version of all is drawn in 1848. An expedition led by Louis-Gustave Binger crosses the ground in the late 1880s and reports no chain, only some high ground to one side, and the range comes off the maps.",
+        "why_it_matters": "It shows, on maps a viewer can see, how a range that was not there outlived the very argument it was drawn for, because people trusted the medium that carried it. Then the correction itself becomes a new authority that serves an empire.",
+        "reward": "The satisfaction of a real puzzle solved in order (where the mountains came from, why they stayed, how they vanished), and a lasting way to read an old map as a record of what its makers believed, not only of the land.",
+        "strongest_material": [
+          {"id": "M1", "what": "James Rennell's 1798 map, made to illustrate Mungo Park's travels, already shows a range of Kong mountains across West Africa", "certainty": "established", "claims": ["C01"]},
+          {"id": "M2", "what": "No continuous east-west chain like the one the maps drew exists across West Africa", "certainty": "established", "claims": ["C03"]},
+          {"id": "M3", "what": "The range stayed on published maps through most of the nineteenth century: the standard study's composite of forty maps naming it runs from 1798 to 1892", "certainty": "established", "claims": ["C09"]},
+          {"id": "M4", "what": "Park reached the Niger, followed it past Ségou, turned back before Timbuktu and never learned where the river met the sea", "certainty": "established", "claims": ["C06"]},
+          {"id": "M5", "what": "Rennell's map sends the Niger east along the southern edge of the Sahara into an inland lake, Lybia Palus, never reaching the sea", "certainty": "established", "claims": ["C05"]},
+          {"id": "M6", "what": "The range begins with Rennell, and its supposed existence supported his argument about the Niger's course", "certainty": "established", "claims": ["C02", "C04"]},
+          {"id": "M7", "what": "What Park actually saw is unknown; he may have seen isolated rock hills more than 200 metres high", "certainty": "contested", "claims": ["C07"],
+           "hedge": "The historians who studied the maps say he may have seen lone rock hills; nobody can say for sure what he saw."},
+          {"id": "M8", "what": "The real Niger reaches the sea through a delta on the Gulf of Guinea", "certainty": "established", "claims": ["C12"]},
+          {"id": "M9", "what": "On Rennell's map the range stands between the river and the coast, so the map leaves the river only one way to go: east, to an inland end", "certainty": "reasoned", "from": ["M1", "M5", "M6", "M8"],
+           "reasoning": "The map draws the range across the land south of the river (M1; its mean latitude in the composite is about 10 degrees N, while the river is drawn along the Sahara's edge), and it sends the river east to an inland lake (M5). The real river runs south through that ground to a delta (M8). Read together, the range is what makes the inland ending look necessary on the map. That is the plainest sense in which it could support his argument: M6 says that it did, not how."},
+          {"id": "M10", "what": "Bassett and Porter suggest the range may have been modelled on Philippe Buache's theory of mountain chains", "certainty": "contested", "claims": ["C08"],
+           "hedge": "They offer it as a plausible model, not a proven source; the film would say 'may have', and only after Buache's theory itself has been read."},
+          {"id": "M11", "what": "In the composite the range's east-west length runs from 525 km (Meyer, 1850) to 3,950 km (Mitchell, 1848), averaging 1,874 km, and its mean latitude moves about a degree south after 1850", "certainty": "established", "claims": ["C10"]},
+          {"id": "M12", "what": "The historians attribute the range's survival to the authority people gave maps, which outweighed the doubts raised about it", "certainty": "contested", "claims": ["C11"],
+           "hedge": "Said as the argument of the historians who gathered the maps, not as a proven cause."},
+          {"id": "M13", "what": "In 1830 Richard and John Lander followed the Niger down through its delta to the sea; in 1831 they announced the river's mystery solved", "certainty": "established", "claims": ["C14"]},
+          {"id": "M14", "what": "The range outlived the theory it had supported: the river was shown to reach the sea in 1830, yet the range stayed on maps into the 1890s, and the longest version in the composite was drawn in 1848", "certainty": "reasoned", "from": ["M3", "M5", "M6", "M11", "M13"],
+           "reasoning": "The argument the range supported was Rennell's inland Niger (M5, M6). The 1830 voyage to the sea disproved that ending (M13). The composite runs to 1892 (M3), and its longest version is dated 1848 (M11). So after 1830 the range's place on the maps cannot have rested on the theory it was first drawn to support."},
+          {"id": "M15", "what": "Binger's expedition in the late 1880s ended the error: in 1889 he reported to the Paris Geographical Society, in 1890 he published on 'the so-called chain of mountains of Kong', and an editor noted he saw mountainous areas only to the north-north-west", "certainty": "established", "claims": ["C15", "C16"]},
+          {"id": "M16", "what": "The high ground the maps put at the Niger's source is real: the Guinea Highlands", "certainty": "established", "claims": ["C13"]},
+          {"id": "M17", "what": "Binger became the new authority on West African geography, his work aiding French expansion, and in 1893 he became the first colonial governor of Ivory Coast", "certainty": "established", "claims": ["C15", "C17"]},
+          {"id": "M18", "what": "The maps were recording a belief rather than a survey: a range that was not there kept its place for some sixty years after its argument was gone, and left when a traveller's report gave mapmakers a new authority to follow", "certainty": "reasoned", "from": ["M2", "M3", "M13", "M15", "M17"],
+           "reasoning": "The range did not exist (M2), yet it stayed on maps to 1892 (M3) although the river it was drawn around had been followed to the sea in 1830 (M13). It went when Binger's report ended it (M15), and he became the new authority (M17). Its presence followed whom the mapmakers trusted, not what anyone had measured."}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "the old map's great range, and the news that it was never there", "material": ["M1", "M2"]},
+            {"adds": "a traveller who reached the river and never learned where it went, and what he may have seen", "material": ["M4", "M7"]},
+            {"adds": "an English mapmaker who sent the river east into an inland lake, with the range drawn in", "material": ["M5", "M6"]},
+            {"adds": "the range read as a wall that leaves the river nowhere to go but inland, and where the idea may have come from", "material": ["M9", "M10"]},
+            {"adds": "the forty maps the historians gathered, which keep the range and never agree on its length or its place", "material": ["M3", "M11"]},
+            {"adds": "the river followed to the sea in 1830, and the range staying anyway, its longest version still to come", "material": ["M13", "M14"]},
+            {"adds": "why it lasted: the authority people gave maps, as the historians argue", "material": ["M12"]},
+            {"adds": "an expedition that crossed the ground and found some high ground to one side, real highlands far west, and no chain", "material": ["M15", "M16"]},
+            {"adds": "the correction becoming a new authority that served a colony", "material": ["M17"]},
+            {"adds": "the opening map read again as a record of belief and trust", "material": ["M18"]}
+          ],
+          "verdict": "sustains",
+          "why": "Each step rests on its own material and opens the next. The traveller's gap makes the theory possible, the theory explains the wall, the copies spread the wall, and the 1830 voyage removes its reason. Only then does the long survival become the real question, which the historians' argument and Binger's report answer, and the hand-over to a colony widens. That is ten minutes of new understanding without padding. The copying stretch must stay specific (the measured versions, the southward drift) so it does not repeat itself.",
+          "material_minutes": 10
+        },
+        "feasibility": "Everything can be drawn without footage: period-style maps (the range in hachures, the river's imagined and real courses), drawn diagrams (the wall across the river's way south, forty versions overlaid, the drift south), and painted scenes of Park at the river, Rennell at his desk, the Landers' canoe in the delta and Binger's party on an open horizon. Voice and a restrained bed carry it. Maps must be newly drawn, not copied from the originals, and the colonial ending is told plainly."
+      },
+      {
+        "id": "T2",
+        "subject": "the Bordeaux traders who slipped secret signals into France's optical telegraph",
+        "value_form": "a heist explained through the mechanism it exploited",
+        "factual": true,
+        "what_happens": "France's state telegraph passed government messages from tower to tower by the positions of signal arms, and operators in the middle of the line relayed signals they could not read. In 1836, by the one credible account read, an operator was bribed to add a specific pattern of errors to transmissions, carrying the direction of the Paris market to accomplices in Bordeaux.",
+        "why_it_matters": "It shows a network leaking through its own design: men who could not read the messages could still carry a secret disguised as transmission errors.",
+        "reward": "The click of seeing how a clever exploit works on a machine made of towers and arms, with the human story of the bribe around it if its details hold up.",
+        "strongest_material": [
+          {"id": "M19", "what": "The Chappe network grew to 556 stations over about 3,000 miles linking the largest French cities, at two to three signals a minute", "certainty": "established", "claims": ["C22"]},
+          {"id": "M20", "what": "Operators at intermediate stations knew only part of the code; messages were decoded only at the ends of each division", "certainty": "established", "claims": ["C23"]},
+          {"id": "M21", "what": "In 1836 an operator was bribed to introduce a pattern of errors signalling the Paris market's direction to accomplices in Bordeaux", "certainty": "established", "claims": ["C24"]},
+          {"id": "M22", "what": "Who the schemers were and when the scheme began", "certainty": "contested", "claims": ["C25"],
+           "hedge": "Popular accounts disagree on a brother's name and on the year; the film could only say 'two brothers, by most accounts'."},
+          {"id": "M23", "what": "How the court ruled and what law followed", "certainty": "contested", "claims": ["C26"],
+           "hedge": "The accounts disagree on the verdict and none seen gives the law, so the film could state neither."}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "a state telegraph of towers and arms passing messages by sight across France", "material": ["M19"]},
+            {"adds": "operators in the middle of the line relaying signals they could not read", "material": ["M20"]},
+            {"adds": "the exploit: a bribed operator's pattern of errors carrying the Paris market's direction to Bordeaux", "material": ["M21"]},
+            {"adds": "who the traders were, how they were caught, and what the court did about it", "material": ["M22", "M23"]}
+          ],
+          "verdict": "uncertain",
+          "why": "The mechanism gives a strong middle, but the opening and the ending (who the schemers were, how they were caught, what the court did, what changed after) rest on popular retellings that contradict each other. Filling ten minutes with telegraph history would repeat the mechanism rather than develop it.",
+          "shortfall": "A credible account of the schemers, the discovery, the verdict and any law that followed: the French court reports, or Holzmann and Pehrson's chapter.",
+          "material_minutes": 6
+        },
+        "feasibility": "Very drawable without footage: towers and arm positions as diagrams, the line across France on a map, the two cities' markets. Nothing graphic or sensitive in the story."
+      },
+      {
+        "id": "T3",
+        "subject": "why Sweden's new warship Vasa capsized in Stockholm harbour in 1628",
+        "value_form": "a consequential failure explained",
+        "factual": true,
+        "what_happens": "On 10 August 1628 the warship Vasa set sail for the first time and, minutes later, heeled over in a gust and sank in Stockholm harbour; thirty people died. Its tall, heavily built upperworks sat on too small a hull, its designer had no way to calculate stability, and some suspected the danger before it sailed.",
+        "why_it_matters": "It is a case of builders who could sense a danger but had no means to measure it, so the failure was built into the ship long before the wind arrived.",
+        "reward": "The engineering 'oh' of seeing how height and weight above the water, not a storm, sank a brand-new ship.",
+        "strongest_material": [
+          {"id": "M24", "what": "Vasa sank in Stockholm harbour on 10 August 1628, minutes after setting sail for the first time; all but 30 of those aboard survived", "certainty": "established", "claims": ["C27"]},
+          {"id": "M25", "what": "The designer had no way to calculate stability; the upperworks were too tall and heavy for the hull below the waterline; open gunports let the water in", "certainty": "established", "claims": ["C28"]},
+          {"id": "M26", "what": "Some suspected the ship's instability before it sailed", "certainty": "established", "claims": ["C29"]},
+          {"id": "M27", "what": "A stability test with men running across the deck was stopped, and the voyage went ahead anyway", "certainty": "contested", "claims": ["C30"],
+           "hedge": "It is widely retold but was not in the museum page read; the film would have to verify it or say 'the story goes'."},
+          {"id": "M28", "what": "The danger was sensed but could not be measured, so suspicion never became a number that might have stopped the voyage", "certainty": "reasoned", "from": ["M25", "M26"],
+           "reasoning": "With no method to calculate stability (M25), the suspicion before sailing (M26) had no way to be measured, and the ship sailed."}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "the new warship heeling over and sinking minutes into its first voyage", "material": ["M24"]},
+            {"adds": "the cause: tall, heavy upperworks on a small hull, and no way to calculate stability", "material": ["M25"]},
+            {"adds": "the danger suspected before sailing, and the test said to have shown it", "material": ["M26", "M27"]},
+            {"adds": "the lesson: a risk people could sense but had no way to measure", "material": ["M28"]}
+          ],
+          "verdict": "sustains",
+          "why": "The subject's own record is deep (the ship itself, the museum's research, the inquest). Even the one page read supports the sinking, its cause and the warning before it, and the unread layers would add to the story rather than repeat it.",
+          "material_minutes": 10
+        },
+        "feasibility": "Drawable: the ship in painted views, cross-sections showing the weight high and the hull small, the harbour on a map. The deaths are told plainly and never shown, which the material allows."
+      }
+    ],
+    "selection": {
+      "candidate": "T1",
+      "why": "T1 is the strongest opportunity here for three reasons. Its strange central fact is confirmed by two independent sources read: the peer-reviewed study of the maps, and the Library of Congress account of the 1798 map. Its causes form a chain in which each step opens the next: a traveller's gap, a theory that needed a wall, copies that disagree, a river followed to the sea in 1830, a range that stays anyway, an expedition that ends it, and a new authority that follows. And its pictures, maps and drawn diagrams, are the evidence itself rather than decoration. It was close with T3, whose evidence is deeper; T1 won on the surprise of its answer and its fit to illustrated maps.",
+      "decisive_material": ["M1", "M2", "M3"],
+      "over_alternatives": [
+        {"candidate": "T2", "why_not": "The one credible page read supports only the mechanism (a bribed operator, a pattern of errors, the market's direction, 1836). Everything that would make it a ten-minute story (who the traders were, how they were caught, what the court decided, which law followed) comes from popular retellings that contradict each other, so the film would have to hedge its own climax. It could come back if the French court reports or Holzmann and Pehrson's chapter are read."},
+        {"candidate": "T3", "why_not": "The evidence is deep and the museum's account is clear, but its answer (too much height and weight on too small a hull) is the one most retellings in the search already lead with. The payoff would confirm what many viewers expect rather than surprise them. The less familiar layers, the stability test and the inquest, were seen here only in search summaries. It was close on depth of evidence."}
+      ]
+    },
+    "value_to_carry": [
+      {"id": "R1", "what": "For about ninety years, maps put a great mountain range across West Africa that was not there as drawn",
+       "why_it_matters": "It is the puzzle the film promises to solve, and it has to land as a fact before any explanation means anything",
+       "certainty": "established", "rests_on": ["M1", "M2", "M3"]},
+      {"id": "R2", "what": "The range began with a traveller who never learned where the river went and an English mapmaker who had the river end inland",
+       "why_it_matters": "It shows the range was born of a gap in knowledge filled by a theory, not of a sighting",
+       "certainty": "established", "rests_on": ["M4", "M5", "M6"], "needs_first": ["R1"]},
+      {"id": "R3", "what": "What Park actually saw is unknown: perhaps a few lone rock hills",
+       "why_it_matters": "It keeps the honest seed of the error in view: something real may have been seen, and the range was made from much less than a range",
+       "certainty": "contested", "hedge": "The historians who studied the maps think he may have seen lone rock hills; nobody can say for sure.",
+       "rests_on": ["M7"], "needs_first": ["R2"]},
+      {"id": "R4", "what": "On Rennell's map the range works as a wall between the river and the sea, leaving the river nowhere to go but inland",
+       "why_it_matters": "It explains why a theory about a river needed a mountain, which turns an odd mistake into a reasoned one",
+       "certainty": "reasoned", "rests_on": ["M9"], "needs_first": ["R2"]},
+      {"id": "R5", "what": "Mapmakers kept the range for the rest of the century but never agreed on it: their versions run from 525 to 3,950 km long and drift south over time",
+       "why_it_matters": "The disagreement is visible evidence that the range was copied and reshaped rather than surveyed",
+       "certainty": "established", "rests_on": ["M3", "M11"], "needs_first": ["R4"]},
+      {"id": "R6", "what": "When the Niger was followed to the sea in 1830 the range's reason was gone, yet it stayed on the maps for some sixty more years, its longest version drawn in 1848",
+       "why_it_matters": "It turns the question from how the mapmakers got it wrong to why they kept it, which is the film's real subject",
+       "certainty": "reasoned", "rests_on": ["M13", "M14"], "needs_first": ["R4", "R5"]},
+      {"id": "R7", "what": "The historians who gathered the maps argue it lasted because people trusted maps more than the doubts raised about them",
+       "why_it_matters": "It names a mechanism behind the survival, so the viewer leaves with an explanation, not just an oddity",
+       "certainty": "contested", "hedge": "Said as the historians' argument: they gathered the maps and read the debates, but nobody can weigh every mapmaker's reasons.",
+       "rests_on": ["M12"], "needs_first": ["R6"]},
+      {"id": "R8", "what": "An expedition led by Binger crossed the ground in the late 1880s and reported in 1889 that there was no chain, only some high ground to the north-north-west; the real highlands lie far to the west, where the Niger rises",
+       "why_it_matters": "It answers the opening question and shows exactly how much was real, so the correction does not overcorrect into 'nothing was there'",
+       "certainty": "established", "rests_on": ["M15", "M16"], "needs_first": ["R6"]},
+      {"id": "R9", "what": "The man who erased the range became the new authority on West African geography, his expedition aiding French expansion, and in 1893 the first governor of the colony of Ivory Coast",
+       "why_it_matters": "It shows the correction was also a transfer of authority, which keeps the ending from being a simple triumph of truth over error",
+       "certainty": "established", "rests_on": ["M17"], "needs_first": ["R8"]},
+      {"id": "R10", "what": "So a map records what its makers believed and whom they trusted, as well as the land",
+       "why_it_matters": "It is the earned implication that changes how the viewer reads the film's opening picture, and old maps generally",
+       "certainty": "reasoned", "rests_on": ["M18"], "needs_first": ["R8", "R9"]}
+    ],
+    "dropped": []
+  }
+}

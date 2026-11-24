@@ -1,0 +1,171 @@
+{
+  "subject": {
+    "scope": {
+      "kind": "subject",
+      "user_words": "the human body",
+      "niche": "biology",
+      "understood_as": "A film that explains how some part of the human body works, its organs, cells and senses as living mechanisms, for a general audience, chosen for how surprising and how clear the explanation can be made.",
+      "boundary": "It stops being the human body when the body is only the backdrop: a film mainly about medicine, treatment or health advice, mainly about other animals, or mainly a scientist's biography or the history of an idea with no working of the body explained."
+    },
+    "audience_value": "A general biology audience comes to have something inside their own body made surprising and then clear: a mechanism they never suspected, shown working, ideally one they can relate to their own experience. They reward a discovery told as a puzzle solved, not a list of body facts. No references were processed for this exercise, so this is read from the niche and the research, not from viewing data.",
+    "from_references": [],
+    "candidates": [
+      {
+        "id": "T1",
+        "subject": "why your ears make sound of their own: the amplifier inside the inner ear",
+        "angle": "a 1948 prediction by a young physicist, ignored for thirty years, proved when a microphone listened to the ear itself",
+        "value_form": "a surprising mechanism explained through the discovery that proved it",
+        "factual": true,
+        "what_happens": "The viewer learns that the inner ear is not a passive microphone. In 1948 Thomas Gold argues that its fluid would smother faint vibrations, so the ear must feed energy back into them like a radio receiver with feedback, and warns that too much feedback would make it ring by itself. The idea is largely ignored until, in the late 1970s, David Kemp puts a microphone in the ear canal and records sound coming back out: echoes of a click, and in some ears a tone with nothing going in. Then the motor is found: outer hair cells that lengthen and shorten with voltage thousands of times a second, driven by a protein called prestin.",
+        "why_it_matters": "It overturns the everyday picture of hearing as sound simply arriving: the viewer's own ears spend energy to make a whisper audible and two close notes distinct, and the cells doing that work are, in us, not replaced once noise destroys them.",
+        "reward": "The 'my ears do what?' surprise, then the satisfaction of a thirty-year-old warning confirmed by listening to the ear itself, and a new sense of hearing as something the body does rather than something that happens to it.",
+        "strongest_material": [
+          {"id": "M1", "what": "Gold's 1948 argument: the cochlea's fluid damps vibration too much for a passive ear to tune as sharply as human hearing does, so the ear must contain an active process that adds energy", "certainty": "established", "claims": ["C01"]},
+          {"id": "M2", "what": "Gold's radio comparison and his warning that with too much feedback the ear would ring by itself", "certainty": "established", "claims": ["C02"]},
+          {"id": "M3", "what": "the idea was largely ignored for about three decades, until evidence mounted in the 1970s", "certainty": "established", "claims": ["C03"]},
+          {"id": "M4", "what": "why and what followed: von Bekesy's opposition was part of the reason, and Gold, disenchanted, turned to cosmology", "certainty": "established", "claims": ["C04", "C05"]},
+          {"id": "M5", "what": "Kemp's late-1970s recordings: sound returning from the ear after a click, then ears that give out sound with nothing going in, direct evidence of an active ear", "certainty": "established", "claims": ["C06"]},
+          {"id": "M6", "what": "a sensitive microphone near the eardrum typically records a faint hum, with clear whistle-like tones in many people", "certainty": "established", "claims": ["C07"]},
+          {"id": "M7", "what": "outer hair cells change length with voltage, shortening and lengthening (Brownell and colleagues, 1983 and 1985)", "certainty": "established", "claims": ["C08"]},
+          {"id": "M8", "what": "the change is a few per cent of the cell and can follow voltage thousands of times a second; first seen in Geneva on 3 December 1982", "certainty": "established", "claims": ["C09", "C10"]},
+          {"id": "M9", "what": "prestin, identified in 2000 as the motor protein, makes even kidney cells change shape with voltage and is named for its speed", "certainty": "established", "claims": ["C11", "C12"]},
+          {"id": "M10", "what": "mice lacking prestin had severe hearing loss and quieter ears", "certainty": "established", "claims": ["C13"]},
+          {"id": "M11", "what": "the scale hearing works at: faintest sounds move the inner membrane by a fraction of an angstrom, painful ones carry a trillion times more energy, close notes a few per cent apart are told apart", "certainty": "established", "claims": ["C14"]},
+          {"id": "M12", "what": "in people hair cells killed by noise are not replaced (about 15,000 per cochlea), while birds regrow theirs and regain full function over several weeks", "certainty": "established", "claims": ["C15"]},
+          {"id": "M13", "what": "an outer hair cell destroyed by noise is not replaced, so damage to the ear's amplifier in us is permanent", "certainty": "reasoned", "from": ["M7", "M12"],
+           "reasoning": "Outer hair cells are among the cochlea's hair cells (M7); hair cells that die from noise damage are not replaced in mammals (M12); so an outer hair cell lost to noise is not replaced either. Nothing read says outer hair cells are the first to go, so the film does not say that."},
+          {"id": "M14", "what": "the ear's own sound is used clinically to test outer hair cell function", "certainty": "established", "claims": ["C16"]},
+          {"id": "M15", "what": "what exactly generates the ear's ring, the cell's body or its hair bundle, and prestin's precise role, are still open", "certainty": "contested", "claims": ["C17"],
+           "hedge": "Said as an open question: the read sources call it unclear and still to be identified, and the frog evidence is about frogs."},
+          {"id": "M16", "what": "hearing is work the ear does with its own energy, and the sound it gives out is a trace of that work", "certainty": "reasoned", "from": ["M1", "M5", "M7"],
+           "reasoning": "A passive ear could not be as sharp as ours (M1); the ear gives out sound energy of its own (M5); the cells that move with voltage show where that energy is put in (M7). Together they mean hearing involves the ear's own active work; the film says this as the conclusion it reaches, not as a quoted finding."}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "the hook: a tone recorded from inside an ear in a silent room, left unexplained", "material": ["M6"]},
+            {"adds": "the puzzle of scale: a movement smaller than an atom, a trillion-fold range, notes a few per cent apart", "material": ["M11"]},
+            {"adds": "Gold's answer in 1948: the fluid smothers faint vibration, so the ear must feed energy back in", "material": ["M1"]},
+            {"adds": "his radio comparison and the testable warning that too much feedback makes the ear ring", "material": ["M2"]},
+            {"adds": "thirty years of neglect, partly through von Bekesy's opposition, and Gold's turn to cosmology", "material": ["M3", "M4"]},
+            {"adds": "Kemp's echoes, then ears sounding with nothing going in: the predicted ring found", "material": ["M5"]},
+            {"adds": "the motor: a cell that changes length with voltage, thousands of times a second", "material": ["M7", "M8"]},
+            {"adds": "prestin, and mice that lose much of their hearing without it", "material": ["M9", "M10"]},
+            {"adds": "the honest open question of what exactly starts the ring", "material": ["M15"]},
+            {"adds": "what it means for our own ears: hair cells lost to noise do not come back, though birds regrow theirs", "material": ["M12", "M13"]},
+            {"adds": "the ear's own sound as today's test of whether its amplifier works", "material": ["M14"]},
+            {"adds": "the reframe: hearing as work the ear does, and the opening tone as its trace", "material": ["M16"]}
+          ],
+          "verdict": "sustains",
+          "why": "Each step changes what the viewer knows and rests on material the earlier steps did not use: a hook, a puzzle, a bold answer with a testable warning, thirty years of neglect, the proof heard in the ear, the cell and protein that do the work, an honest open question, what it means for the viewer's own ears, its use today and the reframe. A person and a long wait carry the first half, the viewer's own ears the second; at an explanatory pace with room to let the ear's sound be heard, ten minutes are filled without repetition.",
+          "material_minutes": 10
+        },
+        "feasibility": "Stills carry it well: a drawn cochlea beside a pea and unrolled along a keyboard, chalkboard feedback diagrams, a 1940s desk with a radio set, a late-1970s lab with an oscilloscope echo, a magnified hair cell in three lengths, lab mice beside hearing bars, a songbird, a measuring screen whose single peak returns through the film. Sound is the film's own evidence: the narration can stop and let a faint tone play. Nothing needs a bare body, an injury, blood or a child: ears appear as diagrams or on clothed adults sitting upright; Gold is drawn from period photographs and Kemp seen from behind. Left out by the content rules: newborn hearing screening, and Bekesy's measurements on ears from the dead."
+      },
+      {
+        "id": "T2",
+        "subject": "the thymus's hidden copy of the body: how T cells learn what not to attack",
+        "angle": "a gland that makes insulin and eye proteins it never uses, to test the immune system's recruits",
+        "value_form": "a hidden mechanism revealed by what happens when one gene is missing",
+        "factual": true,
+        "what_happens": "The viewer learns that T cells are built with randomly assembled receptors, so some are born able to attack the body, and that rare cells in the thymus weed them out by displaying proteins that belong to other organs, insulin, a thyroid protein, an eye protein, largely under the control of one gene, AIRE; without it, a defined set of organs comes under immune attack.",
+        "why_it_matters": "It answers how a defence assembled at random learns the difference between the body and an invader, and why one faulty switch can turn immunity against several organs at once.",
+        "reward": "The surprise of an organ that keeps working samples of the rest of the body, and the clarity of seeing self-tolerance as an exam every immune recruit must pass.",
+        "strongest_material": [
+          {"id": "M1", "what": "T cell receptors are assembled by random DNA rearrangement, so some inevitably react to the body's own molecules and must be removed or silenced", "certainty": "established", "sources": ["S5"]},
+          {"id": "M2", "what": "very rare epithelial cells in the thymic medulla make proteins thought to belong only to particular tissues, such as insulin, thyroglobulin, myelin basic protein and retinal S-antigen", "certainty": "established", "sources": ["S5"]},
+          {"id": "M3", "what": "mice lacking aire lose much of that expression (insulin among it) and develop a defined pattern of autoimmune disease that depends on aire's absence in thymic stromal cells", "certainty": "established", "sources": ["S5"]},
+          {"id": "M4", "what": "people with a defective AIRE develop autoimmune disease in several organs (APECED, also called APS-1)", "certainty": "established", "sources": ["S5"]},
+          {"id": "M5", "what": "aire controls several hundred such genes to varying degrees, and some of the display does not depend on it", "certainty": "established", "sources": ["S5"]},
+          {"id": "M6", "what": "the display works as an exam: a recruit that would attack one of those organs can be caught before it leaves the thymus", "certainty": "reasoned", "from": ["M2", "M3"],
+           "reasoning": "Thymic cells display organ proteins (M2) and losing that display brings organ-specific autoimmunity (M3), so the display serves as a test of the recruits; a review seen only as a search summary (S6) says the same about negative selection."},
+          {"id": "M7", "what": "the autoimmune pattern resembles that of mice whose thymus was removed shortly after birth", "certainty": "established", "sources": ["S5"]}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "the problem: a defence built at random must include cells that could attack the body", "material": ["M1"]},
+            {"adds": "the surprise: thymus cells making insulin and eye proteins", "material": ["M2"]},
+            {"adds": "the switch: one gene, aire, the hundreds of genes it governs, and what its absence does in mice", "material": ["M3", "M5"]},
+            {"adds": "people born with a faulty AIRE, told plainly", "material": ["M4"]},
+            {"adds": "the idea: a shadow of the body used as an exam for recruits", "material": ["M6"]}
+          ],
+          "verdict": "sustains",
+          "why": "Five distinct steps, each a new idea resting on a read primary paper, give enough for ten minutes at an explanatory pace; the risk is not length but that the later steps grow technical and the human chapter has to stay a few plain statements.",
+          "material_minutes": 9
+        },
+        "feasibility": "Stills can carry it as drawn cells, a schematic thymus on a clothed figure's outline and an exam-hall or library metaphor, but nearly every picture is microscopic and abstract, with no sound or sensation the viewer can find in their own body. Its human stakes come from illness (APECED's list of organ diseases, one of them naming an intimate organ) and its key comparison from removing the thymus of newborn mice; the content rules keep both out of lines and pictures, so the human chapter would be thin."
+      },
+      {
+        "id": "T3",
+        "subject": "why fingers wrinkle in water",
+        "angle": "an everyday change that turns out to be run by the nerves, with a purpose still argued over",
+        "value_form": "an everyday puzzle with an open answer",
+        "factual": true,
+        "what_happens": "The viewer learns that wrinkled fingertips are not skin soaking up water but a reflex: the vessels in the fingertip narrow and the skin folds, and fingers whose nerves no longer work stay smooth; then the argument over why, a proposed grip advantage on wet things and a test that found none.",
+        "why_it_matters": "It turns a familiar curiosity into evidence that the nervous system acts on the skin without our knowing, and shows a scientific question still open in plain sight.",
+        "reward": "The surprise that a familiar change is an active reflex, and the honest pleasure of an unsolved question the viewer can watch on their own hands.",
+        "strongest_material": [
+          {"id": "M1", "what": "water-induced wrinkling comes with narrowing of the fingertip's vessels, and a vasoconstricting cream produces near-identical wrinkling", "certainty": "established", "sources": ["S8", "S9"]},
+          {"id": "M2", "what": "replanted fingers, whose nerves no longer work, do not wrinkle in water", "certainty": "established", "sources": ["S10"]},
+          {"id": "M3", "what": "whether wrinkles help grip: a 40-person test found no better handling of wet objects and no change in touch acuity, against the rain-tread hypothesis it tested", "certainty": "contested", "sources": ["S7"],
+           "hedge": "Said as an open question: one small test found no benefit and the search showed no test in favour."},
+          {"id": "M4", "what": "even the mechanism is argued over: a preprint disputes the nerve-signal explanation", "certainty": "contested", "sources": ["S11"],
+           "hedge": "Said as a minority challenge from a paper that was not peer-reviewed."}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "the familiar change and the obvious wrong guess, water soaking in", "material": ["M1"]},
+            {"adds": "the nerve test: fingers without working nerves stay smooth", "material": ["M2"]},
+            {"adds": "the why: the rain-tread idea and the test that found nothing", "material": ["M3"]},
+            {"adds": "the edge: even the mechanism is debated", "material": ["M4"]}
+          ],
+          "verdict": "uncertain",
+          "why": "The leads give four real developments, perhaps five or six minutes; ten would need more independent studies than the searches showed, and the ending can only be that nobody knows yet.",
+          "shortfall": "A read second test of the grip idea, the clinical use of wrinkling as a nerve test (not found), and enough on the mechanism to make the middle more than one finding; every source so far is a search summary.",
+          "material_minutes": 6
+        },
+        "feasibility": "Hands in water are easy to draw, but the picture world is one pair of hands for ten minutes; the ordinary setting, a bath or a swim, is undressed and kept out of the pictures, leaving washing-up and rain; and the nerve evidence comes from damaged and replanted fingers, which must stay out of every picture."
+      }
+    ],
+    "selection": {
+      "candidate": "T1",
+      "why": "T1 lets the film give this audience a surprising mechanism inside their own body through a real test of a real prediction: Gold argued in 1948 that the ear must amplify and warned it could ring, was largely ignored, and was proved right when a microphone in the ear canal caught the ear's own sound; the motor was then found in a single cell. Two independent read accounts confirm each of those steps, the payoff can be played as sound in a narrated film, and none of it needs a bare body, an injury or a child. It was close with T2 on the strength of the mechanism, not on the pictures or the human arc.",
+      "decisive_material": ["M1", "M3", "M5", "M7"],
+      "over_alternatives": [
+        {"candidate": "T2", "why_not": "Its mechanism is as surprising as T1's, but every picture would be a microscopic diagram with nothing the viewer can hear or feel in their own body, and its human weight comes from illness and from experiments on newborn mice that the content rules keep out, leaving ten minutes of clean cell diagrams and a thin human chapter."},
+        {"candidate": "T3", "why_not": "A genuinely open question, but on what the searches showed it holds five or six minutes of real development before ending on nobody knows yet; its everyday setting may not be pictured, its nerve evidence comes from damaged fingers, and none of its sources has been read."}
+      ],
+      "how_scope_kept": "The film explains a working part of every viewer's own body, the cochlea's amplifier, and stays on what human ears do: Gold, Kemp and Brownell appear because they found it, and mice, birds and frogs only as brief comparisons that show what the human ear depends on and cannot regrow. It never becomes a film about hearing aids, medicine or a scientist's life."
+    },
+    "value_to_carry": [
+      {"id": "R1", "what": "hearing works at a scale and sharpness a passive organ should not manage: the faintest sounds move the inner ear by less than an atom, the loudest carry a trillion times more energy, and notes a few per cent apart are told apart",
+       "why_it_matters": "It is the problem the whole film answers; without it the amplifier is a fact with nothing at stake.",
+       "certainty": "established", "rests_on": ["M11"]},
+      {"id": "R2", "what": "Gold's answer: the ear must add energy to the very sounds it detects, like a radio receiver with feedback, and with too much feedback it would ring by itself",
+       "why_it_matters": "It turns the puzzle into a prediction the viewer can wait to see tested.",
+       "certainty": "established", "rests_on": ["M1", "M2"], "needs_first": ["R1"]},
+      {"id": "R3", "what": "the idea was largely ignored for about thirty years, partly through opposition, and Gold left hearing for cosmology",
+       "why_it_matters": "The long neglect makes the later proof a real test of a forgotten prediction, not a confirmation everyone expected.",
+       "certainty": "established", "rests_on": ["M3", "M4"], "needs_first": ["R2"]},
+      {"id": "R4", "what": "ears really do send sound out: a microphone in the ear canal catches echoes of a click and, in some ears, a tone with nothing going in, the ring Gold warned of",
+       "why_it_matters": "It answers the film's opening mystery and pays Gold's warning; it is the proof that the ear is active.",
+       "certainty": "established", "rests_on": ["M5", "M6"], "needs_first": ["R2", "R3"]},
+      {"id": "R5", "what": "the amplifier's motor is the outer hair cell, which lengthens and shortens with voltage thousands of times a second, driven by the protein prestin; mice without prestin lose much of their hearing",
+       "why_it_matters": "It shows where the energy is put in and that hearing depends on it.",
+       "certainty": "established", "rests_on": ["M7", "M8", "M9", "M10"], "needs_first": ["R4"]},
+      {"id": "R6", "what": "exactly what sets the ring going is still being worked out",
+       "why_it_matters": "It keeps the film honest about the edge of knowledge and leaves the viewer a live question.",
+       "certainty": "contested", "hedge": "Said as unsettled: the stretching cell or the tuft of hairs on top of it, which in frogs moves on its own.",
+       "rests_on": ["M15"], "needs_first": ["R5"]},
+      {"id": "R7", "what": "in us, hair cells lost to noise are not replaced, though birds regrow theirs, so damage to the amplifier is permanent",
+       "why_it_matters": "It gives the viewer a stake in the mechanism: their own amplifier can be used up.",
+       "certainty": "reasoned", "rests_on": ["M12", "M13"], "needs_first": ["R5"]},
+      {"id": "R8", "what": "the ear's own sound is now used to check whether its amplifier works",
+       "why_it_matters": "It closes the arc from an ignored idea to an everyday tool.",
+       "certainty": "established", "rests_on": ["M14"], "needs_first": ["R4"]},
+      {"id": "R9", "what": "hearing is something the ear does with its own energy, not only something that happens to it",
+       "why_it_matters": "It is the reframe the ending pays: the opening tone becomes the sound of that work.",
+       "certainty": "reasoned", "rests_on": ["M16"], "needs_first": ["R5"]}
+    ],
+    "dropped": []
+  }
+}

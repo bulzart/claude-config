@@ -1,0 +1,128 @@
+{
+  "blueprint": {
+    "ending_payoff": "Back in the quiet room from the opening: the faint tone the microphone caught is now understood as the sound of the ear's amplifier at work, the ring Gold warned of in 1948, so the viewer leaves hearing their own hearing as something their body does, and knowing that in us the cells doing it are not replaced."
+  },
+  "beats": [
+    {
+      "id": "B01",
+      "experience": "Intrigued disbelief: a microphone in a silent room records a tone from inside a person's ear with no speaker anywhere. The question 'where did that come from?' is planted and held on purpose until B05.",
+      "visual_intent": "An ordinary quiet room and a screen with one sharp peak; the picture holds still so the viewer listens, and the source of the sound is not explained.",
+      "carries": []
+    },
+    {
+      "id": "B02",
+      "experience": "Wonder at the scale: the viewer realises how faint, how loud and how finely tuned their own hearing is, and feels the puzzle that a small coil of fluid could manage it.",
+      "visual_intent": "The pea-sized coil beside a pea, then unrolled into a strip laid along a keyboard; a magnifier compares the membrane's movement with an atom, so the scale is seen rather than stated.",
+      "carries": ["R1"]
+    },
+    {
+      "id": "B03",
+      "experience": "The click of a clever idea: a young physicist sees a radio receiver in the ear, and the viewer is handed a testable consequence, that too much feedback would make the ear ring.",
+      "visual_intent": "Gold at a 1940s desk beside an opened radio set and a sketch of the ear; then a chalkboard sequence: a wave dying in thick fluid, held up by added energy, and spilling out as a ring when the boost is too strong.",
+      "carries": ["R2"],
+      "key_moment": "the prediction",
+      "significance": {
+        "matters_because": "It turns the puzzle of B02 into a claim that could be checked: if the ear adds energy to what it hears, a healthy ear might give some of it back as sound, so the viewer now has something to wait for.",
+        "reward": "The pleasure of an idea from radio engineering suddenly fitting the ear, and a prediction to watch.",
+        "certainty": "established",
+        "depends_on": [{"what": "the puzzle: a coil of damping fluid that should not be able to hear so faintly or so sharply", "from": "B02"}]
+      }
+    },
+    {
+      "id": "B04",
+      "experience": "A slow deflation: the idea is set aside for thirty years, partly through the opposition of Georg von Bekesy, whose own work held the field's attention, and its author leaves for the stars; the viewer starts to wonder whether he was simply wrong.",
+      "visual_intent": "A worn 1940s folder on a library shelf as the light changes across the years; a window onto a starry night sky. Time passes in the picture while the words move on.",
+      "carries": ["R3"]
+    },
+    {
+      "id": "B05",
+      "experience": "'So that's what it was': the opening's sound is explained, and an ignored idea is proved right by listening to the ear itself.",
+      "visual_intent": "A late-1970s lab: a click goes in and a smaller echo returns on the oscilloscope; then the opening room's screen comes back and Gold's predicted ring is laid over its peak, the two shapes meeting.",
+      "carries": ["R4"],
+      "key_moment": "the ear heard",
+      "significance": {
+        "matters_because": "It answers the mystery the film opened with and pays Gold's warning from B03: the ear does ring, so it cannot be a passive receiver, and thirty years of neglect end in a measurement made on ordinary ears.",
+        "reward": "The relief of an answer and the satisfaction of a vindicated prediction, heard rather than only told.",
+        "certainty": "established",
+        "depends_on": [
+          {"what": "the unexplained tone recorded in a silent room", "from": "B01"},
+          {"what": "Gold's warning that too much feedback would make the ear ring", "from": "B03"},
+          {"what": "the idea's thirty years of neglect", "from": "B04"}
+        ]
+      }
+    },
+    {
+      "id": "B06",
+      "experience": "Fascination at the machinery: the amplifier is a single cell that stretches and shrinks thousands of times a second, driven by a protein named for speed, and in mice without that protein hearing falls away.",
+      "visual_intent": "A magnified outer hair cell drawn at three lengths; a wall of tiny identical proteins changing shape together; two mice side by side with very different hearing bars.",
+      "carries": ["R5"]
+    },
+    {
+      "id": "B07",
+      "experience": "Honest curiosity: even now, nobody is sure exactly what sets the ring going, and the viewer is let in on a live question.",
+      "visual_intent": "The hair cell with two question marks, one on its body and one on its tuft of hairs, and a frog in the corner as the animal in which the tuft was seen moving on its own.",
+      "carries": ["R6"],
+      "hedges": {"R6": "Nobody is yet sure exactly what starts the ring: the stretching cell itself, or the little tuft of hairs on top of it, which in frogs has been seen moving on its own."}
+    },
+    {
+      "id": "B08",
+      "experience": "A personal stake: in us, hair cells lost to noise do not come back, though birds regrow theirs; and the ear's own echo has become a way to test it.",
+      "visual_intent": "Neat rows of hair cells seen from above with a flattened gap beside a loudspeaker shape; a songbird with its rows complete again; a clothed adult sitting upright in a clinic chair with a small probe in the ear and an echo trace on a screen.",
+      "carries": ["R7", "R8"]
+    },
+    {
+      "id": "B09",
+      "experience": "Quiet awe: hearing is something the viewer's ears do with their own energy, and the faint sound from the opening is the sound of that work.",
+      "visual_intent": "The opening room again at dusk: the same person, no probe now, listening, with a soft glow at the ear; the peak from B01 is now read as the trace of a working amplifier.",
+      "carries": ["R9"],
+      "key_moment": "the reframe",
+      "significance": {
+        "matters_because": "It changes what the viewer thinks hearing is, from sound arriving to work their own cells do, and turns the opening's mystery tone into a sign of that work, which in us is not replaced once lost.",
+        "reward": "A quiet sense of awe at an everyday act, and a reason to care for it.",
+        "certainty": "reasoned",
+        "depends_on": [
+          {"what": "the quiet room and its unexplained tone", "from": "B01"},
+          {"what": "the motor: cells that lengthen and shorten with voltage", "from": "B06"},
+          {"what": "hair cells lost to noise are not replaced in us", "from": "B08"}
+        ]
+      }
+    }
+  ],
+  "shots": [
+    {"id": "S1", "beat_id": "B01", "new_thing": "the mystery: a microphone in a silent room picks up a tone that no speaker made",
+     "frame_prompt": "Painted still of a quiet, softly lit sound-proofed room with foam wall panels; a clothed adult in a wool sweater sits upright in profile, relaxed, eyes open, a small foam-tipped probe resting in the ear with a thin cable to an old measuring screen showing a flat line with one sharp peak; muted warm palette, calm and still, no lettering"},
+    {"id": "S2", "beat_id": "B01", "new_thing": "the sound itself as a shape: one peak with no visible source",
+     "frame_prompt": "Hand-drawn close view of a dark measuring screen: a fine, slightly noisy baseline with a single tall thin spike, a small chalk question-mark shape beside it, deep blue ground with white ink lines, no lettering"},
+    {"id": "S3", "beat_id": "B02", "new_thing": "where hearing happens: a fluid-filled coil the size of a pea",
+     "frame_prompt": "Clean drawn diagram of the inner ear's snail-shaped cochlea as a single isolated object beside a green pea for scale, opened to show its fluid-filled channels in soft blues and creams, textbook illustration style, no surrounding tissue, no lettering"},
+    {"id": "S4", "beat_id": "B02", "new_thing": "the strip tuned like a keyboard, and a movement smaller than an atom",
+     "frame_prompt": "Illustrated diagram of the cochlea unrolled into a long strip laid along a piano keyboard, stiff at the end beside the high keys and soft at the far end beside the low keys, a round magnifier in which a tiny drawn atom looks larger than the strip's movement; warm paper texture, ink and wash, no lettering"},
+    {"id": "S5", "beat_id": "B03", "new_thing": "Gold, a young physicist, sees a radio receiver in the ear",
+     "frame_prompt": "Painted scene of a late-1940s Cambridge study at night: a young physicist in a tweed jacket, a drawn likeness of Thomas Gold from period photographs, at a wooden desk beside an opened radio receiver with glowing valves and a pencil sketch of a coiled ear diagram; lamplight, sepia and bottle-green tones, no lettering"},
+    {"id": "S6", "beat_id": "B03", "new_thing": "the feedback idea and its risk: too much and the ear rings by itself",
+     "frame_prompt": "Chalk-on-blackboard diagram in three steps: a wave fading fast in thick fluid; the same wave held steady by a small arrow of added energy; and, with a larger arrow, rings spreading outward from the coil on their own; white and pale-yellow chalk, no lettering",
+     "carries_significance": "The third step shows the testable consequence: with too much feedback the ear itself sends out a ring, the prediction the viewer now waits to see tested."},
+    {"id": "S7", "beat_id": "B04", "new_thing": "thirty years of neglect, and the author turning to the stars",
+     "frame_prompt": "Painted still of a quiet library shelf holding a worn 1940s cardboard folder, dust settling on it as the daylight fades across the frame; through a tall window beside it, a clear night sky dense with stars; muted greys with one warm lamp, no lettering"},
+    {"id": "S8", "beat_id": "B05", "new_thing": "a click goes into the ear and an echo comes back out",
+     "frame_prompt": "Painted scene of a late-1970s acoustics laboratory: a scientist seen from behind at a bench of instruments watches an oscilloscope trace where a sharp click is followed, after a short gap, by a smaller wavering echo; beside him a clothed adult volunteer sits upright with a small probe in the ear; cool lab light with warm accents, no lettering"},
+    {"id": "S9", "beat_id": "B05", "new_thing": "the opening's peak and Gold's predicted ring turn out to be the same thing",
+     "frame_prompt": "The measuring screen from the opening scene again: its single sharp peak, and laid over it in glowing chalk the ring from Gold's blackboard diagram, the two shapes meeting exactly; gentle golden light, no lettering",
+     "carries_significance": "Laying Gold's ring over the opening's peak makes the answer visible: the mystery tone is the ring he foresaw, so the ear is active and the ignored idea was right."},
+    {"id": "S10", "beat_id": "B06", "new_thing": "the motor: a cell that lengthens and shortens with voltage",
+     "frame_prompt": "Crisp scientific illustration of a single outer hair cell as a slender cylinder with a small tuft of fine hairs on top, drawn three times side by side, longer, resting and shorter, with small plus and minus symbols beside each; pale background, clean line art, no tissue texture, no lettering"},
+    {"id": "S11", "beat_id": "B06", "new_thing": "prestin: the protein packed in the cell wall, named for speed",
+     "frame_prompt": "Drawn close-up of the hair cell's outer wall as a mosaic of thousands of tiny identical protein units all changing shape together, a fast-swinging metronome in one corner; bright clean colours, schematic style, no lettering"},
+    {"id": "S12", "beat_id": "B06", "new_thing": "without prestin, hearing falls away and the ear goes quiet",
+     "frame_prompt": "Two side-by-side drawn panels of healthy, alert lab mice on clean bedding: in the first a tall bar and a strong sound wave beside the mouse, in the second a much shorter bar and a faint flattened wave; friendly simple illustration, no instruments touching the animals, no lettering"},
+    {"id": "S13", "beat_id": "B07", "new_thing": "the open question: the cell's body or its tuft of hairs",
+     "frame_prompt": "Drawn diagram of the outer hair cell with two softly glowing question marks, one over its stretching body and one over the tuft of hairs on top, a small green frog sitting in the corner beside the tuft; ink and watercolour, no lettering"},
+    {"id": "S14", "beat_id": "B08", "new_thing": "hair cells lost to noise leave a gap that does not refill in us",
+     "frame_prompt": "Schematic drawing of neat rows of hair cells seen from above like a tiled pattern, one patch where several are missing and the space has flattened out, a small loudspeaker shape at the edge of the frame; calm blues and greys, no tissue texture, no lettering"},
+    {"id": "S15", "beat_id": "B08", "new_thing": "birds regrow theirs; and the ear's own echo becomes a hearing test",
+     "frame_prompt": "Split illustration: on the left a songbird on a branch beside the same tiled rows of hair cells, the gap filled with new cells; on the right a clothed adult sitting upright and relaxed in a clinic chair, eyes open, a small foam probe in the ear and an echo trace on a nearby screen; soft daylight palette, no lettering"},
+    {"id": "S16", "beat_id": "B09", "new_thing": "the same room, now understood: hearing as the ear's own work",
+     "frame_prompt": "The sound-proofed room from the first scene at dusk, foam panels in amber light; the same clothed adult now without any probe, sitting upright with eyes open and a faint smile, listening, a soft drawn spiral glowing gently beside the ear; still, warm and unhurried, no lettering",
+     "carries_significance": "The glow at the ear, in the room where the film began, shows the reframe: the faint tone was the ear working, and hearing is something the body does."}
+  ]
+}

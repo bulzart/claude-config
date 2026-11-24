@@ -1,0 +1,140 @@
+{
+  "claims": [
+    {
+      "id": "C01",
+      "claim": "In 1948 Thomas Gold argued that damping by the fluid inside the cochlea would make a passive ear far too blunt for the sharp pitch discrimination of human hearing, so the ear must contain an active process that feeds energy into its own vibrations.",
+      "sources": ["S1", "S2"],
+      "confidence": "confirmed",
+      "note": "S1 quotes Gold's reasoning (viscous damping 'incompatible with the exquisite frequency-resolving powers of human hearing'); S2 describes positive feedback 'of precisely the right magnitude to cancel the damping'. Two independent accounts, both read. Gold's 1948 paper itself was not read.",
+      "line_refs": []
+    },
+    {
+      "id": "C02",
+      "claim": "Gold compared the ear to a regenerative radio receiver, which adds energy at the very frequency it is detecting, and warned that with any more feedback than needed the ear would ring spontaneously.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "Only S2 among the read sources gives the radio comparison and the warning. An unread lead (S12) adds that Gold suggested a microphone at the ear might catch the ring and that his attempt failed with 1948 microphones: not verified, not used.",
+      "line_refs": []
+    },
+    {
+      "id": "C03",
+      "claim": "Gold's proposal was largely ignored for about three decades; evidence for an active cochlea began to mount only in the 1970s.",
+      "sources": ["S1", "S2"],
+      "confidence": "confirmed",
+      "note": "S1: 'largely ignored'; S2: it 'fell on deaf ears'. 'About three decades' is the span from 1948 to the late 1970s, taken from the dates both give.",
+      "line_refs": []
+    },
+    {
+      "id": "C04",
+      "claim": "Opposition from Georg von Bekesy was part of the reason Gold's idea was ignored.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "S1 says 'in part, because of opposition by von Bekesy'. Always said as a part of the reason, never the whole of it. S12 (unread blog) describes a 'Von Bekesy - Gold controversy'.",
+      "line_refs": []
+    },
+    {
+      "id": "C05",
+      "claim": "Gold was a young researcher at Cambridge when he made the proposal; disenchanted by its reception, he turned to cosmology, where his ideas were better received.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "One read source. His later astronomy work is not described further here; anything said about it needs its own source.",
+      "line_refs": []
+    },
+    {
+      "id": "C06",
+      "claim": "In the late 1970s David Kemp, in London, recorded sound coming back out of the human ear after a brief sound was played into it, and then found that some ears give out sound with no sound going in at all: direct evidence that the ear is active, as Gold had proposed.",
+      "sources": ["S1", "S2"],
+      "confidence": "confirmed",
+      "note": "Both read sources agree on the finding. The year differs: S1 cites Kemp 1978 for the evoked emissions, S2 gives 1979 for the finding that ears emit sound, and one search summary said 1977. Say 'in the late 1970s' unless Kemp's 1978 paper is read.",
+      "line_refs": []
+    },
+    {
+      "id": "C07",
+      "claim": "A sensitive microphone placed near the eardrum typically records a faint hum, and in many people clear whistle-like tones stand out above it; in rare cases linked to ear disorders the sound can be heard by people nearby.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "No prevalence figure was read. Search leads (S13) give about 53% of women and 27% of men in one 1990 study of 131 people, and 'about 40%' elsewhere: unverified, so the film says 'many' and 'some'. The rare audible cases are a disorder: state plainly or leave out.",
+      "line_refs": []
+    },
+    {
+      "id": "C08",
+      "claim": "Outer hair cells change their length when the voltage across them changes, shortening when depolarised and lengthening when hyperpolarised (electromotility), as William Brownell and colleagues reported in 1983 and 1985.",
+      "sources": ["S1", "S2"],
+      "confidence": "confirmed",
+      "note": "S1 is the discoverer's own history; S2 independently describes the 1985 finding.",
+      "line_refs": []
+    },
+    {
+      "id": "C09",
+      "claim": "The length change is a few per cent of the cell, and outer hair cells can follow voltage oscillations at several kilohertz, that is thousands of times a second.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "S2 attributes the kilohertz measurement to Jonathan Ashmore. 'Thousands of times a second' is the plain reading of 'several kilohertz'.",
+      "line_refs": []
+    },
+    {
+      "id": "C10",
+      "claim": "Brownell first saw the movement on 3 December 1982, in Geneva.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "The discoverer's own account; no second source read.",
+      "line_refs": []
+    },
+    {
+      "id": "C11",
+      "claim": "In 2000 Zheng and colleagues, in Peter Dallos's group, identified prestin as the protein behind the outer hair cell's movement.",
+      "sources": ["S1", "S2"],
+      "confidence": "confirmed",
+      "note": "Both read sources name prestin and Zheng et al. 2000 or Dallos's group. Its exact working is still studied (C17).",
+      "line_refs": []
+    },
+    {
+      "id": "C12",
+      "claim": "Prestin made cultured kidney cells change shape in response to voltage, and it was named in honour of the speed of the outer hair cell's motor.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "The link to the musical term 'presto' is implied by the name but not stated in what was read; say 'named for its speed'.",
+      "line_refs": []
+    },
+    {
+      "id": "C13",
+      "claim": "Mice lacking prestin had severe hearing loss and reduced otoacoustic emissions.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "Liberman et al. 2002, as reported by S1. A search lead quoting the abstract (S14) gives a 40-60 dB loss of sensitivity with transduction intact: not read, so no number is said.",
+      "line_refs": []
+    },
+    {
+      "id": "C14",
+      "claim": "The quietest audible sounds move the cochlea's basilar membrane by only a fraction of an angstrom; painful sounds carry more than a trillion (twelve orders of magnitude) times the energy of the faintest whispers; two tones heard together can be told apart when they differ by a few per cent in frequency, and tones heard one after another by a fraction of a per cent.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "One read source by a specialist. 'Smaller than an atom' is a plain-language reading of a fraction of an angstrom (an atom is roughly one to a few angstroms across).",
+      "line_refs": []
+    },
+    {
+      "id": "C15",
+      "claim": "In people and other mammals, hair cells that die from noise damage are not replaced, leaving an unresponsive scar; each human cochlea has roughly 15,000 hair cells; the bird hearing organ regrows lost hair cells and regains full function over several weeks.",
+      "sources": ["S4"],
+      "confidence": "likely",
+      "note": "One read source (a regeneration lab); unread leads agree (S15, a University of Washington release). It speaks of hair cells in general and does not say which kind noise harms first.",
+      "line_refs": []
+    },
+    {
+      "id": "C16",
+      "claim": "Otoacoustic emissions are used clinically as objective tests of outer hair cell function, and spontaneous emissions appear to be a useful marker of cochlear health in adults.",
+      "sources": ["S3"],
+      "confidence": "likely",
+      "note": "Keep the source's 'appear to be'. The best-known use, screening the hearing of newborns, is left out: the content rules keep children out of every line.",
+      "line_refs": []
+    },
+    {
+      "id": "C17",
+      "claim": "What exactly generates the ear's spontaneous oscillation, the outer hair cell's body motion or the hair bundle's own motors, and the precise role of prestin are not settled.",
+      "sources": ["S1", "S2"],
+      "confidence": "confirmed",
+      "note": "This is a claim that the question is open. S2 (2002): it 'remains unclear', and the bundle moves on its own in frogs; S1 (2017): prestin's precise role 'remain[s] to be identified'. Newer structural work (2022-2023, search leads only) studies how prestin moves and does not close the question.",
+      "line_refs": []
+    }
+  ]
+}

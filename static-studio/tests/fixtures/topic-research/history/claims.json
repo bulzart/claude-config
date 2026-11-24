@@ -1,0 +1,244 @@
+{
+  "claims": [
+    {
+      "id": "C01",
+      "claim": "James Rennell's 1798 map 'A map shewing the progress of discovery & improvement in the geography of North Africa', made to illustrate Mungo Park's travels, shows the Mountains of Kong.",
+      "sources": ["S1", "S2"],
+      "confidence": "confirmed",
+      "note": "Two independent sources, both read. S2 describes the map in the Library of Congress collection; S1 cites it (footnotes 26 and 29) and traces the range to Rennell.",
+      "line_refs": []
+    },
+    {
+      "id": "C02",
+      "claim": "The range begins with Rennell: his 1798 map is the first to label it.",
+      "sources": ["S1", "S4", "S7"],
+      "confidence": "likely",
+      "note": "S1 (read) traces the range's origin to Rennell. The word 'first' appears outright only in S4 and S7, seen as snippets. Say 'it begins with Rennell' unless S1's body is read.",
+      "line_refs": []
+    },
+    {
+      "id": "C03",
+      "claim": "No continuous east-west mountain chain like the one the maps drew exists across West Africa.",
+      "sources": ["S1", "S2"],
+      "confidence": "confirmed",
+      "note": "S1's abstract calls the range an error that Binger's expedition ended; S2 says 'there are no Mountains of Kong'. Real high ground and hills do exist (C07, C13, C16), so the film says 'no chain', never 'flat land'.",
+      "line_refs": []
+    },
+    {
+      "id": "C04",
+      "claim": "The range's supposed existence supported Rennell's arguments about the course of the Niger around 1800; an earlier historian, Hallett, wrote of 'Rennell's anxiety to bolster up his own theory about the great chain of the Mountains of Kong'.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "One scholarly source, abstract and footnote 35 read. Hallett is quoted there and was not read independently. What was read does not say exactly how the range supported the argument; M9 gives that as reasoning.",
+      "line_refs": []
+    },
+    {
+      "id": "C05",
+      "claim": "Rennell's 1798 map shows the Niger flowing east along the southern edge of the Sahara, past Kassina, into an inland 'Lybia Palus', never reaching the sea.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "From the Library of Congress description of the map. It is consistent with S1's statement that the range supported Rennell's argument about the Niger.",
+      "line_refs": []
+    },
+    {
+      "id": "C06",
+      "claim": "Mungo Park reached the Niger, followed it past Ségou, turned back before Timbuktu and never learned where the river entered the sea.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "S2 gives no dates for the journey. The film can place it before the 1798 map without naming a year.",
+      "line_refs": []
+    },
+    {
+      "id": "C07",
+      "claim": "Park may have seen isolated rock hills (inselbergs over 200 m high) in the region.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "The hedge is S1's own (footnote 24: 'may have seen'). The claim is likely only as a possibility, and the film says it as one.",
+      "line_refs": []
+    },
+    {
+      "id": "C08",
+      "claim": "Philippe Buache's theory of mountain chains may have been a 'plausible prototype' for Rennell's range.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "This is S1's suggestion (footnote 37). What Buache's theory says was not read in this stage, so describe it only after a source on it has been read.",
+      "line_refs": []
+    },
+    {
+      "id": "C09",
+      "claim": "Bassett and Porter's composite of forty maps that name the Kong Mountains spans 1798 to 1892; their abstract describes the range's enduring depiction throughout the nineteenth century.",
+      "sources": ["S1"],
+      "confidence": "confirmed",
+      "note": "Confirmed on the study itself. The composite is the peer-reviewed study's own survey of the maps (primary research), and the passage stating it (footnote 87, with the abstract) was read. It is a composite, not a census, so say 'forty maps they gathered', never 'only forty maps'. A stricter reading that treats S1 as secondary would make this likely (notes.md).",
+      "line_refs": []
+    },
+    {
+      "id": "C10",
+      "claim": "In that composite the range's east-west length runs from 525 km (Meyer, 1850) to 3,950 km (Mitchell, 1848), averaging 1,874 km; its mean latitude is 10 degrees 1 minute N on the maps of 1798-1850 and 8 degrees 58 minutes N on those of 1850-1892.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "These figures came through the page-reading tool's report of footnote 87. Check them against the article before a script states any of them.",
+      "line_refs": []
+    },
+    {
+      "id": "C11",
+      "claim": "Bassett and Porter attribute the range's survival to the authority the public gave maps, trusted for their accuracy even amid doubts.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "This is an interpretation and is said as theirs; material M12 is contested for that reason.",
+      "line_refs": []
+    },
+    {
+      "id": "C12",
+      "claim": "The Niger reaches the sea through a delta on the Gulf of Guinea.",
+      "sources": ["S2", "S3"],
+      "confidence": "confirmed",
+      "note": "Two independent sources, both read. S2: the river turns south and reaches the Gulf of Guinea through a complex delta near Cape Formosa. S3: the Landers followed it through the delta to the Nun River near the Bight of Biafra.",
+      "line_refs": []
+    },
+    {
+      "id": "C13",
+      "claim": "The high ground at the Niger's source that the maps label as Kong is in reality the Guinea Highlands.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "This keeps the correction honest: there is real high ground at the western end.",
+      "line_refs": []
+    },
+    {
+      "id": "C14",
+      "claim": "Richard and John Lander floated down the Niger from Bussa from 2 August 1830 and followed it through the delta to the Nun River near the Bight of Biafra; back in England in June 1831 they announced that the mystery of the Niger had been solved; their journal was published in 1832.",
+      "sources": ["S3"],
+      "confidence": "likely",
+      "note": "One read institutional source; the Britannica page refused the request. Popular summaries agree on the 1830 voyage but differ on secondary dates. The film needs only '1830' and 'to the sea'.",
+      "line_refs": []
+    },
+    {
+      "id": "C15",
+      "claim": "Binger's expedition in the late 1880s ended the error and made him the new authority on West African geography, which aided French empire-building.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "From S1's abstract, which the tool paraphrased. 'Aided empire-building' is the historians' judgement and is stated as theirs.",
+      "line_refs": []
+    },
+    {
+      "id": "C16",
+      "claim": "Binger presented his findings to the Paris Geographical Society in 1889 and in 1890 published 'La ville de Kong et la prétendue chaîne de montagnes de Kong'; an editorial note in the Revue Française said he saw mountainous areas only to the north-north-west.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "From S1's footnote 108. Binger's own texts were not read.",
+      "line_refs": []
+    },
+    {
+      "id": "C17",
+      "claim": "Binger became the first colonial governor of Ivory Coast in 1893.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "From S1's footnote 125.",
+      "line_refs": []
+    },
+    {
+      "id": "C18",
+      "claim": "Binger reached the town of Kong on 20 February 1888.",
+      "sources": ["S4", "S6"],
+      "confidence": "legend",
+      "note": "Seen only in search summaries of popular pages. Read Binger's account or S1's body before a script gives this date; until then say 'the late 1880s' (C15).",
+      "line_refs": []
+    },
+    {
+      "id": "C19",
+      "claim": "Some maps kept the range after Binger, the last reportedly Trampler's Mittelschulatlas (Vienna, 1905).",
+      "sources": ["S4", "S5"],
+      "confidence": "legend",
+      "note": "A search-summary claim whose source was unclear. A 1908 eclipse report that put the eclipse's path over the mountains came up the same way. Neither is used. S1 cites later atlases (Rand McNally 1890 and 1891, Bartholomew 1928), but what was read does not say what they show.",
+      "line_refs": []
+    },
+    {
+      "id": "C20",
+      "claim": "Several hundred maps showed the range.",
+      "sources": ["S6"],
+      "confidence": "legend",
+      "note": "A popular figure seen in a search summary. S1's forty is a composite, so the two need not conflict, but the larger number is unverified and is not used.",
+      "line_refs": []
+    },
+    {
+      "id": "C21",
+      "claim": "Julian Monroe Fisher's 2017 book Mountains of Kong maintains that the mountains exist.",
+      "sources": ["S8"],
+      "confidence": "legend",
+      "note": "A popular report of the explorer's claim, with no peer-reviewed or independent support found; S1 and S2 stand against it. Recorded as counterevidence, not used.",
+      "line_refs": []
+    },
+    {
+      "id": "C22",
+      "claim": "The Chappe optical telegraph grew to 556 stations covering about 3,000 miles and linking the 29 largest French cities; a typical speed was two to three signals a minute.",
+      "sources": ["S9", "S13"],
+      "confidence": "likely",
+      "note": "S9 was read. S13, a snippet, quotes Holzmann and Pehrson for 556 stations over 4,800 km, which agrees.",
+      "line_refs": []
+    },
+    {
+      "id": "C23",
+      "claim": "Operators at intermediate stations knew only part of the code; messages were decoded and logged only at the start and end of each division.",
+      "sources": ["S9"],
+      "confidence": "likely",
+      "note": "From one read source, a lecture outline.",
+      "line_refs": []
+    },
+    {
+      "id": "C24",
+      "claim": "In 1836 a telegraph operator was bribed to introduce a specific pattern of errors into transmissions about the direction of the Paris stock market, and accomplices in Bordeaux took advantage of it.",
+      "sources": ["S9", "S10", "S11"],
+      "confidence": "likely",
+      "note": "S9 (read) gives the mechanism and the year 1836 but no names. S10 and S11 (snippets) agree on the mechanism.",
+      "line_refs": []
+    },
+    {
+      "id": "C25",
+      "claim": "The schemers were the Bordeaux traders François and Joseph Blanc, and the scheme began in 1834.",
+      "sources": ["S10", "S11", "S12"],
+      "confidence": "legend",
+      "note": "The popular accounts disagree: one names Louis rather than Joseph, and both 1834 and 1836 are given as the start.",
+      "line_refs": []
+    },
+    {
+      "id": "C26",
+      "claim": "The brothers went free because no law covered misuse of the telegraph (or were found guilty only of bribery), and a law of 1837 then made misuse of the telegraph a crime.",
+      "sources": ["S10", "S11"],
+      "confidence": "legend",
+      "note": "The popular accounts disagree on the verdict, and none of the results seen gives the law's date or text.",
+      "line_refs": []
+    },
+    {
+      "id": "C27",
+      "claim": "Vasa capsized and sank in Stockholm harbour on 10 August 1628, minutes after setting sail for the first time; all but 30 of the crew and guests survived.",
+      "sources": ["S14", "S15"],
+      "confidence": "likely",
+      "note": "S14 was read; S15 (a snippet) agrees on 30. Another popular page in the search gave 53 dead, which is unverified.",
+      "line_refs": []
+    },
+    {
+      "id": "C28",
+      "claim": "Vasa's designer, Henrik Hybertsson, had no way to calculate stability in advance; the upperworks were too tall and heavily built for the small hull below the waterline, which raised the centre of gravity; open gunports let the water in.",
+      "sources": ["S14"],
+      "confidence": "likely",
+      "note": "From one read institutional source.",
+      "line_refs": []
+    },
+    {
+      "id": "C29",
+      "claim": "Vasa's instability was suspected by some before the ship sailed.",
+      "sources": ["S14"],
+      "confidence": "likely",
+      "note": "From one read institutional source.",
+      "line_refs": []
+    },
+    {
+      "id": "C30",
+      "claim": "Before the voyage Admiral Klas Fleming had about 30 men run back and forth across Vasa's deck; the ship rolled so much that he stopped the test, but the voyage went ahead.",
+      "sources": ["S15", "S16"],
+      "confidence": "legend",
+      "note": "Widely retold, but seen here only in search summaries and absent from S14. Read the museum's or Fred Hocker's account before using it.",
+      "line_refs": []
+    }
+  ]
+}

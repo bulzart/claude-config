@@ -4133,10 +4133,11 @@ class TopicDiscoveryTests(unittest.TestCase):
         solid = self.cand('T1', 'the jellyfish that runs its life backwards', 'a surprising mechanism told honestly',
                           'an adult turns back into a polyp under stress', 'one animal undoes its own ageing',
                           'wonder, with the honest limit that it still dies')
-        iss, warn = self.check(self.subj([solid, weak], niche='biology', user_words='biology'), niche='biology')
+        iss, warn = self.check(self.subj([solid, weak, self.alt('T3')], niche='biology', user_words='biology'), niche='biology')
         self.assertEqual(iss, [])                       # considered and set aside: its gaps are only noted
         self.assertTrue(any('T2' in w and 'legend' in w for w in warn))
-        iss = self.check(self.subj([solid, weak], chosen='T2', niche='biology', user_words='biology'), niche='biology')[0]
+        iss = self.check(self.subj([solid, weak, self.alt('T3')], chosen='T2', niche='biology', user_words='biology'),
+                         niche='biology')[0]
         self.assertTrue(any('said_as_established_but_claim_C05_is_legend' in x for x in iss))
         self.assertTrue(any(x.startswith('subject_choice_rests_on_M1_whose_claims_are_not_confirmed:C05') for x in iss))
 
@@ -4387,6 +4388,38 @@ class TopicDiscoveryTests(unittest.TestCase):
                                        '#### **S3**. News\n- access: snippet\n### S4. Notes\n- Status: likely\n')
         self.assertEqual({k: v['access'] for k, v in led.items()},
                          {'S1': 'read', 'S2': 'indirect', 'S3': 'snippet', 'S4': 'unknown'})
+
+    def test_an_alternative_ruled_out_unread_was_never_compared(self):
+        unread = self.cand('T2', 'a forgotten survey error', 'a small mistake with large effects',
+                           'a mapmaker draws a valley a mile too far north', 'every later plan inherits the error',
+                           'one wrong line explains a dozen failures',
+                           material=[{'id': 'M1', 'what': 'the error in the survey sheet', 'certainty': 'established',
+                                      'sources': ['S4']}])                  # S4: a search summary, never read
+        c = self.cand('T1', 'why dunes sing', 'a natural phenomenon explained', 'sand avalanches hum at one note',
+                      'the note comes from the grains, not the wind', 'a sound that turns into a mechanism')
+        iss, warn = self.check(self.subj([c, unread]))
+        self.assertIn('subject_niche_scope_needs_an_alternative_whose_source_was_read:alternatives_seen_only_in_search_'
+                      'summaries_were_never_compared', iss)
+        iss, warn = self.check(self.subj([c, unread, self.alt('T3', 1)]))
+        self.assertFalse([x for x in iss if 'whose_source_was_read' in x])   # one alternative really read: compared
+        self.assertIn('subject_alternative_T2_ruled_out_on_search_summaries_alone:read_its_strongest_source_or_say_'
+                      'plainly_the_comparison_was_uneven', warn)
+
+    def test_a_key_moment_on_one_source_is_named(self):
+        c = self.core
+        mats = [{'id': 'M1', 'what': 'one experiment shifted the spawning', 'certainty': 'established', 'claims': ['C02']}]
+        direction = {'subject': {'selection': {'candidate': 'T1'},
+                                 'candidates': [{'id': 'T1', 'factual': True, 'strongest_material': mats}],
+                                 'value_to_carry': [{'id': 'R1', 'what': 'x', 'certainty': 'established', 'rests_on': ['M1']}]}}
+        beats = [{'id': 'B04', 'key_moment': 'the experiment', 'carries': ['R1']}]
+        sig = c.key_moment_evidence_signals(direction, beats, self.CLAIMS)
+        self.assertEqual(sig, ['key moment B04 carries R1 on single-source claims only (C02): corroborate them, or let '
+                               'the script say whose finding it is'])
+        mats[0]['claims'] = ['C01']                                               # confirmed: nothing to say
+        self.assertEqual(c.key_moment_evidence_signals(direction, beats, self.CLAIMS), [])
+        beats[0].pop('key_moment')                                                # an ordinary beat: not this signal
+        mats[0]['claims'] = ['C02']
+        self.assertEqual(c.key_moment_evidence_signals(direction, beats, self.CLAIMS), [])
 
     def test_a_treatment_sample_needs_no_turning_point(self):
         c = self.core
