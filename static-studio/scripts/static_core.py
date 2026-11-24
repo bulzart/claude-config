@@ -4436,37 +4436,58 @@ def planning_rules_of(rd, video):
         return 1
 
 
-# What each planning rule of 2026-11-24 concerns: a part of direction.json (a section name prefix) or an artifact a
-# revision sends back to work ("@artifact"). A substantive revision of an older direction applies the rules it reaches.
-NEW_RULE_SCOPES = (
-    ('direction_evidence_', ('evidence',)),
-    ('chosen_approach_missing_exploration', ('chosen_approach.', 'approaches')),
-    ('treatment_', ('treatment.',)),
-    ('decision_missing_carries_payoff', ('decision.',)),
-    ('subject_', ('subject.',)),
-    ('payoff_value_', ('subject.',)),
-    ('progressive_payoff_value_', ('subject.',)),
-    ('blueprint_missing_audience_knows', ('@script',)),
-    ('comprehension_signals_', ('@script',)),
-    ('script_review_', ('@script',)),
-    ('script_revised_where_it_matters', ('@script',)),
-    ('final_review_', ('@edit',)),
-    ('shot_', ('@shot-plan',)),
-    ('track_', ('@music',)),
-    ('style_lock_missing', ('@stills',)),
-    ('pace_signals_not_examined', ('@narration',)),
-)
-
-
-def migrated_rule(issue, migration):
-    """The rule behind this issue reaches what the older direction's substantive revisions changed (planning_migration:
-    the sections they changed, the artifacts they sent back to work)."""
-    secs = [str(s) for s in (migration or {}).get('sections') or []]
+def migrated_rule(issue, migration, chosen_treatment=None, chosen_candidate=None):
+    """The planning rule of 2026-11-24 behind this issue reaches what the older direction's substantive revisions
+    changed (planning_migration): the part of direction.json it checks was revised (re-approved), or the artifact it
+    checks was sent back to work (re-made). A rule about one treatment, candidate or value applies when that one was
+    revised or the subject changed, never because another one was."""
+    s = str(issue).split(':')[0]
+    secs = {str(x) for x in (migration or {}).get('sections') or []}
     arts = {str(a) for a in (migration or {}).get('artifacts') or []}
-    for prefix, scopes in NEW_RULE_SCOPES:
-        if str(issue).startswith(prefix):
-            return any((sc[1:] in arts) if sc.startswith('@') else any(s == sc or s.startswith(sc) for s in secs)
-                       for sc in scopes)
+
+    def sec(*keys, prefix=()):
+        return any(x in keys or x.startswith(prefix) for x in secs)
+
+    def remade(*names):
+        return bool(arts & set(names))
+    new_subject = sec('subject.selection.candidate')
+    m = re.fullmatch(r'(\w+?)_review_r\d+_key_moments_not_reconciled_with_the_readers_account', s)
+    if m:
+        return {'script': remade('script'), 'final': remade('edit')}.get(
+            m.group(1), sec('decision.treatment', 'other_treatments', prefix=('treatment.',)))
+    m = re.fullmatch(r'treatment_(\w+?)_does_not_say_how_it_delivers_the_payoff', s)
+    if m:
+        # a new choice of treatment compares them all again
+        return sec('decision.treatment') or (sec(prefix=('treatment.',)) if m.group(1) == str(chosen_treatment)
+                                             else sec('other_treatments'))
+    m = re.match(r'subject_candidate_(\w+?)_(?:needs_its_payoff_assessed|payoff_)', s)
+    if m:
+        # a new choice of subject compares the candidates again
+        return new_subject or (sec(prefix=('subject.chosen',)) if m.group(1) == str(chosen_candidate)
+                               else sec('subject.other_candidates'))
+    if s.startswith('subject_value_to_carry_names_no_payoff_value'):
+        return new_subject or sec('subject.value_to_carry', prefix=(VALUE_KEY,))
+    m = re.match(r'subject_value_(\w+?)_is_the_payoff_but', s)
+    if m:
+        return new_subject or sec('subject.value_to_carry', VALUE_KEY + m.group(1))
+    m = re.match(r'(?:progressive_)?payoff_value_(\w+?)_(is_dropped|reaches_no_key_moment|is_carried_by_one_beat)', s)
+    if m:
+        return (new_subject or sec('subject.value_to_carry', VALUE_KEY + m.group(1))
+                or (m.group(2) != 'is_dropped' and remade('beat-map', 'script')))
+    for prefix, applies in (
+            ('direction_evidence_', lambda: sec('evidence')),
+            ('chosen_approach_missing_exploration', lambda: sec('approaches', prefix=('chosen_approach.',))),
+            ('decision_missing_carries_payoff', lambda: sec(prefix=('decision.',))),
+            ('subject_niche_scope_needs_', lambda: new_subject or sec('subject.scope')),
+            ('blueprint_missing_audience_knows', lambda: remade('script')),
+            ('comprehension_signals_', lambda: remade('script')),
+            ('script_revised_where_it_matters', lambda: remade('script')),
+            ('shot_', lambda: remade('shot-plan')),
+            ('track_', lambda: remade('music')),
+            ('style_lock_missing', lambda: remade('stills')),
+            ('pace_signals_not_examined', lambda: remade('narration'))):
+        if s.startswith(prefix):
+            return bool(applies())
     return False
 
 
@@ -4476,8 +4497,14 @@ def older_plan_advisory(rd, video, issues, warnings):
     there the current rules apply. Returns what moved."""
     if planning_rules_of(rd, video) >= PLANNING_RULES:
         return []
-    mig = read_json(video_dir(rd, int(video)) / 'direction-lock.json').get('planning_migration') or {}
-    moved = [x for x in issues if NEW_PLANNING_RULES.match(str(x)) and not migrated_rule(x, mig)]
+    vd = video_dir(rd, int(video))
+    mig = read_json(vd / 'direction-lock.json').get('planning_migration') or {}
+    d = read_json(vd / 'direction.json') if mig else {}
+    dec = d.get('decision') if isinstance(d.get('decision'), dict) else {}
+    subj = d.get('subject') if isinstance(d.get('subject'), dict) else {}
+    sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
+    moved = [x for x in issues if NEW_PLANNING_RULES.match(str(x))
+             and not migrated_rule(x, mig, dec.get('treatment'), sel.get('candidate'))]
     if moved:
         issues[:] = [x for x in issues if x not in moved]
         warnings.extend(f'advisory (this direction was approved before the planning rules of 2026-11-24, which it '

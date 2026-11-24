@@ -73,6 +73,18 @@ class CaptionTimingTests(unittest.TestCase):
         self.assertFalse(cap.ends_sentence('Mr.'))
         self.assertTrue(cap.ends_sentence('spies.'))
         self.assertTrue(cap.ends_sentence('one?"'))
+        # a cue too wide for the frame (a long tail in a vertical frame) is cut into nearly equal runs that fit
+        narrow = lambda s: len(s) <= 20
+        cut = cap.word_box_cues(words, 3, 3, 0.8, fits=narrow)
+        texts = [c['text'] for c in cut]
+        self.assertEqual(texts, ['NOBODY IN LONDON', 'EVER MET THE', 'MAN WHO RAN', 'TWENTY-SEVEN SPIES.', 'NOT ONE OF',
+                                 'THEM EXISTED.', 'HE INVENTED EVERY', 'SINGLE ONE.'])
+        self.assertTrue(all(a['end'] <= b['start'] for a, b in zip(cut, cut[1:])))
+        self.assertEqual([c['text'] for c in cap.word_box_cues(words, 3, 3, 0.8, fits=lambda s: True)], cues)
+        # the highlight look reads sentence ends the same way: "MR." ends no line
+        hl = cap.look_of('montserrat-highlight')
+        groups = cap.highlight_groups(w2, hl, lambda s: len(s) * 10.0, 10000)
+        self.assertEqual([' '.join(x['w'] for x in g) for g in groups], ['THEN MR. PUJOL SPOKE.', 'J. EDGAR LISTENED'])
 
     def test_the_looks_and_their_fonts(self):
         lg, mh = cap.look_of('luckiest-guy'), cap.look_of('montserrat-highlight')

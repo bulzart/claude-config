@@ -70,10 +70,53 @@ def ends_sentence(word) -> bool:
     return not NOT_SENTENCE_END.fullmatch(core)
 
 
-def word_box_cues(words: list, max_words: int = 3, min_words: int = 3, break_gap: float = 0.8, info=None) -> list:
+def _cut_to_fit(cues: list, words: list, fits, info=None) -> list:
+    """A cue wider than the frame allows is cut into nearly equal runs of its words that each fit (one word a run at
+    the least): a sentence's tail joined to the cue before it must still be readable on one line."""
+    sep = "" if _unspaced(info) else " "
+    out, i = [], 0
+    for c in cues:
+        n = len(_tokens(c["text"], info))
+        ws = words[i:i + n]
+        i += n
+        if n < 2 or fits(c["text"]) or sep.join(w["w"] for w in ws) != c["text"]:
+            out.append(c)
+            continue
+        k = 2
+        while True:
+            size = math.ceil(n / k)
+            runs = [ws[j:j + size] for j in range(0, n, size)]
+            if size == 1 or all(fits(sep.join(w["w"] for w in r)) for r in runs):
+                break
+            k += 1
+        for j, r in enumerate(runs):
+            start = round(r[0]["s"], 2)
+            end = c["end"] if j == len(runs) - 1 else min(round(r[-1]["e"] + 0.05, 2), round(runs[j + 1][0]["s"], 2))
+            out.append({**c, "start": start, "end": round(max(end, start + 0.01), 2), "text": sep.join(w["w"] for w in r)})
+    return out
+
+
+def word_box_fits(font_file, size, W, gap_em, max_px):
+    """Whether a word-box line fits max_px: its words' advances at CapCut's measured em plus the gaps between them, as
+    _word_box_segments lays the line out."""
+    from PIL import ImageFont
+    em = _capcut_em_px(font_file, size, W)
+    f = ImageFont.truetype(font_file, max(1, int(round(em))))
+    k_em = em / max(1, int(round(em)))
+    gap = gap_em * em
+
+    def fits(text):
+        toks = _tokens(text)
+        return sum(f.getlength(t) * k_em for t in toks) + gap * max(0, len(toks) - 1) <= max_px
+    return fits
+
+
+def word_box_cues(words: list, max_words: int = 3, min_words: int = 3, break_gap: float = 0.8, info=None,
+                  fits=None) -> list:
     """The word box's cues: chunk_words_fill (the original, unchanged) on each sentence on its own, so a cue never runs
     across a sentence end; inside a sentence it fills as before (a short tail joins the cue before it, a pause of
-    break_gap s or more still breaks). A cue's end never runs past the next cue's start."""
+    break_gap s or more still breaks). With fits (a line's text -> it fits the frame), a cue too wide is cut into
+    nearly equal runs that fit. A cue's end never runs past the next cue's start."""
     parts, cur = [], []
     for w in words:
         cur.append(w)
@@ -84,7 +127,8 @@ def word_box_cues(words: list, max_words: int = 3, min_words: int = 3, break_gap
         parts.append(cur)
     res = []
     for part in parts:
-        res += chunk_words_fill(part, max_words, min_words, break_gap, info)
+        cues = chunk_words_fill(part, max_words, min_words, break_gap, info)
+        res += _cut_to_fit(cues, part, fits, info) if fits is not None else cues
     for i in range(len(res) - 1):
         if res[i]['end'] > res[i + 1]['start']:
             res[i]['end'] = round(max(res[i + 1]['start'], res[i]['start'] + 0.01), 2)
@@ -426,7 +470,7 @@ def highlight_groups(words, look, width_of, max_width_px):
     more; a longer stretch is cut into nearly equal lines of at most max_words that each fit max_width_px."""
     runs, cur = [], []
     for w in words:
-        if cur and (w['s'] - cur[-1]['e'] >= look['break_gap_s'] or SENTENCE_END.search(cur[-1]['w'])):
+        if cur and (w['s'] - cur[-1]['e'] >= look['break_gap_s'] or ends_sentence(cur[-1]['w'])):
             runs.append(cur)
             cur = []
         cur.append(w)
@@ -660,7 +704,9 @@ def build_draft(d, plan, work, replace=False):
         if not re.fullmatch(r'#[0-9A-Fa-f]{6}', str(box_color or '')):
             raise RuntimeError('the word box needs its colour (captions-plan --box-color #RRGGBB)')
         lw = [{'w': _upper_for(w['w'], plan.get('language')), 's': w['s'], 'e': w['e']} for w in words]
-        cues = word_box_cues(lw, look['words'], look['min_words'], look['break_gap_s'])
+        cues = word_box_cues(lw, look['words'], look['min_words'], look['break_gap_s'],
+                             fits=word_box_fits(look['font_path'], size, W, float(look['gap_em']),
+                                                look['max_line_width'] * W))
         rows, problems = _word_box_plan(cues, lw, 0.0, fps)
         if problems:
             raise RuntimeError('the captions and the narration words do not line up: ' + json.dumps(problems[:3]))
@@ -895,7 +941,12 @@ def preview(plan, out_dir, W=1920, H=1080, background=None, start_s=None, frames
     else:
         box_color = plan.get('box_color') or '#7A3CFF'
         lw = [{'w': _upper_for(w['w'], plan.get('language')), 's': w['s'], 'e': w['e']} for w in words]
-        cues = [c for c in word_box_cues(lw, look['words'], look['min_words'], look['break_gap_s']) if c['end'] > start_s]
+        gap_px = float(look['gap_em']) * em
+
+        def fits(s):
+            return sum(font.getlength(t) for t in s.split()) + gap_px * (len(s.split()) - 1) <= look['max_line_width'] * W
+        cues = [c for c in word_box_cues(lw, look['words'], look['min_words'], look['break_gap_s'], fits=fits)
+                if c['end'] > start_s]
         shots = []
         for c in cues:
             toks = c['text'].split()

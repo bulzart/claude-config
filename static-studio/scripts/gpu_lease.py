@@ -485,10 +485,11 @@ def hold_capcut_build(note: str = "", ttl_s: float = 900.0):
         return None, []
     lock = _desk_lock(folder)
     try:
+        name = f"{OWN_BUILD_PREFIX}{os.getpid()}"
+        _clear_stale(folder, name)          # a build of ours whose process ended (killed mid-build) left its lease
         busy = capcut_store_users()
         if busy:
             return None, busy
-        name = f"{OWN_BUILD_PREFIX}{os.getpid()}"
         path = folder / f"lease-{name}.json"
         record = {"name": name, "need_mb": 0, "t": time.time(), "at": _now_iso(), "ttl_s": float(ttl_s),
                   "pid": os.getpid(), "note": str(note or "writing a CapCut project"), "by": BY}

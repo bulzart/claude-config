@@ -2332,6 +2332,21 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(core.older_plan_advisory(self.run,1,iss,warn),
                          ['shot_S1_of_beat_B01_needs_uncertainty_shown:z','blueprint_missing_audience_knows:w'])
         self.assertEqual(iss,['track_1_needs_serves:y'])                         # new music must say what it serves
+        # a rule about one treatment, candidate or value applies when that one was revised, never because another was
+        iss=[f'treatment_{ch}_does_not_say_how_it_delivers_the_payoff','treatment_ZZ9_does_not_say_how_it_delivers_the_payoff',
+             'decision_missing_carries_payoff']
+        core.older_plan_advisory(self.run,1,iss,[])
+        self.assertEqual(iss,[f'treatment_{ch}_does_not_say_how_it_delivers_the_payoff'])
+        mig={'sections':['subject.value_to_carry.V1'],'artifacts':['beat-map']}
+        self.assertTrue(core.migrated_rule('subject_value_V1_is_the_payoff_but_rests_on_none_of_its_material:x',mig,'T1','C1'))
+        self.assertFalse(core.migrated_rule('subject_value_V2_is_the_payoff_but_rests_on_none_of_its_material:x',mig,'T1','C1'))
+        self.assertFalse(core.migrated_rule('payoff_value_V2_is_dropped:x',mig,'T1','C1'))
+        self.assertTrue(core.migrated_rule('payoff_value_V2_reaches_no_key_moment:x',mig,'T1','C1'))    # the beat map is re-made
+        self.assertFalse(core.migrated_rule('subject_candidate_C2_needs_its_payoff_assessed',mig,'T1','C1'))
+        self.assertTrue(core.migrated_rule('subject_candidate_C2_needs_its_payoff_assessed',
+                                           {'sections':['subject.selection.candidate']},'T1','C1'))    # another subject
+        self.assertFalse(core.migrated_rule('script_review_r2_key_moments_not_reconciled_with_the_readers_account:K1',
+                                            mig,'T1','C1'))
         # a harmless revision (the evidence's wording) reaches nothing and migrates nothing more
         d['evidence']['notes']='one more observation about the openings, nothing that changes the film'
         save(vd/'direction.json',d)

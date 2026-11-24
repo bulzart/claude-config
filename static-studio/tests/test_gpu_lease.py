@@ -393,6 +393,14 @@ class GpuLeaseTests(unittest.TestCase):
         self.assertFalse((self.dir / L.CAPCUT_DESK_LOCK).exists())     # the desk lock is let go at once
         lease.release()
         self.assertFalse(f.exists())
+        # a build of ours whose process ended (killed mid-build) left its lease: the next build clears it at once
+        dead = self.dir / f"lease-{L.OWN_BUILD_PREFIX}999999.json"
+        self.put(f"{L.OWN_BUILD_PREFIX}999999", need_mb=0, pid=999999, by="create-video")
+        self.assertTrue(dead.is_file())
+        lease, busy = L.hold_capcut_build("after a killed build")
+        self.assertEqual(busy, [])
+        self.assertFalse(dead.exists())
+        lease.release()
         self.put("capcut-build-07-4242", need_mb=0, pid=os.getpid(), by="create-clips")
         self.assertEqual([x["name"] for x in L.capcut_store_users()], ["capcut-build-07-4242"])
         lease, busy = L.hold_capcut_build("a test build")

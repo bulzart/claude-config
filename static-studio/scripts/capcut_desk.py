@@ -446,7 +446,7 @@ def cmd_app(a):
                  'windows': capcut_windows()}, 2)
         writing = [x for x in _store_builds() if str(x.get('name') or '').startswith('capcut-build-')]
         if writing:
-            out({'ok': False, 'refused': f"another pipeline is writing a project into CapCut's store ({writing[0].get('name')} "
+            out({'ok': False, 'refused': f"a project is being written into CapCut's store ({writing[0].get('name')} "
                                          f"since {writing[0].get('at')}): CapCut started now could read a half-written "
                                          'project list. Wait until it ends.', 'lease': writing[0]}, 2)
         if not CAPCUT_EXE.is_file():
