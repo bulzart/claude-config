@@ -28,12 +28,13 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" cohorts --run "RUN"
 python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
   --mode standard --niche "military history" --story-form "historical narrative" \
   --refs V001,V002,V003 --language en
-# Option B: group by cohort_id when labels vary across cards
+# Option B: group by cohort_id when labels vary across cards (references of mixed story forms also need
+#   --forms-why "why their lengths compare", 03)
 python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
   --mode standard --cohort-id "long-military-history" \
   --refs V001,V002,V003 --language en
-# Creative direction FIRST (10): 40-plans/video-01/direction.json (evidence, five approaches, strategy,
-# two or three treatments with sample moments), a blind read of the treatments, the decision, the lock.
+# Creative direction FIRST (10): 40-plans/video-01/direction.json (evidence, two or more approaches, strategy,
+# two to four treatments with sample moments), a blind read of the treatments, the decision, the lock.
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind treatment
 #   -> spawn ONE fresh agent: "Read only <packet> and follow it exactly." It writes the findings file.
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run "RUN" --video 1 --kind treatment
@@ -141,7 +142,7 @@ creative exclusions, `religion_superstition` (religious or superstition) and `ho
 severity: they are not harm. `action`: `exclude` (with `avoid`; `depends` for what goes with it), `restrict_visuals`
 (safety only) or `keep`, each with `why` (an exclusion: why restricting is not enough, or why it is a device and not a
 plain fact). `avoid` is required on an exclusion and optional on a restriction (what must never be shown); both are
-then flagged in script lines and picture prompts and listed in the reviewers' house rules. Optional `not_segments`:
+then flagged in script lines and picture prompts (the readers get only the standing house rules, never these). Optional `not_segments`:
 `[{"at": "mm:ss", "what": "...", "why": "..."}]`, things looked at and cleared. `sexual_content_minors` is always excluded; `high` is never kept as it is; `low` is never excluded;
 `evidence` cites the times seen or heard (mm:ss); every `unsure` segment needs a closer look (`inspect-window`)
 overlapping it; the shot sheets must exist
@@ -161,7 +162,7 @@ with each file's hash.
 
 ## Reference cards (agent generated)
 
-Create `20-analysis/cards/V001.json` for every unique video in `00-inventory/references.json`. Required minimum for CLI grouping: `reference_id`, `niches` (list of category names), `story_form` (one primary form), and `viewer_experience` (list of timed meaningful moments). Optionally add `cohort_id` (a stable lowercase slug, e.g. `"long-military-history"`) when niche/story_form labels may vary across cards for comparable videos—any cards sharing a `cohort_id` form their own cohort group and can be used directly with `length --cohort-id`. The detailed suggested schema is in manual 01; include actual timestamps, source vs interpretation, script delivery, shot/form analysis and tradeoffs.
+Create `20-analysis/cards/V001.json` for every unique video in `00-inventory/references.json`. Required minimum for CLI grouping: `reference_id`, `niches` (list of category names), `story_form` (one primary form), and `viewer_experience` (list of timed meaningful moments). Optionally add `cohort_id` (a stable lowercase slug, e.g. `"long-military-history"`) when niche/story_form labels may vary across cards for comparable videos—any cards sharing a `cohort_id` form their own cohort group and can be used directly with `length --cohort-id` (references of different story forms need `--forms-why` for a Standard length, 03; the lock keeps `story_forms` and `forms_why`). The detailed suggested schema is in manual 01; include actual timestamps, source vs interpretation, script delivery, shot/form analysis and tradeoffs.
 
 **Important:** `cohorts` only groups by reported niche/form and measured ffprobe duration. Agents, not a keyword regex, decide what a video is actually about. A video can be in two niches, but a 50-second Short and a 15-minute episode must not share one Standard duration lock. If group spread is large, explicitly choose a narrow set of comparable IDs for `length`.
 
@@ -202,7 +203,7 @@ Minimal `40-plans/video-01/blueprint.json`:
      "note": "for the team only: never sent, never spoken"},
     {"id": "L004", "text": "The closing line.", "pause_total_s": 3.0, "pause_via": "edit",
      "pause_purpose": "the last picture stays while the ending settles",
-     "pause_picture": "the opening room again, now empty: the change the film was about",
+     "pause_picture": "the supply road at dusk, empty, held while the last line settles",
      "pause_sound": "the bed resolves on its last phrase, then the end"}
   ]
 }
@@ -258,11 +259,25 @@ Minimal `40-plans/video-01/blueprint.json`:
 
 **These snippets are schema examples, not executable complete 12-minute scripts**. A real plan must have sufficient original words, all lines covered by a gap-free map to exactly the locked target, independent sources for all consequential facts, an actual editorial review and complete audio. Copying these snippets alone should correctly fail `plan-check`.
 
+**Examples from one kind of film.** Most examples in this manual follow one factual history story (a commander's supply
+decision); the topic-discovery example below is a geography phenomenon. They show each file's shape, not how another
+kind of video is built. How the same fields might read elsewhere (illustrations, not templates):
+
+- A tutorial (fixing a door that will not close): `payoff.shape` `progressive`, each step leaving one cause found and
+  fixed; the blueprint gives `reward_shape` ("each step removes one cause, so a viewer who stops at any step has
+  something fixed"); no key moment is invented, and several beats carry the payoff value.
+- A science explainer (why the sky is blue at noon and red at dusk): `builds_to` a mechanism understood; the
+  `ending_payoff` is where one cause explains both colours, and that beat is the key moment, its `depends_on` naming the
+  beat that showed sunlight holding every colour.
+- A comedy (a man who cannot stop apologising): `several`, each escalation paying its own laugh; `factual: false`, its
+  material `invented`; the blueprint's `reward_shape` says how the laughs grow, and the biggest turns are key moments
+  whose `significance.reward` is the laugh and whose `depends_on` names the setup it pays.
+
 ## Audio manifest (automatically produced with paid TTS)
 
-Under `50-audio/video-01/`, the TTS tool creates `manifest.json`: voice/model/language, `voice_lock` (the setup recorded with), `chunks` (line ranges, the `beats` each part carries, `text_sha256` of the canonical text and `sent_sha256` of exactly what was sent, characters), `finished_parts`, `part_revs` (the direction revision each part was recorded under), `part_records` (per finished part: voice, model, settings, voice revision, treatment, direction revision, both fingerprints, the context sent with it, the request id and the credits billed) and `status`. Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. Parts keep their line boundaries once recorded. A part whose lines, pronunciation, voice setup or direction changed is listed by the dry run, and `--rerecord-changed` re-records just those, with old takes in `superseded/` and the change in `history`; `--rerecord-parts N --reason` redoes a part after listening. Adding or removing lines, or changing the voice, model or language, needs `--rechunk`/`--archive-existing` (the folder moves to `video-NN-archive-<time>`). `audio-check` disallows a partial or missing line/audio, mixed voice setups, a line not heard or a tag read aloud, rejects a duration outside the audio tolerance, and rejects a narration that, with its planned edit holds, cannot fit the export window. `tts --max-parts 1 --execute` stops after the first part (`mode: partial_by_design_max_parts`) so it can be measured before paying for the rest.
+Under `50-audio/video-01/`, the TTS tool creates `manifest.json`: voice/model/language, `voice_lock` (the setup recorded with), `chunks` (line ranges, the `beats` each part carries, `text_sha256` of the canonical text and `sent_sha256` of exactly what was sent, characters), `finished_parts`, `part_revs` (the direction revision each part was recorded under), `part_records` (per finished part: voice, model, settings, voice revision, treatment, direction revision, both fingerprints, the context sent with it, the request id, the credits billed (`credits_billed`) and `recovered_from_history`) and `status`. Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. Parts keep their line boundaries once recorded. A part whose lines, pronunciation, voice setup or direction changed is listed by the dry run, and `--rerecord-changed` re-records just those, with old takes in `superseded/` and the change in `history`; `--rerecord-parts N --reason` redoes a part after listening. Adding or removing lines, or changing the voice, model or language, needs `--rechunk`/`--archive-existing` (the folder moves to `video-NN-archive-<time>`). `audio-check` disallows a partial or missing line/audio, mixed voice setups, a line not heard or a tag read aloud, rejects a duration outside the audio tolerance, and rejects a narration that, with its planned edit holds, cannot fit the export window. `tts --max-parts 1 --execute` stops after the first part (`mode: partial_by_design_max_parts`) so it can be measured before paying for the rest.
 
-`logs/elevenlabs-ledger.jsonl` (the run's spend record, two lines per billed request: narration parts, probes, trials, Voice Design): first `{"phase": "pending", "attempt_id", "at", "kind", "video", "part" or "trial"/"run"/"budget", "model_id", "voice_id", "characters", "context_characters", "max_credits", "balance_before"}` before it is sent, then the same with `"phase": "done"`, `"ok", "error", "request_id", "character_cost_header", "balance_after", "delta"` and, for a trial, `"credits_billed"` (a request cut off by a crash keeps only its pending line; one recovered from the account history gets `"phase": "recovered"`). `delta` is the balance drop (other use of the account in between can only push it up), `character_cost_header` ElevenLabs' own `character-cost` reply header; `logs/elevenlabs-models.json` caches what ElevenLabs reports for each model (credits per character, maximum characters per request) for a day.
+`logs/elevenlabs-ledger.jsonl` (the run's spend record, two lines per billed request: narration parts, probes, trials, Voice Design): first `{"phase": "pending", "attempt_id", "at", "kind", "video", "part" or "trial"/"run"/"budget", "model_id", "voice_id", "characters", "context_characters", "max_credits", "balance_before", "request_sha256", "pid"}` before it is sent, then the same with `"phase": "done"`, `"ok", "error", "outcome", "request_id", "character_cost_header", "balance_after", "delta"` and, for a trial, `"credits_billed"` (a request cut off by a crash keeps only its pending line; one recovered from the account history gets `"phase": "recovered"`). `outcome` is `completed`, `failed` (a 4xx: answered before any work, never billed), `uncertain` (a timeout, a lost connection or a 5xx) or `charged_incomplete` (billed, the answer unusable). An attempt whose outcome is unknown is settled before the same request is sent again: from the account history, or by a `"phase": "reconciled"` row with the reason when the user allowed one new attempt (`--retry-unreconciled`). `delta` is the balance drop (other use of the account in between can only push it up), `character_cost_header` ElevenLabs' own `character-cost` reply header; `logs/elevenlabs-models.json` caches what ElevenLabs reports for each model (credits per character, maximum characters per request) for a day.
 
 ## Voice lock (`voice-pick` writes it; `narration-measure` writes `measured`; `tts`, `voice-probe` and `plan-check` read it)
 
@@ -316,7 +331,7 @@ A variant left blank takes the voice lock's voice, model and settings; `tags` is
 `50-audio/video-01/line-times.json` (from `narration-measure`) contains:
 - `complete`, `script_sha256` (stale once the script changes), `parts[]` (offset, duration, fingerprint, words, speech, WPM, alignment);
 - `wpm` (while speaking), `overall_wpm` (pauses included), `per_line_overhead_s`, `natural_line_gap_median_s`, `tags_measured[]` (line, tag, gap, excess), `pause_profile` (the same keys `pace-profile` gives for the references);
-- `unheard_lines` (lines still missing after their own window was heard again), `rechecked_lines[]`, `tags_read_aloud[]`, `possible_repeats[]`, `seams[]` (each join: gap, natural gap, `seam_hold_s`, pace, level and pitch range on each side, words heard twice), `beats[]` (pace while speaking and overall, longest gap, numbers per minute, tags, what the beat asked for), `pronunciation_heard[]`;
+- `unheard_lines` (lines still missing after their own window was heard again), `missing_runs[]` (a run of four or more words of a heard line still not heard after its own listen: `line`, `words`, `count`), `rechecked_lines[]`, `tags_read_aloud[]`, `possible_repeats[]`, `seams[]` (each join: gap, natural gap, `seam_hold_s`, pace, level and pitch range on each side, `level_step_lu`: the voice's level step across it, from 3 s of speech on each side; words heard twice), `beats[]` (pace while speaking and overall, longest gap, numbers per minute, tags, what the beat asked for), `pronunciation_heard[]`;
 - `lines[]`: `{id, index, part, start_s, end_s, matched_words, words, word_times, gap_after_s, gap_span_s, gap_basis, gap_is_tail?, heard_on_recheck?, interpolated?}`; `gap_after_s` is the silence after the line read from the audio (`gap_basis` `audio`; `whisper` when no quiet run was found; `unknown`, with `null`, while the next line is not recorded); `gap_subrun_s` and `gap_insert_at_s` (the quiet stretch an added silence goes into and where: never into a word, a release or a breath), `gap_floor_under_speech_db` (the voice's own quiet there, dB under its speech), `gap_other_material_s` (a breath or a click inside the silence); `cadence` (with the delivery pass): how the line ends (`last_vowel_vs_line_st`, `last_vowel_fall_st`, `soft_end_s`, `end_level_db`) and the next begins (`next_reset_st`, `next_lead_in_s`, `next_onset_level_db`), and `cadence_usual` the same voice's medians; `line_gaps_from_audio` sums the gaps up (median, p10, p90, shortest, longest); `word_times` is each comparable token's `[start_s, end_s]` on the narration (`null` where Whisper did not hear it): what the captions are timed by.
 
 `70-edit/video-01/captions.json` (from `captions-plan`): `{video, captions: "on"|"off", style: "luckiest-guy"|"montserrat-highlight", box_color?, box_color_why?, language, fps, words: [{w, s, e, line, timing}], timing_evidence: {whisper, shared, between, words, whisper_share}, holds_applied, made_from: {script_sha256, narration_for_edit_sha256, line_times_measured_at, edit_plan_made_at}}`. `w` is the word as the caption shows it (the script's spelling and punctuation), `s`/`e` its time on the edit's timeline; `timing` says where the time came from: `whisper` (its own word time), `shared` (a number written over two words, its time split by length) or `between` (no time from Whisper: placed between its timed neighbours by length). `captions-built.json` beside it records the last build (draft, canvas, size, tracks, texts, the read-back). `state.json` holds the choice: `captions` (`on`/`off`), `caption_style`, `captions_chosen_at`, and `captions_history[]` when the user changed it.
@@ -345,7 +360,9 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
 {
   "video": 1,
   "subject": {
-    "scope": {"kind": "niche", "user_words": "geography", "niche": "geography"},
+    "scope": {"kind": "niche", "user_words": "geography", "niche": "geography",
+              "understood_as": "how a place on Earth works: the forces that shape it and what they make it look like",
+              "boundary": "it stops being geography when the place is only a backdrop for a person's story"},
     "audience_value": "this audience comes to understand how a place works, not to collect facts about it",
     "from_references": [{"ref": "V017", "at": "02:10-02:40", "observed": "the map zooms out as the cause is named",
                          "interpretation": "the relation is shown before it is explained, so it lands"}],
@@ -360,27 +377,31 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
        "runtime": {"progression": [{"adds": "the eerie photographs, then the question they raise", "material": ["M1"]},
                                    {"adds": "...", "material": ["M2", "M3"]}],
                    "verdict": "sustains", "why": "...", "material_minutes": 9},
+       "payoff": {"shape": "builds_to", "rests_on": ["M1", "M3"], "why_substantial": "...", "needs_first": "...",
+                  "worth_the_buildup": "..."},
        "feasibility": "..."},
       {"id": "T2", "subject": "...", "...": "researched more lightly: sources may stand in for claims"}
     ],
     "selection": {"candidate": "T1", "why": "...", "decisive_material": ["M1"],
                   "over_alternatives": [{"candidate": "T2", "why_not": "..."}]},
     "value_to_carry": [{"id": "R1", "what": "...", "why_it_matters": "...", "certainty": "established",
-                        "rests_on": ["M1"]},
+                        "rests_on": ["M1"], "payoff": true},
                        {"id": "R2", "what": "...", "why_it_matters": "...", "certainty": "contested", "hedge": "...",
                         "rests_on": ["M2"], "needs_first": ["R1"]}],
     "dropped": []
   },
   "evidence": {
-    "references": ["V017", "V018"],
+    "references": ["V017", "V018", "V031"],
     "observations": [{"ref": "V017", "at": "04:00-05:00", "what": "the voice confides while the picture holds one face", "label": "O"}],
+    "borrowed": [{"ref": "V031", "technique": "a cutaway drawing that builds up one layer at a time as each is named",
+                  "not_taken": "its subject (a kitchen recipe) and what a cooking video assumes"}],
     "unknowns": ["retention: no analytics supplied"]
   },
   "approaches": [
     {"id": "A1", "changes": ["structure"], "pitch": "...", "strongest_case": "...", "long_form_risk": "...",
      "challenges_reference_formula": true}
   ],
-  "chosen_approach": {"id": "A1", "why": "...", "runner_up": "A3", "why_not_runner_up": "..."},
+  "chosen_approach": {"id": "A1", "why": "...", "runner_up": "A3", "why_not_runner_up": "...", "exploration": "..."},
   "strategy": {"why_this_idea": "...", "viewer_experience": "...", "progression": "...", "fits_and_forced": "...",
                "facts_as_experience": "...", "picture_contribution": "...", "sound_and_breath": "...",
                "distinct_from_references": "..."},
@@ -388,25 +409,34 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
     {"id": "T1", "name": "...", "narrator": "...", "writing_voice": "...", "structure_and_pace": "...",
      "visual_language": "...", "sound": "...", "audiovisual_relationship": "...", "emotional_course": "...",
      "evidence_used": "...", "departures": "...", "risks": "...",
+     "carries_values": [{"value": "R1", "how": "..."}],
      "samples": {"opening": {"narration": "50+ words as spoken", "picture": "what the viewer sees"},
                  "quiet_middle": {"narration": "...", "picture": "..."},
                  "turning_point": {"narration": "...", "picture": "..."}}}
   ],
-  "decision": {"treatment": "T1", "why": "...", "taken_from_others": "..."}
+  "decision": {"treatment": "T1", "why": "...", "taken_from_others": "...", "carries_payoff": "..."}
 }
 ```
 
-`subject` comes first (02 "Finding the subject"): the user's scope (for a subject, topic or story also
-`understood_as` and `boundary`, and `selection.how_scope_kept`), what this audience values, what the references show
+`subject` comes first (02 "Finding the subject"): the user's scope (`understood_as` and `boundary` for every kind, a
+niche included; for a subject, topic or story also `selection.how_scope_kept`; in a run grouped by `--cohort-id`,
+`niche` is the cohort id or a niche its references' cards name, never the internal `__cohort__:` label), what this
+audience values, what the references show
 (observed apart from interpreted), the researched candidates (at least two in an open scope; each material item with
 its `id` and certainty: established on `claims` whose sources the ledger says were read, reasoned `from` established
 items, contested with its `hedge`, speculative or assumed with its `framed_as`, invented only when not factual), each
 candidate's `runtime` (`progression` of what the viewer newly gets on which material, `verdict`, `why`, `shortfall`;
-`runtime_decision` with the user's words when the chosen one is short or uncertain), the choice (`decisive_material`,
+`runtime_decision` with the user's words when the chosen one is short or uncertain) and `payoff` (`shape`: `builds_to`,
+`several` or `progressive`; `rests_on`, the candidate's own material ids in a factual subject; `why_substantial`;
+`needs_first`; `worth_the_buildup`; required for the chosen one, a warning for an alternative), the choice
+(`decisive_material`,
 confirmed when established; `over_alternatives`, one reason per alternative) and `value_to_carry` (`rests_on`,
-`needs_first`), which the beat map `carries` in that order (with `hedges` for a contested, speculative or assumed value
+`needs_first`; the value the payoff delivers marked `"payoff": true`, resting on the payoff's material: never dropped,
+reaching a key moment for `builds_to` or `several` and more than one beat for `progressive`), which the beat map
+`carries` in that order (with `hedges` for a contested, speculative or assumed value
 in an ordinary beat), the script says (a claim's `line_refs` inside the carrying beat) and the key moments' shots show
-(`carries_significance`). A direction locked before `subject` existed keeps working, with a warning.
+(`carries_significance`; every shot of a beat that carries an uncertain value says how its picture keeps it so,
+`uncertainty_shown`, 04). A direction locked before `subject` existed keeps working, with a warning.
 
 `30-research/video-01/sources.md`, one entry per source (the `Access` line is what the checks read):
 
@@ -420,9 +450,14 @@ in an ordinary beat), the script says (a claim's `line_refs` inside the carrying
 
 `30-research/video-01/claims.json`: `{"claims": [{"id": "C01", "claim": "...", "sources": ["S1"], "confidence":
 "confirmed", "note": "...", "line_refs": ["L034"]}]}`; confidence is confirmed (a primary record, or two or more
-independent credible sources, read), likely (one credible source), disputed or legend. Five approaches (at least three of
-perspective/scale/structure/voice/visualization among them, at least one that challenges the references' formula), two
-or three treatments. `direction-lock.json` keeps the hash, the time, the
+independent credible sources, read), likely (one credible source), disputed or legend. At least two approaches
+(between them at least three of perspective/scale/structure/voice/visualization, at least one that challenges the
+references' formula), with `chosen_approach.exploration`: what range of ways to tell it was considered and why these
+approaches cover it. Two to four treatments, each with `carries_values` (`[{value, how}]`: how it delivers every payoff
+value, in its own terms), and the `decision` with `carries_payoff` (how the chosen treatment makes the payoff land); a
+change to the chosen treatment's `carries_values` marks the beat map and script. Evidence that cites a reference
+outside the locked niche declares it in `evidence.borrowed` (`[{ref, technique, not_taken}]`: the technique borrowed,
+and the subject assumptions not taken). `direction-lock.json` keeps the hash, the time, the
 treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
 follows: `production_rev` (raised by a change that alters what production must do), `sections` (one hash per field,
 so a revision knows exactly what changed; the chosen subject's own description, its research, the other
@@ -491,8 +526,14 @@ With `capcut_draft`, `timeline-check` reads the narration's segments (file, time
 ## Media records (written by the gated workers, never by hand)
 
 `60-visuals/video-01/stills-provenance.json`: `{"video": 1, "images": {"<file>": {"shot_id", "beat_id",
-"frame_prompt_sha256", "production_rev", "treatment", "engine", "made_at"}}}`. `70-edit/video-01/music-provenance.json`:
-the same with `beats` and `caption_sha256` per track. `timeline-check` and `release-check` trace the project through
+"uncertainty_shown", "frame_prompt_sha256", "production_rev", "treatment", "engine", "submitted_prompt",
+"submitted_prompt_sha256", "drew_from", "file_sha256", "made_at"}}}`; a FLUX still adds `precision` (int8), `comfyui`
+(its version), `models` and `model_bytes`, `request_sha256`, `caption_checks`, `caption_notes`, `seed`, `steps`, `size`
+and `refs` (each with its sha256). `submitted_prompt` is what the image model drew (the upsampler's caption, or the
+approved request itself); `drew_from` says which: `caption`, `request`, or `request (its caption was refused)`;
+`uncertainty_shown` appears for a shot that has one (04). `70-edit/video-01/music-provenance.json`: the same with
+`beats`, `caption_sha256`, `serves` and `direction` (the treatment's `sound`, and per beat its `sound_direction`,
+`experience` and `pace`, with a key moment's meaning) per track. `timeline-check` and `release-check` trace the project through
 them. Pictures made any other way (supplied by the user, drawn) are accepted as a set with `direction-reapprove
 --artifact stills --reason "..."`, on record.
 

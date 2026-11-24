@@ -122,13 +122,13 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(len(groups),2)
         self.assertEqual(next(x for x in groups if x['niche']=='military history')['median_s'],600)
         r=cli('length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
-              '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145)
+              '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145,'--pace-why','the test narrator reads at this pace')
         self.assertEqual(r['locked_target_s'],600)
         self.assertEqual(r['pace_wpm_source'],'explicit')
         cli('length','--run',self.run,'--video',1,'--mode','own','--niche','military history',
-            '--story-form','historical narrative','--minutes',12,'--pace-wpm',145,expected=2)
+            '--story-form','historical narrative','--minutes',12,'--pace-wpm',145,'--pace-why','the test narrator reads at this pace',expected=2)
         cli('length','--run',self.run,'--video',2,'--mode','own','--niche','how-to',
-            '--story-form','tutorial','--minutes',12,'--pace-wpm',145,expected=2)
+            '--story-form','tutorial','--minutes',12,'--pace-wpm',145,'--pace-why','the test narrator reads at this pace',expected=2)
 
     # ---- the creative process, run through the real CLI the way an agent would (no media is generated)
     def measure_refs(self):
@@ -176,15 +176,21 @@ class StaticStudioTests(unittest.TestCase):
                     'audiovisual_relationship','emotional_course','evidence_used','departures','risks')},
                 'samples':{m:{'narration':sample(tid,m),
                               'picture':f'{tid} picture for the {m}: a wide frame with one figure and the road ahead.'}
-                           for m in ('opening','quiet_middle','turning_point')}})
+                           for m in ('opening','quiet_middle','turning_point')},
+                'carries_values':[{'value':'R1','how':f'the {tone} narrator lets the battle show what the order made possible'}]})
         def cand(cid, subject, claim, what, why, reward, material, step):
             return {'id':cid,'subject':subject,'value_form':'a consequential decision','factual':True,
                     'what_happens':say(what),'why_it_matters':say(why),'reward':say(reward),
                     'strongest_material':[{'id':'M1','what':material,'certainty':'established','claims':[claim]}],
                     'runtime':{'progression':[{'adds':step,'material':['M1']}],'verdict':'sustains',
                                'why':say('each discovery opens the next, and the consequence fills the end')},
-                    'feasibility':say('maps and period artifacts can show every step')}
-        subject={'scope':{'kind':'niche','user_words':'military history','niche':'military history'},
+                    'feasibility':say('maps and period artifacts can show every step'),
+                    'payoff':{'shape':'builds_to','rests_on':['M1'],'why_substantial':say('the viewer sees a quiet order decide a loud outcome'),
+                              'needs_first':'what the army needed in order to move',
+                              'worth_the_buildup':say('each step of the build-up is a discovery of its own')}}
+        subject={'scope':{'kind':'niche','user_words':'military history','niche':'military history',
+                          'understood_as':'wars, campaigns and the decisions and logistics that shaped them',
+                          'boundary':'a story whose subject is not a war or a campaign, only told with its techniques'},
                  'audience_value':say('viewers of this niche come for decisions whose consequences they can follow'),
                  'from_references':[{'ref':'V001','at':'00:10-00:30','observed':'the narrator names the cost before the decision',
                                      'interpretation':'the stakes come before the turn, so the turn lands'}],
@@ -203,7 +209,7 @@ class StaticStudioTests(unittest.TestCase):
                               'over_alternatives':[{'candidate':'T2','why_not':say('the map error rests on one later study only')}]},
                  'value_to_carry':[{'id':'R1','what':'the supply decision decided the battle',
                                     'why_it_matters':'without it the army could not have moved',
-                                    'certainty':'established','rests_on':['M1']}]}
+                                    'certainty':'established','rests_on':['M1'],'payoff':True}]}
         return {'video':1,
                 'subject':subject,
                 'evidence':{'references':['V001','V002'],
@@ -215,13 +221,15 @@ class StaticStudioTests(unittest.TestCase):
                                'long_form_risk':say('risk',axis),'challenges_reference_formula':i==3}
                               for i,axis in enumerate(['perspective','scale','structure','voice','visualization'],1)],
                 'chosen_approach':{'id':'A3','why':say('the structure approach wins'),'runner_up':'A1',
-                                   'why_not_runner_up':say('the perspective approach repeats the references')},
+                                   'why_not_runner_up':say('the perspective approach repeats the references'),
+                                   'exploration':say('perspective, scale, structure, voice and picture were each tried')},
                 'strategy':{k:say('strategy',k.replace('_',' ')) for k in
                             ('why_this_idea','viewer_experience','progression','fits_and_forced','facts_as_experience',
                              'picture_contribution','sound_and_breath','distinct_from_references')},
                 'treatments':treatments,
                 'decision':{'treatment':'T1','why':say('the wry friend holds twenty minutes'),
-                            'taken_from_others':say('the hushed close of the second treatment')}}
+                            'taken_from_others':say('the hushed close of the second treatment'),
+                            'carries_payoff':say('the friend sets up what the army needs, then lets the battle answer it')}}
 
     def clear_development(self, kind):
         """A reader for whom the whole video is clear and pays: the three judgements given, nothing to find."""
@@ -243,11 +251,32 @@ class StaticStudioTests(unittest.TestCase):
         doc={'reviewer':'test reader','findings':findings}
         if kind in ('script','final'):
             doc['developments']=developments if developments is not None else self.clear_development(kind)
+        if kind=='treatment':
+            meta=json.loads(Path(packet['packet']).with_suffix('.json').read_text(encoding='utf-8')) \
+                if Path(packet['packet']).with_suffix('.json').is_file() else {}
+            pm=next(iter(sorted((self.run/'40-plans/video-01/reviews').glob('packet-treatment-r*.json'))),None)
+            meta=json.loads(pm.read_text(encoding='utf-8')) if pm else meta
+            if meta.get('scope_request'):
+                doc['on_request']={lab:'yes: it stays within what was asked' for lab in meta.get('labels') or {}}
         save(Path(packet['findings_file']),doc)
         rec=cli('review-record','--run',self.run,'--video',1,'--kind',kind,expected=expected_record)
         if answers is not None:
-            save(Path(rec['answers_file']),{'answers':answers})
+            self.answer_file(rec['answers_file'],{'answers':answers})
         return packet,rec
+
+    def answer_file(self, path, doc, reconcile='same'):
+        """The director's answers written into the answers file review-record started (its reconciliation block kept);
+        each key moment reconciled with the reader's account as `reconcile` says ('same' by default, None to leave it)."""
+        path=Path(path)
+        cur=json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+        cur.update(doc)
+        if reconcile is not None:
+            for bid,r in (cur.get('reconcile') or {}).items():
+                if isinstance(reconcile,dict):
+                    r.update(reconcile.get(bid) or {})
+                elif not r.get('verdict'):
+                    r.update(verdict=reconcile,note='the reader took the meaning the beat map plans for this moment')
+        save(path,cur)
 
     def lock_direction(self, vd):
         save(vd/'direction.json',self.direction_doc())
@@ -262,12 +291,13 @@ class StaticStudioTests(unittest.TestCase):
 
     def write_plan(self, lock=True, review_script=True):
         cli('length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
-            '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145)
+            '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145,'--pace-why','the test narrator reads at this pace')
         vd=self.run/'40-plans/video-01'
         save(vd/'blueprint.json',{'audience_promise':'Understood decision','central_question':'What happened?',
                                 'narrative_approach':'Third-person procedural account of a single decision',
                                 'why_this_length':'Five discoveries','original_angle':'Logistical stakes',
                                 'human_lens':'People at crossroads','ending_payoff':'An earned conclusion',
+                                'audience_knows':'that wars need supplies, but not how a single order moved them',
                                 'visual_grammar':'Maps and restrained artifacts','factuality':'factual',
                                 'research_sources':['S1','S2'],'title':'A test title'})
         self.measure_refs()
@@ -472,11 +502,11 @@ class StaticStudioTests(unittest.TestCase):
         save(vd/'direction.json',d)
         issues=core.direction_facts(self.run,1)['issues']
         for issue in ('approaches_differ_on_fewer_than_3_axes','no_approach_challenges_the_reference_formula',
-                      'direction_needs_2_to_3_distinct_treatments',
+                      'direction_needs_2_to_4_distinct_treatments',
                       'treatment_T1_sample_quiet_middle_narration_under_50_words',
                       'direction_evidence_without_av_profile:V003'):
             self.assertIn(issue,issues)
-        self.assertIn('direction_needs_2_to_3_distinct_treatments',cli('direction-lock','--run',self.run,'--video',1,expected=2)['details'])
+        self.assertIn('direction_needs_2_to_4_distinct_treatments',cli('direction-lock','--run',self.run,'--video',1,expected=2)['details'])
         save(vd/'direction.json',self.direction_doc())
         self.assertEqual(core.direction_facts(self.run,1)['issues'],[])
 
@@ -488,9 +518,9 @@ class StaticStudioTests(unittest.TestCase):
         ans=Path(rec['answers_file'])
         self.assertIn('script_review_r1_unanswered:F1',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
         cli('review-packet','--run',self.run,'--video',1,'--kind','script',expected=2)   # no new read before answering
-        save(ans,{'answers':{'F1':{'action':'kept','note':'we like the recap a lot here'}}})   # a major is never just kept
+        self.answer_file(ans,{'answers':{'F1':{'action':'kept','note':'we like the recap a lot here'}}})   # a major is never just kept
         self.assertIn('script_review_r1_unanswered:F1',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
-        save(ans,{'answers':{'F1':{'action':'revised','lines':['L003'],'note':''}}})           # claimed, not done
+        self.answer_file(ans,{'answers':{'F1':{'action':'revised','lines':['L003'],'note':''}}})           # claimed, not done
         self.assertIn('script_review_r1_revised_but_unchanged:F1',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
         script=json.loads((vd/'script.json').read_text())
         script['lines'][2]['text']='A shorter, sharper third line.'
@@ -586,7 +616,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('script_forecast_misses_locked_length_by_over_8pct',res['issues'])
         self.assertEqual(lock_before,(vd/'length-lock.json').read_bytes())   # no creative step touches the lock
         cli('length','--run',self.run,'--video',1,'--mode','own','--niche','military history',
-            '--story-form','historical narrative','--minutes',3,'--pace-wpm',145,expected=2)
+            '--story-form','historical narrative','--minutes',3,'--pace-wpm',145,'--pace-why','the test narrator reads at this pace',expected=2)
 
     def test_final_review_follows_the_exact_export(self):
         vd=self.write_plan()
@@ -627,7 +657,7 @@ class StaticStudioTests(unittest.TestCase):
             self.assertTrue(Path(x).is_file() and Path(pk['packet']).parent in Path(x).parents, x)
         self.assertNotIn(str(self.run),ptext)
         self.assertIn('final_review_r1_unanswered:F1',cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)['issues'])
-        save(Path(rec['answers_file']),{'answers':{'F1':{'action':'kept','note':'the hold is the planned breath'}}})
+        self.answer_file(Path(rec['answers_file']),{'answers':{'F1':{'action':'kept','note':'the hold is the planned breath'}}})
         rel=cli('release-check','--run',self.run,'--video',1,'--file',exp,expected=2)
         self.assertFalse([x for x in rel['issues'] if x.startswith('final_')])   # other gates (no audio here) still block
         self.assertEqual(rel['release_status'],'blocked')
@@ -759,7 +789,7 @@ class StaticStudioTests(unittest.TestCase):
         for k in list(HELD):
             script['lines'][4].pop(k,None)
         save(vd/'script.json',script)                                   # the text is the same, the silence is gone
-        save(Path(rec['answers_file']),{'answers':{'F1':{'action':'revised','lines':['L005'],
+        self.answer_file(Path(rec['answers_file']),{'answers':{'F1':{'action':'revised','lines':['L005'],
                                                          'note':'the planned silence after this line is removed'}}})
         issues=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
         self.assertFalse([x for x in issues if 'revised_but_unchanged' in x])
@@ -829,6 +859,9 @@ class StaticStudioTests(unittest.TestCase):
                for i in range(1,6)]
         shots[4]['carries_significance']='the closing map shows the depots that made the march possible'
         save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        if (self.run/'40-plans/video-01/direction-lock.json').is_file() and \
+                not (self.run/'60-visuals/video-01/style-lock.json').is_file():
+            cli('style-lock','--run',self.run,'--video',1,'--style-prompt','painterly, soft edges')
         return shots
 
     def test_generation_follows_the_approved_plan(self):
@@ -845,7 +878,8 @@ class StaticStudioTests(unittest.TestCase):
         self.assertTrue(ok['direction']['visual_language'])                                         # in the locked look
         # The thumbnail needs the locked direction, not a shot; an unknown purpose is refused.
         thumb={'run':str(self.run),'video':1,'purpose':'thumbnail',
-               'images':[{'prompt':'a bold close portrait of a surveyor at dawn with a broken bridge behind','out':str(stills/'thumb.png')}]}
+               'images':[{'prompt':'a bold close portrait of a surveyor at dawn with a broken bridge behind, painterly, soft edges',
+                          'out':str(stills/'thumb.png')}]}
         save(jobp,thumb); self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
         thumb['purpose']='poster'; save(jobp,thumb)
         self.assertIn('job_purpose_must_be:shots/treatment_preview/thumbnail',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
@@ -873,7 +907,8 @@ class StaticStudioTests(unittest.TestCase):
             self.assertIn('job_must_name_its_run_and_video',p.stdout,worker)
         # Music names the beats it scores.
         music={'op':'generate','run':str(self.run),'video':1,
-               'tracks':[{'video':1,'beats':['B02','B03'],'caption':'a low warm drone that thins out','duration':30,'out':str(self.home/'bed.wav')}]}
+               'tracks':[{'video':1,'beats':['B02','B03'],'caption':'a low warm drone that thins out','duration':30,'out':str(self.home/'bed.wav'),
+                          'serves':'the drone holds the waiting of B02 and thins as B03 opens up'}]}
         mp=self.home/'music-job.json'; save(mp,music)
         self.assertTrue(cli('media-check','--job',mp,'--kind','music')['ok'])
         music['tracks'][0]['beats']=['B99']; save(mp,music)
@@ -898,6 +933,11 @@ class StaticStudioTests(unittest.TestCase):
                          cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
         self.assertIn('item_1_prompt_does_not_carry_shot_S1_frame_prompt',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
         job['images'][0]['prompt']=shots[0]['frame_prompt']+', painterly'; save(jobp,job)
+        # the look changed: the style lock follows it, with its reason, as a new revision (never silently)
+        self.assertIn('style_lock_outdated:the_chosen_treatments_visual_language_changed:relock_with_--why',
+                      cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
+        cli('style-lock','--run',self.run,'--video',1,'--style-prompt','painterly',
+            '--why','the colder sparser look keeps only the painterly finish')
         self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
         # Explicit reapproval accepts pictures as they are (user-supplied, say), on record.
         cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','stills','--reason','the user supplies painted stills for every shot')
@@ -1068,7 +1108,7 @@ class StaticStudioTests(unittest.TestCase):
 
     def test_an_interrupted_research_resumes_from_its_files(self):
         cli('length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
-            '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145)
+            '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145,'--pace-why','the test narrator reads at this pace')
         vd=self.run/'40-plans/video-01'
         save(vd/'blueprint.json',{'audience_promise':'Understood decision','title':'A test title'})
         self.measure_refs()
@@ -1093,7 +1133,8 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(item['carries_values'][0]['id'],'R1')
         self.assertEqual(item['carries_values'][0]['certainty'],'established')
         self.assertTrue(item['matters_because'] and item['carries_significance'])
-        save(jobp,{'run':str(self.run),'video':1,'tracks':[{'beats':['B05'],'caption':'a low pulse under the conclusion'}]})
+        save(jobp,{'run':str(self.run),'video':1,'tracks':[{'beats':['B05'],'caption':'a low pulse under the conclusion',
+                                                             'serves':'a low pulse that lets the conclusion land without pushing it'}]})
         beat=cli('media-check','--job',jobp,'--kind','music')['direction']['items'][0]['beats']['B05']
         self.assertEqual(beat['key_moment'],'the earned conclusion')
         self.assertTrue(beat['matters_because'])
@@ -1120,7 +1161,11 @@ class StaticStudioTests(unittest.TestCase):
         # The stills are made through the gate and recorded with their shots.
         core=self.load_core()
         stills=self.home/'stills'; stills.mkdir()
-        job={'run':str(self.run),'video':1,'images':[{'shot_id':s['id'],'prompt':s['frame_prompt']+', ink wash',
+        sl=self.run/'60-visuals/video-01/style-lock.json'
+        if not sl.is_file():
+            cli('style-lock','--run',self.run,'--video',1,'--style-prompt','ink wash')
+        style=json.loads(sl.read_text(encoding='utf-8'))['style_prompt']
+        job={'run':str(self.run),'video':1,'images':[{'shot_id':s['id'],'prompt':s['frame_prompt']+', '+style,
                                                       'out':str(stills/f"{s['id']}.png")} for s in shots]}
         gate=core.media_gate(job,'stills'); self.assertTrue(gate['ok'],gate['issues'])
         for it in job['images']:
@@ -1153,6 +1198,7 @@ class StaticStudioTests(unittest.TestCase):
         self.look_at_pictures([stills/'S2.png'])
         # The bed made through the gate for the beat it scores; the gate hands the agent that beat's sound direction.
         mjob={'op':'generate','run':str(self.run),'video':1,'tracks':[{'video':1,'beats':['B01'],'duration':5,
+                                                                      'serves':'a quiet bed under the opening that never leads it',
               'caption':'a low warm drone that thins out','out':str(self.home/'bed.wav')}]}
         mg=core.media_gate(mjob,'music'); self.assertTrue(mg['ok'],mg['issues'])
         self.assertEqual(mg['direction']['items'][0]['beats']['B01']['sound_direction'],'bed')
@@ -1606,6 +1652,39 @@ class StaticStudioTests(unittest.TestCase):
         self.assertTrue(any('content_flag_unanswered' in x for x in core.caption_issues_with((),req,req+' Blood on the floor.')))
         self.assertEqual(core.caption_issues_with((),req,req+' Blood-orange sky outside.',
                                                   'a blood-orange evening sky, no injury anywhere in the picture'),[])
+        # Words that name a person in one sense only (a REAL FLUX upsampler caption, 2026-11-24, of a scene with no people:
+        # "weathered plank faces", hills as "overlapping blue-green silhouettes"): drawn, with a note for the look.
+        smoke=('a wide green valley at dawn, a narrow dirt road leading to a small supply depot of stacked wooden crates '
+               'under a canvas awning, mist lying in the low fields, distant hills, no people, painterly, soft edges')
+        real=("Painterly landscape illustration with soft edges, showing a wide green valley at dawn beneath a pale"
+              " blue and peach sky. In the foreground, a narrow ochre dirt road begins near the lower center and wi"
+              "nds into the valley, its uneven surface marked by shallow ruts, scattered stones, and tufts of grass"
+              " along the margins. The road leads toward a small supply depot in the middle distance, right of cent"
+              "er. A faded tan canvas awning stretches over a low wooden platform where several stacks of rough-hew"
+              "n wooden crates sit in orderly rows, some stacked two high and others piled three high. The crates h"
+              "ave dark iron corner fittings and weathered plank faces, with no lettering or labels. Low posts supp"
+              "ort the sagging awning, whose front edge hangs above the crates and casts a muted shadow across them"
+              ". Dew-darkened grass borders the depot, while patches of fog drift around its base. Across the left "
+              "and center midground, broad fields lie in layers of white mist, with only irregular green slopes and"
+              " darker hedgerows emerging through the haze. Distant rounded hills form overlapping blue-green silho"
+              "uettes along the horizon, their upper ridges touched by the first warm light of sunrise. Thin clouds"
+              " gather above the hills, shifting from cool grey-blue overhead to pale apricot near the horizon. The"
+              " empty road, open fields, and unoccupied depot contain no figures, animals, carts, or workers; only "
+              "grasses, mist, the winding road, and the crate-filled shelter remain clearly defined within the wide"
+              " composition.")
+        self.assertEqual(core.caption_review_with((),smoke,real),
+                         {'issues':[],'notes':['caption_says_faces,silhouettes:words_that_may_name_people:'
+                                               'look_for_people_in_the_still_when_it_lands']})
+        for extra,word in (('A lone figure stands on the ridge.','figure'),('Her face is lit by the dawn.','face'),
+                           ('Two workers unload the crates.','workers')):
+            self.assertEqual(core.caption_issues_with((),smoke,smoke+'. '+extra),
+                             [f'caption_adds_people_the_prompt_does_not_have:{word}'])
+        self.assertEqual(core.caption_review_with((),smoke,smoke+'. A figure in the doorway.')['issues'],[])
+        self.assertEqual(core.caption_review_with((),smoke,smoke+'. No figures or workers appear anywhere.'),
+                         {'issues':[],'notes':[]})
+        self.assertEqual(core.caption_review_with((),'a lone figure standing on a ridge at dawn',
+                                                  'A lone figure stands on a ridge at dawn, his coat moving in the wind.'),
+                         {'issues':[],'notes':[]})
 
     def flux_worker(self):
         spec=importlib.util.spec_from_file_location('flux_image_worker_t', ROOT/'scripts/image_worker.py')
@@ -1672,6 +1751,7 @@ class StaticStudioTests(unittest.TestCase):
                          ('flux3-image-klein-int8','int8',good,'caption',7))
         self.assertEqual(v['models']['unet'],'flux3-image-klein-int8-convrot.safetensors')
         self.assertEqual(v['caption_checks'],[])
+        self.assertEqual(v['caption_notes'],[])
         # A caption that adds a child is never drawn; the item fails and says why.
         (stills/'S1.png').unlink()
         drawn.clear()
@@ -1690,6 +1770,456 @@ class StaticStudioTests(unittest.TestCase):
         code,out=self.run_flux(iw,job,[good],drawn)
         self.assertEqual(code,1)
         self.assertIn('cannot swap',out['error'])
+
+
+    # ---------------------------------------------------------------- remediation 2026-11-24: payoff and significance
+    def test_a_candidate_payoff_is_assessed_before_the_choice(self):
+        # Each niche's reward has its own shape: a history built to a decisive outcome, a tutorial delivering value
+        # step by step, a comedy paying off several times. The chosen candidate's payoff must be assessed (an
+        # alternative's gap is only a warning) and rest on its own material.
+        core=self.load_core()
+        d=self.direction_doc()
+        s=d['subject']
+        ok=lambda subj: core.subject_issues(subj,'',600,('V001','V002'))[0]
+        base=[x for x in ok(s) if 'payoff' in x]
+        self.assertEqual(base,[])
+        for shape in ('builds_to','several','progressive'):
+            s['candidates'][0]['payoff']['shape']=shape
+            self.assertFalse([x for x in ok(s) if 'payoff' in x],shape)
+        s['candidates'][0]['payoff']['shape']='climax'
+        self.assertTrue(any('payoff_shape_must_be' in x for x in ok(s)))
+        s['candidates'][0]['payoff']['shape']='builds_to'
+        s['candidates'][0]['payoff']['rests_on']=['M9']
+        self.assertTrue(any('payoff_rests_on_material_the_candidate_lacks:M9' in x for x in ok(s)))
+        s['candidates'][0]['payoff'].update(rests_on=['M1'],worth_the_buildup='yes')
+        self.assertTrue(any(x.endswith('payoff_needs_worth_the_buildup') for x in ok(s)))
+        s['candidates'][0].pop('payoff')
+        self.assertTrue(any(x.startswith('subject_candidate_T1_needs_its_payoff_assessed') for x in ok(s)))
+        s=self.direction_doc()['subject']
+        s['candidates'][1].pop('payoff')                            # an alternative: considered, so only a warning
+        iss,warn=core.subject_issues(s,'',600,('V001','V002'))
+        self.assertFalse([x for x in iss if 'T2' in x and 'payoff' in x])
+        self.assertTrue([x for x in warn if 'T2' in x and 'payoff' in x])
+        s['value_to_carry'][0].pop('payoff')                        # the chosen payoff becomes the value carried
+        self.assertIn('subject_value_to_carry_names_no_payoff_value:mark_the_value_the_payoff_delivers_with_payoff_true',
+                      core.subject_issues(s,'',600,('V001','V002'))[0])
+
+    def test_the_payoff_value_reaches_the_film_in_its_own_shape(self):
+        # A payoff the film builds to lands at a key moment that says what it means; a progressive one is delivered
+        # along the way by more than one beat and needs no invented climax; it is never silently dropped.
+        core=self.load_core()
+        d=self.direction_doc()
+        beats=[{'id':f'B0{i}','carries':[]} for i in range(1,6)]
+        beats[4].update(carries=['R1'],key_moment='the earned conclusion',significance={'matters_because':'x'})
+        self.assertEqual([x for x in core.subject_handoff_issues(d,beats) if 'payoff' in x],[])
+        beats[4].pop('key_moment')
+        self.assertTrue(any(x.startswith('payoff_value_R1_reaches_no_key_moment') for x in core.subject_handoff_issues(d,beats)))
+        d['subject']['candidates'][0]['payoff']['shape']='progressive'       # a tutorial: value step by step
+        self.assertTrue(any(x.startswith('progressive_payoff_value_R1_is_carried_by_one_beat')
+                            for x in core.subject_handoff_issues(d,beats)))
+        beats[1]['carries']=['R1']; beats[3]['carries']=['R1']
+        self.assertEqual([x for x in core.subject_handoff_issues(d,beats) if 'payoff' in x],[])
+        d['subject']['dropped']=[{'id':'R1','why':'it did not fit the treatment in the end'}]
+        self.assertTrue(any(x.startswith('payoff_value_R1_is_dropped') for x in core.subject_handoff_issues(d,beats)))
+
+    def test_treatments_say_how_they_deliver_the_payoff(self):
+        self.write_plan(lock=False)
+        vd=self.run/'40-plans/video-01'
+        d=self.direction_doc()
+        save(vd/'direction.json',d)
+        core=self.load_core()
+        self.assertFalse([x for x in core.direction_facts(self.run,1)['issues'] if 'payoff' in x])
+        d['treatments'][1].pop('carries_values')
+        d['decision'].pop('carries_payoff')
+        save(vd/'direction.json',d)
+        iss=core.direction_facts(self.run,1)['issues']
+        self.assertIn('treatment_T2_does_not_say_how_it_delivers_the_payoff:R1:carries_values[{value,how}]',iss)
+        self.assertIn('decision_missing_carries_payoff:how_the_chosen_treatment_makes_the_payoff_land',iss)
+        # a direction whose research has no payoff value (locked before it existed) is not asked
+        d['subject']['value_to_carry'][0].pop('payoff')
+        save(vd/'direction.json',d)
+        self.assertFalse([x for x in core.direction_facts(self.run,1)['issues'] if 'carries_payoff' in x or 'delivers_the_payoff' in x])
+        self.assertEqual(core.field_effects('treatment.carries_values'),('beat-map','script'))
+
+    def test_a_reader_whose_words_say_it_changes_little_is_a_finding(self):
+        # The labels say it landed; the reader's own account says it changes little: the account is the evidence.
+        core=self.load_core()
+        order=[f'L{i:03}' for i in range(1,21)]
+        km={'id':'B05','key_moment':'the reveal','significance':{'matters_because':'it decides the war'}}
+        spans=[(km,15,20)]
+        dev=lambda **k: dict({'lines':'L015-L018','what_happened':'the agent sends the last message','event':'clear',
+                              'significance':'clear','reward':'landed','why_from':'the video','learned_when':'before',
+                              'why_it_matters':'it makes the plan work','would_be_different':'the plan would fail'},**k)
+        self.assertEqual(core.development_findings('script',[dev()],set(),spans,order),[])
+        f,=core.development_findings('script',[dev(would_be_different='nothing much would be different, the war goes on')],
+                                     set(),spans,order)
+        self.assertEqual((f['severity'],f['derived_from']['reward']),('major','landed'))
+        self.assertIn('changes little',f['likely_cause'])
+        # weighed, not dismissed: no finding; off a key moment: minor
+        self.assertEqual(core.development_findings('script',[dev(would_be_different='not much would change in the plot, '
+                                                                 'but the agent would be unmasked')],set(),spans,order),[])
+        f,=core.development_findings('script',[dev(lines='L002-L004',why_it_matters='it does not really matter')],set(),spans,order)
+        self.assertEqual(f['severity'],'minor')
+        # the reader's own note stays beside the computed cause, never in its place
+        f,=core.development_findings('script',[dev(significance='unclear',note='too many names')],set(),spans,order)
+        self.assertEqual((f['likely_cause'],f['reader_note']),('what it means was never established for the viewer','too many names'))
+
+    def test_a_development_counts_for_a_key_moment_by_measured_overlap(self):
+        core=self.load_core()
+        km={'id':'B05'}
+        span=[(km,316.4,330.0)]
+        self.assertEqual(core._dev_overlaps('final',{'at':'05:10-05:15'},span,()),[])        # ends a second before
+        self.assertEqual(core._dev_overlaps('final',{'at':'05:16'},span,()),[km])            # 316.4-317.0 shared
+        self.assertEqual(core._dev_overlaps('final',{'at':'05:30'},span,()),[])              # 330 is its end: touch only
+        self.assertEqual(core._dev_overlaps('final',{'at':'05:20-06:10'},span,()),[km])
+
+    def test_key_moments_are_reconciled_with_the_readers_account(self):
+        # After an independent read, the director sets each key moment's planned meaning beside the reader's account;
+        # a gap is fixed like a major finding (its cause named, a fresh read follows), a different valid reading is kept.
+        vd=self.write_plan(review_script=False)
+        _,rec=self.review('script',[{'id':'F1','severity':'minor','lines':['L001-L002'],'problem':'the opening starts slowly'}])
+        doc=json.loads(Path(rec['answers_file']).read_text(encoding='utf-8'))
+        self.assertEqual(list(doc['reconcile']),['B05'])
+        r=doc['reconcile']['B05']
+        self.assertTrue(r['planned']['matters_because'])
+        self.assertEqual(r['planned']['values'][0]['id'],'R1')
+        self.assertTrue(r['planned']['values'][0]['payoff'])
+        self.assertEqual(r['reader'][0]['why_it_matters'],'each turn changes what the people can do')
+        ans={'F1':{'action':'kept','note':'the slow start is the treatment choice'}}
+        self.answer_file(rec['answers_file'],{'answers':ans},reconcile=None)
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertIn('script_review_r1_key_moments_not_reconciled_with_the_readers_account:B05',iss)
+        self.answer_file(rec['answers_file'],{'answers':ans},reconcile={'B05':{'verdict':'gap','note':'the reader never saw what the order cost'}})
+        self.assertIn('script_review_r1_key_moments_not_reconciled_with_the_readers_account:B05',
+                      cli('plan-check','--run',self.run,'--video',1,expected=None)['issues'])     # a gap needs its cause
+        self.answer_file(rec['answers_file'],{'answers':ans},reconcile={'B05':{'cause':'setup','revision':'the order is set up in beat B02 now'}})
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in iss if 'not_reconciled' in x])
+        self.assertIn('script_review_round_2_required',iss)                         # a gap counts as a major finding
+        self.answer_file(rec['answers_file'],{'answers':ans},reconcile={'B05':{'verdict':'different_but_valid',
+                         'note':'they read it as luck, which the film allows'}})
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in iss if 'not_reconciled' in x or 'round_2' in x])
+
+    def test_a_revised_significance_finding_names_its_cause(self):
+        core=self.load_core()
+        f={'id':'S1','severity':'major','derived_from':{'development':1}}
+        self.assertIn('needs the cause',core.answer_problem('script',f,{'action':'revised','lines':['L005']}))
+        self.assertIsNone(core.answer_problem('script',f,{'action':'revised','lines':['L005'],'cause':'order'}))
+        self.assertIn('which cause',core.answer_problem('script',f,{'action':'revised','lines':['L005'],'cause':'other'}))
+        self.assertIsNone(core.answer_problem('script',f,{'action':'revised','lines':['L005'],
+                                                          'cause':'other: the joke needs a beat of silence'}))
+        self.assertIsNone(core.answer_problem('script',{'id':'F1','severity':'minor'},{'action':'revised','lines':['L1']}))
+
+
+    # ---------------------------------------------------------------- remediation 2026-11-24: niche, readers, hand-offs
+    def test_a_cohort_length_refuses_mixed_story_forms_unless_explained(self):
+        for i,(form,cid) in enumerate((('tutorial','mine'),('historical narrative','mine')),1):
+            cp=self.run/f'20-analysis/cards/V00{i}.json'
+            card=json.loads(cp.read_text(encoding='utf-8')); card.update(story_form=form,cohort_id=cid); save(cp,card)
+        out=cli('length','--run',self.run,'--video',1,'--mode','standard','--cohort-id','mine','--refs','V001,V002',
+                '--pace-wpm',145,'--pace-why','the test narrator reads at this pace',expected=2)
+        self.assertIn('mixes story forms',out['error'])
+        out=cli('length','--run',self.run,'--video',1,'--mode','standard','--cohort-id','mine','--refs','V001,V002',
+                '--pace-wpm',145,'--pace-why','the test narrator reads at this pace',
+                '--forms-why','both are single-subject explainers of the same depth whatever their labels',expected=None)
+        if out.get('ok'):
+            lock=json.loads((self.run/'40-plans/video-01/length-lock.json').read_text(encoding='utf-8'))
+            self.assertEqual(lock['story_forms'],['historical narrative','tutorial'])
+            self.assertTrue(lock['forms_why'])
+            core=self.load_core()
+            self.assertEqual(core.locked_niche_names(self.run,lock),{'mine','military history'})
+
+    def test_evidence_from_outside_the_niche_is_a_borrowed_technique(self):
+        self.write_plan(lock=False)
+        core=self.load_core()
+        cp=self.run/'20-analysis/cards/V003.json'
+        card=json.loads(cp.read_text(encoding='utf-8')); card.update(niches=['cooking']); save(cp,card)
+        d=self.direction_doc()
+        d['evidence']['references']=['V001','V002','V003']
+        save(self.run/'40-plans/video-01/direction.json',d)
+        iss=core.direction_facts(self.run,1)['issues']
+        self.assertTrue(any(x.startswith('direction_evidence_V003_is_outside_the_locked_niche') for x in iss),iss)
+        d['evidence']['borrowed']=[{'ref':'V003','technique':'the close slow build before each reveal',
+                                    'not_taken':'its kitchen subject and its recipe structure'}]
+        save(self.run/'40-plans/video-01/direction.json',d)
+        self.assertFalse([x for x in core.direction_facts(self.run,1)['issues'] if 'outside_the_locked_niche' in x])
+        d['subject']['scope'].pop('boundary')
+        save(self.run/'40-plans/video-01/direction.json',d)
+        self.assertIn('subject_niche_scope_needs_boundary',core.direction_facts(self.run,1)['issues'])
+
+    def test_reader_packets_carry_no_pitch_and_no_excluded_scenes(self):
+        self.write_plan(lock=False)
+        vd=self.run/'40-plans/video-01'
+        d=self.direction_doc()
+        d['approaches'][2]['pitch']='THE DIRECTORS PITCH: this structure will make the battle unforgettable for everyone'
+        save(vd/'direction.json',d)
+        core=self.load_core()
+        cut=[{'theme':'V001/S2','what':'a burning church at night','kind':'creative','label':'excluded_theme','avoid':[]}]
+        with mock.patch.object(core,'excluded_themes',return_value=cut):
+            code,pk=self.core_call(core,'review-packet','--run',self.run,'--video',1,'--kind','treatment')
+            self.assertIn('burning church',core.house_rules(self.run,1))          # what the old packet would have said
+        self.assertEqual(code,0,pk)
+        text=Path(pk['packet']).read_text(encoding='utf-8')
+        self.assertNotIn('burning church',text)
+        self.assertNotIn('THE DIRECTORS PITCH',text)
+        self.assertIn('House rules',text)
+        self.assertNotIn('left out on purpose',text)
+        meta=json.loads(next((vd/'reviews').glob('packet-treatment-r1.json')).read_text(encoding='utf-8'))
+        self.assertIn('stops being one when',meta.get('scope_request') or '')         # the niche's line goes to the reader
+
+    def test_a_read_records_how_its_reader_was_isolated(self):
+        self.write_plan(review_script=False)
+        _,rec=self.review('script',[{'id':'F1','severity':'minor','lines':['L001-L002'],'problem':'the opening starts slowly'}],
+                          {'F1':{'action':'kept','note':'the slow start is the treatment choice'}})
+        r=json.loads(Path(rec['record']).read_text(encoding='utf-8'))
+        self.assertFalse(r['reader_confined'])
+        self.assertIn('not confined',r['reader_route'])
+        warn=cli('plan-check','--run',self.run,'--video',1,expected=None).get('warnings') or []
+        self.assertTrue(any('review-read confines' in w for w in warn))
+
+    def test_a_large_revision_gets_a_fresh_read(self):
+        core=self.load_core()
+        old={f'L{i:03}':'the quiet order moved the depots before the march began at dawn' for i in range(1,21)}
+        new=dict(old)
+        self.assertEqual(core.script_revised_share(old,new),0.0)
+        for i in range(1,4):
+            new[f'L{i:03}']='an entirely different sentence about the river and the bridge and the town'
+        self.assertLess(core.script_revised_share(old,new),core.SUBSTANTIAL_REVISION_SHARE)
+        for i in range(1,11):
+            new[f'L{i:03}']='an entirely different sentence about the river and the bridge and the town'
+        self.assertGreater(core.script_revised_share(old,new),core.SUBSTANTIAL_REVISION_SHARE)
+        # through the gate: a script rewritten past a quarter after its read, by answers to minor findings, is read again
+        vd=self.write_plan(review_script=False)
+        lines=json.loads((vd/'script.json').read_text(encoding='utf-8'))['lines']
+        _,rec=self.review('script',[{'id':'F1','severity':'minor','lines':[f'L001-L030'],'problem':'the first half drags on'}])
+        sc=json.loads((vd/'script.json').read_text(encoding='utf-8'))
+        for l in sc['lines'][:30]:
+            l['text']='a rewritten line that tells the depot story from the river crossing instead, plainly and briefly now.'
+        save(vd/'script.json',sc)
+        self.answer_file(rec['answers_file'],{'answers':{'F1':{'action':'revised','lines':['L001-L030'],'note':''}}})
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertTrue(any(x.startswith('script_substantially_revised_since_its_last_read') for x in iss),iss)
+
+    def test_uncertain_research_reaches_the_picture_and_the_music_its_direction(self):
+        core=self.load_core()
+        d=self.direction_doc()
+        d['subject']['value_to_carry'].append({'id':'R2','what':'the route may have crossed the north ford',
+                                               'why_it_matters':'it would explain the lost day','certainty':'speculative',
+                                               'framed_as':'one reading of the dispatch, not a record'})
+        beats=[{'id':'B01','carries':['R2']},{'id':'B02','carries':['R1']}]
+        shots=[{'id':'S1','beat_id':'B01'},{'id':'S2','beat_id':'B02'},{'id':'S3','beat_id':'B01','reuses':'S1'}]
+        self.assertEqual(core.uncertain_shot_issues(d,beats,shots),['shot_S1_of_beat_B01_needs_uncertainty_shown:R2_speculative'])
+        shots[0]['uncertainty_shown']='the route is drawn dashed over the map as a reading, never a record'
+        self.assertEqual(core.uncertain_shot_issues(d,beats,shots),[])
+        beats[1].update(key_moment='the reveal',significance={'certainty':'contested'})
+        self.assertEqual(core.uncertain_shot_issues(d,beats,shots),['shot_S2_of_beat_B02_needs_uncertainty_shown:significance_contested'])
+        # a music track says how it serves its beats; the direction it answered goes on record
+        self.write_plan()
+        self.shots_for_plan()
+        job={'op':'generate','run':str(self.run),'video':1,'tracks':[{'video':1,'beats':['B05'],'caption':'a low warm pulse','duration':20,
+                                                                      'out':str(self.home/'bed.wav')}]}
+        jp=self.home/'mjob.json'; save(jp,job)
+        self.assertIn('track_1_needs_serves:how_its_caption_carries_out_the_sound_direction_of_its_beats',
+                      cli('media-check','--job',jp,'--kind','music',expected=2)['issues'])
+        job['tracks'][0]['serves']='a low pulse under the earned conclusion that never announces it'
+        save(jp,job)
+        with mock.patch('sys.stdout',new_callable=io.StringIO):
+            g=core.media_gate(job,'music')
+        self.assertTrue(g['ok'],g['issues'])
+        self.assertEqual(g['records'][0]['serves'],job['tracks'][0]['serves'])
+        self.assertEqual(g['records'][0]['direction']['beats']['B05']['key_moment'],'the earned conclusion')
+
+    def test_a_music_bed_replaced_at_its_path_is_not_the_bed_that_was_made(self):
+        core=self.load_core()
+        with tempfile.TemporaryDirectory() as td:
+            rd=Path(td)/'run'; (rd/'70-edit/video-01/music').mkdir(parents=True)
+            bed=rd/'70-edit/video-01/music/M1.wav'; bed.write_bytes(b'RIFF-first')
+            save(rd/'state.json',{'schema':core.SCHEMA,'run_id':'r'})
+            core.record_media(rd,1,'music',[{'out':str(bed),'beats':['B01'],'production_rev':0}])
+            rec=json.loads((rd/'70-edit/video-01/music-provenance.json').read_text(encoding='utf-8'))
+            (k,v),=rec['tracks'].items()
+            self.assertEqual(v['file_sha256'],core.file_sha256(bed))
+            bed.write_bytes(b'RIFF-replaced')
+            self.assertNotEqual(v['file_sha256'],core.file_sha256(bed))
+
+
+    # ---------------------------------------------------------------- remediation 2026-11-24: style, pace, comprehension
+    def test_stills_carry_exactly_the_locked_style(self):
+        self.write_plan()
+        shots=self.shots_for_plan()                                   # the direction is locked: the style is locked too
+        core=self.load_core()
+        stills=self.home/'stills'
+        job={'op':'generate','run':str(self.run),'video':1,
+             'images':[{'shot_id':'S1','prompt':shots[0]['frame_prompt']+', painterly, soft edges','out':str(stills/'S1.png')}]}
+        jp=self.home/'style-job.json'; save(jp,job)
+        ok=cli('media-check','--job',jp,'--kind','stills')
+        self.assertEqual(ok['direction']['style_prompt'],'painterly, soft edges')
+        job['images'][0]['prompt']=shots[0]['frame_prompt']+', photorealistic, harsh flash'
+        save(jp,job)
+        self.assertTrue(any(x.startswith('item_1_style_words_are_not_the_locked_style')
+                            for x in cli('media-check','--job',jp,'--kind','stills',expected=2)['issues']))
+        # a change of style is a new revision with its reason, kept in history
+        cli('style-lock','--run',self.run,'--video',1,'--style-prompt','gouache, warm muted palette',expected=2)
+        r=cli('style-lock','--run',self.run,'--video',1,'--style-prompt','gouache, warm muted palette',
+              '--palette','#AA8844,#334455','--why','the treatment reader found the painterly look too soft')
+        lock=json.loads((self.run/'60-visuals/video-01/style-lock.json').read_text(encoding='utf-8'))
+        self.assertEqual((r['rev'],lock['history'][0]['style_prompt']),(2,'painterly, soft edges'))
+        # a thumbnail carries the look, or says why it departs from it
+        th={'run':str(self.run),'video':1,'purpose':'thumbnail',
+            'images':[{'prompt':'a bold close portrait of a surveyor at dawn with a broken bridge behind','out':str(stills/'t.png')}]}
+        save(jp,th)
+        self.assertTrue(any('thumbnail_not_in_the_locked_style' in x for x in cli('media-check','--job',jp,'--kind','stills',expected=2)['issues']))
+        th['images'][0]['style_departure']='a thumbnail must read at a tiny size, so it is flatter and bolder than the film'
+        save(jp,th)
+        self.assertTrue(cli('media-check','--job',jp,'--kind','stills')['ok'])
+        # the upsampler's caption keeps the locked look
+        req='a wide valley at dawn, gouache, warm muted palette'
+        self.assertIn('caption_drops_the_locked_style',' '.join(core.caption_review_with(
+            (),req,'A photorealistic wide valley at dawn under a cold sky.',None,'gouache, warm muted palette')['issues']))
+        self.assertEqual(core.caption_review_with((),req,'A gouache painting of a wide valley at dawn in a warm muted '
+                                                  'palette.',None,'gouache, warm muted palette')['issues'],[])
+        # the lock goes stale when the treatment's visual language changes
+        d=json.loads((self.run/'40-plans/video-01/direction.json').read_text(encoding='utf-8'))
+        d['treatments'][0]['visual_language']='charcoal sketches on grey paper, high contrast, for this video'
+        save(self.run/'40-plans/video-01/direction.json',d)
+        self.assertTrue(any('visual_language_changed' in x for x in core.style_lock_state(self.run,1)[1]))
+
+    def test_pace_needs_its_reason_and_is_never_a_blind_average(self):
+        core=self.load_core()
+        args=['length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
+              '--story-form','historical narrative','--refs','V001,V002']
+        code,out=self.core_call(core,*args,'--pace-wpm','145')
+        self.assertEqual(code,2); self.assertIn('--pace-why',out['error'])
+        with mock.patch.object(core,'compute_ref_wpm',return_value=(150,{'V001':118,'V002':182})):
+            code,out=self.core_call(core,*args)
+        self.assertEqual(code,2); self.assertIn('very different paces',out['error'])
+        # intent against delivery, relative to this narration's own norm (never a universal range)
+        beats=[{'id':'B1','pace':'slow and reflective'},{'id':'B2','pace_relative':'faster'},{'id':'B3','pace':'steady'},
+               {'id':'B4','pace':'steady'},{'id':'B5','pace':'unhurried'}]
+        rows=[{'id':'B1','wpm_inside_lines':172,'numbers_per_min':1},{'id':'B2','wpm_inside_lines':135,'numbers_per_min':0},
+              {'id':'B3','wpm_inside_lines':150,'numbers_per_min':0},{'id':'B4','wpm_inside_lines':175,'numbers_per_min':9},
+              {'id':'B5','wpm_inside_lines':140,'numbers_per_min':0}]
+        kinds={f['beat']:f['kind'] for f in core.pace_findings(rows,beats)}
+        self.assertEqual(kinds,{'B1':'asked_slower_heard_faster','B2':'asked_faster_heard_slower','B4':'fast_and_dense'})
+        self.assertEqual(core.pace_intent({'pace':'brisk but calm'}),None)            # mixed words: not inferred
+        txt='## Self-audit\nok\n## Pace\n- B1: the quickening is the point here, the reveal rushes in\n## Next\n'
+        self.assertIn('B1',core.editorial_section(txt,'pace'))
+        self.assertNotIn('Next',core.editorial_section(txt,'pace'))
+
+    def test_comprehension_signals_are_classified_in_context(self):
+        vd=self.write_plan()
+        sc=json.loads((vd/'script.json').read_text(encoding='utf-8'))
+        sc['lines'][0]['text']='In Vienna, Anna met Boris, Carla and Dmitri at the station before the long march began there.'
+        sc['lines'][1]['text']='Boris carried the money. Carla carried the papers. Dmitri carried nothing but the maps today.'
+        sc['lines'][2]['text']='Dmitri watched Anna. Nobody in Vienna watched Dmitri, and Boris never asked Carla why at all.'
+        save(vd/'script.json',sc)
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertTrue(any(x.startswith('comprehension_signals_not_classified_in_the_editorial_review:L001') for x in iss),iss)
+        rv=(vd/'editorial-review.md').read_text(encoding='utf-8')
+        (vd/'editorial-review.md').write_text(rv+'\n## Comprehension\n- L001: necessary_complexity: the four travellers are the '
+                                              'story, each named by what they carry\n',encoding='utf-8')
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in iss if x.startswith('comprehension_signals_not_classified')])
+        b=json.loads((vd/'blueprint.json').read_text(encoding='utf-8')); b.pop('audience_knows'); save(vd/'blueprint.json',b)
+        self.assertTrue(any(x.startswith('blueprint_missing_audience_knows') for x in
+                            cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']))
+
+    def test_a_changed_beat_flags_its_unchanged_lines(self):
+        vd=self.write_plan()
+        first=cli('plan-check','--run',self.run,'--video',1,expected=None)
+        if not first['ready']:
+            self.skipTest('the fixture plan does not pass plan-check here: '+','.join(first['issues'][:3]))
+        bm=json.loads((vd/'beat-map.json').read_text(encoding='utf-8'))
+        bm['beats'][1]['experience']='the viewer now feels the cost before the order, a different beat'
+        save(vd/'beat-map.json',bm)
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertTrue(any(x.startswith('beat_B02_changed_since_its_lines_were_checked') for x in iss),iss)
+        cli('plan-check','--run',self.run,'--video',1,'--keep','short',expected=2)            # a reason, not a word
+        out=cli('plan-check','--run',self.run,'--video',1,'--keep','the lines already carry the cost before the order',expected=None)
+        self.assertFalse([x for x in out['issues'] if 'changed_since_its_lines' in x])
+        # status: the stage comes from the recorded gates, and the run's stored stage follows
+        core=self.load_core()
+        state=json.loads((self.run/'state.json').read_text(encoding='utf-8'))
+        state['stage']='planning'; save(self.run/'state.json',state)            # a stale stored stage
+        st=cli('status','--run',self.run)
+        derived=st['videos']['1']['stage']
+        self.assertIn(derived,core.STAGES)
+        self.assertGreaterEqual(core.STAGES.index(derived),core.STAGES.index('direction_locked'))
+        stored=json.loads((self.run/'state.json').read_text(encoding='utf-8'))['stage']
+        self.assertEqual(stored,derived)                                          # corrected forward, from the gates
+
+    def test_reference_evidence_is_measured_honestly(self):
+        spec=importlib.util.spec_from_file_location('av_tools_t', ROOT/'scripts/av_tools.py')
+        av=importlib.util.module_from_spec(spec); spec.loader.exec_module(av)
+        w=lambda t,a,b: {'text':t,'start_s':a,'end_s':b}
+        words=[w('one',13.0,13.4),w('two',13.5,14.2),w('three',16.0,16.4),w('four',16.5,16.9)]   # a 1.8 s pause at 15 s
+        self.assertEqual(av.span_stats(words,None,0,15)['pauses']+av.span_stats(words,None,15,30)['pauses'],1)
+        self.assertEqual(av.span_stats(words,None,0,15)['longest_pause_s'],1.8)
+        feats=[{'t':i*0.5} for i in range(400)]
+        kinds=['still']+['flash' if i%3==0 else 'still' for i in range(1,400)]
+        self.assertGreater(len(av.inspect_candidates(feats,kinds,[])),60)                 # never a silent first 60
+        out=cli('inspect-window','--run',self.run,'--ref','V001','--from','0','--to','2','--fps',2,expected=2)
+        self.assertIn('samples faster',out['error'])
+
+    def test_content_flags_cover_indecency_children_and_not_a_winding_road(self):
+        core=self.load_core()
+        self.assertEqual(core.prompt_flags('a dirt road wound through the green valley at dawn'),[])
+        self.assertEqual(core.prompt_flags('a deep wound on the soldier arm'),['injury_gore_distress'])
+        self.assertIn('indecency',core.prompt_flags('a naked swimmer at the lake'))
+        self.assertIn('minor_in_the_picture',core.prompt_flags('a young boy waving from the ridge'))
+        self.assertNotIn('minor_in_the_picture',core.prompt_flags('an empty schoolyard, no children anywhere'))
+        self.assertEqual(core.prompt_flag_issues('item_1_prompt',['minor_in_the_picture'],'a long note that tries to answer it'),
+                         ['item_1_prompt_shows_a_child:every_person_in_a_picture_is_an_adult_rewrite_it'])
+        # treatments and beats that name what a cited reference's content review cut: rewritten, or a recorded context
+        self.write_plan(lock=False)
+        vd=self.run/'40-plans/video-01'
+        d=self.direction_doc()
+        d['treatments'][0]['sound']='a burning church bell tolls under the whole film, low and steady for this video'
+        save(vd/'direction.json',d)
+        cut=[{'theme':'V001/S2','what':'a burning church','kind':'creative','label':'excluded_theme','avoid':['burning church']}]
+        with mock.patch.object(core,'excluded_themes',return_value=cut):
+            iss=core.direction_facts(self.run,1)['issues']
+            self.assertTrue(any(x.startswith('treatment_T1_names_what_a_content_review_rules_out') for x in iss),iss)
+            d['content_context']=[{'where':'treatment T1','theme':'excluded_theme:V001/S2',
+                                   'context':'the bell is a town bell heard far off, no church and no fire is shown'}]
+            save(vd/'direction.json',d)
+            self.assertFalse([x for x in core.direction_facts(self.run,1)['issues'] if 'rules_out' in x])
+
+
+    def test_a_drawing_says_what_the_narration_says_in_the_locked_look(self):
+        # An animated count lands on a figure its shot's lines say (or says why not); its words pass the picture rules;
+        # its colours are read against the locked palette; a render no longer of its spec is stale.
+        vd=self.write_plan()
+        self.shots_for_plan()
+        cli('style-lock','--run',self.run,'--video',1,'--style-prompt','painterly, soft edges','--palette','#2B1D14,#B0302A',
+            '--why','a palette for the drawings of this test')
+        sc=json.loads((vd/'script.json').read_text(encoding='utf-8'))
+        sc['lines'][0]['text']='Twenty-seven agents existed only on paper, and every one of them was believed for years.'
+        save(vd/'script.json',sc)
+        core=self.load_core()
+        dd=self.run/'60-visuals/video-01/drawings'; dd.mkdir(parents=True)
+        spec={'canvas':'1920x1080','fps':30,'dur_s':1,'shot':'S1','elements':[
+              {'id':'num','type':'counter','at':[0.6,0.6],'from':0,'to':27,'suffix':' AGENTS','size':0.12,'fill':'#B0302A',
+               'in':{'start_s':0.0,'dur_s':0.3,'ease':'linear'}},
+              {'id':'lab','type':'text','at':[0.3,0.3],'text':'ON PAPER ONLY','size':0.1,'fill':'#2B1D14'}]}
+        save(dd/'D01.json',spec)
+        iss,warn=core.drawing_facts(self.run,1)
+        self.assertEqual((iss,warn),([],[]))
+        spec['elements'][0]['to']=30
+        save(dd/'D01.json',spec)
+        iss,_=core.drawing_facts(self.run,1)
+        # the line says 27 (and 'every one of them': 1); the count lands on 30
+        self.assertTrue(any(x.startswith('drawing_D01_counts_to_30_but_shot_S1_says:1,27') for x in iss),iss)
+        spec['counter_note']='thirty is the total the next shot names, shown early on purpose'
+        save(dd/'D01.json',spec)
+        self.assertFalse([x for x in core.drawing_facts(self.run,1)[0] if 'counts_to' in x])
+        spec['elements'][1]['text']='BLOOD ON THE MAP'
+        spec['elements'][1]['fill']='#00FF00'
+        save(dd/'D01.json',spec)
+        iss,warn=core.drawing_facts(self.run,1)
+        self.assertIn('drawing_D01_words_content_flag_unanswered:injury_gore_distress',iss)
+        self.assertTrue(any('away from the locked palette' in w and '#00FF00' in w for w in warn),warn)
 
 
     def test_parts_follow_the_story(self):
@@ -2838,7 +3368,11 @@ class StaticStudioTests(unittest.TestCase):
         self.assertAlmostEqual(second['edit_duration_s'],first['edit_duration_s']-0.5,delta=0.03)
         # With the stills: each held silence decided again with the shot on screen while it lasts.
         stills=self.home/'stills'; stills.mkdir()
-        job={'run':str(self.run),'video':1,'images':[{'shot_id':s['id'],'prompt':s['frame_prompt']+', ink wash',
+        sl=self.run/'60-visuals/video-01/style-lock.json'
+        if not sl.is_file():
+            cli('style-lock','--run',self.run,'--video',1,'--style-prompt','ink wash')
+        style=json.loads(sl.read_text(encoding='utf-8'))['style_prompt']
+        job={'run':str(self.run),'video':1,'images':[{'shot_id':s['id'],'prompt':s['frame_prompt']+', '+style,
                                                       'out':str(stills/f"{s['id']}.png")} for s in shots]}
         gate=core.media_gate(job,'stills'); self.assertTrue(gate['ok'],gate['issues'])
         for it in job['images']:
@@ -3574,6 +4108,169 @@ class TimelineWriteTests(unittest.TestCase):
             self.assertTrue(any('stray.wav' in p for p in out['problems']), out['problems'])
 
 
+class ExportBindingTests(unittest.TestCase):
+    """An export is held to the CapCut project it was made from (remediation 2026-11-24): timeline-check records what
+    the saved project shows; export-check holds the export to it and records the file by its full sha256; release-check
+    needs that record for the exact file, the master, and the project unchanged since."""
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location('static_studio_core_eb', TOOL)
+        cls.core = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.core)
+
+    def ff(self, *args):
+        subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', *map(str, args)], check=True)
+
+    def still(self, path, seed):
+        import numpy as np, cv2
+        rng = np.random.default_rng(seed)
+        img = np.full((1080, 1920, 3), 235, np.uint8)
+        for _ in range(60):         # a picture with plenty of corners: keypoints to find it again
+            x, y = int(rng.integers(0, 1800)), int(rng.integers(0, 980))
+            col = tuple(int(c) for c in rng.integers(0, 200, 3))
+            if rng.random() < 0.5:
+                cv2.rectangle(img, (x, y), (x + int(rng.integers(30, 220)), y + int(rng.integers(30, 160))), col, -1)
+            else:
+                cv2.circle(img, (x, y), int(rng.integers(15, 90)), col, int(rng.integers(3, 12)))
+        cv2.imencode('.png', img)[1].tofile(str(path))
+
+    def export(self, out, order, size='1920x1080', black_at=None):
+        """An mp4 of the stills in `order`, 4 s each, with the narration as its sound (and, optionally, 1.5 s of black)."""
+        w, h = size.split('x')
+        parts = []
+        for i, f in enumerate(order):
+            seg = self.td / f'seg{i}-{out.stem}.mp4'
+            self.ff('-loop', 1, '-t', 4, '-i', f, '-vf', f'scale={w}:{h},fps=30,format=yuv420p', '-c:v', 'libx264',
+                    '-preset', 'ultrafast', seg)
+            parts.append(seg)
+        lst = self.td / f'list-{out.stem}.txt'
+        lst.write_text(''.join(f"file '{p.as_posix()}'\n" for p in parts), encoding='utf-8')
+        vf = (f'drawbox=enable=between(t\\,{black_at}\\,{black_at + 1.5}):x=0:y=0:w=iw:h=ih:color=black:t=fill'
+              if black_at is not None else 'null')
+        self.ff('-f', 'concat', '-safe', 0, '-i', lst, '-i', self.narr, '-vf', vf, '-c:v', 'libx264', '-preset',
+                'ultrafast', '-c:a', 'aac', '-shortest', out)
+        return out
+
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.td = Path(self._t.name)
+        rd = self.rd = self.td / 'run'
+        vis = rd / '60-visuals/video-01'
+        (vis / 'stills').mkdir(parents=True)
+        self.stills = []
+        for i, sid in enumerate(('S001', 'S002', 'S003')):
+            p = vis / 'stills' / f'{sid}.png'
+            self.still(p, 11 + i)
+            self.stills.append(p)
+        save(rd / 'state.json', {'schema': self.core.SCHEMA, 'run_id': 'r',
+                                 'format': {'width': 1920, 'height': 1080, 'fps': 30}})
+        save(vis / 'shot-plan.json', {'shots': [{'id': f'S00{i}', 'beat_id': 'B01', 'new_thing': 'a new thing here'}
+                                                for i in (1, 2, 3)]})
+        save(rd / '40-plans/video-01/length-lock.json', {'target_length_s': 12, 'tolerance_export_pct': 0.025})
+        self.narr = rd / '50-audio/video-01/narration-edit.wav'
+        self.narr.parent.mkdir(parents=True)
+        # a voice-like sound: bursts of tone with short gaps, 12 s (the narration_in_mix envelope needs speech-like shape)
+        self.ff('-f', 'lavfi', '-i', 'sine=frequency=220:sample_rate=44100:duration=12', '-af',
+                "volume='if(lt(mod(t,1.2),0.9),1,0.02)':eval=frame", '-ac', 1, self.narr)
+        self.plan = {'narration_for_edit': {'file': str(self.narr)}, 'pauses': [],
+                     'shots': [{'id': f'S00{i}', 'beat_id': 'B01', 'start_s': (i - 1) * 4.0, 'end_s': i * 4.0}
+                               for i in (1, 2, 3)]}
+        save(rd / '70-edit/video-01/edit-plan.json', self.plan)
+        us = lambda a, b: {'start': int(a * 1e6), 'duration': int((b - a) * 1e6)}
+        self.draft = self.td / 'draft'
+        self.content = {'canvas_config': {'width': 1920, 'height': 1080}, 'fps': 30,
+            'materials': {'videos': [{'id': f'v{i}', 'path': str(p).replace(chr(92), '/')} for i, p in enumerate(self.stills, 1)],
+                          'audios': [{'id': 'a1', 'path': str(self.narr)}],
+                          'texts': [{'id': 't1', 'content': '{"text":"first words"}'}]},
+            'tracks': [{'type': 'video', 'segments': [{'id': f's{i}', 'material_id': f'v{i}', 'target_timerange': us((i - 1) * 4, i * 4),
+                                                       'source_timerange': us(0, 4)} for i in (1, 2, 3)]},
+                       {'type': 'audio', 'segments': [{'id': 'n', 'material_id': 'a1', 'target_timerange': us(0, 12),
+                                                       'source_timerange': us(0, 12), 'speed': 1}]},
+                       {'type': 'text', 'segments': [{'id': 'tx', 'material_id': 't1', 'target_timerange': us(0.5, 2)}]}]}
+        save(self.draft / 'draft_content.json', self.content)
+        cli('timeline-write', '--run', rd, '--video', 1, '--draft', self.draft)
+        # timeline-check's record of the checked project (here written as a passed check would write it)
+        snap = self.core.project_snapshot(rd, 1, self.draft)
+        save(self.core.timeline_check_path(rd, 1), {'checked_at': self.core.now(), 'draft': str(self.draft),
+                                                    'snapshot_sha256': self.core.canonical_sha(snap), 'snapshot': snap})
+
+    def tearDown(self):
+        self._t.cleanup()
+
+    def issues(self, f, deep=True):
+        with mock.patch('sys.stdout', new_callable=io.StringIO):
+            return self.core.export_facts(self.rd, 1, f, deep=deep)
+
+    def test_a_snapshot_ignores_capcuts_frame_snapping_but_not_a_real_change(self):
+        a = self.core.project_snapshot(self.rd, 1, self.draft)
+        c = json.loads(json.dumps(self.content))
+        c['tracks'][0]['segments'][1]['target_timerange']['start'] += 30000          # a CapCut re-save: 0.03 s
+        save(self.draft / 'draft_content.json', c)
+        self.assertEqual(self.core.project_changes(a, self.core.project_snapshot(self.rd, 1, self.draft)), [])
+        c['tracks'][0]['segments'][0]['material_id'], c['tracks'][0]['segments'][1]['material_id'] = 'v2', 'v1'
+        save(self.draft / 'draft_content.json', c)
+        self.assertTrue(self.core.project_changes(a, self.core.project_snapshot(self.rd, 1, self.draft)))
+        c = json.loads(json.dumps(self.content)); c['materials']['texts'][0]['content'] = '{"text":"other words"}'
+        save(self.draft / 'draft_content.json', c)
+        self.assertTrue(any(x.startswith('texts 1') for x in
+                            self.core.project_changes(a, self.core.project_snapshot(self.rd, 1, self.draft))))
+
+    def test_the_export_is_held_to_its_checked_project(self):
+        good = self.export(self.td / 'good.mp4', self.stills)
+        res = self.issues(good)
+        mine = [x for x in res['issues'] if not x.startswith('audio_gate')]
+        self.assertEqual(mine, [], res['issues'])
+        self.assertEqual(res['pictures']['found'], 3)
+        self.assertEqual(res['narration_in_export']['weak_windows'], [])
+        # the project changed after its check: the export no longer answers for it
+        c = json.loads(json.dumps(self.content))
+        c['tracks'][0]['segments'][0]['material_id'], c['tracks'][0]['segments'][1]['material_id'] = 'v2', 'v1'
+        save(self.draft / 'draft_content.json', c)
+        self.assertTrue(any(x.startswith('project_changed_since_its_timeline_check') for x in self.issues(good, deep=False)['issues']))
+        save(self.draft / 'draft_content.json', self.content)
+        # an export whose pictures are in another order than the checked project
+        wrong = self.export(self.td / 'wrong.mp4', [self.stills[1], self.stills[0], self.stills[2]])
+        self.assertTrue(any(x.startswith('export_shows_another_picture_than_the_project_at') for x in self.issues(wrong)['issues']))
+        # the run's size, exactly (a smaller review copy is not the master)
+        small = self.export(self.td / 'small.mp4', self.stills, size='1280x720')
+        self.assertIn('export_size_1280x720_is_not_the_runs_1920x1080', self.issues(small, deep=False)['issues'])
+
+    def test_black_or_silence_blocks_unless_the_plan_holds_it(self):
+        dark = self.export(self.td / 'dark.mp4', self.stills, black_at=5.0)
+        self.assertTrue(any(x.startswith('export_black_') for x in self.issues(dark)['issues']))
+        save(self.core.planned_blanks_path(self.rd, 1),
+             {'blanks': [{'from_s': 4.9, 'to_s': 6.6, 'kind': 'black', 'why': 'a deliberate cut to black before the turn'}]})
+        self.assertFalse(any(x.startswith('export_black_') for x in self.issues(dark)['issues']))
+        rows = ['[silencedetect @ 0] silence_start: 3.0', '[silencedetect @ 0] silence_end: 6.0 | silence_duration: 3.0']
+        self.assertEqual(self.core._blank_spans(rows, 'silence', 12), [(3.0, 6.0)])
+        self.assertEqual(self.core._blank_spans(['[silencedetect] silence_start: 10.5'], 'silence', 12), [(10.5, 12.0)])
+
+    def test_release_needs_this_exact_file_deep_checked_and_mastered(self):
+        good = self.export(self.td / 'good.mp4', self.stills)
+        rel = cli('release-check', '--run', self.rd, '--video', 1, '--file', good, expected=2)['issues']
+        self.assertIn('export:not_checked_as_this_exact_file:run_export-check_--deep_on_it', rel)
+        self.assertIn('export:not_mastered:run_master-sound_and_release_the_mastered_file', rel)
+        cli('export-check', '--run', self.rd, '--video', 1, '--file', good, '--deep', expected=2)   # other gates fail here
+        prov = json.loads(self.core.export_provenance_path(self.rd, 1).read_text(encoding='utf-8'))
+        (sha, rec), = prov['exports'].items()
+        self.assertEqual((rec['sha256'], rec['deep']), (self.core.file_sha256(good), True))
+        self.assertEqual(rec['project']['draft'], str(self.draft))
+        save(self.rd / '80-deliverables/video-01/master.json', {'export': {'sha256': 'x'}, 'mastered': {'sha256': sha}})
+        rel = cli('release-check', '--run', self.rd, '--video', 1, '--file', good, expected=2)['issues']
+        self.assertFalse(any(x.startswith(('export:not_checked_as_this_exact_file', 'export:not_mastered',
+                                           'export:this_file_is_not_the_recorded_master')) for x in rel), rel)
+        # a different file of the same project is not the one that was checked
+        other = self.export(self.td / 'other.mp4', self.stills, black_at=1.0)
+        rel = cli('release-check', '--run', self.rd, '--video', 1, '--file', other, expected=2)['issues']
+        self.assertIn('export:not_checked_as_this_exact_file:run_export-check_--deep_on_it', rel)
+        # the project changed after the export was checked
+        c = json.loads(json.dumps(self.content)); c['materials']['texts'][0]['content'] = '{"text":"changed later"}'
+        save(self.draft / 'draft_content.json', c)
+        rel = cli('release-check', '--run', self.rd, '--video', 1, '--file', good, expected=2)['issues']
+        self.assertTrue(any(x.startswith('export:the_project_changed_after_this_export_was_checked') for x in rel), rel)
+
+
 class BedLevelsTests(unittest.TestCase):
     """bed-levels: "under_speech_db" N means N dB quieter than the narration, by the same loudness meter (2026-11-22)."""
 
@@ -4298,6 +4995,11 @@ class TopicDiscoveryTests(unittest.TestCase):
                                  for m in mats if m.get('id')],
                  'verdict': 'sustains', 'why': 'the question, its evidence and its consequence fill it without repeats'},
              'feasibility': 'stills, maps and drawings can show every step of it'}
+        first = next((str(m.get('id')) for m in mats if isinstance(m, dict) and m.get('id')), None)
+        c['payoff'] = {'shape': 'builds_to', 'rests_on': [first] if first and factual is not False else [],
+                       'why_substantial': f'the viewer finally sees what {subject} changes for people like them',
+                       'needs_first': 'what the situation was before it',
+                       'worth_the_buildup': 'every step on the way is a small discovery that the payoff then explains'}
         c.update(kw)
         return c
 
@@ -4316,7 +5018,11 @@ class TopicDiscoveryTests(unittest.TestCase):
     def subj(self, cands, chosen='T1', kind='niche', user_words='geography', niche='geography', values=None,
              scope_extra=None, sel_extra=None, **kw):
         alts = [c['id'] for c in cands if c['id'] != chosen]
-        s = {'scope': {'kind': kind, 'user_words': user_words, 'niche': niche, **(scope_extra or {})},
+        s = {'scope': {'kind': kind, 'user_words': user_words, 'niche': niche,
+                       **({'understood_as': f'{niche} as its viewers watch it: how places and their people work',
+                           'boundary': f'a subject that is not {niche} itself, only told with a {niche} technique'}
+                          if kind == 'niche' else {}),
+                       **(scope_extra or {})},
              'audience_value': 'this audience comes to understand how the world works, not to collect facts',
              'from_references': [{'ref': 'V001', 'at': '01:10-01:40', 'observed': 'the map zooms out as the cause is named',
                                   'interpretation': 'the relation is shown before it is explained'}],
@@ -4327,7 +5033,7 @@ class TopicDiscoveryTests(unittest.TestCase):
                            **(sel_extra or {})},
              'value_to_carry': values if values is not None else [
                  {'id': 'R1', 'what': 'the core finding of the chosen subject', 'why_it_matters': 'it changes how the viewer sees it',
-                  'certainty': 'established', 'rests_on': ['M1']}]}
+                  'certainty': 'established', 'rests_on': ['M1'], 'payoff': True}]}
         s.update(kw)
         return s
 
@@ -4458,9 +5164,13 @@ class TopicDiscoveryTests(unittest.TestCase):
                       runtime={'progression': [{'adds': 'the premise and what is certain', 'material': ['M1', 'M2']},
                                                {'adds': 'the tides that follow from it', 'material': ['M3']},
                                                {'adds': 'what might follow, said as might', 'material': ['M4']}],
-                               'verdict': 'sustains', 'why': 'three layers of consequence fill it for curious viewers'})
+                               'verdict': 'sustains', 'why': 'three layers of consequence fill it for curious viewers'},
+                      payoff={'shape': 'progressive', 'rests_on': ['M3'],
+                              'why_substantial': 'the viewer rebuilds a familiar world one solid consequence at a time',
+                              'needs_first': 'that the Moon raises most of the tides',
+                              'worth_the_buildup': 'each layer of consequence is a reward of its own along the way'})
         vals = [{'id': 'R1', 'what': 'the tides would shrink by half', 'why_it_matters': 'coasts and life follow the tides',
-                 'certainty': 'reasoned', 'rests_on': ['M3']},
+                 'certainty': 'reasoned', 'rests_on': ['M3'], 'payoff': True},
                 {'id': 'R2', 'what': 'coastal life might struggle', 'why_it_matters': 'it is the human stake of it',
                  'certainty': 'speculative', 'rests_on': ['M4'], 'framed_as': 'a possibility, said as one'}]
         scope = {'understood_as': 'the user wants the consequences of the Moon disappearing, as a thought experiment',
@@ -4484,9 +5194,14 @@ class TopicDiscoveryTests(unittest.TestCase):
         mats = [{'id': 'M1', 'what': 'a cat runs a tiny bakery badly', 'certainty': 'invented'},
                 {'id': 'M2', 'what': 'it sells the last croissant to itself', 'certainty': 'invented'}]
         vals = [{'id': 'R1', 'what': 'the cat sells the last croissant to itself', 'why_it_matters': 'the setup pays as a joke',
-                 'certainty': 'invented'}]
+                 'certainty': 'invented', 'payoff': True}]
+        # a comedy pays several times: no climax to manufacture, no material to rest on (the premise is invented)
         c = self.cand('T1', 'a cat runs a bakery', 'a comic premise and its payoffs', 'a cat opens a bakery it cannot run',
-                      'each customer makes the premise worse', 'a run of laughs and one last turn', factual=False, material=mats)
+                      'each customer makes the premise worse', 'a run of laughs and one last turn', factual=False, material=mats,
+                      payoff={'shape': 'several', 'rests_on': [],
+                              'why_substantial': 'each customer turns the same premise into a fresh, bigger laugh',
+                              'needs_first': 'that the cat cannot bake at all',
+                              'worth_the_buildup': 'the jokes escalate to the last croissant, which pays the whole setup'})
         s = self.subj([c, self.alt()], niche='comedy', user_words='comedy', values=vals)
         self.assertEqual(self.check(s, niche='comedy')[0], [])
         c['factual'] = True                                            # invention is not allowed in a factual subject
@@ -4755,6 +5470,33 @@ class TopicPathTests(unittest.TestCase):
         if out and cls.report:
             Path(out).write_text(json.dumps(cls.report, indent=1, ensure_ascii=False), encoding='utf-8')
 
+    @staticmethod
+    def add_payoff(subject, sketch):
+        """The recorded exercises predate the payoff assessment (2026-11-24): when the chosen candidate has none, the
+        one its own sketch implies is added, never invented: the value a key-moment beat carries is a payoff the film
+        builds to; otherwise the value most beats carry is delivered progressively."""
+        cands = {str(c['id']): c for c in subject['candidates']}
+        ch = cands[str(subject['selection']['candidate'])]
+        if isinstance(ch.get('payoff'), dict):
+            return
+        keyed = [str(r) for b in sketch['beats'] if b.get('key_moment') for r in b.get('carries') or []]
+        counts = {}
+        for b in sketch['beats']:
+            for r in b.get('carries') or []:
+                counts[str(r)] = counts.get(str(r), 0) + 1
+        vals = {str(v['id']): v for v in subject['value_to_carry']}
+        pid = next((r for r in keyed if r in vals), None)
+        shape = 'builds_to' if pid else 'progressive'
+        if not pid:
+            pid = max((r for r in counts if r in vals), key=lambda r: counts[r])
+        mids = {str(m.get('id')) for m in ch.get('strongest_material') or [] if isinstance(m, dict)}
+        rests = [m for m in vals[pid].get('rests_on') or [] if m in mids]
+        ch['payoff'] = {'shape': shape, 'rests_on': rests or sorted(mids)[:1],
+                        'why_substantial': str(ch.get('reward') or ch.get('why_it_matters')),
+                        'needs_first': 'what the first beats establish about the subject',
+                        'worth_the_buildup': str((ch.get('runtime') or {}).get('why') or ch.get('why_it_matters'))}
+        vals[pid]['payoff'] = True
+
     def run_path(self, name):
         fx = self.FIX / name
         if not (fx / 'subject.json').is_file():
@@ -4778,13 +5520,14 @@ class TopicPathTests(unittest.TestCase):
         shutil.copyfile(fx / 'sources.md', rp / 'sources.md')
         save(rp / 'claims.json', claims)
         cli('length', '--run', run, '--video', 1, '--mode', 'standard', '--niche', niche, '--story-form', form,
-            '--refs', 'V001,V002', '--pace-wpm', 145)
+            '--refs', 'V001,V002', '--pace-wpm', 145, '--pace-why', 'the test narrator reads at this pace')
         vd = run / '40-plans/video-01'
         blue = {'audience_promise': subject.get('audience_value'), 'central_question': 'What does the research show?',
                 'narrative_approach': 'one subject followed through its researched progression',
                 'why_this_length': 'the progression of the chosen material', 'original_angle': 'the chosen angle',
                 'human_lens': 'the people or the viewer inside it', 'visual_grammar': 'maps, drawings, illustrated stills',
-                'factuality': 'factual', 'research_sources': ['S1'], 'title': 'A test title'}
+                'factuality': 'factual', 'research_sources': ['S1'], 'title': 'A test title',
+                'audience_knows': 'the everyday basics of the subject, none of its research'}
         blue.update(sketch.get('blueprint') or {})
         save(vd / 'blueprint.json', blue)
         h.measure_refs()
@@ -4793,12 +5536,22 @@ class TopicPathTests(unittest.TestCase):
             subject['from_references'] = [{'ref': 'V001', 'at': '00:10-00:30',
                                            'observed': 'the narrator names the cost before the decision',
                                            'interpretation': 'the stakes come before the turn, so the turn lands'}]
+        self.add_payoff(subject, sketch)
+        sc_ = subject['scope']
+        if str(sc_.get('kind')).lower() == 'niche':
+            # the recorded exercises predate the niche's line (2026-11-24): their own words stand in for it
+            sc_.setdefault('understood_as', f'{sc_.get("niche")} as the user asked for it: {sc_.get("user_words")}')
+            sc_.setdefault('boundary', f'a subject outside {sc_.get("niche")}, told only with its techniques')
         iss, warn = h.load_core().subject_issues(subject, (rp / 'sources.md').read_text(encoding='utf-8'), 600,
                                                  ('V001', 'V002'), niche, claims)
         rep['subject_issues'], rep['subject_warnings'] = iss, warn
         self.assertEqual(iss, [], (name, iss))
         d = h.direction_doc()
         d['subject'] = subject
+        payv = [str(v['id']) for v in subject['value_to_carry'] if v.get('payoff') is True]
+        for t in d['treatments']:
+            t['carries_values'] = [{'value': p, 'how': f'treatment {t["id"]} lets the researched progression deliver it'}
+                                   for p in payv]
         save(vd / 'direction.json', d)
         packet = cli('review-packet', '--run', run, '--video', 1, '--kind', 'treatment')
         meta = json.loads((vd / 'reviews' / 'packet-treatment-r1.json').read_text(encoding='utf-8'))
@@ -4864,7 +5617,13 @@ class TopicPathTests(unittest.TestCase):
         save(rp / 'claims.json', claims)
         save(vd / 'script.json', {'language': 'en', 'pace_wpm': 145, 'lines': lines, 'tags_exception': TAG_EXCEPTION})
         save(vd / 'beat-map.json', {'target_length_s': 600, 'beats': beats})
-        (vd / 'editorial-review.md').write_text('## Self-audit\nNotes.\n', encoding='utf-8')
+        # the placeholder script's comprehension signals (the exercise's own hedge sentences, placed one per line by this
+        # harness) classified as the editorial stage would: kept, since the harness, not a writer, put them there
+        sig = h.load_core().comprehension_signals(lines, beats, 145, 'en')
+        comp = ''.join(f'- {x.split(":")[0].split("-")[0]}: necessary_complexity: the recorded sentences placed here by '
+                       'the test harness, kept as written\n' for x in sig)
+        (vd / 'editorial-review.md').write_text('## Self-audit\nNotes.\n' + ('## Comprehension\n' + comp if comp else ''),
+                                                encoding='utf-8')
         h.review_script()
         pc = cli('plan-check', '--run', run, '--video', 1, expected=None)
         rep['plan_check_issues'] = pc['issues']
@@ -4898,13 +5657,26 @@ class TopicPathTests(unittest.TestCase):
                     x['content_note'] = notes[x['id']]
             save(run / '60-visuals/video-01/shot-plan.json', {'video': 1, 'shots': shots})
             sc = cli('shot-check', '--run', run, '--video', 1, expected=None)
+        unsure = sorted({x.split('_of_beat_')[0][len('shot_'):] for x in sc['issues'] if '_needs_uncertainty_shown:' in x})
+        if unsure:
+            # the recorded exercises predate the rule (2026-11-24): the uncertainty gate fired on their contested and
+            # speculative beats (the audit's gap, seen in real plans); the sketch's own words when it has them, else a
+            # neutral statement the report marks as added here, so the rest of the path is exercised
+            rep['uncertainty_gate_fired'] = unsure
+            sk = {str(s.get('id') or ''): s for s in sketch.get('shots') or []}
+            for x in shots:
+                if x['id'] in unsure:
+                    x['uncertainty_shown'] = (sk.get(x['id']) or {}).get('uncertainty_shown') or                         'the picture shows the setting only and asserts nothing the research leaves open'
+            save(run / '60-visuals/video-01/shot-plan.json', {'video': 1, 'shots': shots})
+            sc = cli('shot-check', '--run', run, '--video', 1, expected=None)
         rep['shot_check_issues'] = sc['issues']
         self.assertTrue(sc['ready'], (name, sc['issues']))
         # what the image and music workers would be given
         jobp = h.home / 'job.json'
+        cli('style-lock', '--run', run, '--video', 1, '--style-prompt', 'illustrated, muted palette')   # the locked look
         save(jobp, {'op': 'generate', 'run': str(run), 'video': 1,
-                    'images': [{'shot_id': s['id'], 'prompt': s['frame_prompt'], 'out': str(h.home / f'{s["id"]}.png')}
-                               for s in shots]})
+                    'images': [{'shot_id': s['id'], 'prompt': s['frame_prompt'] + ', illustrated, muted palette',
+                                'out': str(h.home / f'{s["id"]}.png')} for s in shots]})
         mg = cli('media-check', '--job', jobp, '--kind', 'stills', expected=None)
         self.assertTrue(mg['ok'], (name, mg['issues']))
         by_beat = {b['id']: b for b in beats}
@@ -4922,7 +5694,8 @@ class TopicPathTests(unittest.TestCase):
             self.assertTrue(any(i.get('carries_significance') for i in mg['direction']['items'] if i['beat_id'] == k),
                             (name, k))
         if keys:
-            save(jobp, {'run': str(run), 'video': 1, 'tracks': [{'beats': keys, 'caption': 'a bed under these moments'}]})
+            save(jobp, {'run': str(run), 'video': 1, 'tracks': [{'beats': keys, 'caption': 'a bed under these moments',
+                                                                 'serves': 'a quiet bed that leaves these moments their weight'}]})
             mu = cli('media-check', '--job', jobp, '--kind', 'music', expected=None)
             self.assertTrue(mu['ok'] and all(mu['direction']['items'][0]['beats'][k].get('key_moment') for k in keys),
                             (name, mu))

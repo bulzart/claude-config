@@ -142,8 +142,22 @@ def make_run(root: Path, drawings=True) -> Path:
             {'type': 'line', 'points': [[0.2, 0.2], [0.8, 0.8]], 'stroke': '#ffffff', 'width': 0.01,
              'in': {'kind': 'draw', 'start_s': 0.2, 'dur_s': 0.6}}]}), encoding='utf-8')
         write_mov(dd / 'D01.mov', 2.1)
+        if HAVE_FFMPEG:
+            draw_record(dd)
         (dd / 'placements.json').write_text('{"D01": {"note": "a working file, not a spec"}}', encoding='utf-8')
     return rd
+
+
+def draw_record(dd, name='D01', seconds=2.1):
+    """The render record draw_tool.py writes after a render, for a clip made here with ffmpeg (no renderer run)."""
+    spec_ = importlib.util.spec_from_file_location('draw_tool_for_records', ROOT / 'scripts' / 'draw_tool.py')
+    dt = importlib.util.module_from_spec(spec_)
+    spec_.loader.exec_module(dt)
+    sp = Path(dd) / f'{name}.json'
+    spec = json.loads(sp.read_text(encoding='utf-8'))
+    still, how = dt.spec_still(spec, sp)
+    dt.write_record(spec, sp, Path(dd) / f'{name}.mov', dt.spec_sha256(spec), dt.tool_sha256(), still, how,
+                    dt._sha_or_none(still), (1920, 1080), 30.0, int(round(seconds * 30)), seconds, 1)
 
 
 def edit_json(p, fn):
@@ -322,6 +336,7 @@ class BuildPlanTests(unittest.TestCase):
             write_mov(self.vis / 'drawings' / 'D01.mov', 1.5)
             edit_json(self.vis / 'drawings' / 'D01.json',
                       lambda d: d.update({'still_motion': {'scale': [1.0, 1.1], 'x': [0, 0], 'y': [0, 0]}}))
+            draw_record(self.vis / 'drawings', seconds=1.5)       # rendered again, as a changed drawing must be
         code, res, r = self.dry()
         self.assertEqual(code, 0, (res, r.stderr[-400:]))
         joined = ' | '.join(json.loads(self.plan_file.read_text(encoding='utf-8'))['warnings'])

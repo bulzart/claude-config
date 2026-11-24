@@ -33,7 +33,12 @@ import urllib.request
 
 
 def output(data, error=False):
-    print(json.dumps(data, indent=2, ensure_ascii=False))
+    s = json.dumps(data, indent=2, ensure_ascii=False)
+    try:
+        s.encode(sys.stdout.encoding or "utf-8")
+    except (UnicodeEncodeError, LookupError):
+        s = json.dumps(data, indent=2, ensure_ascii=True)   # a code-page pipe cannot hold every character: escaped
+    print(s, flush=True)
     if error:
         sys.exit(2)
 

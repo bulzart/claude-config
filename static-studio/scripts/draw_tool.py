@@ -21,13 +21,22 @@ Following the picture: a drawing is placed on its still. `still_motion` ({"scale
 the picture frame by frame, so a still keeps its camera move under its drawing. `still_framing` (one framing for the
 whole clip, `framing_applied` when the spec's positions already include it) is the static form.
 
+The render record (2026-11-24): every render that succeeds writes X.render-record.json beside X.mov, holding the hash of
+the spec's content, of the still it is drawn on, of the clip and of this tool, the size, fps and length as rendered, and
+the words and numbers the drawing shows; a render that fails leaves none. `render_status` reads it to tell whether a
+clip is still the render of its spec and its still; `spec_facts` lists a spec's words, counters and colours without
+rendering. Neither needs Pillow, which is imported on its first use, for drawing.
+
 Local work only: no model, no API, no credits.
 """
 from __future__ import annotations
 
 import argparse
+import datetime
+import hashlib
 import json
 import math
+import os
 import random
 import shutil
 import subprocess
@@ -36,7 +45,24 @@ import tempfile
 import zlib
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+
+class _Pillow:
+    """One Pillow module, imported on its first use, so reading a spec's facts or a render's status imports no Pillow.
+    The first attribute read imports the module and puts it in this module's globals in place of this stand-in: every
+    later use is the plain module, and drawing is unchanged."""
+
+    def __init__(self, name):
+        self._name = name
+
+    def __getattr__(self, attr):
+        import importlib
+        mod = importlib.import_module('PIL.' + self._name)
+        globals()[self._name] = mod
+        return getattr(mod, attr)
+
+
+Image, ImageChops, ImageDraw, ImageFilter, ImageFont = (_Pillow(n) for n in ('Image', 'ImageChops', 'ImageDraw',
+                                                                             'ImageFilter', 'ImageFont'))
 
 SUPERSAMPLE = 3
 FONT_DIRS = [Path(r'C:\Windows\Fonts'), Path.home() / 'AppData' / 'Local' / 'Microsoft' / 'Windows' / 'Fonts',
@@ -1612,14 +1638,18 @@ def _walk(elements):
 
 
 def cmd_render(args):
+    outp = Path(args.out).expanduser().resolve()
+    drop_record(outp)                   # the clip's old record goes first: a render that fails from here leaves none
     spec, cw, ch = load_spec(args.spec)
+    spec_hash, tool_hash = spec_sha256(spec), tool_sha256()     # what is drawn, hashed before the drawing starts
+    still, still_from = spec_still(spec, args.spec, getattr(args, 'still', None))
+    still_hash = _sha_or_none(still)
     fps = float(spec.get('fps', 30))
     dur_s = float(spec['dur_s'])
     ss = int(args.supersample or spec.get('supersample') or SUPERSAMPLE)
     elements = spec['elements']
     n_frames = max(1, round(dur_s * fps))
     moving = motion_varies(spec)
-    outp = Path(args.out).expanduser().resolve()
     outp.parent.mkdir(parents=True, exist_ok=True)
     reused = 0
     with tempfile.TemporaryDirectory(prefix='draw_') as tmp:
@@ -1646,9 +1676,18 @@ def cmd_render(args):
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode != 0:
             error('ffmpeg encode failed', res.stderr[-800:])
+    try:
+        rec_path, _ = write_record(spec, args.spec, outp, spec_hash, tool_hash, still, still_from, still_hash, (cw, ch),
+                                   fps, n_frames, dur_s, ss)
+    except (OSError, ValueError, TypeError) as exc:     # nothing is left at the record's name (it is moved in whole)
+        error('the drawing was rendered, but its render record could not be written',
+              f'{type(exc).__name__}: {exc}'[:800])
+    extra = {'still_warning': f'the still {still} is missing: the record cannot vouch for it'} \
+        if still is not None and still_hash is None else {}
     emit({'ok': True, 'file': str(outp), 'canvas': spec['canvas'], 'fps': fps, 'dur_s': dur_s, 'frames': n_frames,
           'frames_reused': reused, 'supersample': ss, 'elements': len(elements), 'follows_still_motion': moving,
-          'codec': 'qtrle (alpha-preserving QuickTime Animation)',
+          'record': str(rec_path), 'still': str(still) if still is not None else None, 'still_from': still_from,
+          **extra, 'codec': 'qtrle (alpha-preserving QuickTime Animation)',
           'note': 'Import as a video overlay on its own track in CapCut, at the drawing\'s shot start, for the shot\'s '
                   'length, over the still it explains. Look at it placed: `preview` composites frames over the still.'})
 
@@ -1754,10 +1793,553 @@ def cmd_texts(args):
 
 def cmd_check(args):
     ok_ffmpeg = shutil.which('ffmpeg') is not None
+    try:
+        ok_pillow = callable(Image.new)     # imports Pillow: drawing needs it, reading facts and records does not
+    except ImportError:
+        ok_pillow = False
     fonts = {k: bool(font_path({'font': k})) for k in FONT_NAMES}
-    emit({'ok': ok_ffmpeg, 'pillow': True, 'ffmpeg': ok_ffmpeg, 'qtrle_available': True, 'supersample': SUPERSAMPLE,
+    emit({'ok': ok_ffmpeg and ok_pillow, 'pillow': ok_pillow, 'ffmpeg': ok_ffmpeg, 'qtrle_available': True,
+          'supersample': SUPERSAMPLE,
           'element_types': list(ELEMENT_TYPES), 'stroke_styles': list(STROKE_STYLES), 'icons': list(ICONS),
           'fonts': fonts})
+
+
+# ------------------------------------------------------------------ the render record: what a clip was rendered from
+RECORD_SUFFIX = '.render-record.json'
+RECORD_KIND = 'draw_tool render record'
+RECORD_VERSION = 1
+SPEC_HASH_FORM = 'sha256 of the spec as JSON: keys sorted, separators "," and ":", non-ASCII escaped, UTF-8'
+MORSE_LETTERS = {'.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E', '..-.': 'F', '--.': 'G', '....': 'H',
+                 '..': 'I', '.---': 'J', '-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N', '---': 'O', '.--.': 'P',
+                 '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T', '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X',
+                 '-.--': 'Y', '--..': 'Z', '-----': '0', '.----': '1', '..---': '2', '...--': '3', '....-': '4',
+                 '.....': '5', '-....': '6', '--...': '7', '---..': '8', '----.': '9', '.-.-.-': '.', '--..--': ',',
+                 '---...': ':', '-.-.-.': ';', '-....-': '-', '-..-.': '/', '.----.': "'", '.-..-.': '"', '-.--.': '(',
+                 '-.--.-': ')', '-...-': '=', '.-.-.': '+', '.--.-.': '@', '-.-.--': '!', '.-...': '&'}
+_TOOL_SHA = {}
+
+
+def record_path(out_path):
+    """The render record of a clip: X.render-record.json beside X.mov. Not X.render.json: a run's render script saves
+    the render command's printed reply under that name (`render ... > DNN.render.json`), which would write over it."""
+    p = Path(out_path)
+    return p.with_name(p.stem + RECORD_SUFFIX)
+
+
+def drop_record(out_path):
+    """Remove a clip's render record (before a render of it, so a render that fails leaves none)."""
+    try:
+        record_path(out_path).unlink()
+    except FileNotFoundError:
+        pass
+
+
+def spec_sha256(spec):
+    """The hash of a spec's content (SPEC_HASH_FORM), never of its file: the same content has the same hash whatever its
+    key order, spacing or file time, so a spec written again unchanged keeps it. Numbers are hashed as JSON writes them,
+    so 1 and 1.0 differ (a text of 1.0 is drawn "1.0")."""
+    blob = json.dumps(spec, sort_keys=True, separators=(',', ':'), ensure_ascii=True)
+    return hashlib.sha256(blob.encode('utf-8')).hexdigest()
+
+
+def file_sha256(path):
+    h = hashlib.sha256()
+    with open(path, 'rb') as f:
+        for chunk in iter(lambda: f.read(1 << 20), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _sha_or_none(path):
+    try:
+        return file_sha256(path) if path is not None and Path(path).is_file() else None
+    except OSError:
+        return None
+
+
+def tool_sha256():
+    """This renderer's sha256, as draw_tool.py is on disk (read again only when the file changes)."""
+    p = Path(__file__).resolve()
+    st = p.stat()
+    key = (str(p), st.st_size, st.st_mtime_ns)
+    if key not in _TOOL_SHA:
+        _TOOL_SHA[key] = file_sha256(p)
+    return _TOOL_SHA[key]
+
+
+def _utc_now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+
+
+def _rel(path, base):
+    """path relative to base with '/' (so a record still finds its files once their folder is moved), or None."""
+    try:
+        return Path(os.path.relpath(str(path), str(base))).as_posix()
+    except ValueError:                  # another drive
+        return None
+
+
+def spec_still(spec, spec_path=None, still=None):
+    """(the still a drawing is drawn on, how it was found) or (None, None): the still given (render --still); else the
+    spec's own "still" (a path, relative to the spec's folder); else, for a spec in a drawings folder naming its shot,
+    that shot's still as capcut-build finds it: ../stills/<the shot, or the shot it reuses in ../shot-plan.json>.png.
+    The renderer never reads the still: it is recorded so that a still made again after the drawing was placed on it
+    shows in render_status."""
+    if still:
+        return Path(still).expanduser().resolve(), 'given'
+    if not isinstance(spec, dict):
+        return None, None
+    base = Path(spec_path).expanduser().resolve().parent if spec_path else None
+    named = spec.get('still')
+    if isinstance(named, str) and named.strip():
+        p = Path(named).expanduser()
+        if not p.is_absolute() and base is not None:
+            p = base / p
+        return p.resolve(), 'spec'
+    shot = str(spec.get('shot') or '').strip()
+    if not shot or base is None or base.name.lower() != 'drawings':
+        return None, None
+    vis, src = base.parent, shot
+    try:
+        plan = json.loads((vis / 'shot-plan.json').read_text(encoding='utf-8-sig'))
+        for s in plan.get('shots') or []:
+            if isinstance(s, dict) and str(s.get('id')) == shot and s.get('reuses'):
+                src = str(s['reuses'])
+                break
+    except (OSError, ValueError, AttributeError):
+        pass
+    p = vis / 'stills' / f'{src}.png'
+    return (p.resolve(), 'shot') if p.is_file() else (None, None)
+
+
+def write_record(spec, spec_path, out_path, spec_hash, tool_hash, still, still_from, still_hash, size, fps, frames,
+                 dur_s, supersample):
+    """Write the render record of a clip just rendered and return (its path, the record). It is written whole or not
+    at all: a temporary file moved into place."""
+    out_path = Path(out_path).resolve()
+    here = out_path.parent
+    spec_p = Path(spec_path).expanduser().resolve()
+    try:
+        facts = spec_facts(spec)
+    except Exception as exc:            # the words and numbers are an extra: the provenance is written without them
+        facts = {'texts': None, 'counters': None, 'colors': None, 'problems': [f'{type(exc).__name__}: {exc}'[:300]]}
+    has_still = still is not None
+    rec = {'kind': RECORD_KIND, 'version': RECORD_VERSION, 'made_at': _utc_now(),
+           'spec': str(spec_p), 'spec_rel': _rel(spec_p, here), 'spec_sha256': spec_hash,
+           'spec_hash_form': SPEC_HASH_FORM, 'shot': spec.get('shot'), 'beat': spec.get('beat', spec.get('beat_id')),
+           'still': str(still) if has_still else None, 'still_rel': _rel(still, here) if has_still else None,
+           'still_from': still_from, 'still_sha256': still_hash,
+           'out': str(out_path), 'out_rel': out_path.name, 'out_sha256': file_sha256(out_path),
+           'out_bytes': out_path.stat().st_size, 'tool': str(Path(__file__).resolve()), 'tool_sha256': tool_hash,
+           'size': [int(size[0]), int(size[1])], 'fps': fps, 'frames': frames, 'duration_s': round(frames / fps, 6),
+           'spec_dur_s': dur_s, 'supersample': supersample,
+           'texts': facts['texts'], 'counters': facts['counters'], 'colors': facts['colors']}
+    if facts.get('problems'):
+        rec['facts_problems'] = facts['problems']
+    rp = record_path(out_path)
+    tmp = rp.with_name(rp.name + '.tmp')
+    try:
+        tmp.write_text(json.dumps(rec, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
+        os.replace(tmp, rp)
+    except OSError:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
+    return rp, rec
+
+
+# ------------------------------------------------------------------ a spec's facts: its words, numbers and colours
+def _r3(v):
+    return None if v is None else round(float(v), 3)
+
+
+def _num(v):
+    """A number as the spec means it (315 for 315.0), read with float() as the renderer reads it."""
+    f = float(v)
+    return int(f) if f.is_integer() and abs(f) < 2 ** 53 else f
+
+
+def _float_or_none(v):
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f == f and abs(f) != float('inf') else None
+
+
+def _hex6(value):
+    """A colour as hex_rgba paints it ('#rrggbb' from the first six digits; an empty value paints white), or None."""
+    if value is not None and not isinstance(value, str):
+        return None
+    h = (value or '#ffffff').lstrip('#')
+    try:
+        rgb = [int(h[k:k + 2], 16) for k in (0, 2, 4)]
+    except ValueError:
+        return None
+    if any(not 0 <= c <= 255 for c in rgb):
+        return None
+    return '#%02x%02x%02x' % tuple(rgb)
+
+
+def _el_times(el, dur, parent):
+    """(start, full, out, end) of an element on the clip's clock, inside its group's window: when it appears, when its
+    entrance is over, when its exit starts (None: it stays) and when it is gone (the clip's end at the latest)."""
+    i, o = el.get('in') or {}, el.get('out') or {}
+    start = full = 0.0
+    if i:
+        st, du = window(i)
+        start, full = st, st + du
+    out_s, end = None, dur
+    if o:
+        st, du = window(o)
+        out_s, end = st, (st + du if dur is None else min(dur, st + du))
+    if parent:
+        ps, pf, po, pe = parent
+        start, full = max(start, ps), max(full, pf)
+        if pe is not None:
+            end = pe if end is None else min(end, pe)
+        if po is not None and (out_s is None or po < out_s):
+            out_s = po
+    return start, full, out_s, end
+
+
+def _morse_text(code):
+    """Morse marks read as letters ('?' for a sign that is no letter, digit or mark): spaces part letters, '/' words."""
+    words = []
+    for word in str(code).split('/'):
+        letters = [MORSE_LETTERS.get(''.join(c for c in tok if c in '.-'), '?') for tok in word.split()]
+        if letters:
+            words.append(''.join(letters))
+    return ' '.join(words)
+
+
+def _text_rows(el, times):
+    """The words an element shows as written (text, stamp, card lines, Morse marks), each with its times."""
+    kind = el.get('type')
+    start, full, out_s, end = times
+    i = el.get('in') or {}
+    entrance = (i.get('kind') or DEFAULT_IN.get(kind, 'fade')) if i else None
+    rows = []
+
+    def add(text, s, f, how, **extra):
+        text = str(text)
+        if text.strip():
+            rows.append({'id': el.get('id'), 'type': kind, 'text': text, 'start_s': _r3(s), 'full_s': _r3(f),
+                         'out_s': _r3(out_s), 'end_s': _r3(end), 'entrance': how, 'on_screen': end is None or s < end,
+                         **extra})
+    if kind in ('text', 'stamp'):
+        add(el.get('text', ''), start, full, entrance)
+    elif kind == 'card':
+        lines = [str(x) for x in (el.get('lines') or ([el['text']] if el.get('text') else []))]
+        if el.get('type_text', True):   # typed after the card lands, line after line (r_card)
+            t0 = float((el.get('in') or {}).get('start_s', 0)) + float(el.get('text_delay', 0.25))
+            tdur = float(el.get('text_dur_s', 0.6))
+            total = sum(len(x) for x in lines) or 1
+            done = 0
+            for line in lines:
+                s, f = t0 + tdur * done / total, t0 + tdur * (done + len(line)) / total
+                done += len(line)
+                add(line, max(s, start), max(f, full), 'type')
+        else:
+            for line in lines:
+                add(line, start, full, entrance)
+    elif kind == 'morse':
+        code = str(el.get('code', ''))
+        n = sum(1 for c in code if c in '.-')
+        if n:                           # each mark lit at its time (r_morse)
+            st, du = window(el.get('in') or {'start_s': 0, 'dur_s': 1})
+            ts = el.get('times')
+            born = [float(ts[k]) if ts and k < len(ts) else st + du * k / n for k in range(n)]
+            add(code.strip(), max(start, born[0]), max(full, max(born)), 'morse', decoded=_morse_text(code))
+    return rows
+
+
+def _counter_row(el, times, fps):
+    """A counter's numbers and times: what it counts from and lands on, its counting window, and the first frame from
+    which it shows its last number for good (lands_s: the default ease lands well before the window ends, and an
+    elastic or bounce ease passes the number and comes back)."""
+    start, full, out_s, end = times
+    v0, v1 = float(el.get('from', 0)), float(el.get('to', 0))
+    to_text = fmt_number(v1, el)
+    a = el.get('in') or {}
+    if a:
+        cs, cd = window(a)
+        ce = cs + cd
+        first, last = max(0, math.ceil(cs * fps - 1e-9)), math.ceil(ce * fps + 1e-9) + 1
+        landed = first
+        if last - first > 100000:       # a window of hours: past its end the number is there for sure
+            landed = last
+        else:
+            for f in range(first, last + 1):
+                if counter_text(el, f / fps) != to_text:
+                    landed = f + 1
+        lands, from_text = max(landed / fps, start), counter_text(el, cs)
+    else:                               # no entrance: it shows its number from the start
+        cs = ce = lands = start
+        from_text = to_text
+    return {'id': el.get('id'), 'from': _num(v0), 'to': _num(v1), 'from_text': from_text, 'to_text': to_text,
+            'prefix': str(el.get('prefix', '')), 'suffix': str(el.get('suffix', '')),
+            'decimals': int(el.get('decimals', 0) or 0), 'ease': a.get('ease', 'out3') if a else None,
+            'count_start_s': _r3(cs), 'count_end_s': _r3(ce), 'lands_s': _r3(lands),
+            'lands_in_clip': end is None or lands < end, 'start_s': _r3(start), 'out_s': _r3(out_s), 'end_s': _r3(end)}
+
+
+def _element_paint(el):
+    """The colours an element is painted in, as (key, value, default): read the way its renderer reads them, a
+    default being the renderer's own colour for a key the spec leaves out."""
+    kind = el.get('type')
+    out = []
+
+    def given(key):                     # painted only when the spec gives it
+        if el.get(key):
+            out.append((key, el[key], False))
+
+    def painted(key, default, src=None, label=None):    # always painted; the renderer's default when left out
+        src = el if src is None else src
+        out.append((label or key, src[key], False) if key in src else (label or key, default, True))
+    if kind in ('line', 'arrow', 'path', 'ring', 'mark', 'scribble'):
+        painted('stroke', '#ffffff')
+    elif kind == 'highlight':
+        painted('stroke', '#f2d14a')
+    elif kind == 'string':
+        painted('stroke', '#9a2a22')
+    elif kind in ('ellipse', 'rect', 'box', 'polygon'):
+        given('fill')
+        given('stroke')
+    elif kind in ('text', 'counter'):
+        painted('fill', '#ffffff')
+        given('stroke_color')
+        plate, ul = el.get('plate'), el.get('underline')
+        if plate:
+            painted('fill', '#f3ecd9', plate, 'plate.fill')
+            if plate.get('stroke'):
+                out.append(('plate.stroke', plate['stroke'], False))
+        if ul:
+            painted('color', '#b0302a', ul, 'underline.color')
+    elif kind == 'stamp':
+        painted('color', '#b0302a')
+    elif kind == 'card':
+        painted('fill', '#f3ecd9')
+        painted('stroke', '#8b7b62')
+        painted('text_color', '#2b1d14')
+        if el.get('pin'):
+            painted('pin_color', '#b0302a')
+        if el.get('rule'):
+            out.append(('rule', '#c8615a', True))
+        if el.get('tape'):
+            out.append(('tape', '#e8dcb5', True))
+    elif kind in ('pin', 'redact'):
+        painted('color', '#b0302a' if kind == 'pin' else '#151515')
+    elif kind == 'travel':
+        base, from_default = el.get('stroke', '#2b1d14'), 'stroke' not in el
+        trail = el.get('trail')
+        if trail:
+            out.append(('trail.stroke', trail['stroke'], False) if 'stroke' in trail else
+                       ('trail.stroke', base, from_default))
+        out.append(('fill', el['fill'], False) if 'fill' in el else ('fill', base, from_default))
+        if el.get('stroke') and el.get('fill'):
+            out.append(('stroke', el['stroke'], False))
+        if el.get('icon') == 'envelope':
+            painted('flap', '#8b7b62')
+    elif kind == 'pulse':
+        painted('stroke', '#2b1d14')
+    elif kind == 'hatch':
+        painted('stroke', '#6f6f6c')
+        if el.get('outline'):
+            out.append(('outline_color', el['outline_color'], False) if 'outline_color' in el else
+                       ('outline_color', el.get('stroke', '#6f6f6c'), 'stroke' not in el))
+    elif kind == 'morse':
+        painted('color', '#2b1d14')
+        painted('lit', '#d4a017')
+    for key, default in (('shadow', '#000000'), ('glow', '#fff2c0')):
+        fx = el.get(key)
+        if isinstance(fx, dict) and fx:     # as effects() reads it: `true` or {} draws nothing
+            painted('color', default, fx, key + '.color')
+    return out
+
+
+def spec_facts(spec):
+    """The words, numbers and colours a drawing spec shows, from the spec alone (no rendering, no Pillow), for checks
+    against the narration, the content rules and the approved palette. Times are seconds from the overlay's start (the
+    clip's own clock), each element inside its group's window. Returns:
+      texts: [{id, type, text, start_s (appears), full_s (written out or landed), out_s (its exit starts; None: it
+              stays), end_s (gone; the clip's end at the latest), entrance, on_screen}] for text, stamp, card lines,
+              Morse marks (with `decoded`) and counters (text = the number it lands on, with its prefix and suffix;
+              skip type "counter" when reading numbers from texts: they are in counters);
+      counters: [{id, from, to, from_text, to_text, prefix, suffix, decimals, ease, count_start_s, count_end_s,
+                 lands_s (the first frame from which it shows `to` for good), lands_in_clip, start_s, out_s, end_s}];
+      colors: the distinct colours painted ('#rrggbb', the renderer's defaults included); color_uses: [{id, type, key,
+      color, default}]; problems: what could not be read (the renderer would refuse it too).
+    Facts only: nothing is judged here."""
+    facts = {'dur_s': None, 'fps': None, 'shot': None, 'beat': None, 'elements': 0, 'texts': [], 'counters': [],
+             'colors': [], 'color_uses': [], 'problems': []}
+    probs = facts['problems']
+    if not isinstance(spec, dict):
+        probs.append('the spec is not a JSON object')
+        return facts
+    dur = _float_or_none(spec.get('dur_s'))
+    if dur is None:
+        probs.append('dur_s is missing or not a number: an element with no exit has no end')
+    fps = _float_or_none(spec.get('fps', 30))
+    if not fps or fps <= 0:
+        probs.append(f"fps {spec.get('fps')!r} is not a number above 0: read as 30")
+        fps = 30.0
+    facts.update(dur_s=dur, fps=fps, shot=spec.get('shot'), beat=spec.get('beat', spec.get('beat_id')))
+
+    def visit(els, parent):
+        if not isinstance(els, list):
+            probs.append(f'elements (or a group\'s children) is not a list: {type(els).__name__}')
+            return
+        for el in els:
+            if not isinstance(el, dict):
+                probs.append(f'an element is not an object: {el!r}'[:200])
+                continue
+            facts['elements'] += 1
+            eid = el.get('id')
+            try:
+                times = _el_times(el, dur, parent)
+            except (TypeError, ValueError, AttributeError) as exc:
+                probs.append(f'{eid}: its in or out cannot be read: {type(exc).__name__}: {exc}'[:300])
+                times = parent
+            if times is not None:
+                try:
+                    facts['texts'].extend(_text_rows(el, times))
+                    if el.get('type') == 'counter':
+                        row = _counter_row(el, times, fps)
+                        facts['counters'].append(row)
+                        facts['texts'].append({'id': eid, 'type': 'counter', 'text': row['to_text'],
+                                               'start_s': row['start_s'], 'full_s': row['lands_s'],
+                                               'out_s': row['out_s'], 'end_s': row['end_s'], 'entrance': 'count',
+                                               'on_screen': row['end_s'] is None or row['start_s'] < row['end_s']})
+                except (TypeError, ValueError, KeyError, AttributeError, IndexError, OverflowError) as exc:
+                    probs.append(f'{eid}: {type(exc).__name__}: {exc}'[:300])
+            try:
+                for key, value, default in _element_paint(el):
+                    col = _hex6(value)
+                    if col is None:
+                        probs.append(f'{eid}: {key} {value!r} is not a colour the renderer can paint'[:300])
+                    else:
+                        facts['color_uses'].append({'id': eid, 'type': el.get('type'), 'key': key, 'color': col,
+                                                    'default': default})
+            except (TypeError, AttributeError) as exc:
+                probs.append(f'{eid}: its colours cannot be read: {type(exc).__name__}: {exc}'[:300])
+            if el.get('type') == 'group':
+                visit(el.get('children') or [], times)
+    visit(spec.get('elements') or [], None)
+    facts['colors'] = sorted({u['color'] for u in facts['color_uses']})
+    return facts
+
+
+# ------------------------------------------------------------------ is a clip still the render of its spec and still?
+def _same_path(a, b):
+    try:
+        if os.path.exists(a) and os.path.exists(b):
+            return os.path.samefile(a, b)
+    except OSError:
+        pass
+    return os.path.normcase(os.path.abspath(str(a))) == os.path.normcase(os.path.abspath(str(b)))
+
+
+def _recorded(rec, key, base):
+    """Where a record says one of its files is: relative to the record first (its folder may have moved), as written."""
+    out = []
+    if rec.get(key + '_rel'):
+        out.append(base / str(rec[key + '_rel']))
+    if rec.get(key):
+        out.append(Path(str(rec[key])))
+    return out
+
+
+def render_status(spec_path, mov_path, still_path=None):
+    """Is mov_path still the render of spec_path and of its still? Read from the clip's render record (record_path) and
+    the files as they are now, by content: the spec by its content hash (spec_sha256: written again unchanged is no
+    change, whatever its time), the clip and the still by their sha256. still_path is the still the clip is placed
+    over (None: the still the record names). Returns {"current": True|False, "reasons": [{"code", "detail"}], "notes",
+    the paths, made_at, and the hashes now and as recorded}. Reason codes: no_record, record_unreadable,
+    record_for_other_spec, record_for_other_output, spec_missing, spec_unreadable, spec_changed, mov_missing,
+    mov_changed, still_missing, still_changed, still_not_recorded (a still to check, none in the record). A note (the
+    renderer changed since) never makes a clip stale. Reads files only; writes nothing."""
+    spec_path, mov_path = Path(spec_path), Path(mov_path)
+    rp = record_path(mov_path)
+    st = {'current': False, 'reasons': [], 'notes': [], 'spec': str(spec_path), 'mov': str(mov_path), 'record': str(rp),
+          'still': str(still_path) if still_path else None, 'made_at': None, 'spec_sha256': None,
+          'recorded_spec_sha256': None, 'out_sha256': None, 'recorded_out_sha256': None, 'still_sha256': None,
+          'recorded_still_sha256': None}
+
+    def why(code, detail):
+        st['reasons'].append({'code': code, 'detail': detail})
+    rec = None
+    if not rp.is_file():
+        why('no_record', f'{mov_path.name} has no render record ({rp.name}): it was rendered before render records, or '
+                         'not by draw_tool.py render')
+    else:
+        try:
+            rec = json.loads(rp.read_text(encoding='utf-8-sig'))
+        except (OSError, ValueError) as exc:
+            why('record_unreadable', f'{rp.name} cannot be read: {type(exc).__name__}: {exc}'[:300])
+        if rec is not None and not (isinstance(rec, dict) and rec.get('kind') == RECORD_KIND
+                                    and rec.get('spec_sha256')):
+            why('record_unreadable', f'{rp.name} is not a draw_tool render record')
+            rec = None
+    try:
+        st['spec_sha256'] = spec_sha256(json.loads(spec_path.read_text(encoding='utf-8-sig')))
+    except FileNotFoundError:
+        why('spec_missing', f'the spec {spec_path} is missing')
+    except (OSError, ValueError) as exc:
+        why('spec_unreadable', f'the spec {spec_path.name} cannot be read: {type(exc).__name__}: {exc}'[:300])
+    mov_there = mov_path.is_file()
+    if not mov_there:
+        why('mov_missing', f'{mov_path} is missing')
+    if rec is None:
+        return st
+    base = rp.parent
+    st.update(made_at=rec.get('made_at'), recorded_spec_sha256=rec.get('spec_sha256'),
+              recorded_out_sha256=rec.get('out_sha256'), recorded_still_sha256=rec.get('still_sha256'))
+    if not any(_same_path(p, spec_path) for p in _recorded(rec, 'spec', base)):
+        why('record_for_other_spec', f"{mov_path.name} was rendered from {rec.get('spec')}, not from {spec_path}")
+    if st['spec_sha256'] and st['spec_sha256'] != rec.get('spec_sha256'):
+        why('spec_changed', f'{spec_path.name} has changed since {mov_path.name} was rendered from it (its content '
+                            'hash)')
+    if not any(_same_path(p, mov_path) for p in _recorded(rec, 'out', base)):
+        why('record_for_other_output', f"{rp.name} is the record of {rec.get('out')}, not of {mov_path}")
+    if mov_there:
+        not_it = f'{mov_path.name} is not the clip that was rendered'
+        try:
+            if rec.get('out_bytes') is not None and mov_path.stat().st_size != rec.get('out_bytes'):
+                why('mov_changed', f'{not_it} (its size differs from the record)')
+            else:
+                st['out_sha256'] = file_sha256(mov_path)
+                if st['out_sha256'] != rec.get('out_sha256'):
+                    why('mov_changed', f'{not_it} (its sha256 differs from the record)')
+        except OSError as exc:
+            why('mov_changed', f'{mov_path.name} cannot be read: {exc}'[:300])
+    recorded = rec.get('still_sha256')
+    places = _recorded(rec, 'still', base)
+    target = Path(still_path) if still_path else next((p for p in places if p.is_file()), places[0] if places else None)
+    if target is not None:
+        st['still'] = str(target)
+        if not target.is_file():
+            why('still_missing', f'the still {target} is missing')
+        elif not recorded:
+            why('still_not_recorded', f'{rp.name} names no still, so it cannot tell whether {mov_path.name} was drawn '
+                                      f'on {target.name}')
+        else:
+            st['still_sha256'] = _sha_or_none(target)
+            if st['still_sha256'] != recorded:
+                why('still_changed', f'{target.name} is not the still {mov_path.name} was drawn on (its sha256 differs '
+                                     'from the record)')
+            elif places and not any(_same_path(p, target) for p in places):
+                st['notes'].append(f"placed over {target}, drawn on {rec.get('still')}: the same picture (sha256)")
+    try:
+        if rec.get('tool_sha256') and rec['tool_sha256'] != tool_sha256():
+            st['notes'].append('draw_tool.py has changed since this render (tool_sha256): rendered again, it may look '
+                               'different')
+    except OSError:
+        pass
+    st['current'] = not st['reasons']
+    return st
 
 
 if __name__ == '__main__':
@@ -1767,6 +2349,8 @@ if __name__ == '__main__':
     p.add_argument('--spec', required=True, help='path to a drawing spec JSON file')
     p.add_argument('--out', required=True, help='output .mov path')
     p.add_argument('--supersample', type=int, default=None, help=f'draw at N times the canvas (default {SUPERSAMPLE})')
+    p.add_argument('--still', default=None, help='the still it is drawn on, for its render record (default: the '
+                   'spec\'s "still", else ../stills/<its shot>.png for a spec in a drawings folder)')
     p.set_defaults(func=cmd_render)
     p = sub.add_parser('preview', help='frames of the drawing over its still, as one contact sheet (JPG)')
     p.add_argument('--spec', required=True)

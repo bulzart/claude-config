@@ -1336,6 +1336,15 @@ def _media_seconds(p):
     return v if v == v and v > 0 else None
 
 
+def _draw_tool():
+    """The drawing renderer (draw_tool.py beside this file), for its render records: importing it imports no Pillow."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import draw_tool
+    return draw_tool
+
+
 def _capcut_cli_path():
     """capcut-cli's executable, or None (_capcut_cli fails instead)."""
     exe = shutil.which("capcut")
@@ -1582,6 +1591,7 @@ def _capcut_build_plan(rd: Path, n: int, a) -> tuple:
     elif getattr(a, "drawings", None) and not ddir.is_dir():
         problems.append(f"no drawings folder at {ddir}")
     elif ddir.is_dir():
+        unrecorded_drawings = []
         for mov in sorted(ddir.glob("*.mov")):
             spec_p = mov.with_suffix(".json")
             spec = _read_json_or_none(spec_p) if spec_p.is_file() else None
@@ -1598,11 +1608,20 @@ def _capcut_build_plan(rd: Path, n: int, a) -> tuple:
                 problems.append(f"{spec_p.name} is drawn on shot {sid}, which the edit plan does not have (move it out of "
                                 f"{ddir.name}/ or name its shot)")
                 continue
+            rstatus = _draw_tool().render_status(spec_p, mov, next((im["file"] for im in images if im["shot_id"] == sid),
+                                                                   None))
+            unvouched = [r for r in rstatus["reasons"] if r["code"] in ("no_record", "still_not_recorded")]
+            stale = [r for r in rstatus["reasons"] if r not in unvouched]
+            if stale:
+                problems.append(f"{mov.name} is not the render of {spec_p.name} and its still as they are now: "
+                                + "; ".join(r["detail"] for r in stale) + " (render it again: draw_tool.py render)")
+            elif unvouched:
+                unrecorded_drawings.append(mov.stem)
             secs = _media_seconds(mov)
             if secs is None:
                 problems.append(f"ffprobe could not read {mov}")
                 continue
-            frame, shot_s = 1.0 / 30, s["dur_us"] / 1e6
+            frame, shot_s = 1.0 / float((moves or {}).get("fps") or 30), s["dur_us"] / 1e6
             if secs < shot_s - frame:
                 warnings.append(f"{mov.stem} lasts {secs:.2f} s and its shot {sid} {shot_s:.2f} s: it leaves the still "
                                 f"{shot_s - secs:.2f} s before the cut (render it for the shot's length)")
@@ -1629,6 +1648,12 @@ def _capcut_build_plan(rd: Path, n: int, a) -> tuple:
             overlays.append({"id": mov.stem, "shot_id": sid, "file": f.as_posix(), "sha256": _sha256_file(f), "spec": str(spec_p),
                              "spec_sha256": _sha256_file(spec_p), "at": s["at"], "at_us": s["at_us"], "dur": round(min(shot_s, secs), 6),
                              "dur_us": min(s["dur_us"], round(secs * 1e6))})
+        if unrecorded_drawings:
+            warnings.append(f"{len(unrecorded_drawings)} drawing(s) without a render record that vouches for their spec "
+                            "and still (" + ", ".join(unrecorded_drawings[:8]) + (", ..." if len(unrecorded_drawings) > 8
+                                                                                   else "")
+                            + "): rendered before render records, so a stale one cannot be told; render them again "
+                              "to have them checked")
         _lanes(overlays, lambda k: f"draw{k + 1}")
 
     # the beds and the sound effects, as decided (the sound placements file: manual 09)
@@ -1831,8 +1856,8 @@ def _mirror_timeline(d: Path) -> dict:
 
 def _draft_tracks(d: Path) -> list:
     content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
-    return [{"index": i, "type": t.get("type"), "name": t.get("name"), "segments": len(t.get("segments") or [])}
-            for i, t in enumerate(content.get("tracks") or [])]
+    return [{"index": i, "type": t.get("type"), "name": t.get("name"), "segments": len(t.get("segments") or []),
+             "muted": bool(t.get("attribute"))} for i, t in enumerate(content.get("tracks") or [])]
 
 
 def _build_next(rd: Path, n: int, d, sounds_file: Path) -> list:
@@ -1921,7 +1946,7 @@ def cmd_capcut_build(a):
     steps, res = [], {}
     with FileLock(lock, timeout=900):
         if (d / ".locked").exists() or _capcut_running():
-            fail("CapCut is running: close it, then run this again (nothing was changed)", 3)
+            fail("CapCut is running: close it, then run this again (the project was not changed)", 3)
         env = {**os.environ, "CAPCUT_MCP_CORE": str(core), "CAPCUT_DRAFTS_DIR": str(d.parent), "CAPCUT_TEMPLATE_DRAFT": tmpl}
         try:
             cp = subprocess.run([node, str(BUILD_MJS), str(plan_path)], capture_output=True, text=True, encoding="utf-8",
@@ -1949,7 +1974,10 @@ def cmd_capcut_build(a):
         audio_n = sum(t["segments"] for t in tracks if t["type"] == "audio")
         over_n = sum(t["segments"] for t in tracks if t["type"] == "video") - main_n
         want = (counts["pictures"], counts["overlays"], counts["narration"] + counts["beds"] + counts["sfx"])
-        if (main_n, over_n, audio_n) != want:
+        muted = [str(t["name"]) for t in tracks if t["muted"] and t["segments"]]
+        if muted:   # a track cloned from a muted template starts muted: its clips would play nothing
+            steps.append({"step": "read-back", "exit": 1, "result": "muted track(s) holding clips: " + ", ".join(muted)})
+        elif (main_n, over_n, audio_n) != want:
             steps.append({"step": "read-back", "exit": 1, "result": f"the saved project holds {main_n} pictures, {over_n} overlays and "
                                                                     f"{audio_n} audio clips; the plan has {want[0]}, {want[1]} and {want[2]}"})
         else:

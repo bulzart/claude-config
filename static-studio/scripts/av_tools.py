@@ -403,7 +403,7 @@ def segment_shots(feats):
     return shots, kind, d
 
 
-def inspect_candidates(feats, kinds, shots, limit=60):
+def inspect_candidates(feats, kinds, shots, limit=None):
     """Stretches the samples cannot settle, for a closer look at a higher rate (inspect-window): a flash (a picture
     seen in one sample only), a transition or a cut series (what happened between the samples), and a shot shorter
     than two samples. [{'from_s', 'to_s', 'why'}], merged where they touch, in time order."""
@@ -429,7 +429,8 @@ def inspect_candidates(feats, kinds, shots, limit=60):
                 merged[-1][2].append(why)
         else:
             merged.append([a, b, [why]])
-    return [{'from_s': _r(a, 3), 'to_s': _r(b, 3), 'why': ', '.join(w)} for a, b, w in merged[:limit]]
+    # every candidate, never a silent first-N (a caller that shows fewer says how many it left out)
+    return [{'from_s': _r(a, 3), 'to_s': _r(b, 3), 'why': ', '.join(w)} for a, b, w in (merged[:limit] if limit else merged)]
 
 
 # ---------------------------------------------------------------- narration
@@ -524,8 +525,11 @@ def span_stats(words, audio=None, a=None, b=None, segments=None):
     out = {'words': len(ws)}
     sp = _speech_time(ws, segments, a, b)
     out['speech_rate_wpm'] = _r(len(ws) / (sp / 60), 0) if sp >= 3 and len(ws) >= 6 else None
-    gaps = [y['start_s'] - x['end_s'] for x, y in zip(ws, ws[1:])]
-    pauses = [g for g in gaps if g >= PAUSE_MIN_S]
+    # a pause belongs to the stretch it starts in: measured over all the words, so one that crosses a window's edge
+    # is counted once (it used to be counted in neither window; 2026-11-24 audit)
+    pauses = [y['start_s'] - x['end_s'] for x, y in zip(words, words[1:])
+              if y['start_s'] - x['end_s'] >= PAUSE_MIN_S and (a is None or x['end_s'] >= a)
+              and (b is None or x['end_s'] < b)]
     out['pauses'] = len(pauses)
     out['longest_pause_s'] = _r(max(pauses, default=0.0))
     if audio:

@@ -4,7 +4,7 @@
 
 Do not write a ten-minute Wikipedia paraphrase, fake-suspense documentary, or robotic succession of image prompts. Aim for a piece that rewards the viewer's *time*, not only their click: a satisfying question, a surprising but earned path to understanding, emotional and human texture, a credible worldview, visual thought, and an ending that recontextualizes the beginning. Genuine interest and clarity are not enemies of entertainment. Different niches warrant different densities, levels of humor, and narrator distance. Be inviting without sounding like a school assignment, and expressive without manufacturing drama.
 
-The user chooses a **niche**, not a forced title or story form. The writer has creative discretion over a *new* subject and angle inside it ("Finding the subject" below). For the chosen subject, brainstorm **five substantively different** ways of telling it before choosing: contrast perspective (insider vs bystander), scale (one decision vs whole system), structure (event chronology vs consequence-first), voice (practical guide vs intimate inquiry), and visualization (diagram-led vs artifact-led). At least one candidate should challenge the most obvious reference formula. Reject near-identical variants where only a person/date/location changed: five battles told the same way are one approach, not five. Record the five in `40-plans/video-NN/direction.json` → `approaches` (10, 07): what each `changes` (perspective, scale, structure, voice, visualization; at least three of these across the five), its `pitch`, its `strongest_case`, its `long_form_risk`, and whether it `challenges_reference_formula` (at least one does). Then `chosen_approach` with its `runner_up` and why it lost: the comparison is the reasoning, not a score. Rank **not by mathematical virality scores** but by: genuine open question, richness of evidence, ability to sustain locked duration, human consequence, visual potential, unique viewpoint, feasibility and earned conclusion.
+The user chooses a **niche**, not a forced title or story form. The writer has creative discretion over a *new* subject and angle inside it ("Finding the subject" below). For the chosen subject, explore the range of ways it could be told before choosing, and write down as many **substantively different** approaches as it genuinely allows, two at least (there is no fixed number to fill): contrast perspective (insider vs bystander), scale (one decision vs whole system), structure (event chronology vs consequence-first), voice (practical guide vs intimate inquiry), and visualization (diagram-led vs artifact-led). At least one candidate should challenge the most obvious reference formula. Reject near-identical variants where only a person/date/location changed: five battles told the same way are one approach, not five. Record them in `40-plans/video-NN/direction.json` → `approaches` (10, 07): what each `changes` (perspective, scale, structure, voice, visualization; between them at least three of these), its `pitch`, its `strongest_case`, its `long_form_risk`, and whether it `challenges_reference_formula` (at least one does). Then `chosen_approach` with its `runner_up` and why it lost, and its `exploration`: what range of ways to tell it was considered and why these approaches cover it. The comparison is the reasoning, not a score. Rank **not by mathematical virality scores** but by: genuine open question, richness of evidence, ability to sustain locked duration, human consequence, visual potential, unique viewpoint, feasibility and earned conclusion.
 
 No title, hook or narrator performance can save a premise with only three minutes of substance. If research finds no depth, return to topic exploration *before recording*. Never add invented “facts,” pointless facts, filler, machine-gun rhetorical questions or theatrical fake stakes to reach the duration.
 
@@ -20,12 +20,15 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   (`scope.kind`; their own words in `user_words`; the locked niche in `niche`). Inside a niche the subject is ours to
   find; inside a broad subject, a narrower topic or an original angle within its bounds; an exact topic keeps its topic
   and researches its strongest angles (the candidates are those angles); an exact story or concept is developed, never
-  replaced. For a subject, a topic or a story, write what the user asked for in your own words (`understood_as`) and
-  where it would stop being that (`boundary`), then how the choice stays inside it (`selection.how_scope_kept`; for an
-  exact topic or story also `keeps_user_scope: true`). Shared words prove nothing either way: "how a white rock paid
+  replaced. For every scope, a niche included, write what the user asked for in your own words (`understood_as`; for
+  a niche, what the niche is taken to be) and where it would stop being that (`boundary`; for a niche, where a subject
+  would stop being of it); for a subject, a topic or a story, also how the choice stays inside it
+  (`selection.how_scope_kept`; for an exact topic or story also `keeps_user_scope: true`). Shared words prove nothing either way: "how a white rock paid
   Roman soldiers" is still "the history of salt", and "salt in the kitchen" is not, whatever words they share. For an
   exact topic or story the blind treatment reader is also asked whether each treatment is still a video about what was
-  asked (06); a "partly" or "no" is a finding you answer.
+  asked (06), and for a niche with its boundary whether each is still a video of that niche; a "partly" or "no" is a
+  finding you answer. A run grouped by `--cohort-id` (03) names its niche (`scope.niche`) by its own names: the cohort
+  id, or a niche its references' cards name, never the internal `__cohort__:` label.
 - **What this audience values.** Read it from the references and the niche, never from one niche's idea of interesting:
   a history video may reward consequential decisions, a geography video an extraordinary phenomenon understood, a
   biology video a surprising mechanism, a tutorial a problem solved, a "what if" its logically developed consequences,
@@ -74,10 +77,17 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   - A "what if": the premise is assumed, what follows from known science is reasoned, what nobody can know is
     speculative; a possibility is never presented as a guaranteed consequence.
   - Fiction and comedy: invented material is fine, and is never dressed as fact.
-- **Magnitude is not sensationalism.** Death, war, huge numbers or a shocking claim are not value by themselves; an
-  ingenious mechanism or a useful solution can be the bigger reward. A candidate whose exciting version needs
-  exaggeration is not the one. A long build-up must be worth its reward, unless the journey itself is the value; many
-  videos reward continuously (discovery, cumulative understanding, progress, humour) rather than once.
+- **Magnitude is not sensationalism.** Magnitude is the strength of the value this content gives, never drama for
+  its own sake. Death, war, huge numbers or a shocking claim are not value by themselves; an ingenious mechanism or a
+  useful solution can be the bigger reward. A candidate whose exciting version needs exaggeration is not the one. A
+  long build-up must be worth its reward, unless the journey itself is the value; many videos reward continuously
+  (discovery, cumulative understanding, progress, humour) rather than once.
+- **The payoff, assessed before the choice.** Every candidate carries `payoff` (07): its `shape` (`builds_to`: one
+  payoff the film builds to; `several`: several along the way; `progressive`: value delivered step by step, with no
+  climax), what it `rests_on` (in a factual subject, the candidate's own `strongest_material` ids), `why_substantial`
+  for this audience, what the viewer must hold first for it to land (`needs_first`), and `worth_the_buildup`: whether
+  the reward justifies the time spent building to it, or, for a progressive payoff, whether the value along the way
+  holds the length. It is required for the chosen candidate; an alternative's gap is a warning.
 - **The ending comes from this subject.** Its last finding, a result the viewer can now use, an honest open question,
   a consequence still unfolding, a joke's last turn: what this material ends on. A return to the opening image belongs
   only where the return itself says something new; a device any video could use is a template, however well it
@@ -107,13 +117,15 @@ exceptional explanation. The material decides this, not polish, fame or drama.
 - **Carry the value forward.** `value_to_carry`: the findings the film must deliver (`what`, `why_it_matters`,
   `certainty`; `rests_on`: the material ids it stands on, never said more surely than they allow; `needs_first`: the
   values the viewer must hold before it). Each is carried by a beat (`carries` in the beat map), after what it needs
-  first. Where the video turns or pays off, that beat is a key moment, and its shots say how the picture carries it
+  first. The value the payoff delivers is marked `"payoff": true` and rests on the payoff's own material; it is
+  never dropped, and where the payoff `builds_to` one moment or comes in `several` it reaches a key-moment beat, while
+  a `progressive` one is carried by more than one beat. Where the video turns or pays off, that beat is a key moment, and its shots say how the picture carries it
   (`carries_significance`); where value builds step by step (a tutorial, a tour of a mechanism, a run of jokes), no key
   moment is needed and none is invented: the blueprint says how the value builds (`reward_shape`). The script says each
   factual value in the beat that carries it (one of its claims tied to a line there) and as surely as it is known (a
   contested, speculative or assumed value names the line that says so: the beat's `hedges`), and the pictures are given
   what each beat carries and how sure it is (the media gate), so a possibility is never drawn as a documented fact. One
-  the film no longer needs goes in `dropped` with the reason. Research identifies the opportunity; the director decides
+  the film no longer needs (never the payoff's) goes in `dropped` with the reason. Research identifies the opportunity; the director decides
   how to realise it, and may leave out what weakens the experience, never silently.
 - **When it changes.** Another subject is another film: everything follows. A new angle on the chosen subject (its own
   description) is another story: the beat map, script and shot plan follow, and the media follow them where they
@@ -180,7 +192,7 @@ Before writing complete narration, write the episode-specific creative strategy 
 
 Do not mechanically insert humor, tension, cliffhangers, emotional beats, or rhetorical questions to satisfy a format expectation. A quiet, reflective video can be exceptional. So can a playful, energetic one. The right choice depends on the subject and the intended experience.
 
-The strategy then becomes two or three **audiovisual treatments**: narrator, writing voice, pacing, visual language, sound and how picture and voice relate, decided together and tried in sample moments. A blind read compares them, the director decides, and `direction-lock` fixes the choice before the script is written. How is in **10-creative-direction.md**; it is the creative director's manual, and the script stage (03) and the visual and voice stages (04, 05) work from what it locks.
+The strategy then becomes two to four **audiovisual treatments**: narrator, writing voice, pacing, visual language, sound and how picture and voice relate, decided together and tried in sample moments. A blind read compares them, the director decides, and `direction-lock` fixes the choice before the script is written. How is in **10-creative-direction.md**; it is the creative director's manual, and the script stage (03) and the visual and voice stages (04, 05) work from what it locks.
 
 ## Research that supports creativity without turning into a hard documentary
 

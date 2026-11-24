@@ -17,7 +17,9 @@ the minute's numbers on top. Open the sheets in order. Read them the way an edit
 viewer seeing *while* they hear this sentence?
 
 Profile the comparable references (the length lock's) and any reference whose craft you want to learn from, in any
-niche. A technique from an unrelated niche can be exactly what this story needs; its pacing usually is not.
+niche. A technique from an unrelated niche can be exactly what this story needs; its pacing usually is not. Evidence
+that cites a reference outside the locked niche declares it in `evidence.borrowed` (`[{ref, technique, not_taken}]`):
+the technique borrowed, and the subject assumptions not taken.
 
 Every reference the direction cites has its content review (01), and no observation sits inside material it
 excluded (`direction_cites_excluded_material`), unless the observation is about a useful element inside that
@@ -63,8 +65,8 @@ creative profile (02): what makes these videos *enjoyable*, not only what they c
 
 ## 2. From the story approach to an audiovisual treatment
 
-02 finds the *subject* (topic discovery: `subject`, what it offers this audience and the value the film must carry) and chooses the *story*: the angle, the five approaches and why one wins. The strategy's `progression` is how the subject's researched progression is told across the locked length, and each treatment shows in its samples how it makes the researched values land. The **treatment** decides how
-that story sounds and looks, as one idea. Write two or three treatments of the chosen approach that genuinely
+02 finds the *subject* (topic discovery: `subject`, what it offers this audience, its payoff and the value the film must carry) and chooses the *story*: the angle, the approaches (as many genuinely different ones as the subject allows, at least two, with the range explored in `chosen_approach.exploration`) and why one wins. The strategy's `progression` is how the subject's researched progression is told across the locked length, and each treatment shows in its samples how it makes the researched values land. The **treatment** decides how
+that story sounds and looks, as one idea. Write two to four treatments of the chosen approach that genuinely
 differ: different narrators, different relationships between picture and word, different emotional temperatures.
 Not one treatment at three intensities.
 
@@ -92,6 +94,9 @@ Each treatment decides:
   so all of them serve one viewing experience: polish that keeps personality, clarity and surprise, with humour,
   intensity or drama where the material calls for them.
 - **risks**: how this treatment could get boring, cute, theatrical or monotonous over twenty minutes.
+- **carries_values**: for every payoff value (`value_to_carry` marked `"payoff": true`, 02), how this treatment
+  delivers it, in its own terms (`[{value, how}]`). The research shapes the treatment here; its fields are not copied
+  into it.
 
 Then write its **samples**: the opening, a quiet middle and the moment where its value lands hardest (its turn
 when the subject has one, `turning_point`; otherwise its best demonstration, clearest understanding or biggest
@@ -115,10 +120,12 @@ No numbers decide this. Two things do:
 1. **A blind comparison by one fresh reader.** `review-packet --kind treatment` writes the treatments' descriptions
    and samples under random labels, without your rationale. Spawn one new agent whose whole prompt is to read that
    file and follow it. It says which it would watch to the end, where each would wear thin, what feels like a
-   template, and whether voice and picture feel like one idea. `review-record` seals its findings. Answer each one.
+   template, and whether voice and picture feel like one idea. When the user gave an exact topic or story, or the
+   niche scope has its `boundary` (02), it is also asked whether each treatment is still a video about what was asked
+   (for a niche: still a video of that niche); a "partly" or "no" becomes a finding. `review-record` seals its findings. Answer each one.
 2. **Your decision, with reasons.** Which treatment sustains the whole runtime (not the best first 30 seconds),
    fits the subject's truth and the audience's purpose, and is most distinct from the references; and what you take
-   from the others. Write it in `decision`.
+   from the others. Write it in `decision`, with `carries_payoff`: how the chosen treatment makes the payoff land.
 
 Then `direction-lock`. The script and the beat directions are written from the locked treatment. Changing course
 later is allowed and sometimes right: re-lock with `--revise "what changed and why"`. The lock compares the direction
@@ -128,7 +135,8 @@ field by field and says what the change touched (`affects`, and `outdated_now` f
 - In the chosen treatment, the narrator touches the beat map, the script and the recorded narration; the writing voice
   the script; structure and pace the beat map, script, shot plan and edit; the visual language the shot plan, style
   bible, stills and edit; the sound the beat map, music and edit; the audiovisual relationship the beat map, shot plan
-  and edit; the emotional course the beat map and script. In the strategy, the viewer's experience and facts as
+  and edit; the emotional course the beat map and script; how it carries the payoff values (`carries_values`) the beat
+  map and script. In the strategy, the viewer's experience and facts as
   experience touch the beat map and script, the progression also the shot plan and edit, the picture's contribution
   the shot plan, style bible and stills, sound and breath the beat map, music and edit. Another approach touches the
   beat map, script, shot plan and edit; another treatment touches everything.
@@ -158,7 +166,9 @@ the film is built around (`key_moment`), decide all three before the script, in 
 (why it matters inside this video, in the viewer's terms: what is at risk or gained, what question it answers, what
 setup it pays, what the viewer can now do or see differently), `reward` (what the viewer gets there: an answer,
 relief, a laugh, a skill, awe, a feeling), and what they must already know for it to land, its `depends_on` (given
-earlier, or withheld on purpose) or `self_contained` (why it needs nothing earlier). Significance is whatever this
+earlier, or withheld on purpose) or `self_contained` (why it needs nothing earlier). Where the subject's payoff (02) `builds_to` one moment or comes
+in `several`, the value it delivers (`"payoff": true`) lands at a key moment; a `progressive` payoff is carried by
+more than one beat; it is never dropped. Significance is whatever this
 viewer came for: a joke's lies in its setup, a tutorial step's in the problem it solves, a reveal's in what it
 changes, a quiet scene's in what it lets the viewer feel. Never manufacture danger, conflict or a twist the material
 does not have, nor a key moment the video doesn't have (one whose value builds step by step marks none and says how it builds
@@ -280,7 +290,9 @@ These are craft principles. Each one says when it applies.
 1. **Your own pass.** Read the script aloud in your head with `writing_signals` beside you. Cut for length as a
    boredom pass: what a listener would drift through goes first; the vivid detail stays.
 2. **The cold read.** `review-packet --kind script`, then one fresh agent with only that file, then `review-record`.
-   Answer every finding: `revised` (with the lines), `kept` (minor only, with why) or `disputed` (with why). A major
+   Answer every finding: `revised` (with the lines), `kept` (minor only, with why) or `disputed` (with why). Then
+   reconcile each key moment in the answers file (`reconcile`, 06): what it was planned to mean beside what the reader
+   took from it, `same`, `different_but_valid` or `gap`; a gap counts as a major finding. A major
    finding gets a fresh round-2 read of the revised script, by a new agent. After round 2 you decide, and the reasons
    stay on record for the release sheet.
 3. **The narrator, then the calibration part.** `voice-pick` for this treatment (05). When the voice, its stability, the
@@ -288,8 +300,9 @@ These are craft principles. Each one says when it applies.
    time and gives the user clips to hear. Then the calibration part: pace for the length (05), every line heard, and
    `delivery.json` for the performance.
 4. **The final watch review.** `av-profile --video NN --file export.mp4` makes the export's watch sheets;
-   `review-packet --kind final --file` gives a fresh reviewer the sheets and what each part was meant to feel like.
-   Fix, re-export, and the new file gets its own read. `release-check` confirms every gate for that exact file.
+   `review-packet --kind final --file` gives a fresh reviewer the sheets, the parts by time only and the held
+   silences; what each part is meant to do stays with you, to compare with its account when you answer. Its key
+   moments are reconciled the same way. Fix, re-export, and the new file gets its own read. `release-check` confirms every gate for that exact file.
 
 What the code enforces is the order, the versions and the answers. A passed `release-check` means the process was
 followed. Whether the film is a pleasure to watch is the director's and the reviewers' judgement, and the user's.

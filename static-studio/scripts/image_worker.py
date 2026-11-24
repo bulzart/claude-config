@@ -22,7 +22,8 @@ Jobs:
              beat map and shot plan checked, each prompt carrying its shot's approved frame_prompt); each film still made is
              recorded with its shot, beat and direction revision (60-visuals/video-NN/stills-provenance.json)
              (optional job keys: alpha, models, timeout_per_image, start_timeout, reserve_vram_gb: the GPU memory ComfyUI leaves
-             unused, default 5, 0 for none; comfy_args: extra ComfyUI flags; log_out: a path ComfyUI's log is copied to)
+             unused, default 5, 0 for none; comfy_args: extra ComfyUI flags; log_out: a path ComfyUI's log is copied to;
+             gpu_wait_s, default 300, and gpu_need_mb: the GPU lease below)
 
 Each image runs in two stages in the same ComfyUI: the upsampler writes the caption, every model is unloaded (POST /free), then the
 image model draws it. ComfyUI's dynamic VRAM otherwise keeps the upsampler staged next to the text encoder and the transformer: on a
@@ -31,6 +32,11 @@ with a reference; RAM itself stays mostly free). That commit is the GPU memory i
 worker also holds 5 GB of VRAM back (reserve_vram_gb): 11.8 GB for caption plus image at 1216x2160, no slower. ComfyUI's classic loader
 (--disable-dynamic-vram) fills real RAM instead and was stopped by the memory guard. The same seed gives the same pixels again, in one
 process or another, whatever is held back.
+
+While its ComfyUI runs, a generate job holds the PC's GPU lease (gpu_lease.py, next to this file), so the PC's other GPU users make
+room: it declares the card's memory less what ComfyUI holds back (reserve_vram_gb, at least 1 GB), waits up to gpu_wait_s for that
+memory or for a GPU job that took the card first and would not fit beside it (said on stderr), then goes ahead with the same model
+and precision; stop() lets it go, also after an error. The answer's gpu_lease says what it waited for.
 
 The workflow is the one of ComfyUI's own FLUX 3 Image Klein templates (comfyui-workflow-templates 0.11.101:
 image_flux3_klein_distilled_t2i and image_flux3_klein_distilled_image_edit): UNETLoader (the int8 transformer), CLIPLoader type flux3
@@ -74,6 +80,7 @@ STEPS, SAMPLER, SCHEDULER = 16, "euler", "simple"
 # GPU room ComfyUI leaves unused is commit other programs keep. 5 GB held back: a 1216x2160 image peaked at 11.8 GB instead of about
 # 15 GB, with the same speed and the same pixels (dynamic VRAM streams the rest from the mapped model files).
 RESERVE_VRAM_GB = 5
+GPU_WAIT_S = 300          # the longest a generate job waits for the GPU (gpu_lease.py) before it goes ahead anyway
 UPSAMPLER_TOKENS = 3584
 PRESENCE = {"t2i": 1.5, "i2i": 0.0}
 I2I_SCAFFOLD = "Reference images follow in order (the first image, the second image, ...).\nUser request: {instruction}\nOutput the caption."
@@ -85,10 +92,18 @@ ENGINE = "flux3-image-klein-int8"
 # Set by main() for a gated job: (approved request, the upsampler's caption, the item's content note) -> the issues of what the
 # caption adds that the approved prompt does not ask for (static_core.caption_issues). A refused caption is never drawn.
 CAPTION_CHECK = None
+_GPU = {}                 # the running ComfyUI's GPU lease: start() takes it, stop() lets it go
 
 
 def out(obj, code=0):
-    print(json.dumps(obj, ensure_ascii=False), flush=True)
+    s = json.dumps(obj, ensure_ascii=False)
+    try:
+        s.encode(sys.stdout.encoding or "utf-8")
+    except (UnicodeEncodeError, LookupError):
+        # a pipe or file in Windows' code page cannot hold every character a caption may carry (2026-11-24: an
+        # upsampler caption with a block character lost a whole answer): the same JSON, escaped, never a crash
+        s = json.dumps(obj, ensure_ascii=True)
+    print(s, flush=True)
     sys.exit(code)
 
 
@@ -120,7 +135,25 @@ def free_port():
         return s.getsockname()[1]
 
 
-def start(comfy, work, port, extra=()):
+def gpu_take(gpu):
+    """The PC's GPU lease for this ComfyUI (gpu_lease.py, next to this file): FLUX 3 Klein declares the card's memory less the
+    part ComfyUI holds back (reserve_vram_gb, at least 1 GB for the desktop), or the job's gpu_need_mb."""
+    here = str(HERE)
+    if here not in sys.path:
+        sys.path.insert(0, here)     # ComfyUI's embedded Python does not put the script's folder on sys.path
+    import gpu_lease
+    need = gpu.get("need_mb")
+    if need is None:
+        v = gpu_lease.vram()
+        need = int(v["total_mb"] - max(float(gpu.get("reserve_gb") or 0) * 1024, 1024)) if v else 0
+    wait = gpu.get("wait_s")
+    return gpu_lease.acquire("flux", need_mb=int(need), wait_s=GPU_WAIT_S if wait is None else float(wait),
+                             note=str(gpu.get("note") or ENGINE))
+
+
+def start(comfy, work, port, extra=(), gpu=None):
+    if gpu is not None:              # the GPU lease first (gpu_take): held while this ComfyUI runs, let go by stop()
+        _GPU["lease"] = gpu_take(gpu)
     for d in ("in", "out", "tmp", "user"):
         (work / d).mkdir(parents=True, exist_ok=True)
     log = open(work / "comfyui.log", "w", encoding="utf-8", errors="replace")
@@ -165,15 +198,20 @@ def wait_ready(proc, port, timeout):
 
 
 def stop(proc, log):
-    if proc is not None and proc.poll() is None:
-        proc.terminate()
-        try:
-            proc.wait(timeout=20)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait(timeout=20)
-    if log is not None:
-        log.close()
+    try:
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=20)
+        if log is not None:
+            log.close()
+    finally:                         # ComfyUI has stopped (its GPU memory is free again): the GPU lease goes with it
+        lease = _GPU.pop("lease", None)
+        if lease is not None:
+            lease.release()
 
 
 def tail(work, n=2500):
@@ -446,7 +484,10 @@ def op_generate(job):
         port = free_port()
         reserve = job.get("reserve_vram_gb", RESERVE_VRAM_GB)
         extra = ([] if reserve in (None, 0) else ["--reserve-vram", str(reserve)]) + list(job.get("comfy_args") or ())
-        proc, log = start(comfy, work, port, extra)
+        gpu = None if "--cpu" in extra else {     # ComfyUI on the GPU: the GPU lease (gpu_lease.py) while it runs
+            "need_mb": job.get("gpu_need_mb"), "reserve_gb": reserve or 0, "wait_s": job.get("gpu_wait_s"),
+            "note": f"{ENGINE}: {len(imgs)} image(s), {imgs[0]['width']}x{imgs[0]['height']}"}
+        proc, log = start(comfy, work, port, extra, gpu=gpu)
         stats, err = wait_ready(proc, port, float(job.get("start_timeout") or 300))
         if err:
             return {"ok": False, "error": err, "log_tail": tail(work), "images": results}
@@ -469,8 +510,12 @@ def op_generate(job):
                     if not err:
                         res["drew_from"] = "caption"
                         # What the upsampler adds is checked against the approved prompt before anything is drawn from it
-                        refused = CAPTION_CHECK(img["prompt"], caption, img.get("content_note")) if CAPTION_CHECK else []
+                        review = (CAPTION_CHECK(img["prompt"], caption, img.get("content_note")) if CAPTION_CHECK
+                                  else {"issues": [], "notes": []})
+                        refused = review["issues"]
                         res["caption_checks"] = refused
+                        if review["notes"]:
+                            res["caption_notes"] = review["notes"]   # drawn; what to look for when the still lands
                         if refused and img.get("on_caption_refused") == "draw_request":
                             res.update({"caption_refused": caption, "drew_from": "request (its caption was refused)"})
                             caption = img["prompt"]
@@ -508,6 +553,8 @@ def op_generate(job):
         ans = {"ok": ok, "engine": ENGINE, "precision": "int8", "comfyui": version, "models": names,
                "model_bytes": {k: f.stat().st_size for k, f in files.items() if f.is_file()}, "images": results,
                "seconds": round(time.time() - t_all, 1)}
+        if _GPU.get("lease") is not None:
+            ans["gpu_lease"] = _GPU["lease"].info    # how long it waited for the GPU, and for what
         if not ok:
             ans["error"] = next((r.get("error") for r in results if not r.get("ok")), "not every image was made")
             ans["log_tail"] = tail(work)
@@ -555,7 +602,7 @@ def main():
         if not gate["ok"]:
             out({"ok": False, "error": "Static Studio: these stills cannot be generated yet (fix the plan, not the gate).",
                  "issues": gate["issues"]}, 2)
-        CAPTION_CHECK = (lambda request, caption, note: sc.caption_issues(gate["run"], gate["video"], request, caption, note))
+        CAPTION_CHECK = (lambda request, caption, note: sc.caption_review(gate["run"], gate["video"], request, caption, note))
     try:
         res = op(job)
     except Exception as e:  # noqa: BLE001
@@ -577,6 +624,7 @@ def main():
                             "submitted_prompt": given,
                             "submitted_prompt_sha256": hashlib.sha256(given.encode("utf-8")).hexdigest(),
                             "drew_from": r.get("drew_from"), "caption_checks": r.get("caption_checks") or [],
+                            "caption_notes": r.get("caption_notes") or [],
                             "seed": r.get("seed"), "steps": r.get("steps"), "size": [r.get("width"), r.get("height")],
                             "refs": [{"file": str(x), "sha256": (hashlib.sha256(Path(x).read_bytes()).hexdigest()
                                                                  if Path(x).is_file() else None)}

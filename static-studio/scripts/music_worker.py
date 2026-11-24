@@ -21,6 +21,11 @@ the music model runs alone. The instrumental flag of GenerationParams is not rea
 Loading (2026-11-09): the models load through _low_commit_loading (each tensor read when asked, straight onto the GPU), which keeps the
 job's commit memory to the models' own size on this PC; job "low_commit": false loads them ACE-Step's own way. The answer's "loading"
 says which ran.
+
+The GPU: while the models load and play, a generate job holds the PC's GPU lease (gpu_lease.py, next to this file), so the PC's
+other GPU users make room: GPU_NEED_MB (or the job's gpu_need_mb), a wait of up to gpu_wait_s (default 300) for that memory or for
+a GPU job that took the card first and would not fit beside it (said on stderr), then the job goes ahead with the same models; the
+lease is let go however the job ends. The answer's gpu_lease says what it waited for. A job on the CPU ("device") holds none.
 """
 import json
 import os
@@ -31,9 +36,17 @@ import time
 import traceback
 from pathlib import Path
 
+GPU_NEED_MB = 8000        # ACE-Step 1.5 held about 8 GB once loaded (2026-11-09; commit memory, which counts its GPU memory)
+GPU_WAIT_S = 300          # the longest a generate job waits for the GPU (gpu_lease.py) before it goes ahead anyway
+
 
 def out(obj, code=0):
-    print(json.dumps(obj, ensure_ascii=False))
+    s = json.dumps(obj, ensure_ascii=False)
+    try:
+        s.encode(sys.stdout.encoding or "utf-8")
+    except (UnicodeEncodeError, LookupError):
+        s = json.dumps(obj, ensure_ascii=True)      # a code-page pipe cannot hold every character: escaped, never a crash
+    print(s, flush=True)
     sys.exit(code)
 
 
@@ -166,7 +179,30 @@ def _low_commit_loading(torch, device: str) -> None:
     transformers.AutoModel.from_pretrained = from_pretrained
 
 
+def gpu_take(job):
+    """The PC's GPU lease for this job (gpu_lease.py, next to this file): GPU_NEED_MB or the job's gpu_need_mb; none for a job
+    on the CPU."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import gpu_lease
+    if not str(job.get("device") or "cuda").startswith("cuda"):
+        return gpu_lease.unheld("the job runs on the CPU")
+    need, wait = job.get("gpu_need_mb"), job.get("gpu_wait_s")
+    return gpu_lease.acquire("music", need_mb=GPU_NEED_MB if need is None else int(need),
+                             wait_s=GPU_WAIT_S if wait is None else float(wait),
+                             note=f"ACE-Step 1.5: {len(job.get('tracks') or [])} track(s)")
+
+
 def op_generate(job):
+    """The models load and play (_generate) under the GPU lease, which is let go however that ends."""
+    with gpu_take(job) as gpu:
+        res = _generate(job)
+    res["gpu_lease"] = gpu
+    return res
+
+
+def _generate(job):
     loading = "ACE-Step's own"
     if job.get("low_commit", True):
         try:
@@ -262,6 +298,9 @@ def main():
     except Exception as e:  # noqa: BLE001
         out({"ok": False, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-1500:]}, 1)
     if gate:   # which beats each track scores, made under which direction revision
+        # the direction each track was made to serve (the treatment's sound, its beats' sound direction, experience and
+        # pace, a key moment's meaning) and the job's own account of how its caption serves it: shown, and on record
+        res["direction"] = gate.get("direction")
         made = {str(Path(m["out"]).resolve()) for m in res.get("made") or [] if m.get("out")}
         entries = [{"out": str(Path(tr["out"]).resolve()), **rec, "engine": "ace-step-1.5"}
                    for tr, rec in zip(job.get("tracks") or [], gate["records"])
