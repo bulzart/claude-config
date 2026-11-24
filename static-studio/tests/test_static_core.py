@@ -4600,8 +4600,11 @@ class TopicPathTests(unittest.TestCase):
                 if str(v['certainty']).lower() in ('contested', 'speculative', 'assumed'):
                     self.assertTrue(v.get('framing'), (name, v))      # how sure it is reaches the picture
             if b.get('key_moment'):
-                self.assertTrue(item.get('matters_because') and item.get('carries_significance'), (name, item))
+                self.assertTrue(item.get('matters_because'), (name, item))      # what the moment means, on every shot
         keys = [b['id'] for b in beats if b.get('key_moment')]
+        for k in keys:                       # and at least one shot of each key moment says how its picture carries it
+            self.assertTrue(any(i.get('carries_significance') for i in mg['direction']['items'] if i['beat_id'] == k),
+                            (name, k))
         if keys:
             save(jobp, {'run': str(run), 'video': 1, 'tracks': [{'beats': keys, 'caption': 'a bed under these moments'}]})
             mu = cli('media-check', '--job', jobp, '--kind', 'music', expected=None)
