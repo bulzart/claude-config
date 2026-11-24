@@ -13,10 +13,23 @@ A new top-level folder is reported once and stays untracked until you add `!/<fo
 
 ## When commits happen
 Claude Code hooks in `settings.json` run `hooks/autocommit.py`:
-- **Stop**: after every Claude turn, whatever changed is committed as `auto(Stop): …`.
+- **Stop**: after every Claude turn, whatever changed is committed as `auto(Stop) [area]: …`.
 - **SessionStart**: changes made outside Claude (manual edits, installers) are committed as
-  `auto(SessionStart): …`.
+  `auto(SessionStart) [area]: …`.
 Files over 25 MB are left out and reported. The hook only commits; it never pushes.
+
+**One commit per area.** A checkpoint is split into one commit per area, so a commit never mixes two
+projects. The area is the top-level folder (`commands`, `hooks`, `skills`, `static-studio`, `create-clips`, …),
+memory notes (`projects/*/memory/`) are `memory`, and the files at the top (`settings.json`, `CLAUDE.md`,
+`.gitignore`, …) are `config`. The area is in the subject, so one project's commits can be picked out later:
+`git -C ~/.claude log --oneline --grep "\[static-studio\]"`.
+
+**Secret scan.** Before committing, each changed text file is checked for things that look like real
+credentials: API keys (`sk-…`), GitHub, Hugging Face and AWS keys, private-key blocks, and a long random value
+given to a key name such as `ELEVEN_API_KEY` or `CC_SOURCE_KEY`. A file that matches is not committed; the
+hook's message names the file and the kind of match (never the value) on every turn until the secret is taken
+out of the file, and everything else is committed as usual. Encrypted `.enc` files and binary files are not
+checked, and placeholders such as `<your key>` do not count. Tests: `hooks/test_autocommit.py`.
 
 ## GitHub copy
 The repo has a **private** remote, `origin` = `github.com/bulzart/claude-config` (branch `main`), created 2026-10-15 so the
