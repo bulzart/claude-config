@@ -489,11 +489,16 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
      "visual_language": "...", "sound": "...", "audiovisual_relationship": "...", "emotional_course": "...",
      "evidence_used": "...", "departures": "...", "risks": "...",
      "carries_values": [{"value": "R1", "how": "..."}],
+     "movements": [{"what": "what the viewer gets in this movement, six words or more", "minutes": 3},
+                   {"what": "...", "minutes": 6, "promise": true},
+                   {"what": "...", "minutes": 5}],
      "samples": {"opening": {"narration": "50+ words as spoken", "picture": "what the viewer sees"},
                  "quiet_middle": {"narration": "...", "picture": "..."},
                  "turning_point": {"narration": "...", "picture": "..."}}}
   ],
-  "decision": {"treatment": "T1", "why": "...", "taken_from_others": "...", "carries_payoff": "..."}
+  "decision": {"treatment": "T1", "why": "...", "taken_from_others": "...", "carries_payoff": "...",
+               "promise_and_delivery": "where the chosen one delivers the opening's promise, what the viewer gets before it, what the reader said",
+               "length_fit": "how its telling compares with the format, density and narration of the length's references"}
 }
 ```
 
@@ -533,12 +538,17 @@ independent credible sources, read), likely (one credible source), disputed or l
 (between them at least three of perspective/scale/structure/voice/visualization, at least one that challenges the
 references' formula), with `chosen_approach.exploration`: what range of ways to tell it was considered and why these
 approaches cover it. Two to four treatments, each with `carries_values` (`[{value, how}]`: how it delivers every payoff
-value, in its own terms), and the `decision` with `carries_payoff` (how the chosen treatment makes the payoff land); a
-change to the chosen treatment's `carries_values` marks the beat map and script. Evidence that cites a reference
+value, in its own terms) and `movements` (`[{what, minutes, promise}]`: how the whole video unfolds, at least two,
+`promise: true` where it delivers what the opening promises; the blind reader sees them without those marks), and
+the `decision` with `carries_payoff` (how the chosen treatment makes the payoff land), `promise_and_delivery` and
+`length_fit` (10 §3); a change to the chosen treatment's `carries_values` marks the beat map and script, a change to
+its `movements` the beat map, script and shot plan. `direction_facts` reports each treatment's `promise_timing`
+(minutes before its first promise movement, what comes before it) and the length lock's cohort beside it: facts, never
+a verdict. Evidence that cites a reference
 outside the locked niche declares it in `evidence.borrowed` (`[{ref, technique, not_taken}]`: the technique borrowed,
-and the subject assumptions not taken). `direction-lock.json` keeps the hash, the time, `planning_rules` (2 on a lock made since 2026-11-24, kept through
-`--revise`; a lock without it was approved before them, and the planning rules added that day are advisory for it,
-10 §3), `planning_migration` on such an older lock once a substantive revision reached something (`{to, sections,
+and the subject assumptions not taken). `direction-lock.json` keeps the hash, the time, `planning_rules` (3 on a lock made since the storytelling rules of 2026-11-24, kept through
+`--revise`; a lock stamped 2 or without a stamp was approved before rules it need not follow, and those are advisory
+for it, 10 §3), `planning_migration` on such an older lock once a substantive revision reached something (`{to, sections,
 artifacts, history}`: where the current rules now apply), the treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
 follows: `production_rev` (raised by a change that alters what production must do), `sections` (one hash per field,
 so a revision knows exactly what changed; the chosen subject's own description, its research, the other
@@ -562,6 +572,23 @@ wrote), `<kind>-r<N>.json` (sealed: the version it read, its findings and their 
  },
  "revision_notes": {"L045": "Reworded for the ear only: the same fact, the same order, the same hedge."}}
 ```
+
+In a round after the first, a major finding's answer also carries its recurrence (06, "A problem that comes back"):
+
+```json
+"F1": {"action": "revised", "lines": ["L001-L030"], "note": "The letters now open the film; the county follows.",
+       "recurrence": {"recurs_of": "r1:F1", "root_cause": "the revision trimmed the background but kept the treatment that puts it before the letters",
+                      "scope": "structure"}}
+```
+
+`recurs_of` is `"none"` or an earlier finding (`r<round>:<id>`); `scope` is `wording`, `order`, `structure`,
+`treatment`, `material`, `duration` or `dispute`. A `wording` scope is refused unless the finding is disputed; a
+`structure` or `treatment` scope needs `direction-lock --revise` after that read, a `duration` scope a length decision
+made after it. The record lists `recurrence_candidates` (each new major beside the closest earlier majors: facts for
+this answer). A script reader's record (brief 5) also keeps its `promise` (`promised`, `first_delivered`, `waiting`:
+`[{lines, felt: anticipation | delay, why}]`); a delay becomes a W finding (minor), a promise never delivered a major
+one. A harmless serialization slip is put into the format by `review-record` and listed in `format_normalized`
+(`[{where, was, now}]`), the reader's file as written kept in the run and named in `findings_as_written`.
 
 A major finding is `revised` or `disputed`, never just `kept`, and gets a fresh read in the next round (until round 2
 for the script and the final review, round 1 for the treatments). A fresh read also follows a changed line the

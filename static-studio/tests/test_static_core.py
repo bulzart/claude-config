@@ -811,7 +811,9 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(rec['findings'][0]['lines'],['L001-L010','L012'])
         self.assertEqual(rec['format_normalized'][0]['was'],'L001-L010, L012')
         self.assertEqual(rec['findings'][0]['problem'],major['problem'])               # the reader's words untouched
-        self.assertTrue((vd/'reviews/script-r2-findings-as-written.json').is_file())
+        kept=json.loads(Path(rec['findings_as_written']).read_text(encoding='utf-8'))      # the reader's file as written
+        self.assertEqual(kept['findings'][0]['lines'],'L001-L010, L012')
+        self.assertFalse((vd/'reviews/script-r2-findings-as-written.json').exists())      # no second copy
         self.assertTrue(rec['findings'][0]['needs_recurrence'])
         self.assertEqual(rec['recurrence_candidates']['F1'][0]['id'],'F1')
         self.assertIn('recurrence',json.loads(Path(r2['answers_file']).read_text(encoding='utf-8'))['answers']['F1'])
@@ -2384,7 +2386,7 @@ class StaticStudioTests(unittest.TestCase):
         # sent back to re-plan: those checks become advisories. Its other checks stay as they are.
         vd=self.write_plan()
         lock=json.loads((vd/'direction-lock.json').read_text(encoding='utf-8'))
-        self.assertEqual(lock['planning_rules'],2)                                   # a new lock is stamped
+        self.assertEqual(lock['planning_rules'],3)               # a new lock is stamped (3: the storytelling rules)
         b=json.loads((vd/'blueprint.json').read_text(encoding='utf-8')); b.pop('audience_knows'); save(vd/'blueprint.json',b)
         self.assertTrue(any(x.startswith('blueprint_missing_audience_knows') for x in
                             cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']))
@@ -6447,6 +6449,18 @@ class StorytellingTests(unittest.TestCase):
         c.normalize_reader_format('treatment', tr, [], {'A': 'T1', 'B': 'T2', 'C': 'T3'})
         self.assertEqual([(f['id'], f['treatment']) for f in tr['findings']], [('F7', 'B'), ('F7C', 'C'), ('F8', 'B, Z')])
         self.assertEqual(tr['findings'][1]['problem'], 'omens could slip in')
+
+    def test_a_derived_finding_quotes_the_words_it_rests_on(self):
+        # The real case (round 2, 2026-11-24): labels clear, clear, landed; "I could not tell whether the family sent
+        # the money" in what would be different. The derived finding must show that sentence, not only the clear part.
+        c = self.core
+        d = {'lines': 'L001-L010', 'what_happened': 'the brothers write home', 'why_it_matters': 'the human centre',
+             'would_be_different': 'I could not tell whether the family sent the money', 'learned_when': 'at the moment',
+             'why_from': 'the video', 'event': 'clear', 'significance': 'clear', 'reward': 'landed'}
+        f = c.development_findings('script', [d], set())
+        self.assertEqual(f[0]['severity'], 'minor')
+        self.assertIn('I could not tell whether the family sent the money', f[0]['problem'])
+        self.assertIn('the human centre', f[0]['problem'])
 
     def test_a_wait_that_builds_is_not_a_wait_that_delays(self):
         # Case A (delayed promise) against case B (a mystery that rewards the wait): the reader's own account decides.

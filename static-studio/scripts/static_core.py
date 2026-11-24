@@ -12583,9 +12583,12 @@ def development_findings(kind, devs, taken, spans=(), order=()):
         why = str(d.get('why_it_matters') or '').strip() or 'nothing'
         diff = str(d.get('would_be_different') or '').strip()
         keys = _dev_overlaps(kind, d, spans, order) if spans else []
-        # "I could not tell" what would be different, or why it matters, is not "clear" whatever the label says
+        # "I could not tell" what would be different, or why it matters, is not "clear" whatever the label says; the
+        # derived finding then quotes those words too, so its basis is the reader's own (storytelling brief: integrity)
+        told = ''
         if sg == 'clear' and re.search(r"\b(could ?not|couldn'?t|cannot|can'?t) tell\b", f'{diff} {why}', re.I):
             sg = 'partly'
+            told = diff if re.search(r"\b(could ?not|couldn'?t|cannot|can'?t) tell\b", diff, re.I) else ''
         if ev == 'unclear':
             sev, cause = 'major', 'what happened is not clear here'
             prob = f'The reader could not follow what happened at a development that matters: "{what}".'
@@ -12612,7 +12615,8 @@ def development_findings(kind, devs, taken, spans=(), order=()):
             sev = 'major' if keys else 'minor'
             cause = ('why it matters arrives only after the moment' if when == 'only afterwards' else
                      'what it means is established weakly, or too late')
-            prob = (f'The reader only partly saw why this matters: "{what}" (their words: "{why}").'
+            prob = (f'The reader only partly saw why this matters: "{what}" (their words: "{why}"'
+                    + (f'; and on what would be different without it: "{told}"' if told else '') + ').'
                     + (f' It is a key moment ({", ".join(str(b.get("id")) for b in keys)}).' if keys else ''))
         elif ev == 'partly':
             # following only part of what happened is its own failure, apart from meaning and payoff (audit 2026-11-23)
@@ -12733,13 +12737,16 @@ def cmd_review_record(args):
     if not isinstance(raw.get('findings'), list):
         error('The findings file has no "findings" list.', str(fpath))
     # A harmless serialization slip (two line ranges in one string, one finding naming two treatments) is put into
-    # the packet's format without a word of the reader's changed; the file as written stays beside the record, and
-    # what was normalized is recorded (the user's brief, 2026-11-24: never re-run a reader for a slip like that)
+    # the packet's format without a word of the reader's changed; the reader's file as written stays in the run (the
+    # copy above, or a byte copy of a file given from elsewhere), and what was normalized is recorded (the user's
+    # brief, 2026-11-24: never re-run a reader for a slip like that)
     fmt_notes = normalize_reader_format(kind, raw, list((meta.get('subject_snapshot') or {}).keys()),
                                         meta.get('labels') or {})
-    if fmt_notes:
+    as_written = folder / f'{kind}-r{rnd}-findings.json'
+    if fmt_notes and not (meta.get('isolated_dir') and not args.findings):
         folder.mkdir(parents=True, exist_ok=True)
-        write_json(folder / f'{kind}-r{rnd}-findings-as-written.json', read_json(fpath, required=True))
+        as_written = folder / f'{kind}-r{rnd}-findings-as-written.json'
+        shutil.copyfile(fpath, as_written)
     findings = raw.get('findings')
     # A final reviewer who wrote words around its times ("Held silences 00:29, 05:15") is not asked again and its text is
     # never edited: with --normalize-at the times alone become "at" and its own words stay in "at_original".
@@ -12868,7 +12875,7 @@ def cmd_review_record(args):
            'developments': devs if three_ways else None, 'derived_findings': [f['id'] for f in derived],
            'recorded_at': now(),
            **({'promise': raw.get('promise')} if kind == 'script' and brief_v >= 5 else {}),
-           **({'format_normalized': fmt_notes} if fmt_notes else {}),
+           **({'format_normalized': fmt_notes, 'findings_as_written': str(as_written)} if fmt_notes else {}),
            **({'recurrence_candidates': recur} if recur else {})}
     if on_req:
         rec['on_request'] = raw.get('on_request')
