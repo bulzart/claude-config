@@ -138,7 +138,12 @@ blueprint's `audience_knows`, the niche scope's `understood_as` and `boundary`, 
 `uncertainty_shown`, a music track's `serves`, a missing style lock, pace signals not examined, key moments not
 reconciled, and the fresh read after a revision where it matters. Never advisory, for any run: safety and content
 flags, an added child, money (the paid ledger, calibration), asset integrity (file fingerprints, stale renders, a
-changed bed), and the export and release checks. Changing course
+changed bed), and the export and release checks. When such an older direction is substantively revised (the
+revision sends artifacts back to work: a new production revision), the current rules apply where it reaches: the
+sections it changed and the artifacts it sends back, recorded in the lock as `planning_migration` and accumulated over
+revisions (a new sound for the treatment, say, reaches the beat map, the music and the edit: a new bed must say what
+it serves, while the shot plan's and the script's rules stay advisory). A harmless revision (evidence, reasons,
+samples) migrates nothing, and nothing the revision does not reach is reopened. Changing course
 later is allowed and sometimes right: re-lock with `--revise "what changed and why"`. The lock compares the direction
 field by field and says what the change touched (`affects`, and `outdated_now` for what exists):
 

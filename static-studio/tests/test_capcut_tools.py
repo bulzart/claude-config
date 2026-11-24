@@ -52,6 +52,11 @@ class CapcutToolkitTests(unittest.TestCase):
             (Path(store) / first['name']).mkdir()
             _, second = cli('capcut-name', '--video', 3, '--date', '2026-11-19', '--store', store, expected=0)
             self.assertEqual(second['name'], '19_Nov_2026_v03-2')
+            # a name still in CapCut's project list (its folder deleted outside CapCut) is not handed out again
+            (Path(store) / 'root_meta_info.json').write_text(json.dumps({'all_draft_store': [
+                {'draft_name': '19_Nov_2026_v03-2', 'draft_fold_path': f'{store}/19_Nov_2026_v03-2'}]}), encoding='utf-8')
+            _, third = cli('capcut-name', '--video', 3, '--date', '2026-11-19', '--store', store, expected=0)
+            self.assertEqual(third['name'], '19_Nov_2026_v03-3')
             cli('capcut-name', '--video', 3, '--store', Path(store) / 'missing', expected=2)
 
     def test_refusals_change_nothing(self):

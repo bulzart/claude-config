@@ -102,6 +102,27 @@ class SafetyTests(unittest.TestCase):
             # once this tool started it (its pids on record), quitting it is allowed
             m.STARTED.write_text(json.dumps({'pids': [4242]}), encoding='utf-8')
             self.assertEqual([w['pid'] for w in m.mine_running()], [4242])
+        # CapCut opens windows in processes it spawns after the start: a window of a child of a recorded pid is ours;
+        # a CapCut whose ancestry reaches no recorded pid (the user's own) is not
+        child = [{'hwnd': 2, 'title': 'CapCut', 'process': 'CapCut.exe', 'pid': 5151, 'rect': [0, 0, 300, 200], 'front': False}]
+        m.STARTED.write_text(json.dumps({'pids': [4000, 4242]}), encoding='utf-8')
+        with mock.patch.object(m, 'capcut_windows', return_value=child), \
+                mock.patch.object(m, 'capcut_parents', return_value={5151: 4242, 4242: 4000}):
+            self.assertEqual([w['pid'] for w in m.mine_running()], [5151])
+        with mock.patch.object(m, 'capcut_windows', return_value=child), \
+                mock.patch.object(m, 'capcut_parents', return_value={5151: 7777, 7777: 1}):
+            self.assertEqual(m.mine_running(), [])
+        # quit looks again before refusing, and still never closes a CapCut that is not ours
+        calls = []
+        with mock.patch.object(m, 'capcut_running', return_value=True), \
+                mock.patch.object(m, 'capcut_windows', side_effect=lambda: calls.append(1) or users), \
+                mock.patch.object(m, 'capcut_parents', return_value={}), \
+                mock.patch.object(m, 'QUIT_RECHECK_GAP_S', 0.0), mock.patch.object(m, 'user32') as u32:
+            m.STARTED.write_text(json.dumps({'pids': [1234]}), encoding='utf-8')
+            code, ans = run(m.cmd_app, action='quit', timeout='5')
+            self.assertEqual(code, 2)
+            u32.PostMessageW.assert_not_called()
+            self.assertGreaterEqual(len(calls), m.QUIT_RECHECKS)
 
     def test_a_click_is_refused_where_another_window_is_on_top(self):
         m = self.m

@@ -261,10 +261,54 @@ def started_pids():
         return set()
 
 
+QUIT_RECHECKS, QUIT_RECHECK_GAP_S = 3, 2.0     # quit looks again before refusing: CapCut re-creates windows as it starts
+
+
+class _PE32(ctypes.Structure):
+    _fields_ = [('dwSize', wt.DWORD), ('cntUsage', wt.DWORD), ('th32ProcessID', wt.DWORD),
+                ('th32DefaultHeapID', ctypes.c_size_t), ('th32ModuleID', wt.DWORD), ('cntThreads', wt.DWORD),
+                ('th32ParentProcessID', wt.DWORD), ('pcPriClassBase', ctypes.c_long), ('dwFlags', wt.DWORD),
+                ('szExeFile', ctypes.c_wchar * 260)]
+
+
+def capcut_parents():
+    """pid -> parent pid of every running CapCut.exe (a Toolhelp snapshot; {} when it cannot be read)."""
+    out = {}
+    try:
+        k32 = ctypes.WinDLL('kernel32', use_last_error=True)
+        k32.CreateToolhelp32Snapshot.restype = wt.HANDLE
+        snap = k32.CreateToolhelp32Snapshot(0x2, 0)
+        e = _PE32()
+        e.dwSize = ctypes.sizeof(_PE32)
+        ok = k32.Process32FirstW(snap, ctypes.byref(e))
+        while ok:
+            if e.szExeFile.lower() == 'capcut.exe':
+                out[int(e.th32ProcessID)] = int(e.th32ParentProcessID)
+            ok = k32.Process32NextW(snap, ctypes.byref(e))
+        k32.CloseHandle(snap)
+    except Exception:  # noqa: BLE001 - no snapshot: only the recorded pids count
+        return {}
+    return out
+
+
 def mine_running():
-    """CapCut windows that belong to a CapCut this tool started (never the user's own, never another session's)."""
+    """CapCut windows that belong to a CapCut this tool started (never the user's own, never another session's): a
+    window whose process was recorded at start, or descends from one that was (CapCut opens windows in processes it
+    spawns after the start; seen 2026-11-24). A CapCut the user opened descends from none of them."""
     pids = started_pids()
-    return [w for w in capcut_windows() if w['pid'] in pids]
+    if not pids:
+        return []
+    parents = capcut_parents()
+
+    def ours(pid):
+        for _ in range(8):
+            if pid in pids:
+                return True
+            pid = parents.get(pid)
+            if not pid:
+                return False
+        return False
+    return [w for w in capcut_windows() if ours(w['pid'])]
 
 
 def cmd_shot(a):
@@ -365,6 +409,19 @@ def cmd_focus(a):
     out({'ok': capcut_in_front(), 'window': w, 'capcut_in_front': capcut_in_front()}, 0 if capcut_in_front() else 1)
 
 
+def _store_builds() -> list:
+    """Every live project write on CapCut's shared store (capcut-build-* leases), this pipeline's own builds included:
+    CapCut is not started while one writes."""
+    try:
+        here = str(Path(__file__).resolve().parent)
+        if here not in sys.path:
+            sys.path.insert(0, here)
+        import gpu_lease
+        return [x for x in gpu_lease.leases() if str(x.get('name') or '').startswith('capcut-build-')]
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def _store_users() -> list:
     """Others' live leases on CapCut's shared project store (gpu_lease.capcut_store_users), [] without the shared folder."""
     try:
@@ -387,7 +444,7 @@ def cmd_app(a):
             out({'ok': False, 'refused': 'CapCut is already open, and not by this tool: the user (or another session) is '
                                          'using it. Never take it over or close it: wait until it is closed, or ask.',
                  'windows': capcut_windows()}, 2)
-        writing = [x for x in _store_users() if str(x.get('name') or '').startswith('capcut-build-')]
+        writing = [x for x in _store_builds() if str(x.get('name') or '').startswith('capcut-build-')]
         if writing:
             out({'ok': False, 'refused': f"another pipeline is writing a project into CapCut's store ({writing[0].get('name')} "
                                          f"since {writing[0].get('at')}): CapCut started now could read a half-written "
@@ -412,6 +469,10 @@ def cmd_app(a):
         if not capcut_running():
             STARTED.unlink(missing_ok=True)
             out({'ok': True, 'running': False, 'note': 'CapCut was not running'})
+        for _ in range(QUIT_RECHECKS if started_pids() else 0):    # CapCut may be re-creating its windows this second
+            if mine_running():
+                break
+            time.sleep(QUIT_RECHECK_GAP_S)
         if not mine_running():
             out({'ok': False, 'refused': 'the open CapCut was not started by this tool: it is the user\'s (or another '
                                          'session\'s). Never close it.', 'windows': capcut_windows()}, 2)

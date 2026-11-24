@@ -17,7 +17,9 @@ colour of the word box is the agents' choice for each video, with its reason.
 
 The word-box functions below marked "copied" are copied unchanged from the user's other toolkit's word-box builder
 (awl.py: chunk_words_fill, _word_box_plan, _word_box_segments, _capcut_em_px, _wb_norm, _upper_for, _drop_text_tracks),
-so the Luckiest Guy look and its timing behave exactly as there.
+so the Luckiest Guy look and its timing behave exactly as there. One difference, on the Static Studio side only: the words
+reach chunk_words_fill one sentence at a time (word_box_cues), so a caption never runs across a sentence end (the user,
+2026-11-24: a real export showed "SPIES. NOT"); the copied function itself is unchanged.
 """
 from __future__ import annotations
 
@@ -53,7 +55,40 @@ LOOKS = {
         # (no white flash); a longer one is a pause and every word turns white. Every word is lit for min_lit_frames.
         'bridge_s': 0.12, 'tail_s': 0.5, 'min_lit_frames': 2}}
 
-SENTENCE_END = re.compile(r'[.!?…]["”’\')\]]*$')
+SENTENCE_END = re.compile(r'[.!?…。！？]["”’\')\]]*$')
+# a full stop that ends an abbreviation or an initial ends no sentence ("Mr. Pujol", "J. R. R. Tolkien")
+NOT_SENTENCE_END = re.compile(r"(mr|mrs|ms|dr|prof|st|jr|sr|vs|gen|col|lt|sgt|capt|e\.g|i\.e|u\.s|u\.k|[a-z])\.",
+                              re.I)
+
+
+def ends_sentence(word) -> bool:
+    """The word closes a sentence: it ends in . ! ? (or the full-width forms), and is not an abbreviation or an initial."""
+    w = str(word or '')
+    if not SENTENCE_END.search(w):
+        return False
+    core = w.rstrip('"”’\')]')
+    return not NOT_SENTENCE_END.fullmatch(core)
+
+
+def word_box_cues(words: list, max_words: int = 3, min_words: int = 3, break_gap: float = 0.8, info=None) -> list:
+    """The word box's cues: chunk_words_fill (the original, unchanged) on each sentence on its own, so a cue never runs
+    across a sentence end; inside a sentence it fills as before (a short tail joins the cue before it, a pause of
+    break_gap s or more still breaks). A cue's end never runs past the next cue's start."""
+    parts, cur = [], []
+    for w in words:
+        cur.append(w)
+        if ends_sentence(w.get('w')):
+            parts.append(cur)
+            cur = []
+    if cur:
+        parts.append(cur)
+    res = []
+    for part in parts:
+        res += chunk_words_fill(part, max_words, min_words, break_gap, info)
+    for i in range(len(res) - 1):
+        if res[i]['end'] > res[i + 1]['start']:
+            res[i]['end'] = round(max(res[i + 1]['start'], res[i]['start'] + 0.01), 2)
+    return res
 
 
 # ---------------------------------------------------------------- the choice and the look
@@ -625,7 +660,7 @@ def build_draft(d, plan, work, replace=False):
         if not re.fullmatch(r'#[0-9A-Fa-f]{6}', str(box_color or '')):
             raise RuntimeError('the word box needs its colour (captions-plan --box-color #RRGGBB)')
         lw = [{'w': _upper_for(w['w'], plan.get('language')), 's': w['s'], 'e': w['e']} for w in words]
-        cues = chunk_words_fill(lw, look['words'], look['min_words'], look['break_gap_s'])
+        cues = word_box_cues(lw, look['words'], look['min_words'], look['break_gap_s'])
         rows, problems = _word_box_plan(cues, lw, 0.0, fps)
         if problems:
             raise RuntimeError('the captions and the narration words do not line up: ' + json.dumps(problems[:3]))
@@ -860,7 +895,7 @@ def preview(plan, out_dir, W=1920, H=1080, background=None, start_s=None, frames
     else:
         box_color = plan.get('box_color') or '#7A3CFF'
         lw = [{'w': _upper_for(w['w'], plan.get('language')), 's': w['s'], 'e': w['e']} for w in words]
-        cues = [c for c in chunk_words_fill(lw, look['words'], look['min_words'], look['break_gap_s']) if c['end'] > start_s]
+        cues = [c for c in word_box_cues(lw, look['words'], look['min_words'], look['break_gap_s']) if c['end'] > start_s]
         shots = []
         for c in cues:
             toks = c['text'].split()

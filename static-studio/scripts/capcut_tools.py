@@ -325,8 +325,17 @@ def cmd_capcut_name(a):
     if not store.is_dir():
         fail(f"CapCut drafts store not found: {store}", 2)
     base = f"{d.day:02d}_{MONTHS_EN[d.month - 1]}_{d.year}_v{nn:02d}" + _fmt_sfx(_fmt_tag_norm(getattr(a, "format", None)))
+    # a name still in CapCut's project list (its folder deleted outside CapCut) is not free either: re-creating it gives
+    # two tiles for one folder (seen 2026-11-24)
+    try:
+        idx = json.loads((store / "root_meta_info.json").read_text(encoding="utf-8-sig"))
+        listed = {str(e.get("draft_name") or "").lower() for e in idx.get("all_draft_store") or [] if isinstance(e, dict)}
+        listed |= {Path(str(e.get("draft_fold_path") or "").replace(chr(92), "/")).name.lower()
+                   for e in idx.get("all_draft_store") or [] if isinstance(e, dict)}
+    except (OSError, ValueError, AttributeError):
+        listed = set()
     name, k = base, 1
-    while (store / name).exists():
+    while (store / name).exists() or name.lower() in listed:
         k += 1
         name = f"{base}-{k}"
     out({"ok": True, "name": name, "path": str(store / name), "store": str(store)})

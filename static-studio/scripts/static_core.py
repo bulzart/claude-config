@@ -4436,12 +4436,48 @@ def planning_rules_of(rd, video):
         return 1
 
 
+# What each planning rule of 2026-11-24 concerns: a part of direction.json (a section name prefix) or an artifact a
+# revision sends back to work ("@artifact"). A substantive revision of an older direction applies the rules it reaches.
+NEW_RULE_SCOPES = (
+    ('direction_evidence_', ('evidence',)),
+    ('chosen_approach_missing_exploration', ('chosen_approach.', 'approaches')),
+    ('treatment_', ('treatment.',)),
+    ('decision_missing_carries_payoff', ('decision.',)),
+    ('subject_', ('subject.',)),
+    ('payoff_value_', ('subject.',)),
+    ('progressive_payoff_value_', ('subject.',)),
+    ('blueprint_missing_audience_knows', ('@script',)),
+    ('comprehension_signals_', ('@script',)),
+    ('script_review_', ('@script',)),
+    ('script_revised_where_it_matters', ('@script',)),
+    ('final_review_', ('@edit',)),
+    ('shot_', ('@shot-plan',)),
+    ('track_', ('@music',)),
+    ('style_lock_missing', ('@stills',)),
+    ('pace_signals_not_examined', ('@narration',)),
+)
+
+
+def migrated_rule(issue, migration):
+    """The rule behind this issue reaches what the older direction's substantive revisions changed (planning_migration:
+    the sections they changed, the artifacts they sent back to work)."""
+    secs = [str(s) for s in (migration or {}).get('sections') or []]
+    arts = {str(a) for a in (migration or {}).get('artifacts') or []}
+    for prefix, scopes in NEW_RULE_SCOPES:
+        if str(issue).startswith(prefix):
+            return any((sc[1:] in arts) if sc.startswith('@') else any(s == sc or s.startswith(sc) for s in secs)
+                       for sc in scopes)
+    return False
+
+
 def older_plan_advisory(rd, video, issues, warnings):
     """In place: for a direction approved before PLANNING_RULES, the planning checks added since move from issues to
-    warnings, said as advisories. Returns what moved."""
+    warnings, said as advisories, except where a substantive revision of that direction reaches (planning_migration):
+    there the current rules apply. Returns what moved."""
     if planning_rules_of(rd, video) >= PLANNING_RULES:
         return []
-    moved = [x for x in issues if NEW_PLANNING_RULES.match(str(x))]
+    mig = read_json(video_dir(rd, int(video)) / 'direction-lock.json').get('planning_migration') or {}
+    moved = [x for x in issues if NEW_PLANNING_RULES.match(str(x)) and not migrated_rule(x, mig)]
     if moved:
         issues[:] = [x for x in issues if x not in moved]
         warnings.extend(f'advisory (this direction was approved before the planning rules of 2026-11-24, which it '
@@ -10801,6 +10837,16 @@ def cmd_direction_lock(args):
                     required[a] = {'rev': rev + 1, 'parts': parts}
             lock.update({'production_rev': rev + 1, 'required': required,
                          'reapproved': {k: v for k, v in (prev.get('reapproved') or {}).items() if k not in hit}})
+            if int(prev.get('planning_rules') or 1) < PLANNING_RULES:
+                # an older direction substantively revised: the current planning rules apply where this revision
+                # reaches (its changed sections, the artifacts it sends back to work), advisory everywhere else
+                mig = dict(prev.get('planning_migration') or {})
+                lock['planning_migration'] = {
+                    'to': PLANNING_RULES,
+                    'sections': sorted(set(mig.get('sections') or []) | set(changed)),
+                    'artifacts': sorted(set(mig.get('artifacts') or []) | set(hit)),
+                    'history': (mig.get('history') or []) + [{'at': now(), 'revised_because': args.revise,
+                                                              'sections': changed, 'artifacts': hit}]}
     write_json(lockp, lock)
     outdated = outdated_artifacts(rd, n)
     emit({'ok': True, 'lock': str(lockp), 'treatment': lock['treatment'], 'late': bool(lock.get('late_reason')),

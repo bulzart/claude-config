@@ -49,6 +49,31 @@ class CaptionTimingTests(unittest.TestCase):
                      '_upper_for', '_drop_text_tracks'):
             self.assertEqual(c.get(name), o.get(name), name)
 
+    def test_a_word_box_caption_never_runs_across_a_sentence_end(self):
+        # A real CapCut export (2026-11-24) showed "SPIES. NOT": the copied filler fills across sentence ends on purpose.
+        # Static Studio hands it one sentence at a time; inside a sentence it still fills to at least three words.
+        text = ('NOBODY IN LONDON EVER MET THE MAN WHO RAN TWENTY-SEVEN SPIES. NOT ONE OF THEM EXISTED. '
+                'HE INVENTED EVERY SINGLE ONE.').split()
+        words = [{'w': w, 's': round(0.4 * i, 2), 'e': round(0.4 * i + 0.3, 2)} for i, w in enumerate(text)]
+        cues = [c['text'] for c in cap.word_box_cues(words, 3, 3, 0.8)]
+        self.assertEqual(cues, ['NOBODY IN LONDON', 'EVER MET THE', 'MAN WHO RAN TWENTY-SEVEN SPIES.',
+                                'NOT ONE OF THEM EXISTED.', 'HE INVENTED EVERY SINGLE ONE.'])
+        self.assertIn('TWENTY-SEVEN SPIES. NOT', [c['text'] for c in cap.chunk_words_fill(words, 3, 3, 0.8)])  # the original fills
+        # an abbreviation or an initial ends no sentence; a pause still breaks; cues never overlap
+        text2 = 'THEN MR. PUJOL SPOKE. J. EDGAR LISTENED'.split()
+        w2 = [{'w': w, 's': round(0.4 * i, 2), 'e': round(0.4 * i + 0.3, 2)} for i, w in enumerate(text2)]
+        self.assertEqual([c['text'] for c in cap.word_box_cues(w2, 3, 3, 0.8)], ['THEN MR. PUJOL SPOKE.', 'J. EDGAR LISTENED'])
+        w3 = [dict(x) for x in words[:6]]
+        for x in w3[3:]:
+            x['s'] += 2.0
+            x['e'] += 2.0
+        self.assertEqual([c['text'] for c in cap.word_box_cues(w3, 3, 3, 0.8)], ['NOBODY IN LONDON', 'EVER MET THE'])
+        allc = cap.word_box_cues(words, 3, 3, 0.8)
+        self.assertTrue(all(a['end'] <= b['start'] for a, b in zip(allc, allc[1:])))
+        self.assertFalse(cap.ends_sentence('Mr.'))
+        self.assertTrue(cap.ends_sentence('spies.'))
+        self.assertTrue(cap.ends_sentence('one?"'))
+
     def test_the_looks_and_their_fonts(self):
         lg, mh = cap.look_of('luckiest-guy'), cap.look_of('montserrat-highlight')
         self.assertEqual((lg['font_name'], lg['upper'], lg['shadow'], lg['box']['pad']), (['Luckiest Guy', 'Regular'], True, True, 0.05))

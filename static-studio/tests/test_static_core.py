@@ -2314,6 +2314,30 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(iss,['item_1_prompt_does_not_carry_shot_S1_frame_prompt','caption_adds_a_child:boy',
                               'content_flag_unanswered:z'])
         self.assertEqual(len(warn),2)
+        # A substantive revision of the older direction (the chosen treatment's sound: beat map, music and edit go back
+        # to work) applies the current rules where it reaches, and only there.
+        (vd/'editorial-review.md').write_text('## Self-audit\nNotes.\n',encoding='utf-8')
+        d=json.loads((vd/'direction.json').read_text(encoding='utf-8'))
+        ch=d['decision']['treatment']
+        next(t for t in d['treatments'] if str(t.get('id'))==str(ch))['sound']='a low cello drone under every reveal, for this video'
+        save(vd/'direction.json',d)
+        cli('direction-lock','--run',self.run,'--video',1,'--revise','the reveals get a low cello drone')
+        lk=json.loads((vd/'direction-lock.json').read_text(encoding='utf-8'))
+        self.assertNotIn('planning_rules',lk)                                     # still an older direction...
+        self.assertIn('music',lk['planning_migration']['artifacts'])              # ...migrated where the revision reaches
+        self.assertIn('treatment.sound',lk['planning_migration']['sections'])
+        self.assertNotIn('shot-plan',lk['planning_migration']['artifacts'])
+        iss=['track_1_needs_serves:y','shot_S1_of_beat_B01_needs_uncertainty_shown:z','blueprint_missing_audience_knows:w']
+        warn=[]
+        self.assertEqual(core.older_plan_advisory(self.run,1,iss,warn),
+                         ['shot_S1_of_beat_B01_needs_uncertainty_shown:z','blueprint_missing_audience_knows:w'])
+        self.assertEqual(iss,['track_1_needs_serves:y'])                         # new music must say what it serves
+        # a harmless revision (the evidence's wording) reaches nothing and migrates nothing more
+        d['evidence']['notes']='one more observation about the openings, nothing that changes the film'
+        save(vd/'direction.json',d)
+        cli('direction-lock','--run',self.run,'--video',1,'--revise','an evidence note')
+        lk2=json.loads((vd/'direction-lock.json').read_text(encoding='utf-8'))
+        self.assertEqual(lk2['planning_migration']['artifacts'],lk['planning_migration']['artifacts'])
 
     def test_a_changed_beat_flags_its_unchanged_lines(self):
         vd=self.write_plan()

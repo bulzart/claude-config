@@ -480,7 +480,8 @@ change to the chosen treatment's `carries_values` marks the beat map and script.
 outside the locked niche declares it in `evidence.borrowed` (`[{ref, technique, not_taken}]`: the technique borrowed,
 and the subject assumptions not taken). `direction-lock.json` keeps the hash, the time, `planning_rules` (2 on a lock made since 2026-11-24, kept through
 `--revise`; a lock without it was approved before them, and the planning rules added that day are advisory for it,
-10 §3), the treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
+10 §3), `planning_migration` on such an older lock once a substantive revision reached something (`{to, sections,
+artifacts, history}`: where the current rules now apply), the treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
 follows: `production_rev` (raised by a change that alters what production must do), `sections` (one hash per field,
 so a revision knows exactly what changed; the chosen subject's own description, its research, the other
 candidates and each researched value apart), `required` (per artifact, the revision that last touched it and, for a
