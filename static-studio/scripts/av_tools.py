@@ -1194,6 +1194,85 @@ def narration_in_mix(mix_wav, narration_wav, windows=12, win_s=20.0, search_s=3.
                       f'+-{search_s:g} s'}
 
 
+def _frame_at(video, t, width=320):
+    """One frame of a video at t seconds (BGR array), through ffmpeg; None when there is none."""
+    np, cv2 = _np_cv()
+    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-ss', f'{max(0.0, float(t)):.3f}', '-i', str(video),
+           '-frames:v', '1', '-vf', f'scale={int(width)}:-2', '-f', 'image2pipe', '-vcodec', 'png', '-']
+    try:
+        p = subprocess.run(cmd, capture_output=True, timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if p.returncode != 0 or not p.stdout:
+        return None
+    return cv2.imdecode(np.frombuffer(p.stdout, dtype=np.uint8), cv2.IMREAD_COLOR)
+
+
+def _picture_features(img, cv2, width=640, n=1500):
+    """ORB keypoints and descriptors of a picture at a working width: they survive a move, a zoom, a caption and an
+    overlay over part of the frame, as a whole-picture comparison does not."""
+    h, w = img.shape[:2]
+    if w != width:
+        img = cv2.resize(img, (int(width), max(2, int(h * width / w))), interpolation=cv2.INTER_AREA)
+    g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img
+    return cv2.ORB_create(nfeatures=n).detectAndCompute(g, None)
+
+
+def _picture_inliers(fa, fb, np, cv2):
+    """How many keypoints of two pictures agree on one geometric mapping (ratio-tested matches, RANSAC homography)."""
+    (ka, da), (kb, db) = fa, fb
+    if da is None or db is None or len(ka) < 8 or len(kb) < 8:
+        return 0
+    pairs = cv2.BFMatcher(cv2.NORM_HAMMING).knnMatch(da, db, k=2)
+    good = [q[0] for q in pairs if len(q) == 2 and q[0].distance < 0.75 * q[1].distance]
+    if len(good) < 8:
+        return 0
+    src = np.float32([ka[g.queryIdx].pt for g in good]).reshape(-1, 1, 2)
+    dst = np.float32([kb[g.trainIdx].pt for g in good]).reshape(-1, 1, 2)
+    _h, mask = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
+    return int(mask.sum()) if mask is not None else 0
+
+
+PICTURE_FOUND = 15          # inliers: the still is in the frame (measured on a real export: median 362 when it is)
+PICTURE_OTHER = 30          # inliers another still needs to say the frame shows it instead
+
+
+def picture_matches(video, samples, stills):
+    """For each sample {'at_s', 'expect'} (a time in the export and the still file the project shows there): whether the
+    export's frame there shows that still, by keypoints that agree on one geometric mapping (a camera move, a caption or
+    an overlay over part of the frame leaves plenty). When the expected still is not found, every other still of the
+    project is tried. verdict: 'found'; 'another' (another still clearly matches and the expected does not); 'unseen'
+    (nothing matches well: a full-frame card, a dark frame). Measurement only: the checks say what a verdict means.
+    Measured on one real export (2026-11-24): 85 of 92 shots found, 7 under full-frame overlays unseen, none 'another'."""
+    np, cv2 = _np_cv()
+    feats = {}
+    for st in stills:
+        try:
+            img = cv2.imdecode(np.fromfile(str(st), dtype=np.uint8), cv2.IMREAD_COLOR)
+        except (OSError, ValueError):
+            img = None
+        if img is not None:
+            feats[str(st).lower().replace(chr(92), '/')] = (str(st), _picture_features(img, cv2))
+    rows = []
+    for smp in samples:
+        exp = str(smp['expect']).lower().replace(chr(92), '/')
+        row = {'at_s': smp['at_s'], 'expect': str(smp['expect']), 'shot': smp.get('shot')}
+        frame = _frame_at(video, smp['at_s'], width=640)
+        if frame is None or exp not in feats:
+            rows.append({**row, 'verdict': 'unseen', 'error': 'no frame' if frame is None else 'still not readable'})
+            continue
+        ff = _picture_features(frame, cv2)
+        e = _picture_inliers(ff, feats[exp][1], np, cv2)
+        if e >= PICTURE_FOUND:
+            rows.append({**row, 'verdict': 'found', 'inliers': e})
+            continue
+        best = max(((_picture_inliers(ff, v[1], np, cv2), v[0]) for k, v in feats.items() if k != exp),
+                   default=(0, None))
+        verdict = 'another' if best[0] >= PICTURE_OTHER and best[0] >= 2 * e + 10 else 'unseen'
+        rows.append({**row, 'verdict': verdict, 'inliers': e, 'best': best[1], 'best_inliers': best[0]})
+    return rows
+
+
 def delivery(label, wav, words, spans=None, segments=None):
     """The narration alone (a recorded part, a whole narration, a voice preview): its delivery over the whole and,
     when spans are given ({name: (start_s, end_s)}), over each span (a beat)."""

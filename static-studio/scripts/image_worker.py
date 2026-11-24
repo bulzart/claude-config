@@ -11,7 +11,13 @@ Jobs:
   check    : the install (ComfyUI and its version, torch, CUDA, the GPU) and the four model files; "probe": true also starts ComfyUI
              and asks it for every node the workflow uses
   generate : run, video, purpose (shots | treatment_preview | thumbnail; default shots) and images [{shot_id, prompt, out, width,
-             height, seed, steps, upsample, refs}] -> one PNG each, with the caption the image model got. Refused before ComfyUI
+             height, seed, steps, upsample, refs, content_note, on_caption_refused}] -> one PNG each, with the caption the image
+             model got. The upsampler's caption is checked against the approved prompt before anything is drawn from it
+             (static_core.caption_issues: an added child, people or written text the prompt has none of, a content flag or
+             excluded theme, or a caption that keeps under half of the prompt): a refused caption is never drawn (the item
+             fails; on_caption_refused "draw_request" draws the approved prompt itself instead). A job cannot swap the model
+             files. Every still is recorded with what the image model was given (submitted_prompt), its seed, references
+             (with their hashes) and model files. Refused before ComfyUI
              starts unless Static Studio's production gate passes (static_core.media_gate: the direction locked and current, the
              beat map and shot plan checked, each prompt carrying its shot's approved frame_prompt); each film still made is
              recorded with its shot, beat and direction revision (60-visuals/video-NN/stills-provenance.json)
@@ -36,6 +42,7 @@ value since 2026-10-17, flux3/pipeline.py; 6.93 is ComfyUI's built-in launch val
 each reference as the reference code prepares it (RGB over white, LANCZOS to its pixel budget, JPEG q92); a transparent reference is
 put on white for the image model as well.
 """
+import hashlib
 import json
 import math
 import os
@@ -74,6 +81,10 @@ REF_MULTIPLE = 32
 REF_PIXELS = {1: 1024 * 1024, 2: 724 * 724}          # three or more references: 512 x 512 each (flux3/pup.py)
 ASPECTS = ((1, 1), (4, 5), (5, 4), (3, 4), (4, 3), (2, 3), (3, 2), (9, 16), (16, 9), (1, 2), (2, 1), (9, 21), (21, 9))
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))   # 127.0.0.1 only: never through a proxy
+ENGINE = "flux3-image-klein-int8"
+# Set by main() for a gated job: (approved request, the upsampler's caption, the item's content note) -> the issues of what the
+# caption adds that the approved prompt does not ask for (static_core.caption_issues). A refused caption is never drawn.
+CAPTION_CHECK = None
 
 
 def out(obj, code=0):
@@ -340,9 +351,13 @@ def normalise(img, i, earlier_outs=()):
         raise ValueError(f"image {i + 1}: reference image(s) not found: " + "; ".join(missing))
     seed = img.get("seed")
     seed = random.randint(0, 2 ** 32 - 1) if seed is None else _int(seed, "seed")
+    refused = str(img.get("on_caption_refused") or "stop")
+    if refused not in ("stop", "draw_request"):
+        raise ValueError(f"image {i + 1}: on_caption_refused must be stop or draw_request, got {refused!r}")
     return {"prompt": str(img["prompt"]).strip(), "out": str(img["out"]), "width": w, "height": h, "seed": seed,
             "steps": _int(img.get("steps") or STEPS, "steps"), "upsample": img.get("upsample", True) is not False,
-            "refs": [str(r) for r in refs], "alpha": img.get("alpha"), "mtp": img.get("mtp")}
+            "refs": [str(r) for r in refs], "alpha": img.get("alpha"), "mtp": img.get("mtp"),
+            "content_note": img.get("content_note"), "on_caption_refused": refused}
 
 
 # ---- the jobs
@@ -407,6 +422,12 @@ def op_check(job):
 def op_generate(job):
     root, comfy, models_dir = locate(job)
     names, files = model_files(job, models_dir)
+    # This worker makes FLUX 3 Image Klein int8 stills with its own model files: another model, size or precision is
+    # never swapped in through a job (the user, 2026-11-24: FLUX Klein int8 is the primary engine, never silently changed).
+    other = {k: v for k, v in names.items() if v != MODELS[k][1]}
+    if other:
+        return {"ok": False, "error": "a job cannot swap FLUX 3 Image Klein int8's model files (another model or precision "
+                                      "is the user's explicit decision, made in this worker's MODELS)", "models": other}
     missing = [str(f) for f in files.values() if not f.is_file()]
     if missing:
         return {"ok": False, "error": "model files missing: " + "; ".join(missing)}
@@ -438,12 +459,26 @@ def op_generate(job):
             err, caption, entry = None, img["prompt"], None
             try:
                 staged = stage_refs(img["refs"], work, tag)
+                res["drew_from"] = "request"
                 if img["upsample"]:          # stage 1: the caption, then every model unloaded before the image model loads
                     entry, err = run_prompt(proc, port, build_caption(img, names, prompts, staged), timeout)
                     if not err:
                         caption = str((((entry.get("outputs") or {}).get("caption") or {}).get("text") or [""])[0]).strip()
                         err = None if caption else "the prompt upsampler gave an empty caption"
                     res["caption_s"] = round(time.time() - t0, 1)
+                    if not err:
+                        res["drew_from"] = "caption"
+                        # What the upsampler adds is checked against the approved prompt before anything is drawn from it
+                        refused = CAPTION_CHECK(img["prompt"], caption, img.get("content_note")) if CAPTION_CHECK else []
+                        res["caption_checks"] = refused
+                        if refused and img.get("on_caption_refused") == "draw_request":
+                            res.update({"caption_refused": caption, "drew_from": "request (its caption was refused)"})
+                            caption = img["prompt"]
+                        elif refused:
+                            res["caption_refused"] = caption
+                            err = ("the upsampler's caption adds what the approved prompt does not ask for: "
+                                   + "; ".join(refused) + " (nothing drawn: rewrite the prompt, or set the item's "
+                                   "on_caption_refused to draw_request to draw the approved prompt itself)")
                     if not err:
                         free_models(port)
                 if not err:                  # stage 2: the image from the caption
@@ -470,7 +505,8 @@ def op_generate(job):
             if i + 1 < len(imgs) and imgs[i + 1]["upsample"]:
                 free_models(port)
         ok = bool(results) and all(r.get("ok") for r in results) and len(results) == len(imgs)
-        ans = {"ok": ok, "engine": "flux3-image-klein-int8", "comfyui": version, "models": names, "images": results,
+        ans = {"ok": ok, "engine": ENGINE, "precision": "int8", "comfyui": version, "models": names,
+               "model_bytes": {k: f.stat().st_size for k, f in files.items() if f.is_file()}, "images": results,
                "seconds": round(time.time() - t_all, 1)}
         if not ok:
             ans["error"] = next((r.get("error") for r in results if not r.get("ok")), "not every image was made")
@@ -506,27 +542,45 @@ def main():
     op = {"check": op_check, "generate": op_generate}.get(job.get("op"))
     if op is None:
         out({"ok": False, "error": f"unknown op {job.get('op')!r} (check | generate)"}, 2)
+    global CAPTION_CHECK
     gate, sc = None, None
     if job.get("op") == "generate":
         # Before ComfyUI starts: the job names its run and video, every image a shot of the checked shot plan carrying
         # that shot's approved frame_prompt, and the direction, beat map and shot plan are current (static_core.media_gate).
         try:
             sc = studio()
-            gate = sc.media_gate(job, "stills")
+            gate = sc.media_gate(job, "stills", engine=ENGINE)
         except Exception as e:  # noqa: BLE001
             out({"ok": False, "error": f"Static Studio gate unavailable: {type(e).__name__}: {e}"}, 2)
         if not gate["ok"]:
             out({"ok": False, "error": "Static Studio: these stills cannot be generated yet (fix the plan, not the gate).",
                  "issues": gate["issues"]}, 2)
+        CAPTION_CHECK = (lambda request, caption, note: sc.caption_issues(gate["run"], gate["video"], request, caption, note))
     try:
         res = op(job)
     except Exception as e:  # noqa: BLE001
         out({"ok": False, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-1500:]}, 1)
     if gate and not gate.get("untracked"):   # which shot each picture shows, made under which direction revision
-        made = {str(Path(r["out"]).resolve()) for r in res.get("images") or [] if r.get("ok") and r.get("out")}
-        entries = [{"out": str(Path(it["out"]).resolve()), **rec, "engine": "flux3-image-klein-int8"}
-                   for it, rec in zip(job.get("images") or [], gate["records"])
-                   if str(Path(str(it.get("out") or "")).resolve()) in made]
+        made = {str(Path(r["out"]).resolve()): r for r in res.get("images") or [] if r.get("ok") and r.get("out")}
+        entries = []
+        for it, rec in zip(job.get("images") or [], gate["records"]):
+            key = str(Path(str(it.get("out") or "")).resolve())
+            r = made.get(key)
+            if not r:
+                continue
+            # exactly what the image model was given: the caption it drew (or the approved request itself), so the
+            # look, the content checks and any later question trace the picture to its real instruction
+            given = str(r.get("caption") or r.get("request") or "")
+            entries.append({"out": key, **rec, "engine": ENGINE, "precision": "int8", "comfyui": res.get("comfyui"),
+                            "models": res.get("models"), "model_bytes": res.get("model_bytes"),
+                            "request_sha256": hashlib.sha256(str(r.get("request") or "").encode("utf-8")).hexdigest(),
+                            "submitted_prompt": given,
+                            "submitted_prompt_sha256": hashlib.sha256(given.encode("utf-8")).hexdigest(),
+                            "drew_from": r.get("drew_from"), "caption_checks": r.get("caption_checks") or [],
+                            "seed": r.get("seed"), "steps": r.get("steps"), "size": [r.get("width"), r.get("height")],
+                            "refs": [{"file": str(x), "sha256": (hashlib.sha256(Path(x).read_bytes()).hexdigest()
+                                                                 if Path(x).is_file() else None)}
+                                     for x in r.get("refs") or []]})
         if entries:
             res["provenance"] = sc.record_media(gate["run"], gate["video"], "stills", entries)
     out(res, 0 if res.get("ok") else 1)

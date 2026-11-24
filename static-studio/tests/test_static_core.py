@@ -1340,7 +1340,7 @@ class StaticStudioTests(unittest.TestCase):
             body=json.loads(req.data.decode())
             sent.append(body)
             if state['fail']==len(sent):
-                raise core.urllib.error.HTTPError(url,500,'server error',{},io.BytesIO(b'{}'))
+                raise core.urllib.error.HTTPError(url,422,'unprocessable',{},io.BytesIO(b'{}'))
             state['used']+=len(body['text'])
             return Reply(mp3)
         code,out=self.core_call(core,*tts,'--max-parts',1,'--execute',fake=fake)
@@ -1359,13 +1359,15 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(ledger[0]['phase'],'pending')                 # on record before it was sent
         ledger=[x for x in ledger if x['phase']=='done']
         self.assertEqual((ledger[0]['kind'],ledger[0]['delta']),('tts',len(b['text'])))
-        # A failed request blocks; the same command resumes and never asks for a finished part again.
+        # A refused request (4xx: answered before any work, never billed) blocks; the same command resumes and never
+        # asks for a finished part again.
         state['fail']=2
-        code,out=self.core_call(core,*tts,'--skip-calibration','--execute',fake=fake)
-        self.assertEqual(code,2); self.assertIn('BLOCKED',out['error'])
+        skip=['--skip-calibration','--reason','testing the resume path after a refused request']
+        code,out=self.core_call(core,*tts,*skip,'--execute',fake=fake)
+        self.assertEqual(code,2); self.assertIn('BLOCKED',out['error']); self.assertEqual(out['details']['outcome'],'failed')
         state['fail']=None
         before=len(sent)
-        code,out=self.core_call(core,*tts,'--skip-calibration','--execute',fake=fake)
+        code,out=self.core_call(core,*tts,*skip,'--execute',fake=fake)
         parts=len(json.loads((self.run/'50-audio/video-01/manifest.json').read_text())['chunks'])
         self.assertEqual(len(sent)-before,parts-1)                                       # part 1 never again
         self.assertEqual(sent[1]['previous_text'].split('\n')[-1],
@@ -1388,6 +1390,307 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('voice_made_for_an_earlier_direction',cli(*tts)['execute_blockers'])
         cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','voice','--reason','this voice already speaks quietly enough')
         self.assertEqual(cli(*tts)['execute_blockers'],[])
+
+    # ---------------------------------------------------------------- remediation 2026-11-24: paid requests
+    def paid_fake(self, core, state, sent):
+        """ElevenLabs faked for a recording: the balance, the model rates, the account history and its audio, and TTS
+        requests that work, or are cut off after ElevenLabs did (and billed) the work (state['mode'] 'timeout')."""
+        mp3=self.fake_mp3().read_bytes()
+        class Reply(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self,*a): return False
+        def fake(req,timeout=None):
+            url=req.full_url
+            if url.endswith('/v1/user/subscription'):
+                return Reply(json.dumps({'character_limit':100000,'character_count':state['used']}).encode())
+            if url.endswith('/v1/models'):
+                return Reply(json.dumps([{'model_id':'eleven_v4','model_rates':{'character_cost_multiplier':1.0},
+                                          'maximum_text_length_per_request':10000}]).encode())
+            if '/v1/history/' in url and url.endswith('/audio'):
+                return Reply(mp3)
+            if '/v1/history' in url:
+                return Reply(json.dumps({'history':state['history']}).encode())
+            body=json.loads(req.data.decode())
+            sent.append(body)
+            state['used']+=len(body['text'])
+            if state.get('mode')=='timeout':        # the work was done and billed; the answer never came back
+                state['done_unseen'].append({'history_item_id':f'H{len(sent)}','text':body['text'],
+                                             'model_id':body['model_id'],'date_unix':int(time.time())+5,
+                                             'character_count_change_from':0,'character_count_change_to':len(body['text'])})
+                raise TimeoutError('the read timed out')
+            return Reply(mp3)
+        return fake
+
+    def picked_voice(self):
+        vd=self.tagged_plan()
+        self.assertTrue(cli('plan-check','--run',self.run,'--video',1)['ready'])
+        cli('voice-pick','--run',self.run,'--video',1,'--voice-id','VOICEA','--settings',
+            '{"stability":0.6,"similarity_boost":0.8}','--reason','a warm curious friend at a table telling it plainly')
+        return vd
+
+    def ledger(self):
+        return [json.loads(x) for x in (self.run/'logs/elevenlabs-ledger.jsonl').read_text(encoding='utf-8').splitlines()]
+
+    def test_an_unknown_paid_outcome_is_never_billed_twice(self):
+        # A request cut off, timed out or answered by a server error may have been billed: it is never sent again on its
+        # own. Its audio comes from the account history (free) when ElevenLabs finished it, else the job stops until the
+        # user has checked the account (--retry-unreconciled ID --reason), on the ledger.
+        core=self.load_core()
+        self.picked_voice()
+        tts=['tts','--run',self.run,'--video',1]
+        skip=['--skip-calibration','--reason','testing what happens after a request is cut off']
+        sent=[]; state={'used':0,'mode':None,'history':[],'done_unseen':[]}
+        fake=self.paid_fake(core,state,sent)
+        self.assertEqual(self.core_call(core,*tts,'--max-parts',1,'--execute',fake=fake)[0],0)        # part 1, fine
+        state['mode']='timeout'
+        code,out=self.core_call(core,*tts,*skip,'--max-parts',1,'--execute',fake=fake)                # part 2 cut off
+        self.assertEqual((code,out['details']['outcome']),(2,'uncertain'))
+        self.assertIn('sends nothing while its outcome is unknown',out['details']['resume'])
+        self.assertEqual([x.get('outcome') for x in self.ledger() if x['phase']=='done'],['completed','uncertain'])
+        # the account history does not show it yet: nothing is sent, the job stops for the user
+        state['mode']=None
+        before=len(sent)
+        code,out=self.core_call(core,*tts,*skip,'--max-parts',1,'--execute',fake=fake)
+        self.assertEqual((code,len(sent)),(2,before))
+        self.assertIn('no known outcome',out['error'])
+        # once the history holds it, the take comes from there: no second charge, recorded as recovered
+        state['history']=list(state['done_unseen'])
+        code,out=self.core_call(core,*tts,*skip,'--max-parts',1,'--execute',fake=fake)
+        self.assertEqual((code,len(sent)),(0,before),out)
+        man=json.loads((self.run/'50-audio/video-01/manifest.json').read_text())
+        self.assertTrue(man['part_records']['2']['recovered_from_history'])
+        self.assertIn('recovered',[x['phase'] for x in self.ledger()])
+        # a request that never reached the history: sent again only on the user's word, which goes on the ledger
+        state.update(mode='timeout',history=[],done_unseen=[])
+        self.assertEqual(self.core_call(core,*tts,*skip,'--max-parts',1,'--execute',fake=fake)[0],2)  # part 3 cut off
+        state['mode']=None
+        code,out=self.core_call(core,*tts,*skip,'--max-parts',1,'--execute',fake=fake)
+        self.assertEqual(code,2)
+        a3=out['details']['unsettled'][0]['attempt_id']
+        n=len(sent)
+        code,out=self.core_call(core,*tts,'--skip-calibration','--retry-unreconciled',a3,'--reason',
+                                'checked the account usage: part 3 was not billed','--max-parts',1,'--execute',fake=fake)
+        self.assertEqual((code,len(sent)),(0,n+1),out)
+        self.assertTrue(any(r['phase']=='reconciled' and r['attempt_id']==a3 for r in self.ledger()))
+        # a refused request (4xx) was never billed: nothing to settle
+        core.ledger_add(self.run,{'at':core.now(),'kind':'tts','attempt_id':'R1','pid':os.getpid(),'request_sha256':'r',
+                                  'phase':'pending'})
+        core.ledger_add(self.run,{'at':core.now(),'kind':'tts','attempt_id':'R1','phase':'done','ok':False,'outcome':'failed'})
+        self.assertEqual(core.paid_unsettled(self.run,'r'),[])
+
+    def test_an_unknown_design_or_probe_outcome_stops_with_nothing_sent(self):
+        # The same rule for every billed request (Voice Design, probes, trials): a cut-off attempt whose process is gone
+        # stops the next one until the user allows it; an attempt still being sent by a live process is never doubled.
+        core=self.load_core()
+        core.ledger_add(self.run,{'at':core.now(),'kind':'voice_design','attempt_id':'D1','pid':999999,'request_sha256':'d',
+                                  'phase':'pending'})
+        self.assertEqual([x['state'] for x in core.paid_unsettled(self.run,'d')],['cut_off'])
+        with mock.patch('sys.stdout',new_callable=io.StringIO) as out, self.assertRaises(SystemExit):
+            core.paid_reconcile(self.run,None,'d',{'text':'x'},None,from_history=False)
+        self.assertIn('no known outcome',json.loads(out.getvalue())['error'])
+        with mock.patch('sys.stdout',new_callable=io.StringIO), self.assertRaises(SystemExit):     # a reason is required
+            core.paid_reconcile(self.run,None,'d',{'text':'x'},None,retry='D1',from_history=False)
+        self.assertEqual(core.paid_reconcile(self.run,None,'d',{'text':'x'},None,retry='D1',
+                                             reason='checked the usage page: the design call was not billed',
+                                             from_history=False),(None,None))
+        self.assertEqual(core.paid_unsettled(self.run,'d'),[])                       # settled once, on the ledger
+        core.ledger_add(self.run,{'at':core.now(),'kind':'probe','attempt_id':'P1','pid':os.getpid()+0,'request_sha256':'p',
+                                  'phase':'pending'})
+        with mock.patch.object(core,'_pid_running',return_value=True), \
+                mock.patch('sys.stdout',new_callable=io.StringIO) as out, self.assertRaises(SystemExit):
+            core.paid_reconcile(self.run,None,'p',{'text':'x'},None,from_history=False)
+        self.assertIn('right now',json.loads(out.getvalue())['error'])
+
+    def test_calibration_cannot_be_bypassed_one_part_at_a_time(self):
+        # Before this voice setup has a real measured pace, only the parts it takes to reach a measurable sample are
+        # recorded; asking for one part at a time does not get round it, and a skip needs its reason on record.
+        core=self.load_core()
+        vd=self.picked_voice()
+        tts=['tts','--run',self.run,'--video',1]
+        sent=[]; state={'used':0,'mode':None,'history':[],'done_unseen':[]}
+        fake=self.paid_fake(core,state,sent)
+        lines=json.loads((vd/'script.json').read_text())['lines']
+        chunks=cli(*tts)['candidate_manifest']['chunks']
+        words=[sum(core.count_words(lines[i-1]['text']) for i in range(c['line_start'],c['line_end']+1)) for c in chunks]
+        recorded=0
+        for k in range(len(chunks)):
+            code,out=self.core_call(core,*tts,'--max-parts',1,'--execute',fake=fake)
+            if code:
+                break
+            recorded+=1
+        self.assertEqual(code,2,'every part was recorded before the voice was measured')
+        self.assertIn('Calibrate first',out['error'])
+        self.assertGreaterEqual(sum(words[:recorded]),core.CALIBRATION_MIN_WORDS)      # the sample is there
+        self.assertLess(sum(words[:recorded-1]),core.CALIBRATION_MIN_WORDS)            # and nothing beyond it
+        self.assertEqual(self.core_call(core,*tts,'--skip-calibration','--max-parts',1,'--execute',fake=fake)[0],2)
+        code,out=self.core_call(core,*tts,'--skip-calibration','--reason','the user heard part one and approved the voice',
+                                '--max-parts',1,'--execute',fake=fake)
+        self.assertEqual(code,0,out)
+        hist=json.loads((self.run/'50-audio/video-01/manifest.json').read_text())['history']
+        self.assertTrue(any(h.get('skip_calibration') for h in hist))
+        # the part records carry what was billed (the balance drop here: no cost header in the fake)
+        man=json.loads((self.run/'50-audio/video-01/manifest.json').read_text())
+        self.assertEqual(man['part_records']['1']['credits_billed'],chunks[0]['characters'])
+
+    def test_openai_images_are_an_explicit_choice_and_never_billed_twice(self):
+        # FLUX 3 Image Klein int8 is the run's engine; OpenAI Images only on the user's choice on record. Each request goes
+        # on the images manifest before it is sent; an unknown outcome is not sent again until the user allows it.
+        self.write_plan()
+        shots=self.shots_for_plan()
+        job={'run':str(self.run),'video':1,'model':'gpt-image-2.5-flare','size':'1536x864','quality':'high',
+             'images':[{'id':'S1','shot_id':'S1','prompt':shots[0]['frame_prompt']+', painterly, soft edges','file':'S1.png'}]}
+        jobp=self.home/'openai-job.json'; save(jobp,job)
+        spec=importlib.util.spec_from_file_location('openai_images_worker_t', ROOT/'scripts/openai_images_worker.py')
+        ow=importlib.util.module_from_spec(spec); spec.loader.exec_module(ow)
+        png=b'\x89PNG\r\n\x1a\n'+b'2'*4096
+        calls={'n':0,'mode':'ok'}
+        class Reply(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self,*a): return False
+        def fake(req,timeout=None):
+            calls['n']+=1
+            if calls['mode']=='timeout':
+                raise TimeoutError('the read timed out')
+            import base64 as b64
+            return Reply(json.dumps({'data':[{'b64_json':b64.b64encode(png).decode()}]}).encode())
+        def run(*extra):
+            with mock.patch.dict(os.environ,{'OPENAI_API_KEY':'test-not-a-real-key'}), \
+                    mock.patch.object(ow.urllib.request,'urlopen',side_effect=fake), \
+                    mock.patch.object(sys,'argv',['openai_images_worker.py','--job',str(jobp),'--execute',*map(str,extra)]), \
+                    mock.patch('sys.stdout',new_callable=io.StringIO) as out:
+                try:
+                    ow.main(); code=0
+                except SystemExit as e:
+                    code=e.code
+            return code,json.loads(out.getvalue())
+        code,out=run()
+        self.assertEqual((code,calls['n']),(2,0))
+        self.assertTrue(any(x.startswith('image_engine_not_chosen_for_this_run:openai') for x in out['issues']))
+        cli('image-engine','--run',self.run,'--engine','openai',expected=2)                 # the user's words needed
+        cli('image-engine','--run',self.run,'--engine','openai','--why','the user: use OpenAI for this run')
+        calls['mode']='timeout'
+        code,out=run()
+        self.assertEqual((code,out['outcome'],calls['n']),(2,'uncertain',1))
+        stills=self.run/'60-visuals/video-01/stills'                                   # the run's own stills folder
+        self.assertEqual(json.loads((stills/'images-manifest.json').read_text())['results'][0]['status'],'uncertain')
+        calls['mode']='ok'
+        code,out=run()
+        self.assertEqual((code,calls['n']),(2,1))                                        # not sent again on its own
+        self.assertIn('no known outcome',out['error'])
+        code,out=run('--retry-unreconciled','S1.png','--reason','checked the usage page: nothing was billed')
+        self.assertEqual((code,calls['n']),(0,2),out)
+        rec=json.loads((self.run/'60-visuals/video-01/stills-provenance.json').read_text())['images']
+        (k,v),=rec.items()
+        self.assertEqual((v['engine'],v['submitted_prompt']),('openai:gpt-image-2.5-flare',job['images'][0]['prompt']))
+        made=v['made_at']
+        code,out=run()                                                                     # reused: its record stays
+        self.assertEqual((code,calls['n']),(0,2))
+        self.assertEqual(json.loads((self.run/'60-visuals/video-01/stills-provenance.json').read_text())['images'][k]['made_at'],made)
+
+    # ---------------------------------------------------------------- remediation 2026-11-24: FLUX Klein's caption
+    def test_the_upsampler_caption_is_checked_for_what_it_adds(self):
+        core=self.load_core()
+        req='A wooden desk by a window at dusk, an open notebook and a fountain pen, no people, painted in gouache.'
+        good=req+' The light is low and warm; there are no other people, and no writing, lettering or labels anywhere.'
+        self.assertEqual(core.caption_issues_with((),req,good),[])                     # negations are not additions
+        self.assertTrue(any(x.startswith('caption_adds_a_child') for x in
+                            core.caption_issues_with((),req,req+' A young boy sits at the desk.')))
+        self.assertTrue(any(x.startswith('caption_adds_people_the_prompt_does_not_have:man') for x in
+                            core.caption_issues_with((),req,req+' A man in a coat leans over the notebook.')))
+        self.assertTrue(any(x.startswith('caption_adds_written_text') for x in
+                            core.caption_issues_with((),req,req+' A sign with text reads OPEN.')))
+        self.assertTrue(any(x.startswith('caption_keeps_') for x in
+                            core.caption_issues_with((),req,'A busy harbour at noon with ships and gulls.')))
+        theme=[{'theme':'V001/S2','label':'excluded_theme','avoid':['burning church']}]
+        self.assertTrue(any('rules_out' in x for x in core.caption_issues_with(theme,req,req+' A burning church in the distance.')))
+        self.assertTrue(any('content_flag_unanswered' in x for x in core.caption_issues_with((),req,req+' Blood on the floor.')))
+        self.assertEqual(core.caption_issues_with((),req,req+' Blood-orange sky outside.',
+                                                  'a blood-orange evening sky, no injury anywhere in the picture'),[])
+
+    def flux_worker(self):
+        spec=importlib.util.spec_from_file_location('flux_image_worker_t', ROOT/'scripts/image_worker.py')
+        iw=importlib.util.module_from_spec(spec); spec.loader.exec_module(iw)
+        return iw
+
+    def run_flux(self, iw, job, captions, drawn):
+        """image_worker.py's own generate path (FLUX 3 Image Klein int8), with only the ComfyUI process faked: the
+        upsampler answers `captions` in turn, the image model writes a small PNG, and what it was given is kept."""
+        root=self.home/'comfy'
+        (root/'ComfyUI').mkdir(parents=True,exist_ok=True); (root/'ComfyUI'/'main.py').write_text('',encoding='utf-8')
+        for sub,name in iw.MODELS.values():
+            f=root/'ComfyUI'/'models'/sub/name; f.parent.mkdir(parents=True,exist_ok=True)
+            if not f.exists():
+                f.write_bytes(b'0'*64)
+        work=self.home/'flux-work'
+        caps=list(captions)
+        def fake_run(proc,port,graph,timeout):
+            kinds={str(n.get('class_type')) for n in graph.values() if isinstance(n,dict)}
+            if 'TextGenerateV2' in kinds:
+                return {'outputs':{'caption':{'text':[caps.pop(0)]}}},None
+            drawn.append(graph['pos']['inputs']['text'])
+            (work/'out').mkdir(parents=True,exist_ok=True)
+            name=f'img{len(drawn)}.png'
+            (work/'out'/name).write_bytes(b'\x89PNG\r\n\x1a\n'+bytes([len(drawn)])*2048)
+            return {'outputs':{'save':{'images':[{'filename':name,'subfolder':''}]}}},None
+        class Proc:
+            returncode=None
+            def poll(self): return None
+        jobp=self.home/'flux-job.json'; save(jobp,{**job,'root':str(root)})
+        code=0
+        with mock.patch.object(iw,'start',return_value=(Proc(),None)), \
+                mock.patch.object(iw,'wait_ready',return_value=({'system':{'comfyui_version':'0.41.0'}},None)), \
+                mock.patch.object(iw,'run_prompt',side_effect=fake_run), mock.patch.object(iw,'free_models'), \
+                mock.patch.object(iw,'stop'), mock.patch.object(iw,'stage_refs',return_value=[]), \
+                mock.patch.object(iw.tempfile,'mkdtemp',side_effect=lambda **k: str(work)), \
+                mock.patch.object(sys,'argv',['image_worker.py',str(jobp)]), \
+                mock.patch('sys.stdout',new_callable=io.StringIO) as out:
+            try:
+                iw.main()
+            except SystemExit as e:
+                code=e.code
+        return code,json.loads(out.getvalue().strip().splitlines()[-1])
+
+    def test_flux_klein_draws_only_an_approved_caption_and_records_what_it_drew(self):
+        # The real FLUX 3 Image Klein int8 path (image_worker.py: the gate, the upsampler stage, the caption check, the
+        # image stage, the provenance), ComfyUI faked: no model, no GPU.
+        self.write_plan()
+        shots=self.shots_for_plan()
+        iw=self.flux_worker()
+        stills=self.run/'60-visuals/video-01/stills'
+        req=shots[0]['frame_prompt']+', painterly, soft edges'
+        job={'op':'generate','run':str(self.run),'video':1,
+             'images':[{'shot_id':'S1','prompt':req,'out':str(stills/'S1.png'),'seed':7,'width':1024,'height':576}]}
+        good=req+' The valley opens under a pale dawn sky; no people and no lettering anywhere.'
+        drawn=[]
+        code,out=self.run_flux(iw,job,[good],drawn)
+        self.assertEqual(code,0,out)
+        self.assertEqual((out['engine'],out['precision']),('flux3-image-klein-int8','int8'))
+        self.assertEqual(drawn,[good])                                                  # the model got the checked caption
+        rec=json.loads((self.run/'60-visuals/video-01/stills-provenance.json').read_text())['images']
+        (_k,v),=rec.items()
+        self.assertEqual((v['engine'],v['precision'],v['submitted_prompt'],v['drew_from'],v['seed']),
+                         ('flux3-image-klein-int8','int8',good,'caption',7))
+        self.assertEqual(v['models']['unet'],'flux3-image-klein-int8-convrot.safetensors')
+        self.assertEqual(v['caption_checks'],[])
+        # A caption that adds a child is never drawn; the item fails and says why.
+        (stills/'S1.png').unlink()
+        drawn.clear()
+        code,out=self.run_flux(iw,job,[req+' A small boy waves from the ridge.'],drawn)
+        self.assertEqual((code,drawn),(1,[]))
+        self.assertIn('caption_adds_a_child',out['images'][0]['error'])
+        self.assertFalse((stills/'S1.png').exists())
+        # ...unless the item says to draw the approved prompt itself instead (recorded as such).
+        job['images'][0]['on_caption_refused']='draw_request'
+        code,out=self.run_flux(iw,job,[req+' A small boy waves from the ridge.'],drawn)
+        self.assertEqual((code,drawn),(0,[req]))
+        v=next(iter(json.loads((self.run/'60-visuals/video-01/stills-provenance.json').read_text())['images'].values()))
+        self.assertEqual((v['submitted_prompt'],v['drew_from']),(req,'request (its caption was refused)'))
+        # A job cannot swap the model or its precision.
+        job['models']={'unet':'flux-dev-fp16.safetensors'}
+        code,out=self.run_flux(iw,job,[good],drawn)
+        self.assertEqual(code,1)
+        self.assertIn('cannot swap',out['error'])
+
 
     def test_parts_follow_the_story(self):
         core=self.load_core()

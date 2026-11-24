@@ -6,6 +6,8 @@
     "pro": false,
     "pro_note": "This PC has no CapCut Pro: a project that holds a Pro option will not export. false = capcut-transitions and capcut-text-anim use only what data/capcut-catalogue.md marks as drawn by this PC's CapCut and not Pro.",
     "store_lock": "C:/Users/Bulzart/.claude/analyze-with-loupe/runs/.capcut-store.lock",
-    "store_lock_note": "One lock file for every toolkit on this PC that writes CapCut's shared project index (root_meta_info.json): capcut-repair takes it. Do not point it anywhere else."
+    "store_lock_note": "One lock file for every toolkit on this PC that writes CapCut's shared project index (root_meta_info.json): capcut-repair takes it, and capcut-build holds it while it writes a project. Do not point it anywhere else.",
+    "mcp_core": "C:/Users/Bulzart/.claude/analyze-stack/tools/mcp/capcut-mcp/src/core.js",
+    "mcp_core_note": "The CapCut MCP's own library: the code the configured capcut MCP server (server.js beside it) runs for every capcut_* tool. capcut-build loads it in one Node process (scripts/capcut_build.mjs) to write a whole project; nothing here edits it."
   }
 }

@@ -8,6 +8,7 @@ are always read-only. The Claude Code command directs the creative/CapCut work.
 from __future__ import annotations
 
 import argparse
+import atexit
 import base64
 import datetime as dt
 import difflib
@@ -3413,7 +3414,7 @@ def _norm(text):
 STILL_PURPOSES = ('shots', 'treatment_preview', 'thumbnail')
 
 
-def media_gate(job, kind):
+def media_gate(job, kind, engine=None):
     """What every generation worker runs before it makes anything (stills: image_worker.py, openai_images_worker.py;
     music: music_worker.py), and `media-check` runs by hand. A job names its run and video. Stills for the film
     (purpose "shots", the default) each name a shot of the checked shot plan, and the prompt carries that shot's
@@ -3442,6 +3443,11 @@ def media_gate(job, kind):
         iss.append('job_video_must_be_a_positive_number')
         return out
     out.update(run=str(rd), video=n)
+    if kind == 'stills' and engine is not None:
+        fam = engine_family(engine)
+        if fam != 'flux-klein' and fam != run_image_engine(rd):
+            iss.append(f'image_engine_not_chosen_for_this_run:{fam}:FLUX_3_Image_Klein_int8_is_the_default;'
+                       'another_engine_needs_the_users_choice_on_record(image-engine)')
     items = job.get('images' if kind == 'stills' else 'tracks') or []
     if not items:
         iss.append('job_has_nothing_to_make')
@@ -3555,6 +3561,103 @@ def media_gate(job, kind):
     return out
 
 
+# ---------------------------------------------------------------- the image engine and the upsampler's caption
+# FLUX 3 Image Klein int8 on this PC (image_worker.py) is the run's image engine: the default and the primary one. Another
+# engine (OpenAI Images) is used only on the user's explicit choice on record (image-engine); it is never a fallback when
+# FLUX fails: the failure is reported and the job stops.
+IMAGE_ENGINES = ('flux-klein', 'openai')
+
+
+def engine_family(engine):
+    e = str(engine or '').lower()
+    if e.startswith(('flux3-image-klein', 'flux-klein')):
+        return 'flux-klein'
+    return 'openai' if e.startswith('openai') else e
+
+
+def run_image_engine(rd):
+    """The engine this run's stills are made with: FLUX 3 Image Klein int8 unless the user chose another."""
+    return str(read_json(rd / 'state.json').get('image_engine') or 'flux-klein')
+
+
+# FLUX's prompt upsampler rewrites the approved prompt into the caption the image model draws. Measured on 16 captions of
+# one run (2026-11-24): they keep 70-83% of the approved prompt's words, and nearly every person or text word they add
+# stands in a negation ("no other people", "include no writing, lettering, labels"). So the caption is checked for what it
+# ADDS that the approved prompt does not ask for, never for how it rephrases.
+CAPTION_PEOPLE = re.compile(r"\b(man|men|woman|women|person|persons|people|crowd|crowds|figure|figures|silhouette|"
+                            r"silhouettes|face|faces|soldier|soldiers)\b", re.I)
+CAPTION_MINORS = re.compile(r"\b(child|children|boy|boys|girl|girls|kid|kids|baby|babies|infant|infants|toddler|"
+                            r"toddlers|teen|teens|teenager|teenagers)\b", re.I)
+CAPTION_TEXT = re.compile(r"\b(text|lettering|inscription|inscriptions|typography|caption|captions|headline|headlines|"
+                          r"logo|logos|subtitle|subtitles)\b", re.I)
+CAPTION_NEGATION = re.compile(r"\b(no|not|without|never|nor|none|avoid|avoiding|absent|exclude|excluding|free of)\b", re.I)
+CAPTION_KEEP_MIN = 0.5
+_CAPTION_STOP = set('a an the and or of in on at to with by for from as is are was were be its it his her their this that '
+                    'these those into over under near while one two three very'.split())
+
+
+def _affirmed(rx, text):
+    """The words of rx the text asks for: one inside a negated clause ("no other people") is not asked for."""
+    found = set()
+    for clause in re.split(r'[.;:!?\n]', str(text or '')):
+        for m in rx.finditer(clause):
+            if not CAPTION_NEGATION.search(clause[:m.start()]):
+                found.add(m.group(0).lower())
+    return found
+
+
+def _caption_words(text):
+    return {w for w in re.findall(r"[a-z][a-z'-]+", str(text or '').lower()) if len(w) > 2 and w not in _CAPTION_STOP}
+
+
+def caption_issues_with(themes, request, caption, content_note=None):
+    """What a caption adds to the approved prompt it was written from: an excluded or restricted theme or a content flag
+    (a plain one answered by the item's content note), a child, people where the prompt has none, written text where the
+    prompt has none; and a caption keeping under half of the prompt's words is another picture."""
+    req, cap = strip_tags(str(request or '')), strip_tags(str(caption or ''))
+    iss = prompt_flag_issues('caption', [k for k in prompt_flags(cap, themes) if k not in prompt_flags(req, themes)],
+                             content_note)
+    kids = _affirmed(CAPTION_MINORS, cap) - _affirmed(CAPTION_MINORS, req)
+    if kids:
+        iss.append('caption_adds_a_child:' + ','.join(sorted(kids)))
+    if not _affirmed(CAPTION_PEOPLE, req) and not _affirmed(CAPTION_MINORS, req):
+        ppl = _affirmed(CAPTION_PEOPLE, cap)
+        if ppl:
+            iss.append('caption_adds_people_the_prompt_does_not_have:' + ','.join(sorted(ppl)))
+    if not _affirmed(CAPTION_TEXT, req):
+        txt = _affirmed(CAPTION_TEXT, cap)
+        if txt:
+            iss.append('caption_adds_written_text:' + ','.join(sorted(txt)))
+    rw, cw = _caption_words(req), _caption_words(cap)
+    keep = len(rw & cw) / len(rw) if rw else 1.0
+    if rw and keep < CAPTION_KEEP_MIN:
+        iss.append(f'caption_keeps_{round(keep * 100)}pct_of_the_approved_prompt:another_picture')
+    return iss
+
+
+def caption_issues(run, video, request, caption, content_note=None):
+    """caption_issues_with the themes this video's content reviews rule out."""
+    rd = Path(str(run)).expanduser().resolve()
+    return caption_issues_with(excluded_themes(rd, int(video)), request, caption, content_note)
+
+
+def cmd_image_engine(args):
+    """The run's image engine. FLUX 3 Image Klein int8 on this PC is the default (nothing to record); another engine only
+    on the user's explicit choice, in their words, and back to FLUX the same way."""
+    rd, st = run_folder(args)
+    if args.engine != 'flux-klein' and n_words(args.why) < 4:
+        error('An engine other than FLUX 3 Image Klein int8 is the user\'s explicit choice: give their words (--why).')
+    hist = list(st.get('image_engine_history') or [])
+    if st.get('image_engine'):
+        hist.append({'engine': st['image_engine'], 'why': st.get('image_engine_why'), 'until': now()})
+    st.update({'image_engine': args.engine, 'image_engine_why': (args.why or '').strip() or 'the default',
+               'image_engine_history': hist})
+    write_json(rd / 'state.json', st)
+    emit({'ok': True, 'image_engine': args.engine, 'why': st['image_engine_why'],
+          'note': 'FLUX 3 Image Klein int8 (image_worker.py) is the default; a failure there is reported, never answered '
+                  'by another engine.'})
+
+
 def record_media(run, video, kind, entries):
     """After a worker made its files: which shot (stills) or beats (music) each one belongs to, made under which
     direction revision. Read by timeline-check and release-check."""
@@ -3565,9 +3668,10 @@ def record_media(run, video, kind, entries):
     data.setdefault(key, {})
     for e in entries:
         rec = {**{k: v for k, v in e.items() if k != 'out'}, 'made_at': now()}
-        if kind == 'stills' and Path(str(e['out'])).is_file():
+        if kind in ('stills', 'music') and Path(str(e['out'])).is_file():
             # the file exactly as the generator wrote it: a still changed afterwards (blurred, erased or painted over
-            # by anything but a recorded mark) is refused by stills_facts (the user, 2026-11-23: never blur)
+            # by anything but a recorded mark) is refused by stills_facts (the user, 2026-11-23: never blur); a music
+            # file replaced at the same path no longer matches its record
             rec['file_sha256'] = file_sha256(Path(str(e['out'])))
         data[key][_pkey(e['out'])] = rec
     write_json(p, data)
@@ -3610,7 +3714,8 @@ def stills_facts(rd, video):
         except TypeError:
             return True
     blurred_src = {str(e.get('shot_id')) for e in post if _in_force(e)}
-    missing, changed, older, touched, blurred = [], [], [], [], []
+    missing, changed, older, touched, blurred, foreign = [], [], [], [], [], []
+    engine_now = run_image_engine(rd)
     for s in shots:
         sid = str(s.get('id'))
         src = by_id.get(str(s.get('reuses') or sid)) or s
@@ -3621,6 +3726,8 @@ def stills_facts(rd, video):
         rec, rec_path = recs[-1][1], recs[-1][2]
         if rec.get('file_sha256') and file_sha256(Path(rec_path)) != rec['file_sha256']:
             touched.append(sid)
+        if rec.get('engine') and engine_family(rec['engine']) not in ('flux-klein', engine_now):
+            foreign.append(sid)
         if str(src.get('id')) in blurred_src:
             blurred.append(sid)
         fp = hashlib.sha256(_norm(src.get('frame_prompt') or src.get('prompt')).encode('utf-8')).hexdigest()
@@ -3637,7 +3744,8 @@ def stills_facts(rd, video):
             out['warnings'].append('stills accepted as they are by explicit reapproval: ' + str(ra.get('reason')))
     else:
         out['issues'] += [f'{name}:' + ','.join(ids[:15]) + ('...' if len(ids) > 15 else '') for name, ids in found if ids]
-    never = [('stills_changed_after_the_generator_made_them', touched), ('stills_carry_a_blur_or_erase_touchup', blurred)]
+    never = [('stills_changed_after_the_generator_made_them', touched), ('stills_carry_a_blur_or_erase_touchup', blurred),
+             ('stills_made_with_an_engine_the_run_did_not_choose', foreign)]
     out['issues'] += [f'{name}:' + ','.join(ids[:15]) + ('...' if len(ids) > 15 else '') for name, ids in never if ids]
     return out
 
@@ -4930,7 +5038,7 @@ def eleven_paid_post(rd, key, path, body, kind, meta, accept='audio/mpeg', timeo
     ctx = len(str(body.get('previous_text') or '')) + len(str(body.get('next_text') or ''))
     attempt = hashlib.sha256(f'{now()}|{os.getpid()}|{path}|{chars}|{id(body)}'.encode('utf-8')).hexdigest()[:16]
     entry = {'at': now(), 'kind': kind, **meta, 'characters': chars, 'context_characters': ctx,
-             'balance_before': before['available'], 'attempt_id': attempt}
+             'balance_before': before['available'], 'attempt_id': attempt, 'pid': os.getpid()}
     if max_credits is not None:
         entry['max_credits'] = int(max_credits)
     if before['available'] < require:
@@ -4939,7 +5047,7 @@ def eleven_paid_post(rd, key, path, body, kind, meta, accept='audio/mpeg', timeo
     req = urllib.request.Request('https://api.elevenlabs.io' + path, data=json.dumps(body).encode('utf-8'),
                                  method='POST', headers={'xi-api-key': key, 'Content-Type': 'application/json',
                                                          'Accept': accept})
-    raw, err, rid, cost, trace, hist = None, None, None, None, None, None
+    raw, err, rid, cost, trace, hist, outcome = None, None, None, None, None, None, None
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read()
@@ -4947,19 +5055,29 @@ def eleven_paid_post(rd, key, path, body, kind, meta, accept='audio/mpeg', timeo
             if hdrs is not None:
                 rid, trace, hist = hdrs.get('request-id'), hdrs.get('x-trace-id'), hdrs.get('history-item-id')
                 cost = hdrs.get('character-cost')
-    except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+    except urllib.error.HTTPError as exc:
+        # A refused request (bad input, no access, too many requests: 4xx) is answered before anything is generated;
+        # after a server error (5xx) nobody can say whether the work was done and billed.
+        err = f'HTTPError {exc.code}: {str(exc)[:240]}'
+        outcome = 'failed' if 400 <= int(exc.code or 0) < 500 else 'uncertain'
+    except Exception as exc:  # noqa: BLE001  cut off, timed out or unreadable: billed or not is unknown
         err = f'{type(exc).__name__}: {str(exc)[:240]}'
+        outcome = 'uncertain'
     try:
         after = subscription_balance(key)['available']
-    except RuntimeError:
+    except (RuntimeError, OSError, ValueError):
         after = None
     try:
         cost = int(float(cost)) if cost not in (None, '') else None
     except (TypeError, ValueError):
         cost = None
+    if outcome is None:
+        usable = bool(raw) and (len(raw) >= 1024 or str(accept).startswith('application/json'))
+        outcome = 'completed' if usable else ('charged_incomplete' if cost else 'uncertain')
     delta = (before['available'] - after) if after is not None else None
-    entry.update({'phase': 'done', 'ok': err is None, 'error': err, 'request_id': rid, 'trace_id': trace,
-                  'history_item_id': hist, 'character_cost_header': cost, 'balance_after': after, 'delta': delta})
+    entry.update({'phase': 'done', 'ok': err is None, 'error': err, 'outcome': outcome, 'request_id': rid,
+                  'trace_id': trace, 'history_item_id': hist, 'character_cost_header': cost, 'balance_after': after,
+                  'delta': delta})
     if meta.get('credits_per_character') is not None:
         entry['credits_billed'] = cost if cost is not None else (
             delta if isinstance(delta, (int, float)) and delta > 0 else None)
@@ -5056,10 +5174,13 @@ def cmd_voice_candidates(args):
                   {**plan, 'available': bal['available'], 'required_available': need})
         made = 0
         while made < design_n:
-            raw, err, entry = eleven_paid_post(rd, key, '/v1/text-to-voice/design',
-                                               {'voice_description': args.design_description, 'text': text},
-                                               'voice_design', {'video': int(args.video), 'model_id': 'voice_design'},
-                                               accept='application/json', timeout=120)
+            dbody = {'voice_description': args.design_description, 'text': text}
+            dsha = paid_request_sha('/v1/text-to-voice/design', dbody)
+            # a design call cut off earlier has no history to recover from: its outcome is checked by the user first
+            paid_reconcile(rd, key, dsha, dbody, None, args.retry_unreconciled, args.reason, from_history=False)
+            raw, err, entry = eleven_paid_post(rd, key, '/v1/text-to-voice/design', dbody, 'voice_design',
+                                               {'video': int(args.video), 'model_id': 'voice_design',
+                                                'request_sha256': dsha}, accept='application/json', timeout=120)
             if err:
                 error('Voice Design call failed (it may have been billed regardless; see the ledger). '
                       'Verify your ElevenLabs account before retrying.', {'error': err, 'ledger': entry})
@@ -5270,8 +5391,13 @@ def cmd_voice_probe(args):
     if language_code(lock.get('language')):
         body['language_code'] = language_code(lock.get('language'))
     path = '/v1/text-to-speech/' + urllib.parse.quote(voice_id, safe='') + '?output_format=mp3_44100_128'
-    raw, err, entry = eleven_paid_post(rd, key, path, body, 'probe',
-                                       {'video': n, 'model_id': model_id, 'voice_id': voice_id}, timeout=120)
+    req_sha = paid_request_sha(path, body, voice_id)
+    raw, entry = paid_reconcile(rd, key, req_sha, body, voice_id, args.retry_unreconciled, args.reason)
+    err = None
+    if raw is None:
+        raw, err, entry = eleven_paid_post(rd, key, path, body, 'probe',
+                                           {'video': n, 'model_id': model_id, 'voice_id': voice_id,
+                                            'request_sha256': req_sha}, timeout=120)
     if err:
         error('Probe TTS call failed (it may have been billed regardless; see the ledger). '
               'Verify your ElevenLabs account before retrying.', {'error': err, 'ledger': entry})
@@ -5581,6 +5707,116 @@ def recover_from_history(rd, key, pending, body, voice_id):
         ledger_add(rd, row)
         return audio, row
     return None, None
+
+
+# ---------------------------------------------------------------- a paid request is never billed twice
+# Every billed ElevenLabs request goes on the ledger before it is sent (a 'pending' row: its process and the request's
+# identity) and after (a 'done' row with its outcome: completed; failed, refused before any work and never billed;
+# uncertain, cut off, timed out or a server error, billed or not is unknown; charged_incomplete, billed but the answer is
+# unusable). Before the same request is sent again, every earlier attempt whose outcome is unknown is settled first: its
+# audio from the account history when ElevenLabs finished it (free: never paid twice), else nothing is sent until the user
+# has checked the account and allows one new attempt on record (--retry-unreconciled).
+PAID_UNSETTLED = ('uncertain', 'charged_incomplete')
+
+
+def paid_request_sha(path, body, voice_id=None):
+    """A billable request's identity: what decides the work and the bill (the endpoint, the text, the model, the voice and
+    its settings, the language). The context fields are left out: the same text again is the same work."""
+    keep = {k: body.get(k) for k in ('text', 'voice_description', 'model_id', 'voice_settings', 'language_code')}
+    ident = {'path': str(path).split('?')[0], 'voice_id': voice_id, **keep}
+    return hashlib.sha256(json.dumps(ident, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()
+
+
+def paid_unsettled(rd, request_sha):
+    """Earlier attempts of this request whose outcome is not established: a 'pending' row nothing closed (still being
+    sent while its process runs, else cut off), or a closed one whose outcome is uncertain or charged but unusable, with
+    no later 'recovered' or 'reconciled' row."""
+    rows = ledger_rows(rd)
+    closed = {r.get('attempt_id'): r for r in rows if r.get('phase') == 'done' and r.get('attempt_id')}
+    settled = {r.get('attempt_id') for r in rows if r.get('phase') in ('recovered', 'reconciled')}
+    out = []
+    for r in rows:
+        a = r.get('attempt_id')
+        if r.get('phase') != 'pending' or not a or a in settled or r.get('request_sha256') != request_sha:
+            continue
+        d = closed.get(a)
+        if d is None:
+            out.append({**r, 'state': 'being_sent' if _pid_running(r.get('pid')) else 'cut_off'})
+        elif d.get('outcome') in PAID_UNSETTLED:
+            out.append({**r, 'state': d['outcome'], 'error': d.get('error')})
+    return out
+
+
+def paid_reconcile(rd, key, request_sha, body, voice_id, retry=None, reason=None, from_history=True):
+    """Settle every earlier attempt of this request before it is sent again. Returns (audio, ledger row) when the account
+    history holds the take (no new charge); (None, None) when the request may be sent: nothing was unsettled, or the user
+    allowed one new attempt for each unsettled one (--retry-unreconciled ID|all --reason), which goes on the ledger.
+    Anything else stops with nothing sent."""
+    open_ = paid_unsettled(rd, request_sha)
+    if not open_:
+        return None, None
+    busy = [o['attempt_id'] for o in open_ if o['state'] == 'being_sent']
+    if busy:
+        error('Another process is sending this same paid request right now: nothing was sent. Let it finish.',
+              {'attempts': busy})
+    looked = None
+    if from_history and key:
+        for o in open_:
+            audio, row = recover_from_history(rd, key, o, body, voice_id)
+            if audio:
+                return audio, row
+            looked = row or looked
+    allow = {x.strip() for x in str(retry or '').split(',') if x.strip()}
+    left = [o for o in open_ if 'all' not in allow and o['attempt_id'] not in allow]
+    if left:
+        error('An earlier paid request for exactly this has no known outcome (cut off, timed out, a server error, or '
+              'billed with an unusable answer)' + (' and its audio is not in the account history' if from_history else '')
+              + '. Sending it again could bill it twice, so nothing was sent. Check the ElevenLabs history and usage; '
+              'when it was not billed, or paying again is accepted, re-run with --retry-unreconciled ATTEMPT_ID '
+              '--reason "what you checked".',
+              {'unsettled': [{k: o.get(k) for k in ('attempt_id', 'at', 'kind', 'state', 'error', 'video', 'part',
+                                                     'characters')} for o in left],
+               'history_lookup': looked})
+    if n_words(reason) < MIN_NOTE_WORDS:
+        error('--retry-unreconciled sends a request whose earlier outcome is unknown: say what you checked (--reason).')
+    for o in open_:
+        ledger_add(rd, {**{k: o.get(k) for k in ('attempt_id', 'kind', 'video', 'part', 'model_id', 'voice_id',
+                                                 'request_sha256', 'characters')},
+                        'at': now(), 'phase': 'reconciled', 'state_was': o['state'], 'reason': str(reason).strip(),
+                        'note': 'outcome unknown; the user allowed one new attempt'})
+    return None, None
+
+
+def billed_credits(entry):
+    """What one request was billed, best evidence first: ElevenLabs' character-cost header, else the credits on record,
+    else a balance drop seen (it lags: often 0 at the time), else unknown."""
+    e = entry or {}
+    if e.get('character_cost_header') is not None and e.get('phase') != 'recovered':
+        return e['character_cost_header']
+    if e.get('credits_billed') is not None:
+        return e['credits_billed']
+    d = e.get('delta')
+    return d if isinstance(d, (int, float)) and d > 0 else None
+
+
+def hold_process_lock(lockf, label):
+    """One process at a time for one paid job: its lock names the process, and a lock whose process is gone (a crash, a
+    power cut) is taken over. Released when this process ends, however it ends."""
+    held = read_json(lockf) if lockf.is_file() else {}
+    if held and _pid_running(held.get('pid')):
+        error(f'Another {label} is running for this video ({lockf.name}): one at a time.',
+              {'lock': str(lockf), 'held_by': held})
+    lockf.parent.mkdir(parents=True, exist_ok=True)
+    lockf.write_text(json.dumps({'pid': os.getpid(), 'at': now(), 'what': label}), encoding='utf-8')
+
+    def release():
+        try:
+            if (read_json(lockf) or {}).get('pid') == os.getpid():
+                lockf.unlink()
+        except (OSError, ValueError):
+            pass
+    atexit.register(release)
+    return release
 
 
 def loudness_stats(path):
@@ -5975,11 +6211,8 @@ def cmd_narration_trial(args):
             per = rates['credits_per_character']
             max_cr = math.ceil((chars[r] + ctx[r]) * per)
             spent, open_ = budget_spent(rd, budget['id'])
-            audio, entry = None, None
-            for o in [o for o in open_ if o.get('request_sha256') == fps[r]]:
-                audio, entry = recover_from_history(rd, key, o, body, v['voice_id'])
-                if audio:
-                    break
+            # an earlier attempt of this take with no known outcome: its audio from the account history, or a stop
+            audio, entry = paid_reconcile(rd, key, fps[r], body, v['voice_id'], args.retry_unreconciled, args.reason)
             if audio is None:
                 if spent + max_cr > budget['max_credits']:
                     stop = {'run': f'{r[0]}-{r[1]}', 'why': 'budget', 'spent': spent, 'this_request_at_most': max_cr,
@@ -6085,6 +6318,11 @@ def parts_list(raw):
         error('--rerecord-parts takes part numbers, e.g. 2 or 2,5.')
 
 
+# The words a calibration sample needs: narration-measure writes a voice's real pace from 300+ measured words (short
+# samples read fast and scatter).
+CALIBRATION_MIN_WORDS = 300
+
+
 def cmd_tts(args):
     """Record this video's narration in parts, following its plan and its voice lock exactly: voice, model and
     settings come from the lock (a different value on the command line is refused; a change is a voice revision).
@@ -6183,6 +6421,10 @@ def cmd_tts(args):
     todo = [s for s in spec['chunks'] if s['id'] not in finished_before or s['id'] in redo]
     if not args.execute:
         per_char = cached_model_rates(rd, model_id)
+        if per_char is None and getattr(args, 'read_rates', False):
+            rk = elevenlabs_key()
+            if rk:   # free: GET /v1/models, cached for the run
+                per_char = model_rates(rd, rk, model_id)['credits_per_character']
         chars = sum(s['characters'] for s in todo)
         verified, v_n = measured_cost_ratio(rd, model_id)
         emit({'ok': True, 'mode': 'dry_run_no_charges', 'video': n, 'parts': len(chunks),
@@ -6198,7 +6440,8 @@ def cmd_tts(args):
                             f'{v_n} billed request(s) in the ledger (the cost header)' if verified is not None else
                             'the model rates last read for this run (no billed request in the ledger yet)'
                             if per_char is not None else
-                            'not read yet: --execute reads the credits per character and the live balance first'),
+                            'not read yet: --read-rates reads them (free); --execute reads them and the live '
+                            'balance before anything is sent'),
                   'verified_credits_per_character': verified, 'verified_requests': v_n,
                   'documented_credits_per_character': per_char,
                   'upper_bound_at_documented_rate': math.ceil(chars * per_char) if per_char is not None else None,
@@ -6221,6 +6464,7 @@ def cmd_tts(args):
     key = elevenlabs_key()
     if not key:
         error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
+    hold_process_lock(rd / '50-audio' / f'.tts-video-{n:02d}.lock', 'tts recording')
     flagged = [x for x in redo if x not in asked]
     if flagged and not args.rerecord_changed:
         error('Recorded parts no longer match what this video would record now: their lines changed, the '
@@ -6238,10 +6482,33 @@ def cmd_tts(args):
                                   and (narrdir / f'part-{x:03d}.mp3').stat().st_size > 1024]
     remaining = [s for s in spec['chunks'] if s['id'] not in kept]
     batch = remaining[:args.max_parts] if args.max_parts else remaining
-    if len(batch) > 1 and not args.skip_calibration and not voice_calibrated(rd, n, voice_id, model_id, settings):
-        error('Calibrate first: this voice/model/settings has no real measured pace yet. Record one part '
-              '(--max-parts 1 --execute), run narration-measure, check plan-check\'s real_forecast_s, then record '
-              'the rest. --skip-calibration overrides this.')
+    # Calibrate first: until this exact voice, model and settings has a real measured pace, only the parts it takes to
+    # reach a measurable sample are recorded (CALIBRATION_MIN_WORDS, counting parts already recorded with it and not yet
+    # measured); then narration-measure. Recording one part at a time does not get round it.
+    skipped_calibration = []
+    if not voice_calibrated(rd, n, voice_id, model_id, settings):
+        def words_of(s):
+            return sum(count_words(lines[li - 1].get('text') or '') for li in range(s['line_start'], s['line_end'] + 1))
+        same = [x for x in kept if tuple((records.get(str(x)) or {}).get(k) or ({} if k == 'settings' else None)
+                                         for k in ('voice_id', 'model_id', 'settings')) == setup]
+        have = sum(words_of(s) for s in spec['chunks'] if s['id'] in same)
+        allowed = []
+        for s in remaining:
+            if have >= CALIBRATION_MIN_WORDS:
+                break
+            allowed.append(s['id'])
+            have += words_of(s)
+        beyond = [s['id'] for s in batch if s['id'] not in allowed]
+        if beyond and not args.skip_calibration:
+            error('Calibrate first: this voice, model and settings has no real measured pace yet. Record only the '
+                  f'calibration part(s) {allowed or "(none left: they are recorded)"}'
+                  + (f' (--max-parts {len(allowed)} --execute)' if allowed else '')
+                  + ', run narration-measure on them, check plan-check\'s real_forecast_s, then record the rest.',
+                  {'calibration_parts': allowed, 'recorded_not_measured': same,
+                   'words_needed': CALIBRATION_MIN_WORDS, 'asked_for': [s['id'] for s in batch]})
+        if beyond and n_words(args.reason) < MIN_NOTE_WORDS:
+            error('--skip-calibration records parts before this voice is measured: say why on record (--reason).')
+        skipped_calibration = beyond
     rates = model_rates(rd, key, model_id)
     req_max = rates.get('maximum_text_length_per_request')
     if req_max and any(s['characters'] > int(req_max) for s in batch):
@@ -6271,6 +6538,8 @@ def cmd_tts(args):
                         'pronunciation_changed': pron_changed, 'other_voice_setup': other_setup,
                         'earlier_direction': outdated, 'asked': asked, 'reason': args.reason or None,
                         'old_takes': str(sup)})
+    if skipped_calibration:
+        history.append({'at': now(), 'skip_calibration': skipped_calibration, 'reason': args.reason})
     part_revs = {k: v for k, v in (existing.get('part_revs') or {}).items() if str(k).isdigit() and int(k) in kept}
     part_records = {k: v for k, v in records.items() if str(k).isdigit() and int(k) in kept}
     base = {'voice_id': voice_id, 'model_id': model_id, 'settings': settings, 'voice_rev': vf['voice_rev'],
@@ -6302,12 +6571,16 @@ def cmd_tts(args):
             body['next_text'] = nxt
         path = '/v1/text-to-speech/' + urllib.parse.quote(voice_id, safe='') + '?output_format=mp3_44100_128'
         need = math.ceil(s['characters'] * per_char * args.credit_safety_factor) + keep
-        try:
-            raw, err, entry = eleven_paid_post(rd, key, path, body, 'tts',
-                                               {'video': n, 'part': s['id'], 'model_id': model_id, 'voice_id': voice_id},
-                                               require=need)
-        except RuntimeError as exc:
-            raw, err, entry = None, str(exc), None
+        req_sha = paid_request_sha(path, body, voice_id)
+        raw, entry = paid_reconcile(rd, key, req_sha, body, voice_id, args.retry_unreconciled, args.reason)
+        err = None
+        if raw is None:
+            try:
+                raw, err, entry = eleven_paid_post(rd, key, path, body, 'tts',
+                                                   {'video': n, 'part': s['id'], 'model_id': model_id,
+                                                    'voice_id': voice_id, 'request_sha256': req_sha}, require=need)
+            except RuntimeError as exc:
+                raw, err, entry = None, str(exc), None
         if not err and (not raw or len(raw) < 1024):
             err = 'audio response too short'
         if not err:
@@ -6321,15 +6594,19 @@ def cmd_tts(args):
         if err:
             manifest['error'] = f'part {s["id"]}: {err}'
             write_json(manifest_path, manifest)
+            unsure = (entry or {}).get('outcome') in PAID_UNSETTLED
             error('Partial ElevenLabs recording: BLOCKED (never shorten video to match credits).',
-                  {'error': manifest['error'], 'ledger_entry': entry, 'resume': 'the same command again: finished '
-                                                                                'parts are kept and never billed again'})
+                  {'error': manifest['error'], 'ledger_entry': entry, 'outcome': (entry or {}).get('outcome'),
+                   'resume': ('the same command again: it first looks for this part in the account history (free) and '
+                              'sends nothing while its outcome is unknown' if unsure else
+                              'the same command again: finished parts are kept and never billed again')})
         manifest['finished_parts'].append(s['id'])
         manifest['part_revs'][str(s['id'])] = dlock.get('production_rev', 1)
         manifest['part_records'][str(s['id'])] = {
             **base, 'text_sha256': s['text_sha256'], 'sent_sha256': s['sent_sha256'], 'characters_sent': s['characters'],
             'previous_text_sha256': sha(prev) if prev else None, 'next_text_sha256': sha(nxt) if nxt else None,
-            'request_id': (entry or {}).get('request_id'), 'credits_billed': (entry or {}).get('delta'),
+            'request_id': (entry or {}).get('request_id'), 'credits_billed': billed_credits(entry),
+            'recovered_from_history': (entry or {}).get('phase') == 'recovered',
             'recorded_at': now()}
         manifest.pop('error', None)
         write_json(manifest_path, manifest)
@@ -6674,6 +6951,20 @@ def timeline_facts(rd, video):
             issues.append('captions_unreadable_in_the_project:' + str(exc)[:120])
     else:
         warnings.append('timeline.json names no capcut_draft: the captions were not read back from the project')
+    # The checks above read timeline.json: it must still be what the saved project shows (a picture swapped, a clip
+    # moved or a sound added in CapCut after timeline-write is a timeline.json that describes another project).
+    if track.get('capcut_draft'):
+        try:
+            live = project_snapshot(rd, n, track['capcut_draft'])
+            seen = {'visual': [[str(v.get('shot_id')), _pkey(str(v.get('asset_path') or '')), v.get('start_s'), v.get('end_s')]
+                               for v in seq],
+                    'overlays': [[str(o.get('track') or ''), _pkey(str(o.get('file') or '')), o.get('start_s'), o.get('end_s')]
+                                 for o in track.get('overlays') or []]}
+            diff = project_changes(seen, {'visual': live['visual'], 'overlays': live['overlays']})
+            if diff:
+                issues.append('timeline_json_differs_from_the_saved_project:run_timeline-write:' + '; '.join(diff[:3]))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            issues.append('capcut_project_unreadable:' + str(exc)[:120])
     sf = stills_facts(rd, n)
     issues += sf['issues']
     warnings += sf['warnings']
@@ -7055,13 +7346,16 @@ def capcut_project_timeline(rd, video, draft, sounds=None):
     def by_start(t):
         return sorted(t.get('segments') or [], key=lambda x: (x.get('target_timerange') or {}).get('start', 0))
     vtracks = [t for t in content.get('tracks') or [] if t.get('type') == 'video']
+    frame_tol = 1.05 / max(1.0, float(content.get('fps') or 30))
     problems, visual, overlays, audio = [], [], [], []
     shots = plan.get('shots') or []
     stills_dir = artifact_path(rd, n, 'shot-plan').parent / 'stills'
     if vtracks:
         for seg in by_start(vtracks[0]):
             c = info(seg)
-            shot = next((x for x in shots if abs(float(x.get('start_s') or 0) - c['start_s']) <= 1 / 60), None)
+            # CapCut snaps a clip to its frame grid when it saves the project (measured: up to 0.03 s at 30 fps), so a
+            # clip is its shot's when it starts within one frame of the planned start
+            shot = next((x for x in shots if abs(float(x.get('start_s') or 0) - c['start_s']) <= frame_tol), None)
             if not shot:
                 problems.append(f'picture clip at {c["start_s"]} s matches no shot of the edit plan')
                 continue
@@ -7086,7 +7380,8 @@ def capcut_project_timeline(rd, video, draft, sounds=None):
             k = _pkey(c['file'])
             if k == narr:
                 audio.append({'kind': 'narration', 'file': c['file'], 'start_s': c['start_s'], 'end_s': c['end_s'],
-                              'source_start_s': c['source_start_s'], 'source_end_s': c['source_end_s'], 'speed': c['speed']})
+                              'source_start_s': c['source_start_s'], 'source_end_s': c['source_end_s'], 'speed': c['speed'],
+                              'volume': c['volume']})
             elif k in music:
                 audio.append({'kind': 'music', 'file': c['file'], 'start_s': c['start_s'], 'end_s': c['end_s'],
                               'beats': list((music[k] or {}).get('beats') or []), 'volume': c['volume'], 'track': t.get('name')})
@@ -7103,6 +7398,111 @@ def capcut_project_timeline(rd, video, draft, sounds=None):
             'project_file': str(d / 'draft_content.json'), 'capcut_draft': str(d), 'visual_segments': visual,
             'overlays': overlays, 'audio_tracks': audio, 'problems': problems,
             'note': 'Derived from the saved CapCut project (timeline-write). A CapCut project is not an exported file.'}
+
+
+def timeline_check_path(rd, video):
+    return rd / '70-edit' / f'video-{int(video):02d}' / 'timeline-check.json'
+
+
+def export_provenance_path(rd, video):
+    return rd / '80-deliverables' / f'video-{int(video):02d}' / 'export-provenance.json'
+
+
+def planned_blanks_path(rd, video):
+    return rd / '70-edit' / f'video-{int(video):02d}' / 'planned-blanks.json'
+
+
+def project_snapshot(rd, video, draft):
+    """What a saved CapCut project shows and plays, read from the project itself (capcut_project_timeline, plus its
+    texts): every picture clip with its shot and file, every overlay, every sound with its speed and volume, every text
+    with a fingerprint of its words, the canvas and frame rate, and a fingerprint of each media file. What an export of
+    it must carry. Compared with project_changes, never byte for byte: CapCut's own re-save moves a clip by a frame."""
+    tl = capcut_project_timeline(rd, video, draft)
+    content = json.loads((Path(str(draft)).expanduser() / 'draft_content.json').read_text(encoding='utf-8'))
+    mats = {}
+    for items in (content.get('materials') or {}).values():
+        if isinstance(items, list):
+            for m in items:
+                if isinstance(m, dict) and m.get('id'):
+                    mats[m['id']] = m
+    texts = []
+    for t in content.get('tracks') or []:
+        if t.get('type') != 'text':
+            continue
+        for seg in t.get('segments') or []:
+            tg = seg.get('target_timerange') or {}
+            a = int(tg.get('start') or 0) / 1e6
+            words = str((mats.get(seg.get('material_id')) or {}).get('content') or '')
+            texts.append([round(a, 3), round(a + int(tg.get('duration') or 0) / 1e6, 3),
+                          hashlib.sha256(words.encode('utf-8')).hexdigest()[:16]])
+    texts.sort()
+    visual = [[str(v['shot_id']), _pkey(v['asset_path']), v['start_s'], v['end_s']] for v in tl['visual_segments']]
+    overlays = [[str(o.get('track') or ''), _pkey(o['file']), o['start_s'], o['end_s']] for o in tl['overlays']]
+    # every sound clip in the project, named or not (a sound effect the timeline does not name still counts)
+    known = {(_pkey(x['file']), round(float(x['start_s']), 2)): str(x['kind']) for x in tl['audio_tracks']}
+    audio = []
+    for t in content.get('tracks') or []:
+        if t.get('type') != 'audio':
+            continue
+        for seg in t.get('segments') or []:
+            m = mats.get(seg.get('material_id')) or {}
+            tg = seg.get('target_timerange') or {}
+            a0 = round(int(tg.get('start') or 0) / 1e6, 3)
+            f = _pkey(str(m.get('path') or '').replace(chr(92), '/'))
+            audio.append([known.get((f, round(a0, 2)), 'sound'), f, a0, round(a0 + int(tg.get('duration') or 0) / 1e6, 3),
+                          float(seg.get('speed') or 1), float(1 if seg.get('volume') is None else seg['volume'])])
+    audio.sort(key=lambda r: (r[2], r[1]))
+    files = sorted({r[1] for r in visual} | {r[1] for r in overlays} | {r[1] for r in audio})
+    media = {f: (quick_fingerprint(Path(f)) if Path(f).is_file() else None) for f in files}
+    ends = [r[3] for r in visual + overlays + audio] + [r[1] for r in texts]
+    return {'draft': str(draft), 'canvas': tl['canvas'], 'fps': tl['fps'], 'end_s': round(max(ends or [0.0]), 3),
+            'visual': visual, 'overlays': overlays, 'audio': audio, 'texts': texts, 'media': media,
+            'problems': tl['problems']}
+
+
+def project_changes(a, b, tol=0.05):
+    """What differs between two snapshots of a project (project_snapshot) beyond CapCut's frame snapping (tol seconds):
+    a clip added, removed, moved, swapped or re-timed, a speed or volume, a text's words, the canvas, a media file."""
+    out = []
+    for k in ('canvas', 'fps'):
+        if str(a.get(k)) != str(b.get(k)):
+            out.append(f'{k} {a.get(k)} -> {b.get(k)}')
+    for key, label in (('visual', 'picture clips'), ('overlays', 'overlays'), ('audio', 'sound clips'), ('texts', 'texts')):
+        x, y = a.get(key) or [], b.get(key) or []
+        if len(x) != len(y):
+            out.append(f'{label}: {len(x)} -> {len(y)}')
+            continue
+        for i, (p, q) in enumerate(zip(x, y), 1):
+            for u, v in zip(p, q):
+                num = isinstance(u, (int, float)) and isinstance(v, (int, float)) and not isinstance(u, bool)
+                if (abs(float(u) - float(v)) > tol) if num else (u != v):
+                    out.append(f'{label} {i}: {u} -> {v}')
+                    break
+    ma, mb = a.get('media') or {}, b.get('media') or {}
+    out += [f'media changed: {Path(f).name}' for f in sorted(set(ma) | set(mb)) if ma.get(f) != mb.get(f)]
+    return out
+
+
+def _blank_spans(rows, kind, end_s):
+    """[(from_s, to_s)] from ffmpeg's blackdetect or silencedetect lines; a silence still open at the end runs to it."""
+    out, start = [], None
+    for r in rows or []:
+        if kind == 'black':
+            m = re.search(r'black_start:\s*([\d.]+)\s+black_end:\s*([\d.]+)', r)
+            if m:
+                out.append((float(m.group(1)), float(m.group(2))))
+            continue
+        m = re.search(r'silence_start:\s*(-?[\d.]+)', r)
+        if m:
+            start = max(0.0, float(m.group(1)))
+            continue
+        m = re.search(r'silence_end:\s*([\d.]+)', r)
+        if m and start is not None:
+            out.append((start, float(m.group(1))))
+            start = None
+    if start is not None:
+        out.append((start, float(end_s)))
+    return out
 
 
 def cmd_timeline_write(args):
@@ -7210,6 +7610,24 @@ def cmd_bed_levels(args):
 def cmd_timeline_check(args):
     rd, st = run_folder(args)
     res = timeline_facts(rd, args.video)
+    draft = read_json(rd / '70-edit' / f'video-{int(args.video):02d}' / 'timeline.json').get('capcut_draft')
+    if res['ready'] and draft:
+        # What was checked, as the saved project shows it: an export is held to this project (export-check), and a
+        # project changed afterwards is a project not checked.
+        try:
+            snap = project_snapshot(rd, args.video, draft)
+            p = timeline_check_path(rd, args.video)
+            old = read_json(p)
+            sha = canonical_sha(snap)
+            hist = (old.get('history') or []) + ([{k: old.get(k) for k in ('checked_at', 'snapshot_sha256')}] if old else [])
+            write_json(p, {'video': int(args.video), 'checked_at': now(), 'draft': str(draft), 'snapshot_sha256': sha,
+                           'snapshot': snap, 'history': hist[-50:]})
+            res['project_snapshot'] = {'file': str(p), 'sha256': sha, 'pictures': len(snap['visual']),
+                                       'overlays': len(snap['overlays']), 'sounds': len(snap['audio']),
+                                       'texts': len(snap['texts'])}
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            res['ready'] = False
+            res['issues'].append('capcut_project_unreadable:' + str(exc)[:120])
     emit(res, 0 if res['ready'] else 2)
 
 
@@ -7521,6 +7939,19 @@ def cmd_master_sound(args):
 def cmd_export_check(args):
     rd, st = run_folder(args)
     res = export_facts(rd, args.video, args.file, deep=args.deep)
+    # The export on record by its full sha256, with the project it was checked against: release-check binds to this.
+    f = Path(args.file).expanduser().resolve()
+    sha = file_sha256(f)
+    p = export_provenance_path(rd, args.video)
+    rec = read_json(p) or {'video': int(args.video), 'exports': {}}
+    rec.setdefault('exports', {})[sha] = {
+        'file': str(f), 'sha256': sha, 'fingerprint': quick_fingerprint(f), 'size_bytes': f.stat().st_size,
+        'checked_at': now(), 'deep': bool(args.deep), 'ready': res['ready'], 'issues': res['issues'],
+        'metadata': res['metadata'], 'project': res.get('project'), 'pictures': res.get('pictures'),
+        'blank_spans': res.get('blank_spans'), 'narration_in_export': res.get('narration_in_export')}
+    write_json(p, rec)
+    res['provenance'] = {'file': str(p), 'sha256': sha}
+    res.pop('project', None)
     res['manual_review_required'] = ['watch opening/first minute', 'sample each major narrative chapter',
                                      'watch last minute', 'listen to all TTS joins',
                                      'check factual assertions/visual chronology', 'review title-thumbnail promise',
@@ -8173,7 +8604,7 @@ def cmd_narration_measure(args):
     setups = {json.dumps([(recs.get(str(c['id'])) or {}).get(k) for k in ('voice_id', 'model_id', 'settings')],
                          sort_keys=True) for c in use}
     wrote, note = False, None
-    if tot_words < 300:
+    if tot_words < CALIBRATION_MIN_WORDS:
         note = 'Under 300 words measured: too short to calibrate (short samples read fast and scatter).'
     elif len(setups) > 1:
         note = 'The measured parts were recorded with different voice setups: nothing written to the voice lock.'
@@ -10141,6 +10572,13 @@ def export_facts(rd, video, file, deep=False):
         issues.append('export_aspect_not_16_9')
     if meta['width'] and meta['width'] < 1280:
         issues.append('export_low_resolution')
+    # the run's own format, exactly: a review copy at another size is fine, but it is not the master
+    fmt = read_json(rd / 'state.json').get('format') or {}
+    if fmt.get('width') and fmt.get('height') and meta['width'] and \
+            (int(meta['width']), int(meta['height'])) != (int(fmt['width']), int(fmt['height'])):
+        issues.append(f'export_size_{meta["width"]}x{meta["height"]}_is_not_the_runs_{fmt["width"]}x{fmt["height"]}')
+    if fmt.get('fps') and meta.get('fps') and abs(float(meta['fps']) - float(fmt['fps'])) > 0.05:
+        issues.append(f'export_frame_rate_{meta["fps"]:g}_is_not_the_runs_{fmt["fps"]}')
     if abs(meta['duration_s'] - target) > max(4, target * lock.get('tolerance_export_pct', .025)):
         issues.append('export_duration_misses_user_locked_length')
     # The export carries the approved narration, whole, at its own speed: the edit plan's narration file found in the
@@ -10158,8 +10596,10 @@ def export_facts(rd, video, file, deep=False):
                 av = _av()
                 import tempfile
                 with tempfile.TemporaryDirectory() as tmp:
-                    m = av.narration_in_mix(av.extract_audio(video_file, Path(tmp) / 'mix.wav'),
-                                            av.extract_audio(nf, Path(tmp) / 'narration.wav'))
+                    nwav = av.extract_audio(nf, Path(tmp) / 'narration.wav')
+                    # windows that tile the whole narration: a stretch muted between sparse samples would hide
+                    nwin = max(12, math.ceil(float(probe(nf)['duration_s']) / 20.0) + 1)
+                    m = av.narration_in_mix(av.extract_audio(video_file, Path(tmp) / 'mix.wav'), nwav, windows=nwin)
                 narration_match = m
                 for w in m['weak_windows']:
                     issues.append(f'export_narration_not_found_near_{_mmss(w)}')
@@ -10172,7 +10612,28 @@ def export_facts(rd, video, file, deep=False):
                                     'music may mask words; listen on small speakers')
             except (RuntimeError, ValueError, OSError, ImportError) as exc:
                 issues.append('export_narration_not_checked:' + f'{type(exc).__name__}: {str(exc)[:120]}')
-    diag = {}
+    # The export is held to the project it was made from: the project timeline-check passed, unchanged since, and of
+    # the same length as the export (a frame or two of CapCut's own rounding aside).
+    project, live = None, None
+    tcrec = read_json(timeline_check_path(rd, video))
+    draft = read_json(rd / '70-edit' / f'video-{int(video):02d}' / 'timeline.json').get('capcut_draft')
+    if draft:
+        if not tcrec:
+            issues.append('project_not_checked_before_export:run_timeline-check')
+        else:
+            try:
+                live = project_snapshot(rd, video, draft)
+                ch = project_changes(tcrec.get('snapshot') or {}, live)
+                if ch:
+                    issues.append('project_changed_since_its_timeline_check:' + '; '.join(ch[:3]))
+                end = float((tcrec.get('snapshot') or {}).get('end_s') or 0)
+                if end and abs(float(meta['duration_s']) - end) > 0.15:
+                    issues.append(f'export_length_{meta["duration_s"]:g}s_is_not_the_checked_projects_{end:g}s')
+                project = {'draft': str(draft), 'snapshot': live, 'timeline_checked_at': tcrec.get('checked_at'),
+                           'timeline_snapshot_sha256': tcrec.get('snapshot_sha256')}
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                issues.append('capcut_project_unreadable:' + str(exc)[:120])
+    diag, pictures, blanks = {}, None, None
     if deep:
         for name, filters in [('black_frames', ['-vf', 'blackdetect=d=0.6:pix_th=0.10']),
                               ('audio_silence', ['-af', 'silencedetect=noise=-48dB:d=2'])]:
@@ -10180,12 +10641,54 @@ def export_facts(rd, video, file, deep=False):
             try:
                 p = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=None)
                 rows = [x.strip() for x in p.stderr.splitlines() if
-                        ('black_start:' in x if name == 'black_frames' else 'silence_start:' in x)]
-                diag[name] = rows[:200]
+                        ('black_start:' in x if name == 'black_frames' else 'silence_' in x)]
+                diag[name] = rows[:400]
             except OSError as exc:
                 diag[name] = ['scan_unavailable:' + str(exc)]
+                issues.append(f'export_{name}_not_scanned:{str(exc)[:80]}')
+        # A black or silent stretch is a defect unless the plan holds it: a held silence (the edit plan's pauses), or a
+        # moment the director planned blank on purpose (planned-blanks.json: from_s, to_s, kind, why).
+        held = [(float(p['times_in_edit']['silence_from_s']) - 0.4, float(p['times_in_edit']['silence_to_s']) + 0.4)
+                for p in plan.get('pauses') or [] if isinstance((p or {}).get('times_in_edit'), dict)
+                and p['times_in_edit'].get('silence_from_s') is not None]
+        meant = {'black': [], 'silence': []}
+        for w in read_json(planned_blanks_path(rd, video)).get('blanks') or []:
+            if isinstance(w, dict) and n_words(w.get('why')) >= 4 and w.get('kind') in meant:
+                meant[w['kind']].append((float(w['from_s']) - 0.1, float(w['to_s']) + 0.1))
+        def covered(a, b, wins):
+            return any(w0 <= a + 0.05 and b - 0.05 <= w1 for w0, w1 in wins)
+        blanks = {'black': _blank_spans(diag.get('black_frames'), 'black', meta['duration_s']),
+                  'silence': _blank_spans(diag.get('audio_silence'), 'silence', meta['duration_s'])}
+        for a, b in blanks['black']:
+            if not covered(a, b, meant['black']):
+                issues.append(f'export_black_{_mmss(a)}-{_mmss(b)}_not_planned')
+        for a, b in blanks['silence']:
+            if not covered(a, b, meant['silence'] + held):
+                issues.append(f'export_silent_{_mmss(a)}-{_mmss(b)}_not_a_planned_silence')
+        # The export shows the project's picture at each shot: its frame at the shot's middle is closest to that
+        # shot's still among all the project's stills (a move, an overlay or a caption changes it a little).
+        if live:
+            segs = [s for s in live['visual'] if float(s[3]) - float(s[2]) >= 0.6]
+            try:
+                rows = _av().picture_matches(video_file, [{'at_s': round(float(a) + (float(b) - float(a)) / 2, 3),
+                                                           'expect': f, 'shot': sid} for sid, f, a, b in segs],
+                                             sorted({s[1] for s in segs}))
+                bad = [r for r in rows if r.get('verdict') == 'another']
+                unseen = [r for r in rows if r.get('verdict') == 'unseen']
+                pictures = {'shots_sampled': len(rows), 'found': sum(1 for r in rows if r.get('verdict') == 'found'),
+                            'shows_another': bad[:20],
+                            'not_readable': [{k: r.get(k) for k in ('shot', 'at_s')} for r in unseen]}
+                if bad:
+                    issues.append('export_shows_another_picture_than_the_project_at:' +
+                                  ','.join(_mmss(r['at_s']) for r in bad[:10]))
+                if unseen:
+                    warnings.append(f'{len(unseen)} shot(s) could not be read in the export (a full-frame card, a dark '
+                                    'frame): ' + ', '.join(f"{r.get('shot')}@{_mmss(r['at_s'])}" for r in unseen[:10]))
+            except (RuntimeError, ValueError, OSError, ImportError) as exc:
+                issues.append('export_pictures_not_checked:' + f'{type(exc).__name__}: {str(exc)[:120]}')
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'file': str(video_file), 'metadata': meta,
             'target_s': target, 'difference_s': round(meta['duration_s'] - target, 2), 'diagnostic_flags': diag,
+            'blank_spans': blanks, 'pictures': pictures, 'project': project, 'deep': bool(deep),
             'narration_in_export': {k: v for k, v in (narration_match or {}).items() if k != 'windows'} or None}
 
 
@@ -10205,6 +10708,34 @@ def cmd_release_check(args):
     issues = ([f'plan:{x}' for x in plan['issues']] + [f'audio:{x}' for x in audio['issues']] +
               [f'shots:{x}' for x in shots['issues']] + [f'edit:{x}' for x in edit['issues']] +
               [f'export:{x}' for x in exp['issues']] + fin['issues'])
+    # This exact file (its full sha256): deep-checked against its project, that project unchanged since, and the master.
+    f = Path(args.file).expanduser().resolve()
+    sha = file_sha256(f)
+    prov = (read_json(export_provenance_path(rd, n)).get('exports') or {}).get(sha)
+    if not prov:
+        issues.append('export:not_checked_as_this_exact_file:run_export-check_--deep_on_it')
+    else:
+        if not prov.get('deep'):
+            issues.append('export:checked_without_--deep:run_export-check_--deep_on_this_file')
+        if not prov.get('ready'):
+            issues.append('export:its_export-check_found_issues:' + ','.join(str(x) for x in (prov.get('issues') or [])[:3]))
+        snap = (prov.get('project') or {}).get('snapshot')
+        draft = read_json(rd / '70-edit' / f'video-{n:02d}' / 'timeline.json').get('capcut_draft')
+        if snap and draft:
+            try:
+                ch = project_changes(snap, project_snapshot(rd, n, draft))
+                if ch:
+                    issues.append('export:the_project_changed_after_this_export_was_checked:' + '; '.join(ch[:3]))
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                issues.append('export:capcut_project_unreadable:' + str(exc)[:120])
+        elif draft:
+            issues.append('export:checked_without_its_project:run_timeline-check_then_export-check_--deep')
+    mrec = read_json(rd / '80-deliverables' / f'video-{n:02d}' / 'master.json')
+    if not mrec:
+        issues.append('export:not_mastered:run_master-sound_and_release_the_mastered_file')
+    elif (mrec.get('mastered') or {}).get('sha256') != sha:
+        issues.append('export:this_file_is_not_the_recorded_master' +
+                      (':it_is_the_unmastered_export' if (mrec.get('export') or {}).get('sha256') == sha else ''))
     rc = research_changes(rd, n, read_json(vd / 'direction-lock.json'))
     if rc:
         issues.append('research:changed_since_the_direction_lock_and_not_rechecked:' +
@@ -10305,6 +10836,10 @@ def main():
                    'only priced; with it the balance is checked first and each call goes in the spend ledger.')
     p.add_argument('--credit-safety-factor', type=float, default=1.15)
     p.add_argument('--keep-credits', type=int, default=0, help='Credits that must still be left afterwards')
+    p.add_argument('--retry-unreconciled', default='', help='An earlier paid attempt of the same request has no '
+                   'known outcome and is not in the account history: after checking the account, allow one new attempt '
+                   'for these attempt ids (or all), with --reason')
+    p.add_argument('--reason', default='', help='What you checked before --retry-unreconciled')
     add_whisper_args(p); p.set_defaults(func=cmd_voice_candidates)
     p = sub.add_parser('voice-pick', help='Choose this video\'s narrator for its locked treatment (voice, model, '
                        'settings, the reason): every recording of the video follows it')
@@ -10325,6 +10860,10 @@ def main():
     p.add_argument('--no-pronunciation', action='store_true', help='Send the plain spelling (to hear the difference)')
     p.add_argument('--credit-safety-factor', type=float, default=1.15)
     p.add_argument('--keep-credits', type=int, default=0, help='Credits that must still be left afterwards')
+    p.add_argument('--retry-unreconciled', default='', help='An earlier paid attempt of the same request has no '
+                   'known outcome and is not in the account history: after checking the account, allow one new attempt '
+                   'for these attempt ids (or all), with --reason')
+    p.add_argument('--reason', default='', help='What you checked before --retry-unreconciled')
     add_whisper_args(p); p.set_defaults(func=cmd_voice_probe)
     p = sub.add_parser('narration-trial', help='A controlled calibration trial: a few passages under a few voice '
                        'set-ups, each question changing one thing; priced first, recorded only with --execute')
@@ -10338,7 +10877,16 @@ def main():
     p.add_argument('--credit-safety-factor', type=float, default=1.15)
     p.add_argument('--assume-cost-ratio', type=float, default=None)
     p.add_argument('--keep-credits', type=int, default=0, help='Credits that must still be left afterwards')
+    p.add_argument('--retry-unreconciled', default='', help='An earlier paid attempt of the same request has no '
+                   'known outcome and is not in the account history: after checking the account, allow one new attempt '
+                   'for these attempt ids (or all), with --reason')
+    p.add_argument('--reason', default='', help='What you checked before --retry-unreconciled')
     add_whisper_args(p); p.set_defaults(func=cmd_narration_trial)
+    p = sub.add_parser('image-engine', help='The run\'s image engine: FLUX 3 Image Klein int8 on this PC by default; '
+                       'another only on the user\'s explicit choice (never a fallback)')
+    p.add_argument('--run', required=True); p.add_argument('--engine', required=True, choices=IMAGE_ENGINES)
+    p.add_argument('--why', default='', help='The user\'s words choosing it')
+    p.set_defaults(func=cmd_image_engine)
     p = sub.add_parser('tts'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--voice-id', default='', help='Optional: must be the video\'s voice lock (a check, never an override)')
     p.add_argument('--model-id', default='', choices=('',) + TTS_MODELS, help='Optional: must be the voice lock\'s')
@@ -10355,8 +10903,9 @@ def main():
                    're-billed); needs --archive-existing when audio exists.')
     p.add_argument('--archive-existing', action='store_true', help='Move the existing audio folder aside (to '
                    'video-NN-archive-<time>) before starting over with another voice/model/language or --rechunk.')
-    p.add_argument('--skip-calibration', action='store_true', help='Allow recording several parts before this '
-                   'voice/model/settings has a real measured pace (normally: --max-parts 1, then narration-measure).')
+    p.add_argument('--skip-calibration', action='store_true', help='Record parts beyond the calibration sample before '
+                   'this voice/model/settings has a real measured pace (with --reason, kept in the history; normally: '
+                   'the calibration part(s), then narration-measure).')
     p.add_argument('--credit-safety-factor', type=float, default=1.15,
                    help='Reserve over the expected credits (default 1.15)')
     p.add_argument('--assume-cost-ratio', type=float, default=None,
@@ -10370,6 +10919,11 @@ def main():
                    'the first real part, measure it, and confirm the voice, settings and pace before '
                    'paying for the rest: the first part IS the calibration, paid once, kept if good, '
                    'never a separate throwaway sample.')
+    p.add_argument('--retry-unreconciled', default='', help='An earlier paid attempt of the same request has no '
+                   'known outcome and is not in the account history: after checking the account, allow one new attempt '
+                   'for these attempt ids (or all), with --reason')
+    p.add_argument('--read-rates', action='store_true', help='Dry run: read the credits per character of the model '
+                   'now (a free call) when this run has none cached')
     p.set_defaults(func=cmd_tts)
     p = sub.add_parser('audio-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_audio_check)

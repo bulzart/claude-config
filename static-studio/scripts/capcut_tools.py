@@ -2,7 +2,7 @@
 """capcut_tools.py - write and repair the CapCut project of a Static Studio video on this PC.
 
 One command per call; every call prints one JSON object on its last line (exit 0 ok, 1 a step failed, 2 refused, 3 CapCut is running).
-Commands: capcut-name | capcut-prep | capcut-repair | capcut-motion | capcut-transitions | capcut-font | capcut-text-anim.
+Commands: capcut-name | capcut-prep | capcut-build | capcut-repair | capcut-motion | capcut-transitions | capcut-font | capcut-text-anim.
 How and in what order: reference/09-capcut-toolkit.md.
 
 Provenance: these are the CapCut commands of this PC's analyze-with-loupe toolkit (scripts/awl.py, sha256 9d54c41ce5ff9163, copied 2026-11-19),
@@ -20,11 +20,16 @@ copied function by function with their helpers, the source lines unchanged. Chan
     on open, so every audio track showed empty) and `photo-durations` after it (_photo_durations: CapCut's 3-hour duration on a
     still the MCP saved with none). A re-copy must add both back: AudioMaterialTests and PhotoDurationTests fail until it does.
 Nothing else was changed; apart from those two steps, the CapCut logic is theirs.
+
+capcut-build (2026-11-24, with scripts/capcut_build.mjs) is this toolkit's own and copies nothing: it writes the whole project of
+one video from the run's decided files through the CapCut MCP's own library (config.json -> capcut.mcp_core), then runs
+capcut-motion and capcut-transitions on it.
 """
 
 import argparse
 from pathlib import Path
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -1269,6 +1274,724 @@ def _still_motion(r: dict) -> dict:
     return mv
 
 
+# --------------------------------------------------------------------------- capcut-build: the whole project in one command
+#
+# This toolkit's own (2026-11-24), not copied from the other toolkit. It replaces the per-run build scripts of the first
+# production (one MCP call per picture and sound, or a script in the run folder that called the MCP's library): the run's
+# decided files become one checked build plan, written into the draft in one Node process through the CapCut MCP's own
+# library (scripts/capcut_build.mjs), then capcut-motion and capcut-transitions run on the same draft.
+
+CAPCUT_BUILD_VERSION = "1 (2026-11-24)"
+BUILD_MJS = Path(__file__).resolve().parent / "capcut_build.mjs"
+YOUTUBE_CANVASES = ("1920x1080", "2560x1440", "3840x2160")     # the canvases timeline-check accepts (YouTube 16:9)
+BUILD_BED_KINDS = ("music", "ambience", "bed")                  # the kinds timeline-check reads as the bed under a held silence
+END_SLACK_S = 0.05                                              # rounding a sound may end after the last picture, or past its file
+_SHA = {}
+
+
+def _sha256_file(p) -> str:
+    """A file's sha256, read once per version of it (its size and time)."""
+    p = Path(p)
+    st = p.stat()
+    key = (os.path.normcase(str(p.resolve())), st.st_size, st.st_mtime_ns)
+    if key not in _SHA:
+        h = hashlib.sha256()
+        with open(p, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        _SHA[key] = h.hexdigest()
+    return _SHA[key]
+
+
+def _pkey(path) -> str:
+    """One spelling per file, whichever tool wrote the path (as static_core.py keys its media records)."""
+    return os.path.normcase(str(Path(str(path)).expanduser().resolve()))
+
+
+def _true_path(p) -> Path:
+    """The file's own spelling on disk (a record may keep a path in lower case): what the project shows."""
+    return Path(os.path.realpath(str(p)))
+
+
+def _read_json_or_none(p):
+    try:
+        return json.loads(Path(p).read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return None
+
+
+def _in_run(rd: Path, f) -> Path:
+    """A path a run file gives: absolute as written, else relative to the run folder."""
+    p = Path(str(f or "")).expanduser()
+    return p if p.is_absolute() else rd / p
+
+
+def _media_seconds(p):
+    """A media file's length as ffprobe reads it (the reading core.js gives a clip its length from), or None."""
+    try:
+        cp = run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(p)], timeout=120)
+        v = float((cp.stdout or "").strip().splitlines()[0])
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+        return None
+    return v if v == v and v > 0 else None
+
+
+def _capcut_cli_path():
+    """capcut-cli's executable, or None (_capcut_cli fails instead)."""
+    exe = shutil.which("capcut")
+    if exe:
+        return exe
+    cand = os.path.join(os.environ.get("APPDATA", ""), "npm", "capcut.cmd")
+    return cand if os.path.exists(cand) else None
+
+
+def _lanes(rows: list, name) -> None:
+    """Each clip on the first track of its kind where it overlaps nothing (name(0), name(1), ...): one track never holds two
+    clips at once (capcut_validate refuses that). Sorts the rows by their start and writes row["track"]: a mechanical packing."""
+    rows.sort(key=lambda x: (x["at_us"], str(x.get("id") or "")))
+    ends = []
+    for r in rows:
+        k = next((i for i, e in enumerate(ends) if r["at_us"] >= e), None)
+        if k is None:
+            ends.append(0)
+            k = len(ends) - 1
+        ends[k] = r["at_us"] + r["dur_us"]
+        r["track"] = name(k)
+
+
+def _bed_at_silences(pauses, spans) -> list:
+    """What the planned beds do at each held silence, read by timeline-check's own rule (2026-11-24): enters, stops, continues
+    (dips and swells need a bed across it), none. A forecast for the agent; timeline-check decides on the built project."""
+    rows = []
+    for p in pauses or []:
+        bed, tm = ((p or {}).get("transition") or {}).get("bed"), (p or {}).get("times_in_edit") or {}
+        if not bed or tm.get("silence_from_s") is None or tm.get("silence_to_s") is None:
+            continue
+        a, b = float(tm["silence_from_s"]), float(tm["silence_to_s"])
+        nxt = float(tm.get("next_line_s") or b)
+        covers = any(s <= a + 0.05 and e >= b - 0.05 for s, e in spans)
+        under = any(s < b - 0.2 and e > a + 0.2 for s, e in spans)
+        ok = {"enters": any(a - 0.5 <= s <= nxt + 0.5 for s, _ in spans), "stops": any(a - 0.5 <= e <= nxt + 0.5 for _, e in spans),
+              "continues": covers, "none": not under, "dips": covers, "swells": covers}.get(str(bed))
+        rows.append({"after_line": p.get("after_line"), "silence_from_s": a, "silence_to_s": b, "bed": bed, "as_decided": ok})
+    return rows
+
+
+def _capcut_build_plan(rd: Path, n: int, a) -> tuple:
+    """Everything one video's CapCut project holds, from the run's decided files only (manual 09, "capcut-build"):
+    (plan, problems, warnings). A problem is an input missing or unreadable, a file changed since its record was written, or two
+    decided files that disagree on a fact (a time, a shot, a beat); any problem refuses the build. A warning is a fact for the
+    agent. Nothing here chooses a time, a file, a move, a level or a bed: each comes from the file named beside it."""
+    problems, warnings, inputs = [], [], []
+    edit, vis = rd / "70-edit" / f"video-{n:02d}", rd / "60-visuals" / f"video-{n:02d}"
+
+    def note_input(role, p, **extra):
+        inputs.append({"role": role, "file": str(p), "sha256": _sha256_file(p), **extra})
+
+    ep_path = edit / "edit-plan.json"
+    ep = _read_json_or_none(ep_path) if ep_path.is_file() else None
+    if not isinstance(ep, dict):
+        return None, [f"no readable edit plan at {ep_path} (static_core.py retime-shots writes it)"], warnings
+    note_input("edit_plan", ep_path)
+
+    # the shots, as retime-shots timed them to the real narration and its decided holds
+    shots = sorted((s for s in ep.get("shots") or [] if isinstance(s, dict)), key=lambda s: float(s.get("start_s") or 0))
+    if not shots:
+        problems.append("the edit plan has no shots")
+    rows, prev = [], None
+    for k, s in enumerate(shots, 1):
+        sid = str(s.get("id") or "").strip()
+        try:
+            a0, b0 = float(s["start_s"]), float(s["end_s"])
+        except (KeyError, TypeError, ValueError):
+            problems.append(f"edit plan shot {sid or k}: no start_s and end_s (run retime-shots)")
+            continue
+        if not sid:
+            problems.append(f"edit plan shot {k}: no id")
+        at_us, end_us = round(a0 * 1e6), round(b0 * 1e6)
+        if end_us <= at_us:
+            problems.append(f"{sid}: it ends at {b0} s, not after its start at {a0} s")
+        if prev is not None:
+            if at_us < prev[1]:
+                problems.append(f"{sid} starts at {a0} s, before {prev[0]} ends at {prev[1] / 1e6} s")
+            elif at_us - prev[1] > 17000:
+                warnings.append(f"{at_us / 1e6 - prev[1] / 1e6:.3f} s of nothing between {prev[0]} and {sid}: the picture is black there")
+        elif at_us > 17000:
+            warnings.append(f"the first shot {sid} starts at {a0} s: the picture is black before it")
+        prev = (sid, end_us)
+        rows.append({"image": k, "shot_id": sid, "beat_id": s.get("beat_id"), "at": a0, "end": b0, "at_us": at_us,
+                     "dur_us": end_us - at_us})
+    by_shot = {r["shot_id"]: r for r in rows}
+    last_end_us = max((r["at_us"] + r["dur_us"] for r in rows), default=0)
+    beat_ids = {str(b.get("id")) for b in ep.get("beats") or [] if isinstance(b, dict) and b.get("id")}
+    beat_spans = {str(b.get("id")): (float(b.get("start_s") or 0), float(b.get("end_s") or 0))
+                  for b in ep.get("beats") or [] if isinstance(b, dict) and b.get("id")}
+
+    # each shot's still: stills/<the shot, or the shot it reuses>.png, the file timeline-write traces it to, as its record has it
+    sp_path = vis / "shot-plan.json"
+    sp = _read_json_or_none(sp_path) if sp_path.is_file() else None
+    if not isinstance(sp, dict):
+        problems.append(f"no readable shot plan at {sp_path} (it says which shot a callback reuses)")
+        sp = {}
+    else:
+        note_input("shot_plan", sp_path)
+    reuse = {str(s.get("id")): str(s.get("reuses")) for s in sp.get("shots") or [] if isinstance(s, dict) and s.get("reuses")}
+    prov_path = vis / "stills-provenance.json"
+    prov = (_read_json_or_none(prov_path) or {}).get("images") or {} if prov_path.is_file() else {}
+    if prov_path.is_file():
+        note_input("stills_record", prov_path)
+    else:
+        warnings.append(f"no stills record ({prov_path}): no still can be checked against the file the generator made")
+    recs = {_pkey(k): v for k, v in prov.items() if isinstance(v, dict)}
+    newest = {}
+    for k, v in prov.items():
+        if isinstance(v, dict) and Path(k).is_file():
+            sid0 = str(v.get("shot_id"))
+            if str(v.get("made_at") or "") >= newest.get(sid0, ("", ""))[0]:
+                newest[sid0] = (str(v.get("made_at") or ""), k)
+    images, unrecorded = [], []
+    for r in rows:
+        sid = r["shot_id"]
+        src = reuse.get(sid) or sid
+        f = vis / "stills" / f"{src}.png"
+        if not f.is_file():
+            problems.append(f"{sid}: its still {f} is missing" + (f" (it reuses {src}'s)" if src != sid else ""))
+            continue
+        f = _true_path(f)
+        sha = _sha256_file(f)
+        rec = recs.get(_pkey(f))
+        if rec is None:
+            unrecorded.append(f.name)
+        else:
+            if str(rec.get("shot_id")) != src:
+                problems.append(f"{sid}: {f.name} was made for shot {rec.get('shot_id')}, not {src} (stills-provenance.json)")
+            if rec.get("file_sha256") and rec["file_sha256"] != sha:
+                problems.append(f"{sid}: {f.name} changed after the generator made it (its sha256 differs from stills-provenance.json)")
+        nw = newest.get(src)
+        if nw and _pkey(nw[1]) != _pkey(f):
+            warnings.append(f"{sid}: the newest still recorded for {src} is {nw[1]}; the project shows {f} (timeline-write traces "
+                            "stills/<shot>.png)")
+        images.append({**r, "file": f.as_posix(), "sha256": sha, "dur": round(r["dur_us"] / 1e6, 6)})
+    if unrecorded:
+        warnings.append(f"{len(unrecorded)} still(s) without a stills-provenance record (" + ", ".join(sorted(set(unrecorded))[:8])
+                        + "): timeline-check needs a record, or the stills reapproved on record")
+
+    # the narration: the one file the edit plan names, unchanged since retime-shots, at 0 s, speed 1, whole
+    narration = None
+    nfe = ep.get("narration_for_edit") or {}
+    if not nfe.get("file") or not nfe.get("sha256"):
+        problems.append("the edit plan names no narration_for_edit file with its sha256 (run retime-shots again)")
+    else:
+        nf = _in_run(rd, nfe["file"])
+        if not nf.is_file():
+            problems.append(f"the narration the edit plan names is missing: {nf}")
+        else:
+            nf = _true_path(nf)
+            sha = _sha256_file(nf)
+            if sha != nfe["sha256"]:
+                problems.append(f"the narration {nf.name} changed since retime-shots: its sha256 differs from edit-plan.json's "
+                                "narration_for_edit (run retime-shots again, or bring back the approved file)")
+            dur = _media_seconds(nf)
+            if dur is None:
+                problems.append(f"ffprobe could not read the narration's length: {nf}")
+            else:
+                narration = {"file": nf.as_posix(), "sha256": sha, "at": 0.0, "at_us": 0, "dur": dur, "dur_us": round(dur * 1e6),
+                             "src_start_us": 0, "speed": 1.0, "volume": 1.0}
+                if nfe.get("duration_s") and abs(dur - float(nfe["duration_s"])) > 0.02:
+                    warnings.append(f"the narration lasts {dur:.3f} s, the edit plan says {float(nfe['duration_s']):.3f} s")
+                if rows and abs(last_end_us / 1e6 - dur) > 0.5:
+                    warnings.append(f"the pictures end at {last_end_us / 1e6:.3f} s, the narration at {dur:.3f} s")
+                inputs.append({"role": "narration", "file": nf.as_posix(), "sha256": sha})
+
+    # the moves and joins: the images file the agent wrote (manual 09, "The images file")
+    moves, row_motion = None, {}
+    if getattr(a, "no_moves", False):
+        if getattr(a, "images", None):
+            problems.append("--images and --no-moves contradict each other")
+        elif (edit / "capcut-images.json").is_file():
+            warnings.append(f"--no-moves: {edit / 'capcut-images.json'} is there and is not used (every still holds, every join a cut)")
+    else:
+        mp = Path(a.images).expanduser() if getattr(a, "images", None) else edit / "capcut-images.json"
+        data = _read_json_or_none(mp) if mp.is_file() else None
+        if not mp.is_file():
+            problems.append(f"no images file (each still's move and join): {mp}; write it (manual 09, \"The images file\"), or pass "
+                            "--no-moves when every still holds and every join is a cut")
+        elif not isinstance(data, dict) or not isinstance(data.get("images"), list):
+            problems.append(f"the images file is not {{\"fps\": 30, \"images\": [...]}}: {mp}")
+        else:
+            note_input("images_file", mp)
+            fps = int(data.get("fps") or 30)
+            half, pro_ok = 0.5 / fps, _capcut_pro_ok(rd)
+            joins, moved, last, rws = [], 0, 0, data["images"]
+            for j, r in enumerate(rws, 1):
+                if not isinstance(r, dict) or any(x not in r for x in ("image", "start", "motion")):
+                    problems.append(f"images file row {j}: every row needs image, start and motion")
+                    continue
+                try:
+                    k, t = int(r["image"]), float(r["start"])
+                except (TypeError, ValueError):
+                    problems.append(f"images file row {j}: image is a whole number and start a number of seconds")
+                    continue
+                if k <= last:
+                    problems.append(f"images file row {j}: image {k} comes after image {last} (the rows go in clip order)")
+                last = max(last, k)
+                if not 1 <= k <= len(rows):
+                    problems.append(f"images file row {j}: image {k}, but the edit plan has {len(rows)} shots")
+                    continue
+                s = rows[k - 1]
+                if abs(t - s["at"]) > half:
+                    problems.append(f"images file: image {k} starts at {t} s, its clip ({s['shot_id']}) at {s['at']} s: the file was "
+                                    "written for another timing (write it again from the current edit plan)")
+                if r.get("shot_id") and str(r["shot_id"]) != s["shot_id"]:
+                    problems.append(f"images file: image {k} names {r['shot_id']}, the clip number {k} is {s['shot_id']}")
+                slug = str(r.get("transition") or "cut")
+                if slug != "cut":
+                    before = rws[j - 2] if j > 1 and isinstance(rws[j - 2], dict) else {}
+                    if k == 1:
+                        problems.append(f"images file: image 1 has a transition ({slug}), but no clip comes before it")
+                    elif str(before.get("image")) != str(k - 1):
+                        problems.append(f"images file: the transition into image {k} needs the row of image {k - 1} just before it "
+                                        "(capcut-transitions puts it on the clip before, found by that row's start)")
+                    why = _catalogue_refusal("transition", slug, pro_ok)
+                    if why:
+                        problems.append(f"images file: image {k}: {why}")
+                    joins.append({"into_image": k, "into_shot": s["shot_id"], "at_s": s["at"], "transition": slug,
+                                  "trans_s": float(r.get("trans_s") or 0.5)})
+                if any(q in r for q in ("scale", "x", "y")) and not all(
+                        isinstance(r.get(q), (list, tuple)) and len(r[q]) == 2 for q in ("scale", "x", "y")):
+                    problems.append(f"images file: image {k}: scale, x and y go together, each as [at the start, at the end]")
+                    continue
+                mv = _still_motion(r)
+                if mv["edge_shows"]:
+                    warnings.append(f"images file: image {k} ({s['shot_id']}): an edge of the picture would show "
+                                    f"(scale {mv['scale']}, x {mv['x']}, y {mv['y']})")
+                if mv["scale"] != [1.0, 1.0] or mv["x"] != [0.0, 0.0] or mv["y"] != [0.0, 0.0]:
+                    moved += 1
+                row_motion[s["shot_id"]] = mv
+            moves = {"file": str(mp), "sha256": _sha256_file(mp), "fps": fps, "rows": len(rws), "moved": moved, "transitions": joins}
+
+    # the drawn overlays: every rendered DNN.mov in the drawings folder, placed on the shot its spec (DNN.json) names, from
+    # that still's start for as long as it lasts (manual 04: the drawing clip starts with its still and lasts as long)
+    overlays = []
+    ddir = Path(a.drawings).expanduser() if getattr(a, "drawings", None) else vis / "drawings"
+    if getattr(a, "no_drawings", False):
+        if getattr(a, "drawings", None):
+            problems.append("--drawings and --no-drawings contradict each other")
+        elif ddir.is_dir() and any(ddir.glob("*.mov")):
+            warnings.append(f"--no-drawings: the drawings in {ddir} are not placed")
+    elif getattr(a, "drawings", None) and not ddir.is_dir():
+        problems.append(f"no drawings folder at {ddir}")
+    elif ddir.is_dir():
+        for mov in sorted(ddir.glob("*.mov")):
+            spec_p = mov.with_suffix(".json")
+            spec = _read_json_or_none(spec_p) if spec_p.is_file() else None
+            if not isinstance(spec, dict) or not spec.get("elements"):
+                problems.append(f"{mov.name}: no drawing spec beside it ({spec_p.name}), so the shot it is drawn on is unknown "
+                                "(a drawing left out of the cut is moved out of the folder)")
+                continue
+            sid = str(spec.get("shot") or "").strip()
+            if not sid:
+                problems.append(f"{spec_p.name} names no shot (\"shot\": the shot whose still it is drawn on)")
+                continue
+            s = by_shot.get(sid)
+            if s is None:
+                problems.append(f"{spec_p.name} is drawn on shot {sid}, which the edit plan does not have (move it out of "
+                                f"{ddir.name}/ or name its shot)")
+                continue
+            secs = _media_seconds(mov)
+            if secs is None:
+                problems.append(f"ffprobe could not read {mov}")
+                continue
+            frame, shot_s = 1.0 / 30, s["dur_us"] / 1e6
+            if secs < shot_s - frame:
+                warnings.append(f"{mov.stem} lasts {secs:.2f} s and its shot {sid} {shot_s:.2f} s: it leaves the still "
+                                f"{shot_s - secs:.2f} s before the cut (render it for the shot's length)")
+            elif secs > shot_s + frame:
+                warnings.append(f"{mov.stem} lasts {secs:.2f} s and its shot {sid} {shot_s:.2f} s: its last "
+                                f"{secs - shot_s:.2f} s are cut at the shot's end")
+            sm = spec.get("still_motion")
+            mv = row_motion.get(sid)
+            if isinstance(sm, dict) and sm.get("scale"):
+                smd = float(sm.get("dur_s") or spec.get("dur_s") or 0)
+                if abs(smd - shot_s) > frame:
+                    warnings.append(f"{spec_p.name} follows its still's move over {smd:.2f} s, the shot lasts {shot_s:.2f} s: the "
+                                    "drawing drifts off what it marks (render it again for the current timing)")
+                if mv is not None:
+                    pairs = [[round(float(x), 4) for x in (sm.get(key) or [default, default])] for key, default in
+                             (("scale", 1.0), ("x", 0.0), ("y", 0.0))]
+                    if any(abs(p - q) > 1e-3 for got, want in zip(pairs, (mv["scale"], mv["x"], mv["y"])) for p, q in zip(got, want)):
+                        warnings.append(f"{spec_p.name}'s still_motion differs from the images file's move for {sid}: the drawing "
+                                        "would not stay on what it marks")
+            elif mv is not None and (mv["scale"][0] != mv["scale"][1] or mv["x"][0] != mv["x"][1] or mv["y"][0] != mv["y"][1]) \
+                    and not isinstance(spec.get("still_framing"), dict):
+                warnings.append(f"{sid} moves under {mov.stem}, whose spec does not follow the move (no still_motion)")
+            f = _true_path(mov)
+            overlays.append({"id": mov.stem, "shot_id": sid, "file": f.as_posix(), "sha256": _sha256_file(f), "spec": str(spec_p),
+                             "spec_sha256": _sha256_file(spec_p), "at": s["at"], "at_us": s["at_us"], "dur": round(min(shot_s, secs), 6),
+                             "dur_us": min(s["dur_us"], round(secs * 1e6))})
+        _lanes(overlays, lambda k: f"draw{k + 1}")
+
+    # the beds and the sound effects, as decided (the sound placements file: manual 09)
+    beds, sfx, sound_names = [], [], {}
+    music_prov_path = edit / "music-provenance.json"
+    music = (_read_json_or_none(music_prov_path) or {}).get("tracks") or {} if music_prov_path.is_file() else {}
+    music = {_pkey(k): v for k, v in music.items() if isinstance(v, dict)}
+    if music_prov_path.is_file():
+        note_input("music_record", music_prov_path)
+    if getattr(a, "no_sounds", False):
+        if getattr(a, "sound_placements", None):
+            problems.append("--sound-placements and --no-sounds contradict each other")
+        elif (edit / "sound-placements.json").is_file():
+            warnings.append(f"--no-sounds: {edit / 'sound-placements.json'} is there and is not used")
+        if music:
+            warnings.append("music was made for this video (music-provenance.json) and --no-sounds places none")
+    else:
+        spp = Path(a.sound_placements).expanduser() if getattr(a, "sound_placements", None) else edit / "sound-placements.json"
+        data = _read_json_or_none(spp) if spp.is_file() else None
+        if not spp.is_file():
+            problems.append(f"no sound placements file (the beds and sound effects as decided): {spp}; write it (manual 09, \"The "
+                            "sound placements file\"), or pass --no-sounds when the edit has no bed and no sound effect")
+        elif not isinstance(data, dict) or not any(isinstance(data.get(k2), list) for k2 in ("beds", "sfx")):
+            problems.append(f"the sound placements file holds no \"beds\" or \"sfx\" list: {spp}")
+        else:
+            note_input("sound_placements", spp)
+            anchored = any(isinstance(x, dict) and any(str(k2).endswith("_anchor") for k2 in x)
+                           for k2 in ("beds", "sfx") for x in data.get(k2) or [])
+            try:
+                made = dt.datetime.fromisoformat(str(ep.get("made_at") or "").replace("Z", "+00:00")).timestamp()
+            except ValueError:
+                made = None
+            if anchored and made and spp.stat().st_mtime < made:
+                warnings.append("the edit plan was retimed after the sound placements were last written: run sound-anchors --resolve "
+                                "on them (--list beds, then --list sfx) before the build")
+            for key, out_rows in (("beds", beds), ("sfx", sfx)):
+                for j, it in enumerate(data.get(key) or [], 1):
+                    label = f"{key}[{j}]" + (f" {it.get('id')}" if isinstance(it, dict) and it.get("id") else "")
+                    if not isinstance(it, dict):
+                        problems.append(f"{label}: not an object")
+                        continue
+                    f = _in_run(rd, it.get("file"))
+                    if not it.get("file") or not f.is_file():
+                        problems.append(f"{label}: its file is missing: {f}")
+                        continue
+                    f = _true_path(f)
+                    sha = _sha256_file(f)
+                    if it.get("sha256") and it["sha256"] != sha:
+                        problems.append(f"{label}: {f.name} changed since the placements recorded it (sha256)")
+                    try:
+                        at = float(it["at"])
+                        src = float(it.get("src_start") or 0.0)
+                        vol = float(it["volume"]) if it.get("volume") is not None else 1.0
+                        fin, fout = float(it.get("fade_in") or 0.0), float(it.get("fade_out") or 0.0)
+                        end = float(it["end"]) if it.get("end") is not None else None
+                    except (KeyError, TypeError, ValueError):
+                        problems.append(f"{label}: at (seconds on the edit's clock) is needed; src_start, end, volume, fade_in and "
+                                        "fade_out are numbers when given")
+                        continue
+                    secs = _media_seconds(f)
+                    if secs is None:
+                        problems.append(f"{label}: ffprobe could not read {f}")
+                        continue
+                    room = secs - src
+                    dur = (end - at) if end is not None else room
+                    bad = []
+                    if at < 0 or src < 0:
+                        bad.append("at and src_start are 0 or more")
+                    if room <= 0:
+                        bad.append(f"src_start {src} s is past the file's end ({secs:.3f} s)")
+                    elif dur <= 0:
+                        bad.append(f"it ends at {end} s, not after its start at {at} s")
+                    elif dur > room + END_SLACK_S:
+                        bad.append(f"it lasts {dur:.3f} s from {src} s into its file, which holds {room:.3f} s from there")
+                    if vol <= 0:
+                        bad.append("volume is more than 0 (a muted clip is no placement)")
+                    if fin < 0 or fout < 0 or (dur > 0 and fin + fout > dur + 1e-6):
+                        bad.append("fade_in and fade_out are 0 or more and fit inside the clip")
+                    beats = [str(x) for x in it.get("beats") or []]
+                    if not beats:
+                        bad.append("beats names the beats it serves (timeline-check needs them)")
+                    elif beat_ids and any(x not in beat_ids for x in beats):
+                        bad.append("beats names a beat the edit plan does not have: " + ",".join(x for x in beats if x not in beat_ids))
+                    kind = str(it.get("kind") or ("music" if key == "beds" else "sfx"))
+                    if key == "beds" and kind not in BUILD_BED_KINDS:
+                        bad.append(f"a bed's kind is one of {', '.join(BUILD_BED_KINDS)}")
+                    if bad:
+                        problems += [f"{label}: {b}" for b in bad]
+                        continue
+                    dur = min(dur, room)
+                    at_us, dur_us = round(at * 1e6), round(dur * 1e6)
+                    if rows and at_us + dur_us > last_end_us + END_SLACK_S * 1e6:
+                        problems.append(f"{label}: it ends at {(at_us + dur_us) / 1e6:.3f} s, after the last picture ({last_end_us / 1e6:.3f} s): "
+                                        "the export would end on black (end it with the picture, or hold the last shot longer)")
+                        continue
+                    if beat_spans and not any(x in beat_spans and at < beat_spans[x][1] and at + dur > beat_spans[x][0] for x in beats):
+                        warnings.append(f"{label} plays at {at:.2f}-{at + dur:.2f} s, outside the beats it names ({','.join(beats)})")
+                    if abs(vol - 1.0) > 1e-9:
+                        warnings.append(f"{label}: volume {vol:g} on the clip: CapCut's export was measured ignoring a clip's volume "
+                                        "(2026-11-22, a video clip); a level baked into the file (bed-levels --bake) plays as made")
+                    rec = music.get(_pkey(f))
+                    if key == "beds":
+                        if rec is None:
+                            warnings.append(f"{label}: {f.name} has no music-provenance record (timeline-check needs one, or the music "
+                                            "reapproved on record)")
+                        elif sorted(rec.get("beats") or []) != sorted(beats):
+                            warnings.append(f"{label}: its record names beats {','.join(rec.get('beats') or [])}; timeline-write takes "
+                                            "a recorded bed's beats from there")
+                    if key == "sfx" or rec is None:
+                        nm = f.name
+                        if nm.lower() in {x.lower() for x in sound_names} and sound_names.get(nm, {}).get("_file") != str(f):
+                            problems.append(f"{label}: another sound file is also named {nm}: timeline-write tells sounds apart by "
+                                            "their file names")
+                        sound_names[nm] = {"kind": kind, "beats": beats, "purpose": str(it.get("purpose") or it.get("why") or ""),
+                                           "_file": str(f)}
+                    out_rows.append({"id": str(it.get("id") or f.stem), "kind": kind, "file": f.as_posix(), "sha256": sha,
+                                     "at": at, "at_us": at_us, "dur": round(dur, 6), "dur_us": dur_us, "src_start": src,
+                                     "src_start_us": round(src * 1e6), "volume": vol, "fade_in_us": round(fin * 1e6),
+                                     "fade_out_us": round(fout * 1e6), "beats": beats,
+                                     "purpose": str(it.get("purpose") or it.get("why") or ""), "recorded_music": rec is not None})
+            _lanes(beds, lambda k: "music" if k == 0 else f"music-{k + 1}")
+            _lanes(sfx, lambda k: "sfx" if k == 0 else f"sfx-{k + 1}")
+            if music and not beds:
+                warnings.append("music was made for this video (music-provenance.json) and the placements place no bed")
+
+    held = _bed_at_silences(ep.get("pauses"), [(b["at"], b["at"] + b["dur"]) for b in beds if b["kind"] in BUILD_BED_KINDS])
+    for h in held:
+        if h["as_decided"] is False:
+            warnings.append(f"the silence after {h['after_line']} ({h['silence_from_s']:.2f}-{h['silence_to_s']:.2f} s) was decided "
+                            f"with the bed \"{h['bed']}\"; the placed beds do not do that there (timeline-check reads the same)")
+    for role, items in (("overlay", overlays), ("bed", beds), ("sfx", sfx)):
+        inputs += [{"role": role, "id": o["id"], "file": o["file"], "sha256": o["sha256"]} for o in items]
+    for im in images:
+        inputs.append({"role": "still", "shot_id": im["shot_id"], "file": im["file"], "sha256": im["sha256"]})
+    plan = {"made_by": "capcut_tools.py capcut-build", "version": CAPCUT_BUILD_VERSION, "made_at": now_iso(), "run": str(rd),
+            "video": n, "edit_duration_s": ep.get("edit_duration_s"), "narration": narration, "images": images,
+            "overlays": overlays, "beds": beds, "sfx": sfx, "moves": moves, "held_silences": held,
+            "sounds_for_timeline_write": {k: {x: y for x, y in v.items() if x != "_file"} for k, v in sound_names.items()},
+            "inputs": inputs, "warnings": warnings,
+            "note": "Everything the project holds, from the run's decided files; capcut_build.mjs places exactly this. Times in "
+                    "seconds on the edit's clock (*_us: the same in microseconds, as CapCut stores them)."}
+    return plan, problems, warnings
+
+
+def _capcut_build_draft_facts(d: Path) -> tuple:
+    """Whether a draft is the fresh, prepared clone capcut-build may write: (problems, facts). It refuses the template, a
+    project that already holds a clip, a clone capcut-prep has not prepared, one CapCut has opened, and a canvas that is not
+    YouTube 16:9."""
+    tmpl = str(cfg_get("capcut.template_draft") or "")
+    facts = {"draft": str(d), "draft_name": d.name, "drafts_dir": str(d.parent), "template_draft": tmpl}
+    cp = d / "draft_content.json"
+    if not cp.is_file():
+        return [f"not a CapCut draft (no draft_content.json): {d}"], facts
+    problems = []
+    if not tmpl:
+        problems.append("config.json names no capcut.template_draft")
+    elif d.name == tmpl or _pkey(d) == _pkey(_capcut_store() / tmpl):
+        problems.append(f"{d} is the template draft every project is cloned from: it is never edited")
+    elif not (d.parent / tmpl / "draft_content.json").is_file():
+        problems.append(f"the template {tmpl!r} is not beside this draft in {d.parent}: core.js takes its clip templates from there "
+                        "(build in the drafts folder capcut-name answered)")
+    try:
+        content = json.loads(cp.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return problems + [f"draft_content.json is unreadable: {e}"], facts
+    held = sum(len(t.get("segments") or []) for t in content.get("tracks") or [] if isinstance(t, dict))
+    if held:
+        problems.append(f"the draft already holds {held} clip(s): capcut-build writes only a fresh project (capcut-name, the "
+                        "clone, capcut-prep, then capcut-build)")
+    if content.get("name") and content.get("name") != d.name:
+        problems.append(f"draft_content.json names {content.get('name')!r}, not this folder {d.name!r}: not the fresh clone")
+    if (d / "draft_meta_info.json").exists():
+        problems.append("capcut-prep has not run on this clone: draft_meta_info.json (the template's identity) is still in place")
+    lay = _read_json_or_none(d / "timeline_layout.json") or {}
+    ids = [i for it in lay.get("dockItems") or [] if isinstance(it, dict) for i in it.get("timelineIds") or []]
+    if content.get("id") not in ids:
+        problems.append("capcut-prep has not run on this clone: timeline_layout.json does not point at its timeline")
+    if (d / "template-2.tmp").exists():
+        problems.append("template-2.tmp is in the draft: it was opened in CapCut or copied, not cloned (capcut_clone_draft leaves "
+                        "it out; capcut-cli would read it as the timeline): make a fresh project")
+    cc = content.get("canvas_config") or {}
+    facts["canvas"] = f"{cc.get('width')}x{cc.get('height')}"
+    if facts["canvas"] not in YOUTUBE_CANVASES:
+        problems.append(f"the canvas is {facts['canvas']}: run capcut-prep --canvas 1920x1080 on the fresh clone (a YouTube 16:9 "
+                        "canvas: " + ", ".join(YOUTUBE_CANVASES) + ")")
+    return problems, facts
+
+
+def _mirror_timeline(d: Path) -> dict:
+    """draft_info.json made the same timeline as draft_content.json, the mirror capcut-cli keeps identical when it exists: a fresh
+    clone carries the template's, which capcut-motion would key as a stale copy and sync-timelines would find newer than the build."""
+    src, dst = d / "draft_content.json", d / "draft_info.json"
+    if not dst.is_file():
+        return {"mirrored": False, "why": "the draft has no draft_info.json"}
+    tmp = dst.with_name(dst.name + ".build-tmp")
+    shutil.copyfile(src, tmp)
+    _replace(tmp, dst)
+    return {"mirrored": True, "file": str(dst)}
+
+
+def _draft_tracks(d: Path) -> list:
+    content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
+    return [{"index": i, "type": t.get("type"), "name": t.get("name"), "segments": len(t.get("segments") or [])}
+            for i, t in enumerate(content.get("tracks") or [])]
+
+
+def _build_next(rd: Path, n: int, d, sounds_file: Path) -> list:
+    """The documented steps after the build (manual 09, "The order"), with this run's paths."""
+    st = _read_json_or_none(rd / "state.json") or {}
+    cap = str(st.get("captions") or "").lower()
+    core = 'python "$HOME/.claude/static-studio/scripts/static_core.py"'
+    tools = 'python "$HOME/.claude/static-studio/scripts/capcut_tools.py"'
+    dr = f'"{d}"' if d else '"<project>"'
+    steps = []
+    if cap == "on":
+        steps += [f'{core} captions-plan --run "{rd}" --video {n}   (if captions.json is not timed to this edit plan; the word box adds '
+                  '--box-color and --box-color-why)',
+                  f'{core} captions-build --run "{rd}" --video {n} --draft {dr}']
+    elif cap != "off":
+        steps.append(f'{core} captions-choice --run "{rd}" ...   (the user has not chosen the captions yet: ask once)')
+    steps += [f"{tools} capcut-repair --draft {dr} --keep-text",
+              f'{core} timeline-write --run "{rd}" --video {n} --draft {dr} --sounds "{sounds_file}"',
+              f'{core} timeline-check --run "{rd}" --video {n}']
+    return steps
+
+
+def cmd_capcut_build(a):
+    """The whole CapCut project of one video in one command (manual 09, "The order", step 4): the run's decided files (the edit
+    plan with its shots, holds and narration_for_edit; each shot's still; the images file; the rendered drawings; the sound
+    placements) become one checked build plan (RUN/70-edit/video-NN/capcut/build-plan.json); unless --dry-run, it is written
+    into the fresh, prepared draft in one Node process through the CapCut MCP's own library (capcut_build.mjs, one save), then
+    capcut-motion and capcut-transitions run on the same draft, and RUN/70-edit/video-NN/capcut/build-log.json records the draft,
+    every input with its sha256, what each track holds and this toolkit's version. It decides nothing; an input missing or
+    changed since its record refuses the build (exit 2, nothing written). CapCut closed; the machine-wide store lock is held while
+    the draft is written; the template and every other project are never touched."""
+    rd = resolve_run(a.run)
+    try:
+        n = int(a.video)
+    except (TypeError, ValueError):
+        fail("--video must be the video's number", 2)
+    if not a.draft and not a.dry_run:
+        fail("capcut-build needs --draft (the project folder capcut-name answered), or --dry-run", 2)
+    d = Path(os.path.abspath(Path(a.draft).expanduser())) if a.draft else None
+    if not shutil.which("ffprobe"):
+        fail("ffprobe not found on PATH: the build reads each clip's length with it, as core.js does", 2)
+    if d is not None and not a.dry_run and ((d / ".locked").exists() or _capcut_running()):
+        fail("CapCut is running: close it, then run this again (nothing was changed)", 3)
+    edit = rd / "70-edit" / f"video-{n:02d}"
+    plan, problems, warnings = _capcut_build_plan(rd, n, a)
+    facts = {}
+    if d is not None:
+        dp, facts = _capcut_build_draft_facts(d)
+        problems += dp
+        if a.dry_run and (d / ".locked").exists():
+            warnings.append("the draft is open in CapCut (.locked): close it before the build")
+    core = Path(str(cfg_get("capcut.mcp_core") or "")).expanduser()
+    node = shutil.which("node")
+    if not a.dry_run:
+        if not node:
+            problems.append("node not found on PATH: the build runs the CapCut MCP's own library in Node")
+        if not cfg_get("capcut.mcp_core") or not core.is_file():
+            problems.append(f"the CapCut MCP library is not at {core} (config.json -> capcut.mcp_core)")
+        if not BUILD_MJS.is_file():
+            problems.append(f"{BUILD_MJS} is missing (it sits next to capcut_tools.py)")
+        if plan and plan.get("moves") and plan["moves"]["transitions"] and not _capcut_cli_path():
+            problems.append("capcut-cli not found: capcut-transitions writes the joins with it (npm i -g capcut-cli)")
+    if problems:
+        out({"ok": False, "error": problems[0] + (f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""),
+             "problems": problems[:60], "problems_count": len(problems), "warnings": warnings[:20], "warnings_count": len(warnings),
+             "note": "refused: nothing was written"}, 2)
+    plan.update({k: facts.get(k) for k in ("draft", "draft_name", "drafts_dir", "template_draft", "canvas")})
+    plan["dry_run"] = bool(a.dry_run)
+    cdir = edit / "capcut"
+    plan_path, sounds_file, log_path = cdir / "build-plan.json", cdir / "sounds.json", cdir / "build-log.json"
+    write_json(plan_path, plan)
+    write_json(sounds_file, plan["sounds_for_timeline_write"])
+    counts = {"pictures": len(plan["images"]), "overlays": len(plan["overlays"]), "narration": 1 if plan["narration"] else 0,
+              "beds": len(plan["beds"]), "sfx": len(plan["sfx"]),
+              "moves": (plan["moves"] or {}).get("moved", 0), "transitions": len((plan["moves"] or {}).get("transitions") or [])}
+    nxt = _build_next(rd, n, d, sounds_file)
+    if a.dry_run:
+        out({"ok": True, "dry_run": True, "build_plan": str(plan_path), "sounds_file": str(sounds_file), "draft": plan["draft"],
+             "planned": counts, "warnings": warnings[:30], "warnings_count": len(warnings),
+             "next": ([] if d else ["capcut-name, the clone (capcut_clone_draft, empty) and capcut-prep --canvas 1920x1080"])
+             + [f'python "$HOME/.claude/static-studio/scripts/capcut_tools.py" capcut-build --run "{rd}" --video {n} --draft '
+                + (f'"{d}"' if d else '"<project>"')]})
+    tmpl = facts["template_draft"]
+    lock = Path(cfg_get("capcut.store_lock", str(STUDIO_HOME / "runs" / ".capcut-store.lock")))
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    steps, res = [], {}
+    with FileLock(lock, timeout=900):
+        if (d / ".locked").exists() or _capcut_running():
+            fail("CapCut is running: close it, then run this again (nothing was changed)", 3)
+        env = {**os.environ, "CAPCUT_MCP_CORE": str(core), "CAPCUT_DRAFTS_DIR": str(d.parent), "CAPCUT_TEMPLATE_DRAFT": tmpl}
+        try:
+            cp = subprocess.run([node, str(BUILD_MJS), str(plan_path)], capture_output=True, text=True, encoding="utf-8",
+                                errors="replace", timeout=1800, env=env)
+            res = _last_json(cp.stdout) or {"ok": False, "error": ((cp.stderr or "") + (cp.stdout or "")).strip()[-800:]}
+            code = cp.returncode
+        except subprocess.TimeoutExpired:
+            res, code = {"ok": False, "error": "the Node build did not finish in 30 minutes"}, 1
+        steps.append({"step": "build", "exit": code, "result": {k: v for k, v in res.items() if k != "segments"}})
+        built = code == 0 and bool(res.get("ok"))
+        if built:
+            steps.append({"step": "mirror", "exit": 0, "result": _mirror_timeline(d)})
+            me = str(Path(__file__).resolve())
+            if plan["moves"]:
+                for name in ("capcut-motion", "capcut-transitions"):
+                    if name == "capcut-transitions" and not plan["moves"]["transitions"]:
+                        steps.append({"step": name, "exit": 0, "result": "no join but cuts: nothing to write"})
+                        continue
+                    cp = run([sys.executable, me, name, "--draft", str(d), "--timeline", plan["moves"]["file"]], timeout=1800)
+                    r2 = _last_json(cp.stdout) or {"ok": False, "error": (cp.stderr or cp.stdout or "").strip()[-600:]}
+                    steps.append({"step": name, "exit": cp.returncode, "ok": bool(r2.get("ok")), "result": r2})
+    tracks = _draft_tracks(d) if built else []
+    if built:
+        main_n = next((t["segments"] for t in tracks if t["type"] == "video"), 0)
+        audio_n = sum(t["segments"] for t in tracks if t["type"] == "audio")
+        over_n = sum(t["segments"] for t in tracks if t["type"] == "video") - main_n
+        want = (counts["pictures"], counts["overlays"], counts["narration"] + counts["beds"] + counts["sfx"])
+        if (main_n, over_n, audio_n) != want:
+            steps.append({"step": "read-back", "exit": 1, "result": f"the saved project holds {main_n} pictures, {over_n} overlays and "
+                                                                    f"{audio_n} audio clips; the plan has {want[0]}, {want[1]} and {want[2]}"})
+        else:
+            steps.append({"step": "read-back", "exit": 0, "result": "the saved project holds every planned clip"})
+    ok = built and all(s["exit"] == 0 and s.get("ok", True) for s in steps)
+    if log_path.is_file():
+        old = _read_json_or_none(log_path) or {}
+        if old.get("draft") and _pkey(old["draft"]) != _pkey(d):
+            shutil.copyfile(log_path, log_path.with_name(f"build-log.{Path(str(old['draft'])).name}.json"))
+    me_sha = _sha256_file(Path(__file__).resolve())
+    nv = run([node, "--version"], timeout=60).stdout.strip() if node else None
+    log = {"ok": ok, "draft": str(d), "draft_name": d.name, "made_at": now_iso(),
+           "toolkit": {"command": "capcut_tools.py capcut-build", "version": CAPCUT_BUILD_VERSION, "capcut_tools_sha256": me_sha,
+                       "capcut_build_mjs_sha256": _sha256_file(BUILD_MJS), "mcp_core": str(core), "mcp_core_sha256": _sha256_file(core),
+                       "node": nv},
+           "build_plan": str(plan_path), "build_plan_sha256": _sha256_file(plan_path), "inputs": plan["inputs"], "counts": counts,
+           "tracks": tracks, "steps": steps, "segments": res.get("segments") or [], "warnings": warnings, "plan": plan}
+    write_json(log_path, log)
+    summary = []
+    for s in steps:
+        r = s.get("result")
+        if s["step"] == "capcut-motion" and isinstance(r, dict):
+            r = {"ok": r.get("ok"), "images_without_a_clip": r.get("images_without_a_clip"), "stale_copies": len(r.get("stale_copies") or [])}
+        elif s["step"] == "capcut-transitions" and isinstance(r, dict):
+            r = {"ok": r.get("ok"), "written": len(r.get("transitions") or []), "already_there": r.get("already_there"),
+                 "failed": r.get("failed")}
+        elif s["step"] == "build" and isinstance(r, dict):
+            r = {"ok": r.get("ok"), "error": r.get("error"), "validate": r.get("validate"), "saved": r.get("saved")}
+        summary.append({"step": s["step"], "exit": s["exit"], "result": r})
+    res_out = {"ok": ok, "draft": str(d), "build_plan": str(plan_path), "build_log": str(log_path), "sounds_file": str(sounds_file),
+               "counts": counts, "tracks": tracks, "steps": summary, "warnings": warnings[:30], "warnings_count": len(warnings)}
+    if ok:
+        res_out["next"] = nxt
+    elif not built:
+        res_out["action"] = ("the draft was not saved (core.js saves once, at the end): fix what the build step names, then run "
+                             "capcut-build again on this draft")
+    else:
+        res_out["action"] = ("the clips are in the project; fix what the failed step names and run that step alone on this draft "
+                             "(capcut-motion and capcut-transitions can run again), then go on with: " + " | ".join(nxt))
+    out(res_out, 0 if ok else 1)
+
+
 # --------------------------------------------------------------------------- command line
 
 def main():
@@ -1285,6 +2008,20 @@ def main():
     p.add_argument("--draft", required=True, help="the freshly cloned draft folder")
     p.add_argument("--canvas", help="WxH: the project's canvas (default: the template's)")
     p.set_defaults(fn=cmd_capcut_prep)
+
+    p = sp.add_parser("capcut-build", help="after capcut-prep: the whole project of one video from the run's decided files, in one "
+                                           "Node process through the CapCut MCP's own library, then capcut-motion and capcut-transitions")
+    p.add_argument("--run", required=True, help="the run folder (or its name under the runs root)")
+    p.add_argument("--video", required=True, help="the video's number")
+    p.add_argument("--draft", help="the fresh, prepared project folder (capcut-name's path); optional with --dry-run")
+    p.add_argument("--images", help="the images file (moves and joins); default RUN/70-edit/video-NN/capcut-images.json")
+    p.add_argument("--no-moves", action="store_true", help="the edit has no move and no join: no images file")
+    p.add_argument("--sound-placements", help="the beds and sound effects as decided; default RUN/70-edit/video-NN/sound-placements.json")
+    p.add_argument("--no-sounds", action="store_true", help="the edit has no bed and no sound effect")
+    p.add_argument("--drawings", help="the rendered drawings (DNN.mov beside its spec DNN.json); default RUN/60-visuals/video-NN/drawings")
+    p.add_argument("--no-drawings", action="store_true", help="place no drawing")
+    p.add_argument("--dry-run", action="store_true", help="write the build plan only; the draft is not touched")
+    p.set_defaults(fn=cmd_capcut_build)
 
     p = sp.add_parser("capcut-repair", help="after the last capcut_save: register, the media links CapCut 9.7 opens clips by, "
                                             "sync-timelines, lint (under the machine-wide store lock); every text stays as it is")
