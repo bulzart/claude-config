@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 24e34d07-fc5a-4377-8a48-dcbcee1ff513
-  modified: 2026-11-24T05:32:03.743Z
+  modified: 2026-11-24T11:58:12.085Z
 ---
 
 A change to the /create-video pipeline is not complete because code exists or tests pass. Verify it on the actual path,
@@ -17,6 +17,9 @@ proportionate to what changed, on isolated test assets (never a finished product
 - ElevenLabs v4: verify request construction and handling free (mocks, recorded payloads, dry runs); a real post-change
   generation is billable: prepare the exact test with its credit estimate and ask first, unless an approved test budget
   explicitly covers it.
+2026-11-24 results: FLUX new stills verified; CapCut desktop open+export verified (first pass, no captions); ElevenLabs
+v4 live test on the user's yes (cap 205 credits): one 205-character part, 82 credits billed
+(character-cost header), all 34 words heard, no tag read aloud.
 Report each change in a matrix: verified by real execution / automated tests only / static inspection / not verified.
 Never call a mock a live integration, never weaken a check to pass a test, never substitute a model or provider.
 
