@@ -3785,6 +3785,34 @@ def direction_facts(rd, video):
                            + ':carries_values[{value,how}]')
         if n_words(dec.get('carries_payoff')) < MIN_FIELD_WORDS:
             iss.append('decision_missing_carries_payoff:how_the_chosen_treatment_makes_the_payoff_land')
+    # How each treatment unfolds over the whole video (the samples are its best moments, not the video): its movements,
+    # each with what the viewer gets and roughly how long, and where it first delivers what the opening promises. The
+    # facts (minutes before that, what the viewer gets meanwhile) are the director's to weigh: productive anticipation
+    # or a wait; no time limit is set, and a long build that rewards the viewer is a choice (storytelling brief).
+    ll = read_json(video_dir(rd, int(video)) / 'length-lock.json')
+    target_min = float(ll.get('target_length_s') or 0) / 60
+    out['promise_timing'] = {}
+    for t in trs:
+        tid = t.get('id')
+        mv = treatment_movements(t)
+        if len(mv) < 2 or any(n_words(m['what']) < MIN_FIELD_WORDS or m['minutes'] <= 0 for m in mv):
+            iss.append(f'treatment_{tid}_needs_movements:how_the_whole_video_unfolds[{{what,minutes,promise}}]')
+            continue
+        if not any(m['promise'] for m in mv):
+            iss.append(f'treatment_{tid}_never_marks_where_its_promise_is_delivered:movements[].promise')
+        out['promise_timing'][str(tid)] = promise_timing(t)
+        total = sum(m['minutes'] for m in mv)
+        if target_min and abs(total - target_min) > 0.2 * target_min:
+            warn.append(f'treatment {tid}: its movements add up to {total:g} min for a {target_min:.1f}-min video: '
+                        'is this how it unfolds over the locked length?')
+    # The chosen treatment keeps the opening's promise (how, and what the viewer gets while waiting for it), and its
+    # telling is weighed against the references the length and the pace came from: a cohort shares a niche, not
+    # necessarily this video's format, density or narration (storytelling brief, 2026-11-24).
+    out['length_cohort'] = {k: ll.get(k) for k in ('cohort_id', 'forms_why', 'target_length_s', 'pace_wpm',
+                                                   'pace_wpm_source')} if ll else None
+    for k in ('promise_and_delivery', 'length_fit'):
+        if n_words(dec.get(k)) < MIN_FIELD_WORDS:
+            iss.append(f'decision_missing_{k}')
     older_plan_advisory(rd, video, iss, warn)
     return out
 
@@ -3817,6 +3845,7 @@ FIELD_EFFECTS = {
     'treatment.audiovisual_relationship': ('beat-map', 'shot-plan', 'edit'),
     'treatment.emotional_course': ('beat-map', 'script'),
     'treatment.carries_values': ('beat-map', 'script'),     # how the chosen treatment delivers the payoff
+    'treatment.movements': ('beat-map', 'script', 'shot-plan'),   # how the whole video unfolds: its structure
     # Another subject is another film. A new angle on the same subject (the chosen candidate's own description) is
     # another story: the plan files follow it, and the media follow the plan (a still its shot's changed prompt, a
     # recorded part its changed lines). A researched value that changes reaches only the beats that carry it, their
@@ -3915,7 +3944,38 @@ def treatment_text(t):
     t = t if isinstance(t, dict) else {}
     s = t.get('samples') if isinstance(t.get('samples'), dict) else {}
     return ' '.join([str(t.get(k) or '') for k in TREATMENT_KEYS] +
-                    [str(sample_of(s, m).get(x) or '') for m in SAMPLE_MOMENTS for x in ('narration', 'picture')])
+                    [str(sample_of(s, m).get(x) or '') for m in SAMPLE_MOMENTS for x in ('narration', 'picture')] +
+                    [str(m.get('what') or '') for m in treatment_movements(t)])
+
+
+def treatment_movements(t):
+    """A treatment's movements, in order: [{what, minutes, promise}] (what the viewer gets in each, roughly how long,
+    and whether it delivers what the opening promises). Malformed entries are dropped; the check names them."""
+    out = []
+    for m in (t or {}).get('movements') or []:
+        if not isinstance(m, dict):
+            continue
+        try:
+            mins = float(m.get('minutes'))
+        except (TypeError, ValueError):
+            mins = 0.0
+        out.append({'what': str(m.get('what') or '').strip(), 'minutes': mins, 'promise': m.get('promise') is True})
+    return out
+
+
+def promise_timing(t):
+    """Facts for the director, never a verdict: how long a treatment's movements run before the first one that
+    delivers what the opening promises, and what the viewer gets in the movements before it."""
+    mv = treatment_movements(t)
+    total = sum(m['minutes'] for m in mv)
+    before, mins = [], 0.0
+    for m in mv:
+        if m['promise']:
+            return {'minutes_before': round(mins, 1), 'share_before': round(mins / total, 2) if total else None,
+                    'total_minutes': round(total, 1), 'before': before}
+        before.append(m['what'])
+        mins += m['minutes']
+    return {'minutes_before': None, 'share_before': None, 'total_minutes': round(total, 1), 'before': before}
 
 
 def chosen_treatment_of(d):
@@ -4339,6 +4399,43 @@ def comprehension_signal_facts(sgl):
         g = re.search(r'"([^"]+)" returns', str(sgl))
         names = {g.group(1).lower()} if g else set()
     return (m.group(1) if m else None), names
+
+
+def comprehension_kinds(section_text):
+    """{line id: kind} from the editorial review's Comprehension lines (the first kind a line names)."""
+    kinds = re.compile(r'\b(' + '|'.join(COMPREHENSION_KINDS) + r')\b')
+    out = {}
+    for ln in str(section_text or '').splitlines():
+        m = kinds.search(ln)
+        if m:
+            for lid in re.findall(r'\bL\d+\b', ln):
+                out.setdefault(lid, m.group(1))
+    return out
+
+
+def key_moment_dependency_issues(signals, section_text, beats, ids):
+    """A name returning after a long absence inside a key moment's lines, classified as intentional_mystery while the
+    beat withholds nothing on purpose (no depends_on entry with "withheld")."""
+    kinds = comprehension_kinds(section_text)
+    pos = {lid: i + 1 for i, lid in enumerate(ids)}
+    out = []
+    for sgl in signals:
+        if 'returns after' not in str(sgl):
+            continue
+        lid, names = comprehension_signal_facts(sgl)
+        if not lid or kinds.get(lid) != 'intentional_mystery':
+            continue
+        for b in beats:
+            if not is_key_moment(b):
+                continue
+            try:
+                inside = int(b['line_start']) <= pos.get(lid, 0) <= int(b['line_end'])
+            except (KeyError, TypeError, ValueError):
+                inside = False
+            if inside and not any(isinstance(d, dict) and d.get('withheld') for d in b.get('depends_on') or []):
+                out.append(f'key_moment_dependency_called_a_mystery:{lid}:{",".join(sorted(names))}:'
+                           f'{b.get("id")}_withholds_nothing:make_it_available_where_it_is_needed_or_mark_it_withheld')
+    return out
 
 
 def comprehension_unclassified(signals, section_text, line_beat):
@@ -5076,12 +5173,15 @@ def expand_lines(spec, order):
     return out
 
 
-ANSWER_RULES = 2       # 2 (2026-11-24): a revised significance finding names its cause; rounds recorded before keep rule 1
+ANSWER_RULES = 3       # 2 (2026-11-24): a revised significance finding names its cause; 3 (2026-11-24, storytelling
+                       # brief): a major finding of a later round says whether it recurs and, if so, its root cause;
+                       # rounds recorded before keep their rules
+RECURRENCE_SCOPES = ('wording', 'order', 'structure', 'treatment', 'material', 'duration', 'dispute')
 # The planning rules added on 2026-11-24 (PLANNING_RULES 2): what a NEW direction must plan. A direction approved before
 # them (its lock carries no planning_rules) keeps the plan it was approved with: these checks are shown to it as
 # advisories, never as re-planning (the user, 2026-11-24). Safety and content, money, asset integrity and release
 # validation are never in this list: they hold for every run.
-PLANNING_RULES = 2
+PLANNING_RULES = 3
 NEW_PLANNING_RULES = re.compile(
     r'(direction_evidence_\w+?_is_outside_the_locked_niche'
     r'|chosen_approach_missing_exploration'
@@ -5100,6 +5200,17 @@ NEW_PLANNING_RULES = re.compile(
     r'|pace_signals_not_examined'
     r'|\w+?_review_r\d+_key_moments_not_reconciled'
     r'|script_revised_where_it_matters)')
+# The planning rules of the storytelling brief (PLANNING_RULES 3, 2026-11-24): each treatment says how the whole video
+# unfolds and where it delivers what the opening promises; the decision says how the chosen one keeps that promise
+# and how its telling fits the references the length and pace were taken from; a key moment's dependency is not
+# called a mystery unless it is withheld on purpose. Older directions see them as advisories, except where a revision
+# reaches.
+PLANNING_RULES_V3 = re.compile(
+    r'(treatment_\w+?_needs_movements'
+    r'|treatment_\w+?_never_marks_where_its_promise_is_delivered'
+    r'|decision_missing_(promise_and_delivery|length_fit)'
+    r'|key_moment_dependency_called_a_mystery)')
+PLANNING_RULES_ADDED = ((2, NEW_PLANNING_RULES), (3, PLANNING_RULES_V3))
 
 
 def planning_rules_of(rd, video):
@@ -5129,6 +5240,19 @@ def migrated_rule(issue, migration, chosen_treatment=None, chosen_candidate=None
     def remade(*names):
         return bool(arts & set(names))
     new_subject = sec('subject.selection.candidate')
+    # the storytelling rules (3) reach what a revision of an older direction touched
+    if int((migration or {}).get('to') or 0) >= 3:
+        m3 = re.match(r'treatment_(\w+?)_(?:needs_movements|never_marks_where_its_promise_is_delivered)', s)
+        if m3:
+            return sec('decision.treatment') or (sec(prefix=('treatment.',)) if m3.group(1) == str(chosen_treatment)
+                                                 else sec('other_treatments'))
+        if s.startswith('decision_missing_promise_and_delivery') or s.startswith('decision_missing_length_fit'):
+            return sec('decision.treatment', 'decision.reasons')
+        if s.startswith('key_moment_dependency_called_a_mystery'):
+            return remade('beat-map', 'script')
+    elif re.match(r'(treatment_\w+?_(needs_movements|never_marks_where)|decision_missing_(promise_and_delivery|length_fit)'
+                  r'|key_moment_dependency_called_a_mystery)', s):
+        return False
     m = re.fullmatch(r'(\w+?)_review_r\d+_key_moments_not_reconciled_with_the_readers_account', s)
     if m:
         return {'script': remade('script'), 'final': remade('edit')}.get(
@@ -5173,7 +5297,8 @@ def older_plan_advisory(rd, video, issues, warnings):
     """In place: for a direction approved before PLANNING_RULES, the planning checks added since move from issues to
     warnings, said as advisories, except where a substantive revision of that direction reaches (planning_migration):
     there the current rules apply. Returns what moved."""
-    if planning_rules_of(rd, video) >= PLANNING_RULES:
+    have = planning_rules_of(rd, video)
+    if have >= PLANNING_RULES:
         return []
     vd = video_dir(rd, int(video))
     mig = read_json(vd / 'direction-lock.json').get('planning_migration') or {}
@@ -5181,12 +5306,16 @@ def older_plan_advisory(rd, video, issues, warnings):
     dec = d.get('decision') if isinstance(d.get('decision'), dict) else {}
     subj = d.get('subject') if isinstance(d.get('subject'), dict) else {}
     sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
-    moved = [x for x in issues if NEW_PLANNING_RULES.match(str(x))
-             and not migrated_rule(x, mig, dec.get('treatment'), sel.get('candidate'))]
+    moved = []
+    for version, rx in PLANNING_RULES_ADDED:
+        if have >= version:
+            continue          # rules the direction was approved under hold in full
+        moved += [x for x in issues if rx.match(str(x)) and x not in moved
+                  and not migrated_rule(x, mig, dec.get('treatment'), sel.get('candidate'))]
     if moved:
         issues[:] = [x for x in issues if x not in moved]
-        warnings.extend(f'advisory (this direction was approved before the planning rules of 2026-11-24, which it '
-                        f'need not follow): {x}' for x in moved)
+        warnings.extend(f'advisory (this direction was approved before planning rules it need not follow): {x}'
+                        for x in moved)
     return moved
 
 
@@ -5211,6 +5340,23 @@ def answer_problem(kind, finding, ans, rules=ANSWER_RULES):
             return 'revised needs the cause it fixes (cause: ' + ' | '.join(SIGNIFICANCE_CAUSES) + ')'
         if cause.startswith('other') and n_words(cause) < 3:
             return 'cause "other" needs to say which cause'
+    if int(rules or 1) >= 3 and finding.get('needs_recurrence'):
+        rc = ans.get('recurrence') if isinstance(ans.get('recurrence'), dict) else {}
+        of = str(rc.get('recurs_of') or '').strip().lower()
+        if not of:
+            return ('say whether this major problem recurs from an earlier round (recurrence.recurs_of: "none", or '
+                    'the earlier finding, e.g. "r1:F1")')
+        if of != 'none':
+            if not re.fullmatch(r'r\d+:[a-z]+\d*[a-z]*', of):
+                return 'recurrence.recurs_of names an earlier finding as r<round>:<id> (e.g. "r1:F1"), or "none"'
+            if n_words(rc.get('root_cause')) < MIN_NOTE_WORDS:
+                return 'a recurring major problem needs its root cause: what the earlier revision missed'
+            scope = str(rc.get('scope') or '').strip().lower()
+            if scope not in RECURRENCE_SCOPES:
+                return 'recurrence.scope must be one of: ' + ' | '.join(RECURRENCE_SCOPES)
+            if scope == 'wording' and act != 'disputed':
+                return ('a major problem an earlier reader also found is not fixed by rewording: name the order, '
+                        'structure, treatment, material or duration cause it fixes, or dispute it with the reason')
     return None
 
 
@@ -5420,6 +5566,23 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
                     st['issues'].append(f'{kind}_review_r{rnd}_revised_but_unchanged:{fid}')
         if open_ids:
             st['issues'].append(f'{kind}_review_r{rnd}_unanswered:' + ','.join(open_ids))
+        # A recurring major problem whose root cause is the structure or the treatment is answered by re-planning
+        # (direction-lock --revise after this read); one whose cause is the length, by a length decision the user
+        # approved (length re-locked after this read). Rewording alone was refused by answer_problem.
+        for fid, a in ans.items():
+            rc = a.get('recurrence') if isinstance(a, dict) and isinstance(a.get('recurrence'), dict) else {}
+            if str(rc.get('recurs_of') or '').strip().lower() in ('', 'none'):
+                continue
+            scope = str(rc.get('scope') or '').strip().lower()
+            when = str(rec.get('recorded_at') or '')
+            if scope in ('structure', 'treatment'):
+                if str(read_json(vd / 'direction-lock.json').get('locked_at') or '') < when:
+                    st['issues'].append(f'{kind}_review_r{rnd}_{fid}_recurs_with_a_{scope}_cause_but_the_direction_'
+                                        'was_not_revised_after_this_read:direction-lock_--revise')
+            elif scope == 'duration':
+                if str(read_json(vd / 'length-lock.json').get('locked_at') or '') < when:
+                    st['issues'].append(f'{kind}_review_r{rnd}_{fid}_recurs_with_a_duration_cause_but_the_length_was_'
+                                        'not_decided_again_after_this_read:the_user_approves_a_length_change')
         unrec = reconcile_problems(rec, {str(f.get('id')) for f in fs})
         if unrec:
             st['issues'].append(f'{kind}_review_r{rnd}_key_moments_not_reconciled_with_the_readers_account:'
@@ -6155,6 +6318,11 @@ def plan_facts(rd, video):
     if apart:
         issues.append('comprehension_signals_grouped_without_a_shared_cause:' + ','.join(apart[:12])
                       + ':answer_each_on_its_own_line_(a_line_answers_together_only_signals_that_share_a_name_or_a_beat)')
+    # A name the viewer last heard long ago, returning inside a key moment, is what that moment's meaning rests on:
+    # calling it a mystery is right only when the beat withholds it on purpose (depends_on with "withheld"); otherwise
+    # it has to be made available where it is needed (storytelling brief, 2026-11-24: a climax that leaned on two
+    # places named once, long before, was classified as a mystery and passed).
+    issues += key_moment_dependency_issues(signals, comp, beats.get('beats') or [], ids_)
     if n_words(blue.get('audience_knows')) < MIN_FIELD_WORDS:
         issues.append('blueprint_missing_audience_knows:what_the_intended_viewer_already_knows_(nothing_they_know_is_'
                       'explained,_nothing_they_lack_is_assumed)')
@@ -11638,27 +11806,35 @@ directions follow one another.
 
 Think about:
 1. What the video promised, and whether it delivered.
-2. Your gut: would you keep watching, from 1 to 10, and why? (a viewer's gut, not a quality score)
-3. Where your attention dropped, and why: facts with no consequence for anyone, the same point made again, a list
+2. When you first got what the opening made you want (the experience, the answer or the result you came for), and
+   what came before it: which stretches gave you something on the way (a discovery, tension, a laugh, an
+   explanation that clicked, a reason to care) and which only made you wait for it. A long build is fine when it
+   rewards you, and a slow, quiet passage can be exactly right: say so. Write this in "promise".
+3. Your gut: would you keep watching, from 1 to 10, and why? (a viewer's gut, not a quality score)
+4. Where your attention dropped, and why: facts with no consequence for anyone, the same point made again, a list
    read aloud, a sentence pattern repeating, textbook register, explaining what you had already felt, exposition
-   before you cared. Roughly how long each stretch felt.
-4. Following it by ear, the first time: who each person is when they matter, and what they want; what has happened
+   before you cared, background you were given before you knew why it mattered. Roughly how long each stretch felt.
+   Did the length feel earned, or did any part feel like filling?
+5. Following it by ear, the first time: who each person is when they matter, and what they want; what has happened
    and what is happening now; why each new fact matters. Where did you have to stop and work something out? Where
-   did a line lean on something you were never told, or told so long before that you had lost it? Where did too
-   many new names, numbers or places arrive at once? Where was something deliberately held back, and did that feel
-   like a promise (you wanted to know) or like being lost? Complexity you enjoyed is not a problem: say so.
-5. What feels formulaic: devices used so often they stop working (count them).
-6. The strongest passages, and why they work.
-7. The narrator the writing implies: personality, warmth, wit or emotion where the material invites it; or a reader
+   did a line lean on something you were never told, or told so long before that you had lost it (at the moments
+   that matter most, did you still have the name, place or fact they rest on)? Where did too many new names, numbers
+   or places arrive at once? Where was something deliberately held back, and did that feel like a promise (you
+   wanted to know) or like being lost? Complexity you enjoyed is not a problem: say so.
+6. Where the narration suggests a cause, a prediction, a link or a certainty that its own words do not support
+   (two things connected by place or theme told as if one caused or foresaw the other).
+7. What feels formulaic: devices used so often they stop working (count them).
+8. The strongest passages, and why they work.
+9. The narrator the writing implies: personality, warmth, wit or emotion where the material invites it; or a reader
    of facts; or someone straining for drama.
-8. Lines hard to follow by ear: number pile-ups, very long sentences, tangled grammar, jargon.
-9. The ending: does it land and answer what the opening promised; is anything after the payoff too long or too short.
-10. The intended delivery and silences: which directions serve their moment and which push the narration into
+10. Lines hard to follow by ear: number pile-ups, very long sentences, tangled grammar, jargon.
+11. The ending: does it land and answer what the opening promised; is anything after the payoff too long or too short.
+12. The intended delivery and silences: which directions serve their moment and which push the narration into
    theatre or decoration. For each intended silence: does it feel needed, or does it delay what you want to know
    next? Would you become impatient? Does it help the joke, the reveal or the feeling, or would the line land as well
    going straight on? Would it make the narrator sound unnaturally slow? Would a first-time viewer understand why it
    is there? A silence you would cut or shorten is a finding.
-11. The developments that matter most in this video, up to six, in order: whatever its reward is (an event, a
+13. The developments that matter most in this video, up to six, in order: whatever its reward is (an event, a
    turn, a discovery, an explanation that clicks, a joke's payoff, a solution, a feeling). Keep three judgements apart
    for each, because they fail separately: what happened (could you retell it?); why it matters within this video (in
    your own words, using ONLY what the narration told you: if you know why from your own knowledge and the words never
@@ -11686,6 +11862,10 @@ Write your answer as JSON, and nothing else, to: {OUT}
 {{
   "reviewer": "fresh cold reader",
   "verdict": {{"promise": "...", "delivered": "...", "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
+  "promise": {{"promised": "what the opening made you want, in your words",
+              "first_delivered": "the line where you first got it, or never",
+              "waiting": [{{"lines": "{EX_RANGE}", "felt": "anticipation | delay",
+                           "why": "what this stretch gave you on the way, or why it only made you wait"}}]}},
   "strongest": [{{"lines": "{EX_RANGE}", "why": "..."}}],
   "developments": [{{"lines": "{EX_RANGE}", "what_happened": "...", "why_it_matters": "... (or: I could not tell)",
                     "would_be_different": "...", "learned_when": "before | at the moment | only afterwards | never",
@@ -11695,7 +11875,9 @@ Write your answer as JSON, and nothing else, to: {OUT}
   "findings": [{{"id": "F1", "severity": "major or minor", "lines": ["{EX_LINE}"], "problem": "...",
                  "likely_cause": "...", "viewer_impact": "...", "suggestion": "..."}}]
 }}
-Line ids: only ids that appear below, one id or a range such as "{EX_RANGE}".
+Line ids: only ids that appear below, one id or a range such as "{EX_RANGE}" ("lines" may list several:
+["L003", "{EX_RANGE}"]). "waiting" lists the stretches before the first delivery, each felt one way or the other
+(it may be empty when nothing made you wait).
 
 ## The narration
 """
@@ -11703,7 +11885,8 @@ Line ids: only ids that appear below, one id or a range such as "{EX_RANGE}".
 TREATMENT_BRIEF = """# Treatment comparison (blind)
 
 Below are {K} different ways to make the same long-form YouTube video: how it sounds (the narrator and the
-writing) and how it looks (pictures, motion, sound), each shown through three short sample moments. The labels are
+writing) and how it looks (pictures, motion, sound), each shown through how it unfolds over the whole video and three
+short sample moments. The labels are
 random. You get nothing else, on purpose: read nothing else and change no file except the one you are asked to write.
 
 The video: {PREMISE}
@@ -11716,6 +11899,9 @@ Judge them as a viewer choosing what to watch for {MINUTES} minutes, not by the 
 3. Which narrator would you enjoy for {MINUTES} minutes, and which would tire you (too flat, too theatrical,
    too cute, too much like a lecture)?
 4. Anything in a sample that breaks the house rules.
+5. From how each one unfolds: when would you first get what this video promises, what would you get before that,
+   and would its middle hold you or leave you waiting? The samples are its best moments; the way it unfolds is the
+   rest of the video.
 
 Findings, the most important first: each names the treatment label, severity "major" (this treatment would not
 hold a long watch, or has a serious flaw) or "minor", the problem, why it matters to a viewer, and a suggestion.
@@ -11918,6 +12104,12 @@ def cmd_review_packet(args):
             text += f'\n## Treatment {lab}\n'
             for k in TREATMENT_SHOWN_TO_REVIEWER:
                 text += f'- {k.replace("_", " ")}: {t.get(k)}\n'
+            # how the whole video unfolds, movement by movement (what the viewer gets, roughly when), without the
+            # director's marks of where the promise is delivered: the reader judges that blind
+            mv = treatment_movements(t)
+            if mv:
+                text += '\n### How it unfolds\n' + ''.join(
+                    f'- about {m["minutes"]:g} min: {m["what"]}\n' for m in mv)
             for m in SAMPLE_MOMENTS:
                 s = sample_of(t.get('samples'), m)
                 text += (f'\n### {sample_label(t.get("samples"), m)}\nWhat you see: {s.get("picture")}\n'
@@ -12089,8 +12281,10 @@ AT_RX = r'\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?(\s*,\s*\d{1,3}:\d{2}(\s*-\s*\d{1,
 # knowledge. Readers now name the developments that matter most and keep three judgements apart for each (what
 # happened / why it matters, from the video alone / whether it paid off); review-record turns a gap into a finding
 # answered like any other. Not every video needs danger or a twist: the reward is the video's own (10 §4, 06).
-BRIEF_VERSION = 4          # 3: would_be_different, learned_when; 4 (audit 2026-11-23): the final reader is not told
-                           # the intent, why_it_matters and likely_cause are required, key moments sealed
+BRIEF_VERSION = 5          # 3: would_be_different, learned_when; 4 (audit 2026-11-23): the final reader is not told
+                           # the intent, why_it_matters and likely_cause are required, key moments sealed; 5
+                           # (2026-11-24, storytelling brief): the script reader also says what the opening promised,
+                           # where it was first delivered and which waits gave something on the way ("promise")
 DEV_EVENT = ('clear', 'partly', 'unclear')
 DEV_SIGNIFICANCE = ('clear', 'partly', 'unclear', 'withheld')
 DEV_REWARD = ('landed', 'partly', 'missed', 'not the point here')
@@ -12182,6 +12376,151 @@ def development_problems(kind, devs, order, version=BRIEF_VERSION):
         for key, allowed in keys:
             if _choice(d.get(key), allowed) is None:
                 out.append(f'development {k}: "{key}" must be one of: ' + ', '.join(allowed))
+    return out
+
+
+PROMISE_FELT = ('anticipation', 'delay')
+
+
+def _line_specs(spec):
+    """'L001-L004, L010' or ['L001-L004, L010'] -> ['L001-L004', 'L010'] (the parts a reader joined in one string)."""
+    items = spec if isinstance(spec, list) else [spec]
+    out = []
+    for it in items:
+        out += [p.strip() for p in re.split(r'\s*(?:[,;]|\band\b)\s*', str(it or '')) if p.strip()]
+    return out
+
+
+def normalize_reader_format(kind, raw, order, labels):
+    """In place, a reader's harmless serialization slips put into the packet's format, its words untouched:
+    several line ranges joined in one string become a list; one treatment finding naming several labels becomes one
+    finding per label. Only when every part is valid (anything else stays as written and the format check names it).
+    Returns what was changed: [{where, was, now}]."""
+    notes = []
+
+    def fix_lines(obj, where):
+        v = obj.get('lines')
+        if not v or expand_lines(v, order) is not None:
+            return
+        parts = _line_specs(v)
+        if parts and all(expand_lines(p, order) is not None for p in parts):
+            notes.append({'where': where, 'was': v, 'now': parts})
+            obj['lines'] = parts
+    if kind == 'script':
+        for f in raw.get('findings') or []:
+            if isinstance(f, dict):
+                fix_lines(f, f'findings.{f.get("id")}.lines')
+        for k, d in enumerate(raw.get('developments') or [], 1):
+            if isinstance(d, dict):
+                fix_lines(d, f'developments.{k}.lines')
+        for k, d in enumerate(raw.get('strongest') or [], 1):
+            if isinstance(d, dict):
+                fix_lines(d, f'strongest.{k}.lines')
+        p = raw.get('promise') if isinstance(raw.get('promise'), dict) else {}
+        for k, w in enumerate(p.get('waiting') or [], 1):
+            if isinstance(w, dict):
+                fix_lines(w, f'promise.waiting.{k}.lines')
+    elif kind == 'treatment' and labels:
+        out = []
+        for f in raw.get('findings') or []:
+            labs = [x.strip().upper() for x in re.split(r'\s*(?:[,;/&]|\band\b)\s*', str((f or {}).get('treatment') or ''))
+                    if x.strip()] if isinstance(f, dict) else []
+            if len(labs) > 1 and all(x in labels for x in labs):
+                for i, lab in enumerate(labs):
+                    out.append(dict(f, treatment=lab, id=f['id'] if i == 0 else f'{f["id"]}{lab}'))
+                notes.append({'where': f'findings.{f.get("id")}.treatment', 'was': f.get('treatment'),
+                              'now': [f['id'] if i == 0 else f'{f["id"]}{lab}' for i, lab in enumerate(labs)]})
+            else:
+                out.append(f)
+        raw['findings'] = out
+    return notes
+
+
+def promise_problems(p, order):
+    """Why a script reader's "promise" does not follow the packet's format (empty: it does)."""
+    if not isinstance(p, dict):
+        return ['"promise" must say what the opening promised, where it was first delivered, and the waits before it']
+    out = []
+    if n_words(p.get('promised')) < 3:
+        out.append('promise: "promised" is not told (what the opening made you want)')
+    fd = str(p.get('first_delivered') or '').strip()
+    if fd.lower() != 'never' and (not fd or expand_lines(_line_specs(fd), order) is None):
+        out.append('promise: "first_delivered" must be a line of the script (L005 or L005-L009) or "never"')
+    if not isinstance(p.get('waiting'), list):
+        out.append('promise: "waiting" must be a list (empty when nothing made you wait)')
+    for k, w in enumerate(p.get('waiting') or [], 1):
+        if not isinstance(w, dict) or expand_lines(w.get('lines'), order) is None:
+            out.append(f'promise: waiting {k}: "lines" must name lines of the script')
+            continue
+        if _choice(w.get('felt'), PROMISE_FELT) is None:
+            out.append(f'promise: waiting {k}: "felt" must be anticipation or delay')
+        if n_words(w.get('why')) < 3:
+            out.append(f'promise: waiting {k}: "why" is not told')
+    return out
+
+
+def waiting_findings(p, taken):
+    """The reader's own account of waiting, as findings the director answers: a stretch felt as delay (minor), and an
+    opening promise never delivered (major). A wait felt as anticipation is the build working: no finding."""
+    if not isinstance(p, dict):
+        return []
+    out, k = [], 0
+
+    def next_id():
+        nonlocal k
+        k += 1
+        while f'W{k}' in taken:
+            k += 1
+        return f'W{k}'
+    promised = str(p.get('promised') or '').strip()
+    if str(p.get('first_delivered') or '').strip().lower() == 'never':
+        out.append({'id': next_id(), 'severity': 'major', 'lines': [],
+                    'problem': f'The reader never got what the opening promised them ("{promised}").',
+                    'likely_cause': 'the promise the opening makes is not the experience the video delivers',
+                    'viewer_impact': 'a viewer who came for the promise leaves without it',
+                    'suggestion': ('Deliver what the opening promises, or make the opening promise what the video '
+                                   'really gives; or dispute it with the reason.'),
+                    'derived_from': {'promise': p}})
+    for w in p.get('waiting') or []:
+        if not isinstance(w, dict) or _choice(w.get('felt'), PROMISE_FELT) != 'delay':
+            continue
+        out.append({'id': next_id(), 'severity': 'minor', 'lines': _line_specs(w.get('lines')),
+                    'problem': (f'The reader waited here for what the opening promised ("{promised}") without getting '
+                                f'enough on the way (their words: "{str(w.get("why") or "").strip()}").'),
+                    'likely_cause': 'a stretch that delays the promised experience instead of building toward it',
+                    'viewer_impact': 'a viewer who came for the promise drifts while waiting for it',
+                    'suggestion': ('Find why this stretch delays rather than builds (it comes before the viewer cares, '
+                                   'repeats, holds what the viewer needs only later, or the promise could be met '
+                                   'sooner and the background given through the questions it raises) and fix that '
+                                   'cause: another order, another frame, a cut, stronger material; or dispute it.'),
+                    'derived_from': {'waiting': w}})
+    return out
+
+
+def _finding_text(f, snap, order):
+    ls = expand_lines(f.get('lines'), order) if f.get('lines') else []
+    return ' '.join([snap.get(x, '') for x in (ls or [])] + [str(f.get('problem') or ''), str(f.get('likely_cause') or '')])
+
+
+def recurrence_candidates(prior, findings, snapshot, order):
+    """Facts for the director: for each major finding of a new round, the earlier rounds' major findings closest to
+    it (words shared by the lines they cite and what they say). Whether it is the same problem is the director's call
+    (recurrence.recurs_of); no share of words decides it."""
+    out = {}
+    for f in findings:
+        if not isinstance(f, dict) or f.get('severity') != 'major':
+            continue
+        mine = _content_tokens(_finding_text(f, snapshot, order))
+        cands = []
+        for prec, _ in prior:
+            psnap = prec.get('subject_snapshot') or {}
+            for pf in prec.get('findings') or []:
+                if not isinstance(pf, dict) or pf.get('severity') != 'major':
+                    continue
+                ov = _jaccard(mine, _content_tokens(_finding_text(pf, psnap, list(psnap))))
+                cands.append({'round': prec.get('_round'), 'id': pf.get('id'), 'shared_words': round(ov, 2),
+                              'problem': str(pf.get('problem') or '')[:220]})
+        out[str(f.get('id'))] = sorted(cands, key=lambda c: -c['shared_words'])[:3]
     return out
 
 
@@ -12391,9 +12730,17 @@ def cmd_review_record(args):
     raw = read_json(fpath, required=True)
     if meta.get('isolated_dir') and not args.findings:
         write_json(folder / f'{kind}-r{rnd}-findings.json', raw)     # the isolated reader's findings, kept in the run
-    findings = raw.get('findings')
-    if not isinstance(findings, list):
+    if not isinstance(raw.get('findings'), list):
         error('The findings file has no "findings" list.', str(fpath))
+    # A harmless serialization slip (two line ranges in one string, one finding naming two treatments) is put into
+    # the packet's format without a word of the reader's changed; the file as written stays beside the record, and
+    # what was normalized is recorded (the user's brief, 2026-11-24: never re-run a reader for a slip like that)
+    fmt_notes = normalize_reader_format(kind, raw, list((meta.get('subject_snapshot') or {}).keys()),
+                                        meta.get('labels') or {})
+    if fmt_notes:
+        folder.mkdir(parents=True, exist_ok=True)
+        write_json(folder / f'{kind}-r{rnd}-findings-as-written.json', read_json(fpath, required=True))
+    findings = raw.get('findings')
     # A final reviewer who wrote words around its times ("Held silences 00:29, 05:15") is not asked again and its text is
     # never edited: with --normalize-at the times alone become "at" and its own words stay in "at_original".
     normalized = []
@@ -12436,6 +12783,8 @@ def cmd_review_record(args):
     three_ways = kind in ('script', 'final') and brief_v >= 2
     if three_ways:
         problems += development_problems(kind, devs, order, brief_v)
+    if kind == 'script' and brief_v >= 5:
+        problems += promise_problems(raw.get('promise'), order)
     on_req = {}
     if kind == 'treatment' and meta.get('scope_request'):
         given = raw.get('on_request') if isinstance(raw.get('on_request'), dict) else {}
@@ -12455,6 +12804,8 @@ def cmd_review_record(args):
         spans = review_spans(meta, rd, vd, n, kind, order)
         derived = development_findings(kind, devs, taken, spans, order)
         derived += key_moment_findings(rd, vd, n, kind, devs, order, taken | {f['id'] for f in derived}, spans)
+        if kind == 'script' and brief_v >= 5:
+            derived += waiting_findings(raw.get('promise'), taken | {f['id'] for f in derived})
         findings = findings + derived
     if on_req:
         # "partly" or "no" on whether a treatment is still the video that was asked for: the director answers it
@@ -12497,6 +12848,15 @@ def cmd_review_record(args):
                                                   'payoff': vals_[r].get('payoff') is True}
                                                  for r in (str(x) for x in full.get('carries') or []) if r in vals_]},
                           'reader': mine, 'verdict': '', 'note': '', 'cause': '', 'answered_by': '', 'revision': ''}
+    # A major problem in a later round is weighed against the earlier rounds' majors: the facts list the closest
+    # (shared words of the lines and the problem), and the director says whether it recurs and, if so, what the
+    # earlier revision missed (answer rules 3). The new reader never sees any of this.
+    recur = {}
+    if recs and kind in ('script', 'final'):
+        recur = recurrence_candidates(recs, findings, meta.get('subject_snapshot') or {}, order)
+        for f in findings:
+            if f.get('severity') == 'major':
+                f['needs_recurrence'] = True
     rec = {'kind': kind, 'round': rnd, 'video': n, 'packet': str(folder / f'packet-{kind}-r{rnd}.md'),
            'subject_sha256': meta['subject_sha256'], 'subject_snapshot': meta.get('subject_snapshot'),
            'holds_snapshot': meta.get('holds_snapshot'),
@@ -12506,7 +12866,10 @@ def cmd_review_record(args):
            'at_normalized': normalized, 'findings_from': str(fpath), 'findings_outside_reader_folder': outside,
            'reader_route': reader_route, 'reader_confined': bool(route), 'answer_rules': ANSWER_RULES,
            'developments': devs if three_ways else None, 'derived_findings': [f['id'] for f in derived],
-           'recorded_at': now()}
+           'recorded_at': now(),
+           **({'promise': raw.get('promise')} if kind == 'script' and brief_v >= 5 else {}),
+           **({'format_normalized': fmt_notes} if fmt_notes else {}),
+           **({'recurrence_candidates': recur} if recur else {})}
     if on_req:
         rec['on_request'] = raw.get('on_request')
     if recon:
@@ -12518,12 +12881,20 @@ def cmd_review_record(args):
             a = {'action': '', 'lines': [], 'note': ''}
             if _significance_finding(f):
                 a['cause'] = ''
+            if f.get('needs_recurrence'):
+                a['recurrence'] = {'recurs_of': '', 'root_cause': '', 'scope': ''}
             return a
         doc = {'answers': {str(f['id']): blank(f) for f in findings},
                'how': 'action: revised (script: list the lines changed) | kept (minor only) | disputed; '
                       'kept and disputed need a reason in note. A major finding is revised or disputed. A revised '
                       'finding about what a development means or pays (S, K) names its cause: '
-                      + ' | '.join(SIGNIFICANCE_CAUSES) + ' (other: say which).'}
+                      + ' | '.join(SIGNIFICANCE_CAUSES) + ' (other: say which). A major finding of a later round says '
+                      'whether it recurs (recurrence.recurs_of: "none", or an earlier finding such as "r1:F1": see the '
+                      'record\'s recurrence_candidates) and, when it does, what the earlier revision missed '
+                      '(root_cause) and what kind of correction it needs (scope: ' + ' | '.join(RECURRENCE_SCOPES)
+                      + '). Rewording does not answer a problem two readers found; a structural or treatment cause '
+                      'is answered by a direction revision (direction-lock --revise), a duration cause by a length '
+                      'decision the user approves.'}
         if recon:
             doc['reconcile'] = recon
             doc['how_reconcile'] = (

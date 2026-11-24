@@ -202,7 +202,12 @@ class StaticStudioTests(unittest.TestCase):
                 'samples':{m:{'narration':sample(tid,m),
                               'picture':f'{tid} picture for the {m}: a wide frame with one figure and the road ahead.'}
                            for m in ('opening','quiet_middle','turning_point')},
-                'carries_values':[{'value':'R1','how':f'the {tone} narrator lets the battle show what the order made possible'}]})
+                'carries_values':[{'value':'R1','how':f'the {tone} narrator lets the battle show what the order made possible'}],
+                # how the whole video unfolds (planning rules 3): what the viewer gets in each movement, roughly how long
+                'movements':[{'what':f'the {tone} narrator sets up the army and what it needs to move','minutes':3},
+                             {'what':'the order that moved the depots, told as the viewer first meets it','minutes':4,
+                              'promise':True},
+                             {'what':'what the order made possible in the battle, and what it cost','minutes':3}]})
         def cand(cid, subject, claim, what, why, reward, material, step):
             return {'id':cid,'subject':subject,'value_form':'a consequential decision','factual':True,
                     'what_happens':say(what),'why_it_matters':say(why),'reward':say(reward),
@@ -254,7 +259,11 @@ class StaticStudioTests(unittest.TestCase):
                 'treatments':treatments,
                 'decision':{'treatment':'T1','why':say('the wry friend holds twenty minutes'),
                             'taken_from_others':say('the hushed close of the second treatment'),
-                            'carries_payoff':say('the friend sets up what the army needs, then lets the battle answer it')}}
+                            'carries_payoff':say('the friend sets up what the army needs, then lets the battle answer it'),
+                            'promise_and_delivery':say('the order the opening promises arrives in the second movement, '
+                                                       'after a setup that already shows what the army lacks'),
+                            'length_fit':say('the references the length came from tell one decision in the same '
+                                             'documentary register, at a similar density')}}
 
     def clear_development(self, kind):
         """A reader for whom the whole video is clear and pays: the three judgements given, nothing to find."""
@@ -276,6 +285,10 @@ class StaticStudioTests(unittest.TestCase):
         doc={'reviewer':'test reader','findings':findings}
         if kind in ('script','final'):
             doc['developments']=developments if developments is not None else self.clear_development(kind)
+        if kind=='script':
+            first=json.loads((self.run/'40-plans/video-01/script.json').read_text(encoding='utf-8'))['lines'][0]['id']
+            doc['promise']={'promised':'to understand the decision and what it cost','first_delivered':first,
+                            'waiting':[]}
         if kind=='treatment':
             meta=json.loads(Path(packet['packet']).with_suffix('.json').read_text(encoding='utf-8')) \
                 if Path(packet['packet']).with_suffix('.json').is_file() else {}
@@ -771,11 +784,55 @@ class StaticStudioTests(unittest.TestCase):
         self.assertTrue(re.findall(r'L\d{3}',head))
         self.assertTrue(set(re.findall(r'L\d{3}',head)) <= ids, re.findall(r'L\d{3}',head))
         save(fi,{'reviewer':'test reader','developments':self.clear_development('script'),
+                 'promise':{'promised':'to see how one order decided a battle','first_delivered':'L001','waiting':[]},
                  'findings':[{'id':'F1','severity':'minor','lines':['L003'],
                  'problem':'a name arrives with no introduction','likely_cause':'a name nobody introduced'}]})
         cli('review-record','--run',self.run,'--video',1,'--kind','script')
         kept=json.loads((vd/'reviews/script-r1-findings.json').read_text(encoding='utf-8'))
         self.assertEqual(kept['findings'][0]['likely_cause'],'a name nobody introduced')
+
+    def test_a_problem_two_readers_find_is_traced_to_its_cause(self):
+        """Repeated structural finding (case C), a harmless format slip (case J) and a substantive re-plan (case I):
+        the second reader's major problem that the first reader also found is not closed by rewording; a structural
+        cause is answered by revising the direction after the read."""
+        vd=self.write_plan(review_script=False)
+        major={'id':'F1','severity':'major','lines':['L001-L012'],
+               'problem':'the decision the title promises arrives only after a long stretch of background',
+               'likely_cause':'waiting too long for the payoff','suggestion':'meet the decision sooner'}
+        _,r1=self.review('script',[major])
+        script=json.loads((vd/'script.json').read_text(encoding='utf-8'))
+        script['lines'][0]['text']='A shorter opening, with the same careful planning and real consequences, then on.'
+        save(vd/'script.json',script)
+        self.answer_file(r1['answers_file'],{'answers':{'F1':{'action':'revised','lines':['L001'],
+                                                               'note':'the background before the decision was shortened'}}})
+        # the new reader names the same problem, and joins two line ranges in one string: a slip, not a judgement
+        _,r2=self.review('script',[dict(major,lines='L001-L010, L012')])
+        rec=json.loads((vd/'reviews/script-r2.json').read_text(encoding='utf-8'))
+        self.assertEqual(rec['findings'][0]['lines'],['L001-L010','L012'])
+        self.assertEqual(rec['format_normalized'][0]['was'],'L001-L010, L012')
+        self.assertEqual(rec['findings'][0]['problem'],major['problem'])               # the reader's words untouched
+        self.assertTrue((vd/'reviews/script-r2-findings-as-written.json').is_file())
+        self.assertTrue(rec['findings'][0]['needs_recurrence'])
+        self.assertEqual(rec['recurrence_candidates']['F1'][0]['id'],'F1')
+        self.assertIn('recurrence',json.loads(Path(r2['answers_file']).read_text(encoding='utf-8'))['answers']['F1'])
+        def answer(scope, cause):
+            self.answer_file(r2['answers_file'],{'answers':{'F1':{'action':'revised','lines':['L001'],
+                'note':'the opening was changed again for this finding',
+                'recurrence':{'recurs_of':'r1:F1','root_cause':cause,'scope':scope}}}})
+            return cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        issues=answer('wording','the background still comes before the viewer has a reason to care')
+        self.assertTrue(any(x.startswith('script_review_r2_unanswered') and 'F1' in x for x in issues), issues)
+        issues=answer('structure','the treatment puts the background before the decision the viewer came for')
+        self.assertFalse([x for x in issues if x.startswith('script_review_r2_unanswered')], issues)
+        self.assertTrue(any('recurs_with_a_structure_cause_but_the_direction_was_not_revised' in x for x in issues), issues)
+        d=json.loads((vd/'direction.json').read_text(encoding='utf-8'))
+        d['treatments'][0]['movements'][0]['what']='the order that moved the depots opens the video, then the army it served'
+        save(vd/'direction.json',d)
+        res=cli('direction-lock','--run',self.run,'--video',1,'--revise',
+                'the decision now opens the video; the background follows from the questions it raises')
+        self.assertIn('script',res['affects'])                     # a structural re-plan sends the script back to work
+        issues=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in issues if 'recurs_with_a_structure_cause' in x], issues)
 
     def test_review_read_runs_the_reader_restricted_in_its_own_folder(self):
         vd=self.write_plan(review_script=False)
@@ -790,6 +847,8 @@ class StaticStudioTests(unittest.TestCase):
                         'story is told","why_it_matters":"each turn changes what they can do","why_from":"the video",'
                         '"would_be_different":"they would be stuck","learned_when":"before",'
                         '"event":"clear","significance":"clear","reward":"landed"}],'
+                        '"promise":{"promised":"to see how one order decided a battle","first_delivered":"L001",'
+                        '"waiting":[]},'
                         '"findings":[{"id":"F1","severity":"minor","lines":["L002"],'
                         '"problem":"the second line repeats the first one","likely_cause":"the same point again"}]},'
                         'open("findings.json","w"))\n',encoding='utf-8')
@@ -6352,3 +6411,164 @@ class NichePathTests(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
+
+class StorytellingTests(unittest.TestCase):
+    """The storytelling brief (2026-11-24): promise and delivery, waits that build or only delay, a problem two readers
+    find, a key moment's dependency, harmless format slips, how the whole video unfolds, and the same logic across
+    niches. The code gathers facts and enforces the process; whether a wait builds or delays is the reader's account,
+    and what to do about it is the director's call."""
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location('static_core_storytelling', TOOL)
+        cls.core = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.core)
+
+    order = [f'L{i:03}' for i in range(1, 41)]
+
+    def test_harmless_format_slips_are_put_right_without_touching_the_judgement(self):
+        # Case J: two ranges joined in one string; one treatment finding naming two labels.
+        c = self.core
+        raw = {'findings': [{'id': 'F1', 'severity': 'major', 'lines': 'L001-L004, L010', 'problem': 'a long wait'},
+                            {'id': 'F2', 'severity': 'minor', 'lines': ['L003; L099'], 'problem': 'not a line'}],
+               'developments': [{'lines': 'L005-L006, L011-L012', 'what_happened': 'x y z'}],
+               'promise': {'waiting': [{'lines': 'L001-L002 and L004', 'felt': 'delay', 'why': 'a b c'}]}}
+        notes = c.normalize_reader_format('script', raw, self.order, {})
+        self.assertEqual(raw['findings'][0]['lines'], ['L001-L004', 'L010'])
+        self.assertEqual(raw['findings'][1]['lines'], ['L003; L099'])             # a part that is no line stays as written
+        self.assertEqual(raw['developments'][0]['lines'], ['L005-L006', 'L011-L012'])
+        self.assertEqual(raw['promise']['waiting'][0]['lines'], ['L001-L002', 'L004'])
+        self.assertEqual(raw['findings'][0]['problem'], 'a long wait')
+        self.assertEqual({n['where'] for n in notes},
+                         {'findings.F1.lines', 'developments.1.lines', 'promise.waiting.1.lines'})
+        tr = {'findings': [{'id': 'F7', 'treatment': 'B, C', 'problem': 'omens could slip in'},
+                           {'id': 'F8', 'treatment': 'B, Z', 'problem': 'an unknown label'}]}
+        c.normalize_reader_format('treatment', tr, [], {'A': 'T1', 'B': 'T2', 'C': 'T3'})
+        self.assertEqual([(f['id'], f['treatment']) for f in tr['findings']], [('F7', 'B'), ('F7C', 'C'), ('F8', 'B, Z')])
+        self.assertEqual(tr['findings'][1]['problem'], 'omens could slip in')
+
+    def test_a_wait_that_builds_is_not_a_wait_that_delays(self):
+        # Case A (delayed promise) against case B (a mystery that rewards the wait): the reader's own account decides.
+        c = self.core
+        promise = {'promised': 'to read the soldiers letters', 'first_delivered': 'L020',
+                   'waiting': [{'lines': 'L001-L008', 'felt': 'anticipation', 'why': 'each clue made me want the next'},
+                               {'lines': 'L009-L019', 'felt': 'delay', 'why': 'background I did not need yet'}]}
+        self.assertEqual(c.promise_problems(promise, self.order), [])
+        found = c.waiting_findings(promise, set())
+        self.assertEqual([(f['id'], f['severity'], f['lines']) for f in found], [('W1', 'minor', ['L009-L019'])])
+        self.assertIn('background I did not need yet', found[0]['problem'])     # quoted, never rewritten
+        built = dict(promise, waiting=[promise['waiting'][0]])
+        self.assertEqual(c.waiting_findings(built, set()), [])                  # a rewarding build is not a finding
+        never = dict(promise, first_delivered='never', waiting=[])
+        self.assertEqual([f['severity'] for f in c.waiting_findings(never, set())], ['major'])
+        bad = c.promise_problems({'promised': 'x', 'first_delivered': 'L099', 'waiting': [{'lines': 'L001', 'felt': 'meh'}]},
+                                 self.order)
+        self.assertTrue(any('promised' in x for x in bad) and any('first_delivered' in x for x in bad)
+                        and any('felt' in x for x in bad) and any('why' in x for x in bad))
+
+    def test_a_recurring_major_problem_needs_its_cause_not_new_words(self):
+        # Case C, at the level of one answer: rewording does not answer a problem two readers found.
+        c = self.core
+        f = {'id': 'F1', 'severity': 'major', 'needs_recurrence': True, 'problem': 'the letters arrive late'}
+        base = {'action': 'revised', 'lines': ['L001'], 'note': 'the opening was changed again'}
+        self.assertIn('recurs', c.answer_problem('script', f, base))
+        self.assertIsNone(c.answer_problem('script', f, dict(base, recurrence={'recurs_of': 'none'})))
+        wording = dict(base, recurrence={'recurs_of': 'r1:F1', 'root_cause': 'the background still comes first here',
+                                         'scope': 'wording'})
+        self.assertIn('rewording', c.answer_problem('script', f, wording))
+        self.assertIsNone(c.answer_problem('script', f, dict(wording, action='disputed',
+                                                             note='the reader wanted a different video, and says so')))
+        structure = dict(base, recurrence={'recurs_of': 'r1:F1', 'root_cause': 'the treatment puts background first',
+                                           'scope': 'structure'})
+        self.assertIsNone(c.answer_problem('script', f, structure))
+        self.assertIsNone(c.answer_problem('script', f, base, 2))                # rounds recorded before keep their rules
+        # the facts behind the director's call: the same problem shares far more words than an unrelated one
+        prior = [({'_round': 1, 'subject_snapshot': {'L001': 'the clerk is born at cockcrow', 'L002': 'the clerk works'},
+                   'findings': [{'id': 'F1', 'severity': 'major', 'lines': ['L001-L002'],
+                                 'problem': 'the letters arrive late after the clerk biography',
+                                 'likely_cause': 'waiting too long for the payoff'},
+                                {'id': 'F2', 'severity': 'major', 'lines': ['L002'],
+                                 'problem': 'the ending names two rivers nobody remembers',
+                                 'likely_cause': 'a name nobody introduced'}]}, {})]
+        new = [{'id': 'F1', 'severity': 'major', 'lines': ['L001'], 'problem': 'the letters still arrive late, after '
+                'the clerk biography', 'likely_cause': 'waiting too long for the payoff'}]
+        cands = c.recurrence_candidates(prior, new, {'L001': 'the clerk is born at cockcrow'}, ['L001'])
+        self.assertEqual(cands['F1'][0]['id'], 'F1')
+        self.assertGreater(cands['F1'][0]['shared_words'], cands['F1'][1]['shared_words'])
+
+    def test_a_key_moment_cannot_lean_on_a_forgotten_name_by_calling_it_a_mystery(self):
+        # Case D (a dependency introduced long before) and case E (necessary complexity kept when it is explained).
+        c = self.core
+        sig = ['L030: "Chen" returns after about 14.3 min, heard only once or twice before. Does the viewer still know '
+               'who or what it is?']
+        beats = [{'id': 'B01', 'line_start': 1, 'line_end': 25},
+                 {'id': 'B02', 'line_start': 26, 'line_end': 40, 'key_moment': 'the click',
+                  'depends_on': [{'what': 'where the king fled', 'from': 'B01'}]}]
+        mystery = '- L030: intentional_mystery: the return of the name is the reveal itself\n'
+        self.assertTrue(c.key_moment_dependency_issues(sig, mystery, beats, self.order))
+        complexity = '- L030: necessary_complexity: the line itself says again where the city is and why it matters\n'
+        self.assertEqual(c.key_moment_dependency_issues(sig, complexity, beats, self.order), [])
+        beats[1]['depends_on'].append({'what': 'who the stranger is', 'withheld': 'the answer is the turn',
+                                       'revealed_in': 'L030'})
+        self.assertEqual(c.key_moment_dependency_issues(sig, mystery, beats, self.order), [])   # held back on purpose
+        outside = ['L010: "Chen" returns after about 4.0 min, heard only once or twice before.']
+        self.assertEqual(c.key_moment_dependency_issues(outside, '- L010: intentional_mystery: kept for later\n',
+                                                        beats, self.order), [])
+
+    def test_how_a_treatment_unfolds_is_facts_not_a_verdict(self):
+        # Cases A, B, F and G at the treatment stage: the minutes before the promise are reported, never judged.
+        c = self.core
+        late = {'movements': [{'what': 'background on the county and the clerk', 'minutes': 7},
+                              {'what': 'the letters read in full', 'minutes': 5, 'promise': True},
+                              {'what': 'the law and the revolt', 'minutes': 7}]}
+        t = c.promise_timing(late)
+        self.assertEqual((t['minutes_before'], t['share_before'], t['total_minutes']), (7.0, 0.37, 19.0))
+        self.assertEqual(t['before'], ['background on the county and the clerk'])
+        never = c.promise_timing({'movements': [{'what': 'a b c', 'minutes': 3}]})
+        self.assertIsNone(never['minutes_before'])
+        self.assertEqual(c.treatment_movements({'movements': ['not a movement', {'what': 'x', 'minutes': 'two'}]}),
+                         [{'what': 'x', 'minutes': 0.0, 'promise': False}])
+
+    def test_older_directions_see_the_storytelling_rules_as_advisories(self):
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            rd = Path(td)
+            vd = rd / '40-plans' / 'video-01'
+            save(vd / 'direction-lock.json', {'locked_at': '2026-11-24T10:00:00+00:00', 'planning_rules': 2})
+            issues = ['treatment_T1_needs_movements:how_the_whole_video_unfolds', 'decision_missing_length_fit',
+                      'chosen_approach_missing_exploration']
+            warnings = []
+            c.older_plan_advisory(rd, 1, issues, warnings)
+            self.assertEqual(issues, ['chosen_approach_missing_exploration'])   # rules it was approved under still hold
+            self.assertEqual(len(warnings), 2)
+            save(vd / 'direction-lock.json', {'locked_at': '2026-11-24T10:00:00+00:00', 'planning_rules': 3})
+            issues = ['decision_missing_length_fit']
+            c.older_plan_advisory(rd, 1, issues, [])
+            self.assertEqual(issues, ['decision_missing_length_fit'])
+            # an older direction revised in its treatment: the new rules reach what the revision touched
+            save(vd / 'direction-lock.json', {'planning_rules': 2, 'planning_migration': {
+                'to': 3, 'sections': ['treatment.movements', 'decision.reasons'], 'artifacts': ['script']}})
+            save(vd / 'direction.json', {'decision': {'treatment': 'T1'}, 'subject': {}})
+            issues = ['treatment_T1_needs_movements:x', 'treatment_T2_needs_movements:x', 'decision_missing_length_fit']
+            c.older_plan_advisory(rd, 1, issues, [])
+            self.assertEqual(issues, ['treatment_T1_needs_movements:x', 'decision_missing_length_fit'])
+
+    def test_the_same_reasoning_across_niches(self):
+        # Case K: nothing here knows history. A how-to whose result arrives step by step, a biology mechanism, a
+        # what-if chain: the same facts, the same findings, in their own words.
+        c = self.core
+        tutorial = {'movements': [{'what': 'the first fix and the hinge that stops sticking', 'minutes': 2, 'promise': True},
+                                  {'what': 'the second cause and its fix', 'minutes': 3, 'promise': True},
+                                  {'what': 'the door that closes by itself', 'minutes': 2, 'promise': True}]}
+        self.assertEqual(c.promise_timing(tutorial)['minutes_before'], 0.0)     # cumulative value: no climax asked for
+        biology = {'promised': 'to see how a cell makes its energy', 'first_delivered': 'L012',
+                   'waiting': [{'lines': 'L001-L011', 'felt': 'anticipation', 'why': 'each step of the pump was a reveal'}]}
+        self.assertEqual(c.waiting_findings(biology, set()), [])
+        whatif = {'promised': 'to learn what happens if the moon disappears', 'first_delivered': 'L015',
+                  'waiting': [{'lines': 'L001-L014', 'felt': 'delay', 'why': 'a long lecture on orbits first'}]}
+        self.assertEqual(len(c.waiting_findings(whatif, set())), 1)
+        sig = ['L033: "mitochondria" returns after about 9.0 min, heard only once or twice before.']
+        beats = [{'id': 'B05', 'line_start': 30, 'line_end': 40, 'key_moment': 'the energy click',
+                  'depends_on': [{'what': 'what the membrane does', 'from': 'B02'}]}]
+        self.assertTrue(c.key_moment_dependency_issues(sig, '- L033: intentional_mystery: kept\n', beats, self.order))

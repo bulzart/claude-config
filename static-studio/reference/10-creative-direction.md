@@ -97,12 +97,27 @@ Each treatment decides:
 - **carries_values**: for every payoff value (`value_to_carry` marked `"payoff": true`, 02), how this treatment
   delivers it, in its own terms (`[{value, how}]`). The research shapes the treatment here; its fields are not copied
   into it.
+- **movements**: how the whole video unfolds, in order: what the viewer gets in each movement and roughly how many
+  minutes (`[{what, minutes, promise}]`), with `promise: true` on the movements that deliver what the opening makes
+  the viewer want (the experience, the answer, the result they came for). The order is the order in which the viewer
+  should learn, which is not automatically the order in which things happened: chronology, following one person,
+  opening on a discovery or a problem, a mechanism before its consequences, evidence revealed piece by piece,
+  interleaved perspectives are options, never templates, and a chronology is kept when it is the strongest telling.
+  Every movement before the promise is delivered has to give the viewer something on the way (a discovery, tension, a
+  laugh, an explanation that clicks, a reason to care): that is anticipation. Background the viewer doesn't need yet,
+  given before they have a reason to want it, is delay, and every wait raises the bar for what fills it (narrative
+  debt). There is no time limit: a mystery can hold its answer to the end when the way there rewards; a tutorial
+  delivers its result step by step; a slow, quiet passage can be exactly right. `direction_facts` reports each
+  treatment's minutes before its first promise movement and what comes before it: facts for you, never a verdict.
 
 Then write its **samples**: the opening, a quiet middle and the moment where its value lands hardest (its turn
 when the subject has one, `turning_point`; otherwise its best demonstration, clearest understanding or biggest
 laugh, `strongest_moment`, never a turn invented to fill the slot), each as the narration (50+ words) and
-what the viewer sees. The samples are where a treatment proves itself. A treatment that can't make a quiet middle
-interesting will sag in the real film; a treatment that only works at full volume will exhaust.
+what the viewer sees. The samples are where a treatment proves its voice. A treatment that can't make a quiet middle
+interesting will sag in the real film; a treatment that only works at full volume will exhaust. But three good
+samples do not prove the transitions between them, nor a middle the samples never show: the movements carry the rest
+of the video, and each one has to be worth its minutes on its own material, not filled with facts because research
+holds them.
 
 Don't default. A serious subject isn't automatically grave, a light one isn't automatically jokey, and the
 documentary voice is one option among many. Ask what the subject's own nature and the audience's purpose call for.
@@ -122,13 +137,24 @@ No numbers decide this. Two things do:
    file and follow it. It says which it would watch to the end, where each would wear thin, what feels like a
    template, and whether voice and picture feel like one idea. When the user gave an exact topic or story, or the
    niche scope has its `boundary` (02), it is also asked whether each treatment is still a video about what was asked
-   (for a niche: still a video of that niche); a "partly" or "no" becomes a finding. `review-record` seals its findings. Answer each one.
+   (for a niche: still a video of that niche); a "partly" or "no" becomes a finding. The reader also sees how each
+   treatment unfolds (its movements, without your marks of where the promise is delivered) and says when it would
+   first get what the video promises and whether the middle would hold it. `review-record` seals its findings. Answer each one.
 2. **Your decision, with reasons.** Which treatment sustains the whole runtime (not the best first 30 seconds),
    fits the subject's truth and the audience's purpose, and is most distinct from the references; and what you take
-   from the others. Write it in `decision`, with `carries_payoff`: how the chosen treatment makes the payoff land.
+   from the others. Write it in `decision`, with `carries_payoff`: how the chosen treatment makes the payoff land;
+   `promise_and_delivery`: how it keeps the opening's promise (where it is delivered, what the viewer gets while
+   waiting, and what the blind reader said about it); and `length_fit`: how its telling compares with the format,
+   density and narration of the references the length and pace were taken from (`direction_facts` shows the length
+   lock's cohort and why it was comparable). A cohort shares a niche with the video, not necessarily its format:
+   when they differ, say why the runtime and the pace still fit, or ask the user for a length decision (03); the lock
+   is never changed silently.
 
 Then `direction-lock`. The script and the beat directions are written from the locked treatment. A new lock is
-stamped `planning_rules: 2`, kept through `--revise`. A lock without the stamp was approved before 2026-11-24, and it
+stamped `planning_rules: 3`, kept through `--revise` (3, the storytelling rules of 2026-11-24: each treatment's
+movements with its promise marked, the decision's `promise_and_delivery` and `length_fit`, and a key moment's
+dependency never called a mystery unless it is withheld, 03). A lock stamped 2 keeps its plan the same way: those
+rules reach it as advisories except where a revision reaches. A lock without the stamp was approved before 2026-11-24, and it
 keeps its plan: the planning rules added that day reach it only as warnings that start "advisory (this direction was
 approved before the planning rules of 2026-11-24, which it need not follow): ..." in plan-check, shot-check,
 audio-check, media-check (both workers) and release-check's final review. They are: evidence from outside the locked
@@ -161,7 +187,18 @@ field by field and says what the change touched (`affects`, and `outdated_now` f
   stage that uses it continues: `plan-check` and paid narration for the script and beat map, the image workers for the
   shot plan and style bible, `retime-shots` and `timeline-check` for the narration, stills, music and edit.
 - Refining the chosen treatment needs no new blind read; it is shown at every plan-check. A treatment never read, or
-  rewritten so far that under 70% of its vocabulary is what its reader saw, gets its own blind read first.
+  rewritten so far that under 70% of its vocabulary (its movements included) is what its reader saw, gets its own
+  blind read first. A change to the movements is a change of structure: it reaches the beat map, the script and the
+  shot plan.
+
+**Reconsidering the treatment.** A lock protects the direction from drift, never from a correction. When two
+independent readers find the same major problem, the revision between them did not reach its cause: the answer to the
+later finding says so (`recurrence`: what the earlier revision missed, and whether the cause is wording, order,
+structure, the treatment, the material or the duration, 06), and rewording is refused as its answer. A structural or
+treatment cause is answered by re-planning: revise the chosen treatment (its movements, its structure and pace, or
+another treatment) and re-lock with `--revise`, keeping what works (the voice, the strongest material, the samples
+that landed); the script and what follows it are rebuilt from the new plan and read afresh. A duration cause is a
+length decision the user approves. A higher reader score does not close a major problem the reader still names.
 
 ## 4. Beat direction: the treatment, moment by moment
 
@@ -199,6 +236,24 @@ given too late, a consequence never shown, a relation the picture never makes, t
 answers no expectation, a weak idea. Fix that cause with the means that fits it (one clearer line, a picture or
 drawing that shows the relation, another order, a stronger setup, a different idea); more narration, a louder
 delivery, a diagram or a pause is never the default.
+
+**The strongest authentic significance, never a manufactured one.** Two things connected by place, theme or time are
+told as that connection: a letter's warning and a later revolt in the same land are a coincidence of place, not a
+prediction; a correlation is not a cause; a logically possible outcome is not a certain one. Say the link the evidence
+gives, plainly, and let its strangeness do the work. And what a key moment leans on must be in the viewer's hands when
+it comes: a name, place or fact given once, long before, is planted with its significance when it first appears (what
+it is and why it will matter) and re-anchored in the narration at the moment itself; a picture can reinforce that,
+never rescue a relation the words never make. Calling such a dependency a mystery is right only when the beat
+withholds it on purpose (`depends_on` with `withheld`); plan-check refuses it otherwise (03).
+
+**Boredom at its source.** When a passage loses attention, name why before changing anything: the viewer does not yet
+care about it; it arrives before its relevance is established; the same idea comes again without developing; background
+interrupts the experience the viewer came for; the strongest material is postponed; the treatment has become
+predictable; facts arrive unrelated to the questions the viewer is carrying; it develops no understanding, feeling,
+humour or anticipation; the subject is organised around its weaker material; or there is more than a listener can hold.
+Then correct that cause: reorder, reframe, bring a discovery forward, replace weak exposition with stronger researched
+material, connect it to what the viewer wants to know, merge the repetitions, cut what does not serve, explain it with a
+better picture, or revise the treatment. More cuts, motion, music, speed or effects never substitute for content.
 
 Let the treatment evolve with the story: more distance in one beat, more intimacy in the next, a lighter touch after a
 heavy one. Consistency means one world, one narrator and one visual logic, not one intensity. Never schedule
