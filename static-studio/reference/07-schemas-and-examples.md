@@ -247,6 +247,7 @@ Minimal `40-plans/video-01/blueprint.json`:
      "pace": "unhurried",
      "key_moment": "the constraint revealed",
      "carries": ["R1"],
+     "hedges": {},
      "significance": {"matters_because": "the plan everyone trusted could never have worked, so the choice the viewer weighed in B01 was made blind",
                       "reward": "the oh of seeing the hidden constraint",
                       "certainty": "established"},
@@ -349,15 +350,25 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
     "from_references": [{"ref": "V017", "at": "02:10-02:40", "observed": "the map zooms out as the cause is named",
                          "interpretation": "the relation is shown before it is explained, so it lands"}],
     "candidates": [
-      {"id": "C1", "subject": "why one lake turns animals to stone", "value_form": "a natural phenomenon explained",
+      {"id": "T1", "subject": "why one lake turns animals to stone", "value_form": "a natural phenomenon explained",
        "factual": true, "what_happens": "...", "why_it_matters": "...", "reward": "...",
-       "strongest_material": [{"what": "the water's chemistry preserves bodies", "certainty": "established", "sources": ["S1"]},
-                              {"what": "how long a body keeps its shape", "certainty": "contested", "hedge": "..."}],
-       "runtime": {"material_minutes": 12, "why": "..."}, "feasibility": "..."}
+       "strongest_material": [
+         {"id": "M1", "what": "the water's chemistry preserves what falls in", "certainty": "established", "claims": ["C01"]},
+         {"id": "M2", "what": "why so many birds land there", "certainty": "contested", "claims": ["C02"], "hedge": "..."},
+         {"id": "M3", "what": "a bird would keep its shape for years", "certainty": "reasoned", "from": ["M1"],
+          "reasoning": "..."}],
+       "runtime": {"progression": [{"adds": "the eerie photographs, then the question they raise", "material": ["M1"]},
+                                   {"adds": "...", "material": ["M2", "M3"]}],
+                   "verdict": "sustains", "why": "...", "material_minutes": 9},
+       "feasibility": "..."},
+      {"id": "T2", "subject": "...", "...": "researched more lightly: sources may stand in for claims"}
     ],
-    "selection": {"candidate": "C1", "why": "...", "over_alternatives": "..."},
+    "selection": {"candidate": "T1", "why": "...", "decisive_material": ["M1"],
+                  "over_alternatives": [{"candidate": "T2", "why_not": "..."}]},
     "value_to_carry": [{"id": "R1", "what": "...", "why_it_matters": "...", "certainty": "established",
-                        "sources": ["S1"], "needs_first": "..."}],
+                        "rests_on": ["M1"]},
+                       {"id": "R2", "what": "...", "why_it_matters": "...", "certainty": "contested", "hedge": "...",
+                        "rests_on": ["M2"], "needs_first": ["R1"]}],
     "dropped": []
   },
   "evidence": {
@@ -385,18 +396,40 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
 }
 ```
 
-`subject` comes first (02 "Finding the subject"): the user's scope, what this audience values, what the references
-show (observed apart from interpreted), the researched candidates (each strongest-material item established with
-ledger sources, contested with its `hedge`, speculative with its `framed_as`, or invented in a non-factual subject),
-the material against the locked length (`runtime_decision` when short), the choice in words, and `value_to_carry`,
-which the beat map `carries` and the key moments' shots show (`carries_significance`). A direction locked before
-`subject` existed keeps working, with a warning. Five approaches (at least three of
+`subject` comes first (02 "Finding the subject"): the user's scope (for a subject, topic or story also
+`understood_as` and `boundary`, and `selection.how_scope_kept`), what this audience values, what the references show
+(observed apart from interpreted), the researched candidates (at least two in an open scope; each material item with
+its `id` and certainty: established on `claims` whose sources the ledger says were read, reasoned `from` established
+items, contested with its `hedge`, speculative or assumed with its `framed_as`, invented only when not factual), each
+candidate's `runtime` (`progression` of what the viewer newly gets on which material, `verdict`, `why`, `shortfall`;
+`runtime_decision` with the user's words when the chosen one is short or uncertain), the choice (`decisive_material`,
+confirmed when established; `over_alternatives`, one reason per alternative) and `value_to_carry` (`rests_on`,
+`needs_first`), which the beat map `carries` in that order (with `hedges` for a contested, speculative or assumed value
+in an ordinary beat), the script says (a claim's `line_refs` inside the carrying beat) and the key moments' shots show
+(`carries_significance`). A direction locked before `subject` existed keeps working, with a warning.
+
+`30-research/video-01/sources.md`, one entry per source (the `Access` line is what the checks read):
+
+```markdown
+### S1. <author/issuer>, <title>, <journal or publisher>, <date>
+- Primary: the study itself (peer-reviewed). URL: <url>
+- Access: read (abstract, methods and results)
+- Supports: C01, C02. Counterevidence: none on the finding; whether it matters in the living animal is open (C03).
+- Status: primary record.
+```
+
+`30-research/video-01/claims.json`: `{"claims": [{"id": "C01", "claim": "...", "sources": ["S1"], "confidence":
+"confirmed", "note": "...", "line_refs": ["L034"]}]}`; confidence is confirmed (a primary record, or two or more
+independent credible sources, read), likely (one credible source), disputed or legend. Five approaches (at least three of
 perspective/scale/structure/voice/visualization among them, at least one that challenges the references' formula), two
 or three treatments. `direction-lock.json` keeps the hash, the time, the
 treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
 follows: `production_rev` (raised by a change that alters what production must do), `sections` (one hash per field,
-so a revision knows exactly what changed), `required` (per artifact, the revision that last touched it and, for a
-plan file, its content hash at that moment), `reapproved` (per artifact: the revision, the reason and, for a file, the
+so a revision knows exactly what changed; the chosen subject's own description, its research, the other
+candidates and each researched value apart), `required` (per artifact, the revision that last touched it and, for a
+plan file, its content hash at that moment, or, for a change scoped to a researched value, the hash of each beat, line
+or shot it reaches: `parts`), `research` (each ledger entry and claim as the direction was locked on them, renewed by
+`--research-rechecked`), `reapproved` (per artifact: the revision, the reason and, for a file, the
 content approved) and `reviewed_treatments` (each treatment's words as its last blind read saw them).
 
 ## Review records (`review-packet`, a fresh agent, `review-record`, the director's answers)

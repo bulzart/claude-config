@@ -63,7 +63,7 @@ creative profile (02): what makes these videos *enjoyable*, not only what they c
 
 ## 2. From the story approach to an audiovisual treatment
 
-02 finds the *subject* (topic discovery: `subject`, what it offers this audience and the value the film must carry) and chooses the *story*: the angle, the five approaches and why one wins. The **treatment** decides how
+02 finds the *subject* (topic discovery: `subject`, what it offers this audience and the value the film must carry) and chooses the *story*: the angle, the five approaches and why one wins. The strategy's `progression` is how the subject's researched progression is told across the locked length, and each treatment shows in its samples how it makes the researched values land. The **treatment** decides how
 that story sounds and looks, as one idea. Write two or three treatments of the chosen approach that genuinely
 differ: different narrators, different relationships between picture and word, different emotional temperatures.
 Not one treatment at three intensities.
@@ -93,7 +93,9 @@ Each treatment decides:
   intensity or drama where the material calls for them.
 - **risks**: how this treatment could get boring, cute, theatrical or monotonous over twenty minutes.
 
-Then write its **samples**: the opening, a quiet middle and the turning point, each as the narration (50+ words) and
+Then write its **samples**: the opening, a quiet middle and the moment where its value lands hardest (its turn
+when the subject has one, `turning_point`; otherwise its best demonstration, clearest understanding or biggest
+laugh, `strongest_moment`, never a turn invented to fill the slot), each as the narration (50+ words) and
 what the viewer sees. The samples are where a treatment proves itself. A treatment that can't make a quiet middle
 interesting will sag in the real film; a treatment that only works at full volume will exhaust.
 
@@ -159,7 +161,8 @@ relief, a laugh, a skill, awe, a feeling), and what they must already know for i
 earlier, or withheld on purpose) or `self_contained` (why it needs nothing earlier). Significance is whatever this
 viewer came for: a joke's lies in its setup, a tutorial step's in the problem it solves, a reveal's in what it
 changes, a quiet scene's in what it lets the viewer feel. Never manufacture danger, conflict or a twist the material
-does not have, and never claim more than the evidence: a contested consequence stays contested (`certainty:
+does not have, nor a key moment the video doesn't have (one whose value builds step by step marks none and says how it builds
+in the blueprint's `reward_shape`), and never claim more than the evidence: a contested consequence stays contested (`certainty:
 "contested"` with `hedge`, the line that keeps it honest). Then plan where the viewer learns what they need: before
 the moment, enough to recognise what it means when it comes, without explaining the payoff in advance; a mystery held
 on purpose stays held. A verdict afterwards ("historians judged it decisive") confirms a meaning the viewer already felt; it cannot give the moment the weight it lacked when it happened. When a moment is understood but not felt, find the cause before the cure: context missing or

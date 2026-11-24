@@ -2068,6 +2068,10 @@ TREATMENT_KEYS = ('narrator', 'writing_voice', 'structure_and_pace', 'visual_lan
 TREATMENT_SHOWN_TO_REVIEWER = ('narrator', 'writing_voice', 'structure_and_pace', 'visual_language', 'sound',
                                'audiovisual_relationship', 'emotional_course')
 SAMPLE_MOMENTS = ('opening', 'quiet_middle', 'turning_point')
+# The third sample is where this video's value lands hardest: its turn when it has one, otherwise its best
+# demonstration, its clearest moment of understanding, its biggest laugh. A direction may name it "strongest_moment",
+# so nobody is pushed to invent a turn the subject doesn't have (2026-11-24); "turning_point" stays valid.
+SAMPLE_ALIASES = {'turning_point': ('turning_point', 'strongest_moment')}
 BEAT_DIRECTION_KEYS = ('experience', 'narration_direction', 'visual_intent', 'sound_direction', 'pace')
 # A major finding asks for a fresh read of the revised version until this round; after it the director decides
 # and records why (no endless loops). More rounds are always allowed, never required.
@@ -2100,58 +2104,271 @@ def _jaccard(a, b):
 
 
 # ---------------------------------------------------------------- the subject, before the approaches
-# Topic discovery (2026-11-24): what the user's scope leaves open, which subjects were researched, what each could give
-# its viewer and on what evidence, whether it fills the locked length, which was chosen over which and why, and the
-# researched value the film must carry (02 "Finding the subject"). The code checks that this reasoning exists, is tied
-# to recorded sources and references, keeps the user's scope and reaches the beat map and the shots; whether a subject
-# is worth a viewer's time is the director's judgement, never a score.
+# Topic discovery (2026-11-24, revised the same day): what the user's scope leaves open, which subjects (or angles of
+# the user's own topic) were researched, what each could give this audience and on what evidence, whether its material
+# can carry the locked length as a progression (the director's verdict and its reasons, never a share of minutes),
+# which was chosen over which and why, and the researched value the film must carry (02 "Finding the subject"). The
+# code checks that this reasoning exists, is specific to each candidate, rests on the claims and sources it names
+# (claims.json, the sources ledger and what the ledger says was actually read), keeps the user's scope, and reaches
+# the beat map, the script and the pictures. Whether a subject is worth a viewer's time, and whether a source deserves
+# trust, stays the director's judgement: never a score, and never decided by looking at a URL.
 SUBJECT_SCOPES = ('niche', 'subject', 'topic', 'story')
-CERTAINTIES = ('established', 'contested', 'speculative', 'invented')
+# How sure the film may be of a researched item. established: a fact, on claims whose sources were read; reasoned: a
+# consequence derived from established items by stated reasoning; contested: credible sources disagree or the evidence
+# leaves it open (said with its hedge); speculative: a possibility beyond the evidence (said as one); assumed: an
+# explicit premise of a hypothetical (said as an assumption); invented: only where the subject is not factual.
+CERTAINTIES = ('established', 'reasoned', 'contested', 'speculative', 'assumed', 'invented')
+CERTAINTY_STRENGTH = {'established': 4, 'reasoned': 3, 'contested': 2, 'speculative': 1, 'assumed': 1, 'invented': 0}
+HEDGED_CERTAINTIES = ('contested', 'speculative', 'assumed')
+SIGNIFICANCE_CERTAINTIES = ('established', 'reasoned', 'contested', 'speculative', 'invented')
+# claims.json confidence (02): confirmed = a primary record, or two or more independent credible sources, read;
+# likely = one credible source; disputed = credible sources disagree; legend = popular, unverified.
+CLAIM_CONFIDENCE = ('confirmed', 'likely', 'disputed', 'legend')
 SUBJECT_TEXT_KEYS = ('subject', 'value_form', 'what_happens', 'why_it_matters', 'reward')
-MATERIAL_SHORT_SHARE = 0.9      # material for under 90% of the locked length is reported and decided, never padded
+CHOSEN_CORE_KEYS = ('subject', 'angle', 'value_form', 'factual', 'what_happens', 'why_it_matters', 'reward')
+RUNTIME_VERDICTS = ('sustains', 'short', 'uncertain')
+VALUE_KEY = 'subject.value_to_carry.'
 
 
 def source_ids(text):
     return set(re.findall(r'\bS\d+\b', str(text or '')))
 
 
-def material_issues(prefix, items, known, factual, id_key=None):
-    """Each researched item says what it is and how sure we are, tied to the sources ledger: established -> a recorded
-    source; contested -> how the film keeps it honest; speculative -> how it is framed; invented -> only in a subject
-    that is not factual (a comedy's premise, a fiction)."""
+def sources_path(rd, video):
+    return rd / '30-research' / f'video-{int(video):02d}' / 'sources.md'
+
+
+def claims_path(rd, video):
+    return rd / '30-research' / f'video-{int(video):02d}' / 'claims.json'
+
+
+def _ids(xs):
+    if isinstance(xs, str):
+        xs = [xs]
+    return [str(x).strip() for x in (xs or []) if str(x).strip()]
+
+
+def is_key_moment(b):
+    km = (b or {}).get('key_moment')
+    return km is not None and km is not False and bool(str(km).strip())
+
+
+def ledger_entries(text):
+    """The sources ledger (30-research/video-NN/sources.md) entry by entry: '### S1. title' starts one, and its
+    '- Access:' line says how much of the source was actually read (read: the text itself, or the part that matters;
+    indirect: only through another source; snippet: only a search summary). {id: {'access', 'sha256'}}. What the ledger
+    says about a source's standing stays the researcher's judgement; this only reads what it records."""
+    found, cur = {}, None
+    for line in str(text or '').splitlines():
+        m = re.match(r'\s*#{2,4}\s*\**\s*(S\d+)\b', line)
+        if m:
+            cur = m.group(1)
+            found[cur] = {'access': 'unknown', 'lines': [line]}
+            continue
+        if cur is None:
+            continue
+        found[cur]['lines'].append(line)
+        a = re.match(r'\s*[-*]?\s*\**access\**\s*:\s*\**\s*(.*)', line, re.I)
+        if a:
+            v = a.group(1).strip().lower()
+            found[cur]['access'] = ('snippet' if v.startswith(('snippet', 'search')) else
+                                    'indirect' if v.startswith('indirect') else
+                                    'read' if v.startswith('read') else 'unknown')
+    return {k: {'access': v['access'],
+                'sha256': hashlib.sha256(' '.join(' '.join(v['lines']).split()).encode('utf-8')).hexdigest()}
+            for k, v in found.items()}
+
+
+def claims_index(claims):
+    return {str(c.get('id')).strip(): c for c in (claims or {}).get('claims') or []
+            if isinstance(c, dict) and str(c.get('id') or '').strip()}
+
+
+def sample_of(samples, m):
+    """A treatment's sample for one of SAMPLE_MOMENTS, under its own name or an alias (SAMPLE_ALIASES)."""
+    samples = samples if isinstance(samples, dict) else {}
+    for k in SAMPLE_ALIASES.get(m, (m,)):
+        if isinstance(samples.get(k), dict):
+            return samples[k]
+    return {}
+
+
+def sample_label(samples, m):
+    samples = samples if isinstance(samples, dict) else {}
+    for k in SAMPLE_ALIASES.get(m, (m,)):
+        if isinstance(samples.get(k), dict):
+            return k.replace('_', ' ')
+    return m.replace('_', ' ')
+
+
+def _reason_key(text, own):
+    """A reason with the candidate's own subject words taken out: two candidates left with the same words were given
+    the same reason, and a reason that fits every candidate explains none of them."""
+    return ' '.join(t for t in re.findall(r"[a-z0-9']+", strip_tags(str(text or '')).lower()) if t not in own)
+
+
+def material_issues(prefix, items, known, factual, claims=None, ledger=None, strict=False):
+    """Each researched item says what it is and how sure the film may be of it (CERTAINTIES), tied to what supports it.
+    established: claims in claims.json (strict, the chosen subject's material; recorded sources are enough for a
+    candidate only considered), never a disputed or legend claim, and each claim with at least one source the ledger
+    says was read; contested: how the film keeps it honest (hedge), and its claims when strict; reasoned: the
+    established items of the same candidate it follows from, and how (from, reasoning); speculative or assumed: how the
+    film frames it (framed_as); invented: only where the subject is not factual. A recorded link is not evidence: the
+    reading of the source is."""
     out = []
+    claims, ledger = claims or {}, ledger or {}
+    by_id = {str(m.get('id')).strip(): m for m in items if str(m.get('id') or '').strip()}
     for i, m in enumerate(items, 1):
-        tag = f'{prefix}_{m.get(id_key) if id_key else i}'
+        ident = str(m.get('id') or '').strip()
+        tag = f'{prefix}_{ident or i}'
+        if strict and not ident:
+            out.append(f'{tag}_needs_an_id:id')
         if n_words(m.get('what')) < 3:
             out.append(f'{tag}_missing_what')
         cert = str(m.get('certainty') or '').strip().lower()
         if cert not in CERTAINTIES:
             out.append(f'{tag}_certainty_must_be:' + '/'.join(CERTAINTIES))
             continue
-        srcs = {str(s).strip() for s in m.get('sources') or [] if str(s).strip()}
+        srcs, cids = set(_ids(m.get('sources'))), _ids(m.get('claims'))
+        if srcs and not known:
+            out.append(f'{tag}_cites_sources_but_the_ledger_is_empty:30-research/video-NN/sources.md')
+        elif srcs - known:
+            out.append(f'{tag}_cites_sources_not_in_the_ledger:' + ','.join(sorted(srcs - known)))
+        if [c for c in cids if c not in claims]:
+            out.append(f'{tag}_cites_claims_not_in_claims_json:' + ','.join(c for c in cids if c not in claims))
         if cert == 'established':
-            if not srcs:
+            if strict and not cids:
+                out.append(f'{tag}_established_needs_its_claims:claims')
+            elif not cids and not srcs:
                 out.append(f'{tag}_established_needs_a_source')
-            elif not known:
-                out.append(f'{tag}_cites_sources_but_the_ledger_is_empty:30-research/video-NN/sources.md')
-            elif not srcs <= known:
-                out.append(f'{tag}_cites_sources_not_in_the_ledger:' + ','.join(sorted(srcs - known)))
-        elif cert == 'contested' and n_words(m.get('hedge')) < 4:
-            out.append(f'{tag}_contested_needs_how_it_is_kept_honest:hedge')
-        elif cert == 'speculative' and n_words(m.get('framed_as')) < 4:
-            out.append(f'{tag}_speculative_needs_how_it_is_framed:framed_as')
+            for c in cids:
+                cl = claims.get(c)
+                if not cl:
+                    continue
+                conf = str(cl.get('confidence') or '').strip().lower()
+                if conf in ('disputed', 'legend'):
+                    out.append(f'{tag}_said_as_established_but_claim_{c}_is_{conf}:say_it_as_contested_or_leave_it_out')
+                elif conf not in CLAIM_CONFIDENCE:
+                    out.append(f'{tag}_claim_{c}_confidence_must_be:' + '/'.join(CLAIM_CONFIDENCE))
+                csrc = set(_ids(cl.get('sources')))
+                if csrc - known:
+                    out.append(f'{tag}_claim_{c}_cites_sources_not_in_the_ledger:' + ','.join(sorted(csrc - known)))
+                if not any((ledger.get(s) or {}).get('access') == 'read' for s in csrc):
+                    out.append(f'{tag}_claim_{c}_rests_on_no_source_that_was_read:read_one_and_record_its_Access')
+        elif cert == 'contested':
+            if n_words(m.get('hedge')) < 4:
+                out.append(f'{tag}_contested_needs_how_it_is_kept_honest:hedge')
+            if strict and not cids:
+                out.append(f'{tag}_contested_needs_its_claims:claims')
+        elif cert == 'reasoned':
+            frm = _ids(m.get('from'))
+            if n_words(m.get('reasoning')) < 4:
+                out.append(f'{tag}_reasoned_needs_its_reasoning:reasoning')
+            if not frm:
+                out.append(f'{tag}_reasoned_needs_what_it_follows_from:from')
+            elif [f for f in frm if str((by_id.get(f) or {}).get('certainty') or '').lower() != 'established']:
+                out.append(f'{tag}_reasoned_from_items_not_established_here:' + ','.join(
+                    f for f in frm if str((by_id.get(f) or {}).get('certainty') or '').lower() != 'established'))
+        elif cert in ('speculative', 'assumed') and n_words(m.get('framed_as')) < 4:
+            out.append(f'{tag}_{cert}_needs_how_it_is_framed:framed_as')
         elif cert == 'invented' and factual is not False:
             out.append(f'{tag}_invented_material_only_in_a_subject_that_is_not_factual')
     return out
 
 
-def subject_issues(subj, sources_text='', locked_s=None, refs=(), locked_niche=None):
-    """(issues, warnings) for direction.json -> subject. Presence, links and scope only: the chosen candidate's
-    research must hold; the others were considered, so their gaps are warnings."""
+def runtime_issues(cid, c):
+    """Whether a candidate's material can carry the locked length, as the director judges it: the progression of what
+    the viewer newly gets, each step resting on researched material, and a verdict with its reasons. Never a share of
+    minutes: six minutes of notes can hold ten when each step opens the next, fifteen may not when they repeat.
+    (issues, signals)."""
+    out, sig = [], []
+    rt = c.get('runtime') if isinstance(c.get('runtime'), dict) else {}
+    tag = f'subject_candidate_{cid}_runtime'
+    mids = {str(m.get('id')).strip() for m in c.get('strongest_material') or [] if isinstance(m, dict)
+            and str(m.get('id') or '').strip()}
+    steps = [s for s in rt.get('progression') or [] if isinstance(s, dict)]
+    if not steps:
+        out.append(f'{tag}_needs_its_progression:what_the_viewer_newly_gets_step_by_step')
+    seen, used = set(), set()
+    for i, s in enumerate(steps, 1):
+        if n_words(s.get('adds')) < 4:
+            out.append(f'{tag}_step_{i}_missing_adds')
+        key = _norm(s.get('adds'))
+        if key and key in seen:
+            out.append(f'{tag}_step_{i}_repeats_an_earlier_step')
+        seen.add(key)
+        mm = set(_ids(s.get('material')))
+        if not mm:
+            out.append(f'{tag}_step_{i}_rests_on_no_material:material')
+        elif mm - mids:
+            out.append(f'{tag}_step_{i}_names_material_this_candidate_lacks:' + ','.join(sorted(mm - mids)))
+        elif i > 1 and mm <= used:
+            sig.append(f'{tag}_step_{i}_uses_only_material_earlier_steps_used:is_it_new_for_the_viewer')
+        used |= mm
+    verdict = str(rt.get('verdict') or '').strip().lower()
+    if verdict not in RUNTIME_VERDICTS:
+        out.append(f'{tag}_verdict_must_be:' + '/'.join(RUNTIME_VERDICTS))
+    if n_words(rt.get('why')) < MIN_FIELD_WORDS:
+        out.append(f'{tag}_needs_why_the_verdict')
+    if verdict in ('short', 'uncertain') and n_words(rt.get('shortfall')) < 4:
+        out.append(f'{tag}_{verdict}_needs_what_is_missing:shortfall')
+    return out, sig
+
+
+def value_issues(vals, chosen):
+    """value_to_carry: what the film must deliver, each with why it matters, how sure the film may be of it and, in a
+    factual subject, the chosen subject's material it rests on (never said more surely than that material allows); what
+    the viewer must hold first (needs_first) names other values."""
+    iss = []
+    ch = chosen or {}
+    factual = ch.get('factual')
+    mats = {str(m.get('id')).strip(): m for m in ch.get('strongest_material') or [] if isinstance(m, dict)
+            and str(m.get('id') or '').strip()}
+    vids = [str(v.get('id') or '').strip() for v in vals]
+    if not vals or len(set(vids)) != len(vids) or '' in vids:
+        iss.append('subject_needs_value_to_carry_with_distinct_ids')
+    for v in vals:
+        rid = str(v.get('id') or '').strip()
+        tag = f'subject_value_{rid}'
+        if n_words(v.get('what')) < 3:
+            iss.append(f'{tag}_missing_what')
+        if n_words(v.get('why_it_matters')) < 4:
+            iss.append(f'{tag}_missing_why_it_matters')
+        cert = str(v.get('certainty') or '').strip().lower()
+        if cert not in CERTAINTIES:
+            iss.append(f'{tag}_certainty_must_be:' + '/'.join(CERTAINTIES))
+            continue
+        if cert == 'contested' and n_words(v.get('hedge')) < 4:
+            iss.append(f'{tag}_contested_needs_how_it_is_kept_honest:hedge')
+        if cert in ('speculative', 'assumed') and n_words(v.get('framed_as')) < 4:
+            iss.append(f'{tag}_{cert}_needs_how_it_is_framed:framed_as')
+        if cert == 'invented' and factual is not False:
+            iss.append(f'{tag}_invented_value_only_in_a_subject_that_is_not_factual')
+        ro = _ids(v.get('rests_on'))
+        if factual is not False:
+            if not ro:
+                iss.append(f'{tag}_needs_the_material_it_rests_on:rests_on')
+            if [x for x in ro if x not in mats]:
+                iss.append(f'{tag}_rests_on_material_the_chosen_subject_lacks:' + ','.join(x for x in ro if x not in mats))
+            weaker = [x for x in ro if x in mats and CERTAINTY_STRENGTH.get(
+                str(mats[x].get('certainty') or '').strip().lower(), 0) < CERTAINTY_STRENGTH[cert]]
+            if weaker:
+                iss.append(f'{tag}_said_as_{cert}_but_rests_on_weaker_material:' + ','.join(weaker))
+        for u in _ids(v.get('needs_first')):
+            if u == rid or u not in vids:
+                iss.append(f'{tag}_needs_first_names_no_other_value:{u}')
+    return iss
+
+
+def subject_issues(subj, sources_text='', locked_s=None, refs=(), locked_niche=None, claims=None):
+    """(issues, warnings) for direction.json -> subject. Presence, specificity, links and scope only: the chosen
+    candidate's research must hold; the others were considered, so their gaps are warnings."""
     iss, warn = [], []
     if not isinstance(subj, dict):
         return ['direction_needs_subject_research:subject'], warn
-    known = source_ids(sources_text)
+    ledger = ledger_entries(sources_text)
+    known = set(ledger) or source_ids(sources_text)
+    cidx = claims_index(claims)
     sc = subj.get('scope') if isinstance(subj.get('scope'), dict) else {}
     kind = str(sc.get('kind') or '').strip().lower()
     if kind not in SUBJECT_SCOPES:
@@ -2160,6 +2377,13 @@ def subject_issues(subj, sources_text='', locked_s=None, refs=(), locked_niche=N
         iss.append('subject_scope_needs_the_users_own_words:user_words')
     if locked_niche and str(sc.get('niche') or '').strip().lower() != str(locked_niche).strip().lower():
         iss.append(f'subject_scope_niche_must_be_the_locked_niche:{locked_niche}')
+    if kind in ('subject', 'topic', 'story'):
+        # What the user asked for, in the director's words, and where it would stop being that: what the choice is
+        # read against. Word overlap can't tell whether a subject is still the user's; for an exact topic or story the
+        # blind treatment reader is asked too (review-packet --kind treatment), and its answer is a finding.
+        for k in ('understood_as', 'boundary'):
+            if n_words(sc.get(k)) < MIN_FIELD_WORDS:
+                iss.append(f'subject_{kind}_scope_needs_{k}')
     if n_words(subj.get('audience_value')) < MIN_FIELD_WORDS:
         iss.append('subject_missing_audience_value')
     # what the processed references show about how this audience is rewarded: observed apart from interpreted
@@ -2181,20 +2405,63 @@ def subject_issues(subj, sources_text='', locked_s=None, refs=(), locked_niche=N
     ids = [str(c.get('id') or '').strip() for c in cands]
     if not cands or len(set(ids)) != len(ids) or '' in ids:
         iss.append('subject_needs_researched_candidates_with_distinct_ids')
+    elif kind in ('niche', 'subject', 'topic') and len(cands) < 2:
+        # a choice with nothing to choose from is the first idea that came up (an exact topic compares its angles)
+        iss.append(f'subject_{kind}_scope_needs_a_researched_alternative')
     sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
     chosen = str(sel.get('candidate') or '').strip()
     if chosen not in ids:
         iss.append('subject_selection_must_name_a_listed_candidate')
-    for k in ('why', 'over_alternatives'):
-        if n_words(sel.get(k)) < MIN_FIELD_WORDS:
-            iss.append(f'subject_selection_missing_{k}')
-    if kind in ('topic', 'story') and (sel.get('keeps_user_scope') is not True
-                                       or n_words(sel.get('how_scope_kept')) < MIN_FIELD_WORDS):
+    if n_words(sel.get('why')) < MIN_FIELD_WORDS:
+        iss.append('subject_selection_missing_why')
+    ch = next((c for c in cands if str(c.get('id')) == chosen), None)
+    mats_ch = {str(m.get('id')).strip(): m for m in (ch or {}).get('strongest_material') or []
+               if isinstance(m, dict) and str(m.get('id') or '').strip()}
+    if ch is not None:
+        # the choice rests on evidence it names: what in the chosen subject's research makes it the one
+        dm = _ids(sel.get('decisive_material'))
+        if not dm:
+            iss.append('subject_selection_needs_decisive_material:the_chosen_subjects_material_the_choice_rests_on')
+        for x in dm:
+            m = mats_ch.get(x)
+            if m is None:
+                iss.append(f'subject_selection_decisive_material_not_in_the_chosen_subject:{x}')
+            elif str(m.get('certainty') or '').strip().lower() == 'established':
+                weak = [c for c in _ids(m.get('claims'))
+                        if str((cidx.get(c) or {}).get('confidence') or '').strip().lower() != 'confirmed']
+                if weak:
+                    iss.append(f'subject_choice_rests_on_{x}_whose_claims_are_not_confirmed:' + ','.join(weak) +
+                               ':corroborate_them_or_rest_the_choice_on_stronger_material')
+    # every alternative is answered on its own terms, and differently from the others
+    alts = [i for i in ids if i and i != chosen]
+    oa = sel.get('over_alternatives')
+    answered = {str(x.get('candidate') or '').strip(): x for x in (oa if isinstance(oa, list) else [])
+                if isinstance(x, dict)}
+    if alts and not isinstance(oa, list):
+        iss.append('subject_selection_over_alternatives_must_answer_each_alternative:[{candidate,why_not}]')
+    why_nots, id_toks = {}, {i.lower() for i in ids if i}
+    for a in alts:
+        x = answered.get(a) or {}
+        if n_words(x.get('why_not')) < MIN_FIELD_WORDS:
+            iss.append(f'subject_selection_does_not_say_why_not_{a}:over_alternatives')
+        ca = next((c for c in cands if str(c.get('id')) == a), {})
+        key = _reason_key(x.get('why_not'), id_toks | set(re.findall(
+            r"[a-z0-9']+", f"{ca.get('subject') or ''} {ca.get('angle') or ''}".lower())))
+        if n_words(key) >= 3:
+            why_nots.setdefault(key, []).append(a)
+    for key, who in why_nots.items():
+        if len(who) > 1:
+            iss.append(f'subject_selection_gives_{"_and_".join(who)}_the_same_why_not:say_what_is_weaker_in_each')
+    if kind in ('topic', 'story') and sel.get('keeps_user_scope') is not True:
         # an exact topic or story is developed, never replaced (the user's direction)
-        iss.append(f'subject_exact_{kind}_must_be_kept:selection.keeps_user_scope_and_how_scope_kept')
+        iss.append(f'subject_exact_{kind}_must_be_kept:selection.keeps_user_scope')
+    if kind in ('subject', 'topic', 'story') and n_words(sel.get('how_scope_kept')) < MIN_FIELD_WORDS:
+        iss.append(f'subject_{kind}_scope_needs_how_scope_kept:selection.how_scope_kept')
+    reasons = {}
     for c in cands:
         cid = str(c.get('id'))
-        mine = iss if cid == chosen else warn
+        strict = cid == chosen
+        mine = iss if strict else warn
         for k in SUBJECT_TEXT_KEYS:
             if n_words(c.get(k)) < (2 if k in ('subject', 'value_form') else 4):
                 mine.append(f'subject_candidate_{cid}_missing_{k}')
@@ -2203,33 +2470,39 @@ def subject_issues(subj, sources_text='', locked_s=None, refs=(), locked_niche=N
         mats = [m for m in c.get('strongest_material') or [] if isinstance(m, dict)]
         if not mats:
             mine.append(f'subject_candidate_{cid}_names_no_strongest_material')
-        mine += material_issues(f'subject_candidate_{cid}_material', mats, known, c.get('factual'))
-        rt = c.get('runtime') if isinstance(c.get('runtime'), dict) else {}
-        if not isinstance(rt.get('material_minutes'), (int, float)) or n_words(rt.get('why')) < 4:
-            mine.append(f'subject_candidate_{cid}_needs_runtime:material_minutes_and_why')
+        mids = [str(m.get('id') or '').strip() for m in mats if str(m.get('id') or '').strip()]
+        if len(set(mids)) != len(mids):
+            mine.append(f'subject_candidate_{cid}_material_ids_must_be_distinct')
+        mine += material_issues(f'subject_candidate_{cid}_material', mats, known, c.get('factual'), claims=cidx,
+                                ledger=ledger, strict=strict)
+        r_iss, r_sig = runtime_issues(cid, c)
+        mine += r_iss
+        warn += r_sig
         if n_words(c.get('feasibility')) < 4:
             mine.append(f'subject_candidate_{cid}_missing_feasibility')
-    ch = next((c for c in cands if str(c.get('id')) == chosen), None)
-    if ch is not None and locked_s:
+        own = set(re.findall(r"[a-z0-9']+", f"{c.get('subject') or ''} {c.get('angle') or ''}".lower()))
+        for k in ('what_happens', 'why_it_matters', 'reward'):
+            key = _reason_key(c.get(k), own)
+            if n_words(key) >= 3:
+                reasons.setdefault((k, key), []).append(cid)
+    for (k, _), who in reasons.items():
+        if len(set(who)) > 1:
+            (iss if chosen in who else warn).append(
+                f'subject_candidates_{"_and_".join(sorted(set(who)))}_share_the_same_{k}:'
+                'a_reason_that_fits_any_candidate_explains_none')
+    if ch is not None:
+        # the chosen material carries the locked length, or the shortfall went to the user: re-selection (another
+        # candidate or angle) or the user's own decision, never padding
         rt = ch.get('runtime') if isinstance(ch.get('runtime'), dict) else {}
-        mm = rt.get('material_minutes')
-        if (isinstance(mm, (int, float)) and mm * 60 < MATERIAL_SHORT_SHARE * float(locked_s)
-                and n_words(subj.get('runtime_decision')) < MIN_FIELD_WORDS):
-            iss.append(f'subject_material_short_of_locked_length:{mm:g}_of_{float(locked_s) / 60:.1f}_min:'
-                       'report_it_and_record_the_users_decision_in_runtime_decision:never_pad')
+        verdict = str(rt.get('verdict') or '').strip().lower()
+        dec = subj.get('runtime_decision') if isinstance(subj.get('runtime_decision'), dict) else {}
+        if verdict in ('short', 'uncertain') and (str(dec.get('decided_by') or '').strip().lower() != 'user'
+                                                   or n_words(dec.get('user_words')) < 2
+                                                   or n_words(dec.get('decision')) < 4):
+            iss.append(f'subject_material_judged_{verdict}_for_the_locked_length:choose_another_candidate_or_angle_or_'
+                       'record_the_users_decision_in_runtime_decision:never_pad')
     vals = [v for v in subj.get('value_to_carry') or [] if isinstance(v, dict)]
-    vids = [str(v.get('id') or '').strip() for v in vals]
-    if not vals or len(set(vids)) != len(vids) or '' in vids:
-        iss.append('subject_needs_value_to_carry_with_distinct_ids')
-    iss += material_issues('subject_value', vals, known, (ch or {}).get('factual'), id_key='id')
-    for v in vals:
-        if n_words(v.get('why_it_matters')) < 4:
-            iss.append(f'subject_value_{v.get("id")}_missing_why_it_matters')
-    if kind in ('topic', 'story') and ch is not None:
-        want, got = _content_tokens(sc.get('user_words')), _content_tokens(ch.get('subject'))
-        if want and not (want & got):
-            warn.append(f'the chosen subject shares no word with the user\'s {kind} ("{sc.get("user_words")}"): '
-                        'is it still theirs?')
+    iss += value_issues(vals, ch)
     return iss, warn
 
 
@@ -2245,30 +2518,105 @@ def card_moment_issues(card, ident):
 
 def subject_handoff_issues(direction, beats):
     """The researched value reaches the film: each value_to_carry item is carried by a beat (`carries`) or dropped with
-    a reason; at least one key moment carries researched value; a contested item carried by a key moment keeps that
-    moment contested (and so hedged)."""
+    a reason, and not before what it needs first (needs_first); a key moment that carries one keeps its certainty (a
+    contested value stays contested, a speculative or assumed one is said as speculative). Key moments are the
+    director's call where the video turns or pays off; a video whose value builds up step by step needs none, and no
+    milestone is invented to have one (2026-11-24)."""
     subj = (direction or {}).get('subject')
     if not isinstance(subj, dict):
         return []
     vals = {str(v.get('id')): v for v in subj.get('value_to_carry') or [] if isinstance(v, dict)}
     dropped = {str(x.get('id')) for x in subj.get('dropped') or [] if isinstance(x, dict) and n_words(x.get('why')) >= 4}
-    carried, iss = {}, []
-    is_key = lambda b: b.get('key_moment') not in (None, False) and bool(str(b.get('key_moment')).strip())
-    for b in beats or []:
+    carried, first, iss = {}, {}, []
+    for k, b in enumerate(beats or []):
         for r in b.get('carries') or []:
             r = str(r).strip()
             if r not in vals:
                 iss.append(f'beat_{b.get("id")}_carries_unknown_value:{r}')
+                continue
             carried.setdefault(r, []).append(b)
+            first.setdefault(r, k)
     for rid, v in vals.items():
         if rid not in carried and rid not in dropped:
             iss.append(f'researched_value_{rid}_reaches_no_beat:carry_it_or_drop_it_with_the_reason_in_subject.dropped')
+        cert = str(v.get('certainty') or '').strip().lower()
         for b in carried.get(rid, []):
-            if (is_key(b) and str(v.get('certainty') or '').lower() == 'contested'
-                    and str((b.get('significance') or {}).get('certainty') or 'established').lower() != 'contested'):
-                iss.append(f'beat_{b.get("id")}_carries_contested_{rid}_but_states_it_as_established')
-    if vals and not any(is_key(b) and b.get('carries') for b in beats or []):
-        iss.append('no_key_moment_carries_researched_value:mark_where_the_researched_value_lands')
+            if not is_key_moment(b):
+                continue
+            said = str((b.get('significance') or {}).get('certainty') or 'established').strip().lower()
+            if cert == 'contested' and said != 'contested':
+                iss.append(f'beat_{b.get("id")}_carries_contested_{rid}_but_states_it_as_{said}')
+            elif cert in ('speculative', 'assumed') and said != 'speculative':
+                iss.append(f'beat_{b.get("id")}_carries_{cert}_{rid}_but_states_it_as_{said}')
+        for u in _ids(v.get('needs_first')):
+            if u not in vals or rid not in first:
+                continue
+            if u not in first:
+                iss.append(f'researched_value_{rid}_needs_{u}_first_but_{u}_reaches_no_beat')
+            elif first[u] > first[rid]:
+                iss.append(f'researched_value_{rid}_lands_before_{u}_which_it_needs_first')
+    return iss
+
+
+def value_script_issues(direction, beats, lines, claims):
+    """The researched value is said, and said as surely as it is known: a factual value carried by a beat has one of
+    its claims tied (claims.json line_refs) to a line of that beat; a contested, speculative or assumed value carried
+    by an ordinary beat names the line that keeps it honest (beat `hedges`: {value: line}), at the beat or after it
+    (a key moment keeps its own: significance.hedge)."""
+    subj = (direction or {}).get('subject')
+    if not isinstance(subj, dict) or not lines:
+        return []
+    sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
+    ch = next((c for c in subj.get('candidates') or [] if isinstance(c, dict)
+               and str(c.get('id')) == str(sel.get('candidate'))), {})
+    mats = {str(m.get('id')).strip(): m for m in ch.get('strongest_material') or [] if isinstance(m, dict)}
+    vals = {str(v.get('id')): v for v in subj.get('value_to_carry') or [] if isinstance(v, dict)}
+    cidx = claims_index(claims)
+    order = [str((l or {}).get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
+    pos = {lid: i + 1 for i, lid in enumerate(order)}
+
+    def beat_lines(b):
+        try:
+            return order[int(b['line_start']) - 1:int(b['line_end'])]
+        except (KeyError, TypeError, ValueError):
+            return []
+
+    def claims_of(mid, depth=0):
+        m = mats.get(mid) or {}
+        out = set(_ids(m.get('claims')))
+        if depth < 3:
+            for f in _ids(m.get('from')):
+                out |= claims_of(f, depth + 1)
+        return out
+    by_val, iss = {}, []
+    for b in beats or []:
+        for r in b.get('carries') or []:
+            by_val.setdefault(str(r).strip(), []).append(b)
+    for rid, bs in by_val.items():
+        v = vals.get(rid)
+        if not v:
+            continue
+        cert = str(v.get('certainty') or '').strip().lower()
+        if ch.get('factual') is not False:
+            cs = {c for mid in _ids(v.get('rests_on')) for c in claims_of(mid) if c in cidx}
+            if cs:
+                said = {str(x) for c in cs for x in cidx[c].get('line_refs') or []}
+                if not said & {l for b in bs for l in beat_lines(b)}:
+                    iss.append(f'researched_value_{rid}_carried_by_{"_".join(str(b.get("id")) for b in bs)}_but_no_line_'
+                               'there_is_tied_to_its_claims:' + ','.join(sorted(cs)))
+        if cert in HEDGED_CERTAINTIES:
+            for b in bs:
+                if is_key_moment(b):
+                    continue
+                h = str((b.get('hedges') or {}).get(rid) or '') if isinstance(b.get('hedges'), dict) else ''
+                if h not in pos:
+                    iss.append(f'beat_{b.get("id")}_carries_{cert}_{rid}_without_the_line_that_says_so:hedges.{rid}')
+                else:
+                    try:
+                        if pos[h] < int(b.get('line_start')):
+                            iss.append(f'beat_{b.get("id")}_hedge_for_{rid}_comes_before_the_beat')
+                    except (TypeError, ValueError):
+                        pass
     return iss
 
 
@@ -2279,11 +2627,20 @@ def key_moment_shot_issues(direction, beats, shots):
         return []
     out = []
     for b in beats or []:
-        if b.get('key_moment') in (None, False) or not str(b.get('key_moment')).strip():
+        if not is_key_moment(b):
             continue
         mine = [s for s in shots or [] if str(s.get('beat_id')) == str(b.get('id'))]
         if mine and not any(n_words(s.get('carries_significance')) >= 4 for s in mine):
             out.append(f'key_moment_{b.get("id")}_no_shot_says_how_the_picture_carries_it:carries_significance')
+    return out
+
+
+def music_beat_direction(b):
+    """What a music caption is written from, per beat: its sound, experience and pace, and at a key moment what the
+    moment means (the bed serves the moment; it never invents one)."""
+    out = {k: (b or {}).get(k) for k in ('sound_direction', 'experience', 'pace')}
+    if is_key_moment(b):
+        out.update({'key_moment': b.get('key_moment'), 'matters_because': (b.get('significance') or {}).get('matters_because')})
     return out
 
 
@@ -2342,9 +2699,10 @@ def direction_facts(rd, video):
     lock_now = read_json(vd / 'direction-lock.json')
     ll = read_json(vd / 'length-lock.json')
     if 'subject' in d or not lock_now:
-        src_p = rd / '30-research' / f'video-{int(video):02d}' / 'sources.md'
+        src_p = sources_path(rd, video)
         s_iss, s_warn = subject_issues(d.get('subject'), src_p.read_text(encoding='utf-8', errors='replace')
-                                       if src_p.is_file() else '', ll.get('target_length_s'), refs, ll.get('niche'))
+                                       if src_p.is_file() else '', ll.get('target_length_s'), refs, ll.get('niche'),
+                                       read_json(claims_path(rd, video)))
         iss += s_iss
         warn += s_warn
         for v in refs:
@@ -2391,7 +2749,7 @@ def direction_facts(rd, video):
                 iss.append(f'treatment_{tid}_missing_{k}')
         samples = t.get('samples') if isinstance(t.get('samples'), dict) else {}
         for m in SAMPLE_MOMENTS:
-            s = samples.get(m) if isinstance(samples.get(m), dict) else {}
+            s = sample_of(samples, m)
             if n_words(strip_tags(s.get('narration') or '')) < MIN_SAMPLE_WORDS:
                 iss.append(f'treatment_{tid}_sample_{m}_narration_under_{MIN_SAMPLE_WORDS}_words')
             if n_words(s.get('picture')) < MIN_PICTURE_WORDS:
@@ -2400,7 +2758,7 @@ def direction_facts(rd, video):
         for j in range(i + 1, len(trs)):
             def toks(t):
                 s = t.get('samples') if isinstance(t.get('samples'), dict) else {}
-                return _content_tokens(' '.join(str((s.get(m) or {}).get('narration') or '') for m in SAMPLE_MOMENTS))
+                return _content_tokens(' '.join(str(sample_of(s, m).get('narration') or '') for m in SAMPLE_MOMENTS))
             sim = _jaccard(toks(trs[i]), toks(trs[j]))
             if sim >= 0.6:
                 warn.append(f'treatments {tids[i]} and {tids[j]} share {sim:.0%} of their sample vocabulary: '
@@ -2442,22 +2800,31 @@ FIELD_EFFECTS = {
     'treatment.sound': ('beat-map', 'music', 'edit'),
     'treatment.audiovisual_relationship': ('beat-map', 'shot-plan', 'edit'),
     'treatment.emotional_course': ('beat-map', 'script'),
-    # another subject is another film; the researched value is what the beat map, script and shots must carry
+    # Another subject is another film. A new angle on the same subject (the chosen candidate's own description) is
+    # another story: the plan files follow it, and the media follow the plan (a still its shot's changed prompt, a
+    # recorded part its changed lines). A researched value that changes reaches only the beats that carry it, their
+    # lines and their shots (VALUE_KEY, scoped by direction-lock: value_change_scope). The research behind the choice,
+    # the other candidates and the reasons feed nothing; a corrected source or claim is re-checked where it is used
+    # (research_changes), never rebuilt.
     'subject.selection.candidate': ALL_ARTIFACTS,
-    'subject.value_to_carry': ('beat-map', 'script', 'shot-plan'),
+    'subject.chosen': ('beat-map', 'script', 'shot-plan'),
+    'subject.value_to_carry': ('beat-map', 'script', 'shot-plan'),   # a lock from before values were hashed one by one
 }
 NO_EFFECT = ('evidence', 'approaches', 'other_treatments', 'decision.reasons', 'chosen_approach.why',
              'chosen_approach.runner_up', 'chosen_approach.why_not_runner_up', 'strategy.why_this_idea',
              'strategy.fits_and_forced', 'strategy.distinct_from_references', 'treatment.name',
              'treatment.evidence_used', 'treatment.departures', 'treatment.risks', 'treatment.samples',
              'subject.scope', 'subject.audience_value', 'subject.from_references', 'subject.candidates',
-             'subject.selection.reasons', 'subject.runtime_decision', 'subject.dropped')
+             'subject.chosen.research', 'subject.other_candidates', 'subject.selection.reasons',
+             'subject.runtime_decision', 'subject.dropped')
 TREATMENT_REREAD_BELOW = 0.7   # under this share of its blind read's vocabulary, the chosen treatment is a new one
 
 
 def field_effects(key):
     """The artifacts a change to this part of direction.json must be followed by; a part this table doesn't know is
     assumed to matter for all of them."""
+    if key.startswith(VALUE_KEY):
+        return ('beat-map', 'script', 'shot-plan')        # scoped to the parts that carry it (direction-lock)
     if key in FIELD_EFFECTS:
         return FIELD_EFFECTS[key]
     if key in NO_EFFECT or key.startswith('other.'):
@@ -2508,8 +2875,16 @@ def direction_sections(d):
         sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
         out['subject.selection.candidate'] = canonical_sha(sel.get('candidate'))
         out['subject.selection.reasons'] = canonical_sha({k: v for k, v in sel.items() if k != 'candidate'})
+        cands = {str(c.get('id')): c for c in subj.get('candidates') or [] if isinstance(c, dict)}
+        ch = cands.get(str(sel.get('candidate'))) or {}
+        out['subject.chosen'] = canonical_sha({k: ch.get(k) for k in CHOSEN_CORE_KEYS})
+        out['subject.chosen.research'] = canonical_sha({k: v for k, v in ch.items() if k not in CHOSEN_CORE_KEYS})
+        out['subject.other_candidates'] = canonical_sha({k: v for k, v in cands.items() if k != str(sel.get('candidate'))})
+        for v in subj.get('value_to_carry') or []:
+            if isinstance(v, dict):
+                out[VALUE_KEY + str(v.get('id'))] = canonical_sha(v)
         for k, v in subj.items():
-            if k != 'selection':
+            if k not in ('selection', 'candidates', 'value_to_carry'):
                 out['subject.' + k] = canonical_sha(v)
     for k, v in d.items():
         if k not in ('evidence', 'approaches', 'treatments', 'decision', 'chosen_approach', 'strategy', 'subject'):
@@ -2522,7 +2897,7 @@ def treatment_text(t):
     t = t if isinstance(t, dict) else {}
     s = t.get('samples') if isinstance(t.get('samples'), dict) else {}
     return ' '.join([str(t.get(k) or '') for k in TREATMENT_KEYS] +
-                    [str((s.get(m) or {}).get(x) or '') for m in SAMPLE_MOMENTS for x in ('narration', 'picture')])
+                    [str(sample_of(s, m).get(x) or '') for m in SAMPLE_MOMENTS for x in ('narration', 'picture')])
 
 
 def chosen_treatment_of(d):
@@ -2578,6 +2953,15 @@ def stale_files(rd, video, names=TRACKED_FILES):
         if not req:
             continue
         cur = artifact_sha(rd, video, name)
+        if isinstance(req.get('parts'), dict):
+            # a change scoped to some parts (a researched value: the beats that carry it, their lines, their shots):
+            # only those parts left exactly as they were are waiting; the rest of the file is free
+            now_parts = artifact_parts(rd, video, name) if cur is not None else {}
+            waiting = [p for p, sha in req['parts'].items() if now_parts.get(p) == sha]
+            ra = reapproved_for(lock, name)
+            if waiting and not (ra and ra.get('sha256') == cur):
+                out[name] = f"{name.replace('-', '_')}_made_for_an_earlier_direction:" + ','.join(waiting)
+            continue
         if cur is None or cur != req.get('baseline'):
             continue                         # absent, or changed since the direction did: its own checks apply
         ra = reapproved_for(lock, name)
@@ -2585,6 +2969,108 @@ def stale_files(rd, video, names=TRACKED_FILES):
             continue
         out[name] = f"{name.replace('-', '_')}_made_for_an_earlier_direction"
     return out
+
+
+PART_TIMING_KEYS = ('start_s', 'end_s', 'duration_s')
+
+
+def part_sha(obj):
+    """One beat, line or shot as content: its timing (retime-shots rewrites it) is not what a revision asks about."""
+    return canonical_sha({k: v for k, v in (obj or {}).items()
+                          if k not in PART_TIMING_KEYS and not str(k).startswith('planned_')})
+
+
+def artifact_parts(rd, video, name):
+    """A plan file part by part ({id: sha}): the beats of the beat map, the lines of the script, the shots of the shot
+    plan."""
+    data = read_json(artifact_path(rd, video, name))
+    if name == 'script':
+        return {str(r.get('id') or f'L{i + 1:03d}'): part_sha(r) for i, r in enumerate(data.get('lines') or [])
+                if isinstance(r, dict)}
+    key = {'beat-map': 'beats', 'shot-plan': 'shots'}.get(name)
+    return {str(r.get('id')): part_sha(r) for r in data.get(key) or [] if isinstance(r, dict)} if key else {}
+
+
+def value_change_scope(rd, video, vids):
+    """What a change to these researched values reaches: the beats that carry them, the lines of those beats and the
+    shots of those beats, each at its current content ({artifact: {part: sha}}). Nothing else is touched."""
+    vids = {str(v) for v in vids or []}
+    if not vids:
+        return {}
+    beats = read_json(artifact_path(rd, video, 'beat-map')).get('beats') or []
+    hit = [b for b in beats if isinstance(b, dict) and vids & {str(x).strip() for x in b.get('carries') or []}]
+    if not hit:
+        return {}
+    out = {'beat-map': {str(b.get('id')): part_sha(b) for b in hit}}
+    lines = read_json(artifact_path(rd, video, 'script')).get('lines') or []
+    order = [str((l or {}).get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
+    lp = artifact_parts(rd, video, 'script')
+    sel = {}
+    for b in hit:
+        try:
+            for lid in order[int(b['line_start']) - 1:int(b['line_end'])]:
+                sel[lid] = lp.get(lid)
+        except (KeyError, TypeError, ValueError):
+            pass
+    if sel:
+        out['script'] = sel
+    bids = {str(b.get('id')) for b in hit}
+    shots = read_json(artifact_path(rd, video, 'shot-plan')).get('shots') or []
+    sp = {str(s.get('id')): part_sha(s) for s in shots if isinstance(s, dict) and str(s.get('beat_id')) in bids}
+    if sp:
+        out['shot-plan'] = sp
+    return out
+
+
+def research_hashes(rd, video):
+    """The research as the direction was locked on it: each ledger entry and each claim (its links to script lines
+    left out: writing them is not a change of research)."""
+    sp = sources_path(rd, video)
+    led = ledger_entries(sp.read_text(encoding='utf-8', errors='replace') if sp.is_file() else '')
+    cl = claims_index(read_json(claims_path(rd, video)))
+    return {'sources': {k: v['sha256'] for k, v in led.items()},
+            'claims': {k: canonical_sha({x: y for x, y in c.items() if x != 'line_refs'}) for k, c in cl.items()}}
+
+
+def research_changes(rd, video, lock):
+    """Sources and claims that changed or went away since the direction was locked (or last re-checked), and what
+    rests on them: the claims citing a changed source, the script lines those claims are tied to, the chosen subject's
+    material and the values that rest on them. A correction is re-checked where it is used, never rebuilt: only a value
+    that itself changes needs a direction revision. {} when nothing changed, None for a lock made before this record."""
+    was = (lock or {}).get('research')
+    if not isinstance(was, dict):
+        return None
+    cur = research_hashes(rd, video)
+    ch_s = sorted(k for k, v in (was.get('sources') or {}).items() if cur['sources'].get(k) != v)
+    ch_c = sorted(k for k, v in (was.get('claims') or {}).items() if cur['claims'].get(k) != v)
+    if not ch_s and not ch_c:
+        return {}
+    cl = claims_index(read_json(claims_path(rd, video)))
+    recheck = sorted(set(ch_c) | {cid for cid, c in cl.items() if set(_ids(c.get('sources'))) & set(ch_s)})
+    lines = sorted({str(r) for cid in recheck for r in (cl.get(cid) or {}).get('line_refs') or []})
+    subj = read_json(video_dir(rd, video) / 'direction.json').get('subject')
+    mats, vals = [], []
+    if isinstance(subj, dict):
+        sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
+        ch = next((c for c in subj.get('candidates') or [] if isinstance(c, dict)
+                   and str(c.get('id')) == str(sel.get('candidate'))), {})
+        mats = [str(m.get('id')) for m in ch.get('strongest_material') or [] if isinstance(m, dict)
+                and (set(_ids(m.get('claims'))) & set(recheck) or set(_ids(m.get('sources'))) & set(ch_s))]
+        vals = [str(v.get('id')) for v in subj.get('value_to_carry') or [] if isinstance(v, dict)
+                and set(_ids(v.get('rests_on'))) & set(mats)]
+    return {'sources': ch_s, 'claims': ch_c, 'claims_to_recheck': recheck, 'lines': lines, 'material': mats,
+            'values': vals}
+
+
+def research_note(rc):
+    parts = [f'sources {",".join(rc["sources"])}' if rc.get('sources') else '',
+             f'claims {",".join(rc["claims"])}' if rc.get('claims') else '']
+    reach = [f'claims to re-check {",".join(rc["claims_to_recheck"])}' if rc.get('claims_to_recheck') else '',
+             f'their lines {",".join(rc["lines"])}' if rc.get('lines') else '',
+             f'material {",".join(rc["material"])} and values {",".join(rc["values"]) or "none"}' if rc.get('material') else '']
+    return ('research changed since the direction was locked (' + '; '.join(p for p in parts if p) + '): re-check ' +
+            ('; '.join(r for r in reach if r) or 'where they are used') + '. Nothing is rebuilt for a correction; a '
+            'value that changes is a direction revision. Then: direction-lock --research-rechecked "what you checked"')
 
 
 def narration_outdated_parts(lock, manifest):
@@ -2735,11 +3221,11 @@ def beat_significance_issues(beats, lines):
         if not (b.get('depends_on') or []) and n_words(sg.get('self_contained')) < 4:
             issues.append(f'beat_{bid}_key_moment_needs_what_the_viewer_must_know_first:depends_on_or_self_contained')
         cert = str(sg.get('certainty') or 'established').strip().lower()
-        if cert not in ('established', 'contested'):
-            issues.append(f'beat_{bid}_significance_certainty_must_be_established_or_contested')
-        elif cert == 'contested' and str(sg.get('hedge') or '') not in ids:
-            issues.append(f'beat_{bid}_contested_significance_needs_the_line_that_hedges_it:significance.hedge')
-        elif cert == 'contested':
+        if cert not in SIGNIFICANCE_CERTAINTIES:
+            issues.append(f'beat_{bid}_significance_certainty_must_be:' + '/'.join(SIGNIFICANCE_CERTAINTIES))
+        elif cert in ('contested', 'speculative') and str(sg.get('hedge') or '') not in ids:
+            issues.append(f'beat_{bid}_{cert}_significance_needs_the_line_that_hedges_it:significance.hedge')
+        elif cert in ('contested', 'speculative'):
             # the hedge qualifies the claim where the viewer meets it: at the moment or after it, never before it
             pos = {str((l or {}).get('id') or f'L{i + 1:03d}'): i + 1 for i, l in enumerate(lines)}
             try:
@@ -2908,10 +3394,11 @@ def media_gate(job, kind):
         trs = {str(t.get('id')): t for t in d.get('treatments') or [] if isinstance(t, dict)}
         for i, it in enumerate(items, 1):
             t, m = trs.get(str(it.get('treatment'))), str(it.get('moment') or '')
+            m = next((k for k, al in SAMPLE_ALIASES.items() if m in al), m)
             if not t or m not in SAMPLE_MOMENTS:
                 iss.append(f'item_{i}_must_name_a_treatment_and_a_sample_moment')
                 continue
-            pic = ((t.get('samples') or {}).get(m) or {}).get('picture')
+            pic = sample_of(t.get('samples'), m).get('picture')
             if not _norm(pic) or _norm(pic) not in _norm(it.get('prompt')):
                 iss.append(f'item_{i}_prompt_does_not_carry_its_sample_picture')
             iss += prompt_flag_issues(f'item_{i}_prompt', prompt_flags(it.get('prompt'), excluded_themes(rd, n)),
@@ -2938,15 +3425,24 @@ def media_gate(job, kind):
     beats = {str(b.get('id')): b for b in read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or []}
     if kind == 'stills':
         sf = shot_facts(rd, n)
-        iss += sf['issues']
+        # a shot of a beat that changed since the shot plan's last check waits for it; the other shots go ahead
+        waiting = {sid: bid for bid, sids in (sf.get('changed_beats') or {}).items() for sid in sids}
+        iss += [x for x in sf['issues'] if not (x.startswith('beat_') and '_changed_since_its_shots_were_checked:' in x)]
         out['warnings'] += sf['warnings']
         shots = {str(s.get('id')): s for s in read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []}
         out['direction'] = {'treatment': treatment, 'visual_language': chosen.get('visual_language'), 'items': []}
         themes_now = excluded_themes(rd, n)
+        dsub = read_json(video_dir(rd, n) / 'direction.json').get('subject')
+        vals = ({str(v.get('id')): v for v in dsub.get('value_to_carry') or [] if isinstance(v, dict)}
+                if isinstance(dsub, dict) else {})
         for i, it in enumerate(items, 1):
             s = shots.get(str(it.get('shot_id') or it.get('id') or ''))
             if not s:
                 iss.append(f'item_{i}_must_name_a_shot_of_the_shot_plan')
+                continue
+            if str(s.get('id')) in waiting:
+                iss.append(f'item_{i}_shot_{s.get("id")}_waits:its_beat_{waiting[str(s.get("id"))]}_changed_since_the_'
+                           'shot_plan_was_checked')
                 continue
             if s.get('reuses'):
                 iss.append(f'item_{i}_shot_{s.get("id")}_is_a_callback_of_{s.get("reuses")}_nothing_to_generate')
@@ -2965,6 +3461,16 @@ def media_gate(job, kind):
                 item.update({'key_moment': b.get('key_moment'),
                              'matters_because': (b.get('significance') or {}).get('matters_because'),
                              'carries_significance': s.get('carries_significance')})
+            carried = [vals[r] for r in (str(x).strip() for x in b.get('carries') or []) if r in vals]
+            if carried:
+                # the research this beat delivers, as surely as it is known: a speculative or contested value is not
+                # pictured as a documented fact, an assumption not as an observation
+                item['carries_values'] = [{'id': v.get('id'), 'what': v.get('what'),
+                                           'why_it_matters': v.get('why_it_matters'), 'certainty': v.get('certainty'),
+                                           **({'framing': v.get('hedge') or v.get('framed_as')}
+                                              if v.get('hedge') or v.get('framed_as') else {})} for v in carried]
+                if s.get('carries_significance') and 'carries_significance' not in item:
+                    item['carries_significance'] = s.get('carries_significance')
             out['direction']['items'].append(item)
             out['records'].append({'shot_id': str(s.get('id')), 'beat_id': str(s.get('beat_id')),
                                    'frame_prompt_sha256': hashlib.sha256(fp.encode('utf-8')).hexdigest(),
@@ -2979,8 +3485,7 @@ def media_gate(job, kind):
                 iss.append(f'track_{i}_is_for_another_video')
             if n_words(it.get('caption')) < 3:
                 iss.append(f'track_{i}_missing_caption')
-            out['direction']['items'].append({'beats': {b: {k: (beats.get(b) or {}).get(k) for k in
-                                                            ('sound_direction', 'experience', 'pace')} for b in bs}})
+            out['direction']['items'].append({'beats': {b: music_beat_direction(beats.get(b) or {}) for b in bs}})
             out['records'].append({'beats': bs, 'caption_sha256': hashlib.sha256(_norm(it.get('caption')).encode('utf-8')).hexdigest(),
                                    'production_rev': rev, 'treatment': treatment})
     out['ok'] = not iss
@@ -3391,7 +3896,11 @@ def writing_signals(lines, language='en'):
     return out
 
 
-def shot_facts(rd, video):
+def shot_check_path(rd, video):
+    return rd / '60-visuals' / f'video-{int(video):02d}' / 'shot-check.json'
+
+
+def shot_facts(rd, video, keep=''):
     """The shot plan as a visual argument (04): every shot belongs to a beat and says what NEW thing its picture
     gives the viewer; every beat has a picture; lines run contiguously. Plus repetition signals: shots whose
     prompts are nearly the same, and long runs of one composition family."""
@@ -3480,6 +3989,25 @@ def shot_facts(rd, video):
             run = [s.get('id')] if fam else []
         prev = fam
     out['issues'] += key_moment_shot_issues(read_json(video_dir(rd, n) / 'direction.json'), beat_rows, shots)
+    # A beat changed since the shot plan last passed this check: its shots were planned for the beat as it was. The
+    # ones left exactly as they were are named (update them, or shot-check --keep "why they still fit"); the shots of
+    # the other beats and their stills are untouched (2026-11-24: precise, never wholesale).
+    snap = read_json(shot_check_path(rd, n))
+    out['changed_beats'] = {}
+    if isinstance(snap.get('beats'), dict):
+        now_b = {str(b.get('id')): part_sha(b) for b in beat_rows if isinstance(b, dict)}
+        for bid, sha in snap['beats'].items():
+            if bid in now_b and now_b[bid] != sha:
+                left = [str(s.get('id')) for s in shots if str(s.get('beat_id')) == bid
+                        and (snap.get('shots') or {}).get(str(s.get('id'))) == part_sha(s)]
+                if left:
+                    out['changed_beats'][bid] = left
+        for bid, left in out['changed_beats'].items():
+            msg = f'beat_{bid}_changed_since_its_shots_were_checked:{",".join(left)}'
+            if keep:
+                out['warnings'].append(f'{msg} (kept: {keep})')
+            else:
+                out['issues'].append(msg + ':update_them_or_shot-check_--keep_why_they_still_fit')
     out['overlays'] = sum(1 for s in shots if str(s.get('diagram_or_overlay')).lower() not in ('', 'false', 'none', '0'))
     out['ready'] = not out['issues']
     return out
@@ -3748,6 +4276,8 @@ def plan_facts(rd, video):
         issues.append('script_language_differs_from_length_lock')
     issues += beat_map_facts(rd, video, lines, lock['target_length_s'])
     issues += subject_handoff_issues(read_json(vd / 'direction.json'), (beats or {}).get('beats') or [])
+    issues += value_script_issues(read_json(vd / 'direction.json'), (beats or {}).get('beats') or [], lines,
+                                  read_json(claims_path(rd, video)))
     # Spoken words only: inline [audio tags] are sent to ElevenLabs but never spoken (count_words strips them).
     words = sum(count_words(x.get('text', '')) for x in lines)
     tags, tag_issues = script_tags(lines)
@@ -3786,6 +4316,9 @@ def plan_facts(rd, video):
     gate, dlock, dfacts = direction_gate(rd, video)
     issues += gate
     warnings += dfacts['warnings']
+    rc = research_changes(rd, video, dlock)
+    if rc:
+        warnings.append(research_note(rc))
     if dlock.get('late_reason'):
         warnings.append('creative direction was locked after the script existed: ' + str(dlock['late_reason']))
     # Made for an earlier direction (or before there was one): updated for real, or explicitly reapproved.
@@ -3897,11 +4430,14 @@ def plan_facts(rd, video):
     numbers_without_claim = [str(x.get('id')) for x in lines
                              if number_rx.search(strip_tags(x.get('text') or '')) and str(x.get('id')) not in covered]
     beat_list = (beats or {}).get('beats') or []
-    if beat_list and not any(b.get('key_moment') not in (None, False) and str(b.get('key_moment')).strip()
-                             for b in beat_list):
+    if (beat_list and n_words(blue.get('reward_shape')) < MIN_FIELD_WORDS
+            and not any(b.get('key_moment') not in (None, False) and str(b.get('key_moment')).strip()
+                        for b in beat_list)):
+        # a video whose value builds up says so in reward_shape and needs no key moment; one that turns or pays off
+        # names where (key_moment + significance), so the readers' accounts can be weighed against it
         warnings.append('no beat is marked as a key moment: name the developments this video is built around, what each '
-                        'means to its viewer and what it pays (beat map key_moment + significance), so the readers\' '
-                        'accounts can be weighed against them')
+                        'means to its viewer and what it pays (beat map key_moment + significance), or, when its value '
+                        'builds up instead, say how in the blueprint\'s reward_shape')
     voice_pace = measured.get('forecast_wpm') or measured.get('wpm')
     if voice_pace and script.get('pace_wpm') and abs(float(script['pace_wpm']) - float(voice_pace)) > 3:
         warnings.append(f"script pace_wpm {script['pace_wpm']} differs from the voice's measured {voice_pace} "
@@ -8513,8 +9049,23 @@ def cmd_direction_lock(args):
     lockp = vd / 'direction-lock.json'
     prev = read_json(lockp)
     if prev and prev.get('direction_sha256') == df['direction_sha256']:
+        rc = research_changes(rd, n, prev)
+        if rc and getattr(args, 'research_rechecked', ''):
+            # a corrected source or claim, re-checked where it is used: recorded, and nothing in production follows
+            if n_words(args.research_rechecked) < MIN_NOTE_WORDS:
+                error('Say what was re-checked, where, and what it changed (a few words at least).')
+            prev['research'] = research_hashes(rd, n)
+            prev['history'] = (prev.get('history') or []) + [{'at': now(), 'research_rechecked': args.research_rechecked,
+                                                              'changed': rc}]
+            write_json(lockp, prev)
+            emit({'ok': True, 'unchanged': True, 'research_rechecked': rc, 'lock': str(lockp),
+                  'production_rev': prev.get('production_rev'),
+                  'note': 'Recorded. Nothing is rebuilt for a correction; a researched value that changes is a revision '
+                          'of direction.json (direction-lock --revise), which reaches only the beats that carry it.'})
+            return
         emit({'ok': True, 'unchanged': True, 'lock': str(lockp), 'treatment': prev.get('treatment'),
-              'production_rev': prev.get('production_rev')})
+              'production_rev': prev.get('production_rev'),
+              **({'research_changed': rc, 'next': research_note(rc)} if rc else {})})
         return
     d = read_json(vd / 'direction.json')
     trs = {str(t.get('id')): t for t in d.get('treatments') or [] if isinstance(t, dict)}
@@ -8544,7 +9095,10 @@ def cmd_direction_lock(args):
     script_exists = (vd / 'script.json').is_file()
     entry = {'locked_at': now(), 'direction_sha256': df['direction_sha256'],
              'treatments_sha256': df['treatments_sha256'], 'treatment': df['chosen_treatment'],
-             'script_existed': script_exists, 'sections': sections, 'reviewed_treatments': reviewed}
+             'script_existed': script_exists, 'sections': sections, 'reviewed_treatments': reviewed,
+             # the research the direction rests on, as it is now; a later correction is re-checked where it is used
+             'research': (research_hashes(rd, n) if not prev or not isinstance(prev.get('research'), dict)
+                          or getattr(args, 'research_rechecked', '') else prev['research'])}
     if not prev:
         if script_exists and not args.late:
             error('A script already exists: the creative direction is decided and locked BEFORE scriptwriting. For a '
@@ -8561,16 +9115,33 @@ def cmd_direction_lock(args):
             error('The direction changed since it was locked. Re-lock with --revise "what changed and why".')
         old = prev.get('sections') or {}
         changed = sorted(k for k in set(old) | set(sections) if old.get(k) != sections.get(k))
-        hit = [a for a in ALL_ARTIFACTS if any(a in field_effects(k) for k in changed)]
+        # what each change reaches: whole artifacts for most fields; for a researched value only the beats that carry
+        # it, their lines and their shots (2026-11-24: no wholesale rebuild for a bounded change)
+        whole = [a for a in ALL_ARTIFACTS if any(a in field_effects(k) for k in changed if not k.startswith(VALUE_KEY))]
+        scope = value_change_scope(rd, n, [k[len(VALUE_KEY):] for k in changed if k.startswith(VALUE_KEY)])
+        hit = [a for a in ALL_ARTIFACTS if a in whole or scope.get(a)]
         rev = prev.get('production_rev', 1)
         history = (prev.get('history') or []) + [{k: prev.get(k) for k in ('locked_at', 'direction_sha256', 'treatment',
                                                                           'production_rev')}
-                                                 | {'revised_because': args.revise, 'changed_sections': changed}]
+                                                 | {'revised_because': args.revise, 'changed_sections': changed,
+                                                    **({'scoped': {a: sorted(p) for a, p in scope.items()
+                                                                   if p and a not in whole}} if scope else {})}]
         lock = {**prev, **entry, 'history': history, 'changed_sections': changed, 'affects': hit}
         if hit:   # meaningful: a new revision, and each artifact it touches must follow it
             required = dict(prev.get('required') or {})
+            waiting = stale_files(rd, n)          # what an earlier change still waits for (the lock on disk)
             for a in hit:
-                required[a] = {'rev': rev + 1, **({'baseline': artifact_sha(rd, n, a)} if a in TRACKED_FILES else {})}
+                old_req = required.get(a) or {}
+                if a in whole or a not in scope:
+                    required[a] = {'rev': rev + 1, **({'baseline': artifact_sha(rd, n, a)} if a in TRACKED_FILES else {})}
+                elif a in waiting and 'baseline' in old_req:
+                    continue          # the whole file still waits for an earlier change, which covers these parts
+                else:
+                    parts = dict(scope[a])
+                    if a in waiting and isinstance(old_req.get('parts'), dict):
+                        now_parts = artifact_parts(rd, n, a)
+                        parts = {**{p: sha for p, sha in old_req['parts'].items() if now_parts.get(p) == sha}, **parts}
+                    required[a] = {'rev': rev + 1, 'parts': parts}
             lock.update({'production_rev': rev + 1, 'required': required,
                          'reapproved': {k: v for k, v in (prev.get('reapproved') or {}).items() if k not in hit}})
     write_json(lockp, lock)
@@ -8755,6 +9326,14 @@ Write your answer as JSON, and nothing else, to: {OUT}
 }}
 """
 
+TREATMENT_REQUEST = """
+## What was asked for
+
+The person who asked for this video asked for exactly this: "{REQUEST}". As well as your other answers, say for each
+treatment whether it is a video about that, "yes", "partly" or "no", and why, in one more key of your JSON:
+"on_request": {"A": "yes: ...", "B": "partly: ..."}
+"""
+
 FINAL_BRIEF = """# Final watch review: {TITLE}
 
 You review the finished video as a viewer would experience it. You cannot play it; you have its watch sheets: one
@@ -8909,16 +9488,24 @@ def cmd_review_packet(args):
         premise = ' '.join(x for x in (str(blue.get('audience_promise') or ''), str(chosen.get('pitch') or '')) if x)
         text = _fill(TREATMENT_BRIEF, K=len(trs), PREMISE=premise or '(see the samples)', MINUTES=minutes,
                      HOUSE_RULES=house_rules(rd, n), OUT=out_path)
+        # An exact topic or story: the reader also says whether each treatment is still a video about what was asked
+        # (word overlap can't tell; a fresh reader can). Its "partly" or "no" becomes a finding the director answers.
+        asked = (d.get('subject') or {}).get('scope') if isinstance(d.get('subject'), dict) else {}
+        asked = asked if isinstance(asked, dict) else {}
+        request = (str(asked.get('user_words') or '').strip()
+                   if str(asked.get('kind') or '').strip().lower() in ('topic', 'story') else '')
+        if request:
+            text += TREATMENT_REQUEST.replace('{REQUEST}', request)
         for lab, tid in labels.items():
             t = trs[tid]
             text += f'\n## Treatment {lab}\n'
             for k in TREATMENT_SHOWN_TO_REVIEWER:
                 text += f'- {k.replace("_", " ")}: {t.get(k)}\n'
             for m in SAMPLE_MOMENTS:
-                s = (t.get('samples') or {}).get(m) or {}
-                text += (f'\n### {m.replace("_", " ")}\nWhat you see: {s.get("picture")}\n'
+                s = sample_of(t.get('samples'), m)
+                text += (f'\n### {sample_label(t.get("samples"), m)}\nWhat you see: {s.get("picture")}\n'
                          f'What you hear: {strip_tags(s.get("narration") or "")}\n')
-        meta.update({'subject_sha256': subject, 'labels': labels})
+        meta.update({'subject_sha256': subject, 'labels': labels, **({'scope_request': request} if request else {})})
     else:
         if not args.file:
             error('The final review reads a real export: give --file export.mp4.')
@@ -9383,6 +9970,16 @@ def cmd_review_record(args):
     three_ways = kind in ('script', 'final') and brief_v >= 2
     if three_ways:
         problems += development_problems(kind, devs, order, brief_v)
+    on_req = {}
+    if kind == 'treatment' and meta.get('scope_request'):
+        given = raw.get('on_request') if isinstance(raw.get('on_request'), dict) else {}
+        for lab in meta.get('labels') or {}:
+            said = str(given.get(lab) or given.get(lab.lower()) or '').strip()
+            m_ = re.match(r'(yes|partly|no)\b', said.lower())
+            if not m_:
+                problems.append(f'on_request: treatment {lab} needs "yes", "partly" or "no", with why')
+            else:
+                on_req[lab] = (m_.group(1), said)
     if problems:
         error('The findings file does not follow the packet\'s format. Ask the reviewer to fix the format; never '
               'rewrite its judgement.', problems)
@@ -9393,6 +9990,25 @@ def cmd_review_record(args):
         derived = development_findings(kind, devs, taken, spans, order)
         derived += key_moment_findings(rd, vd, n, kind, devs, order, taken | {f['id'] for f in derived}, spans)
         findings = findings + derived
+    if on_req:
+        # "partly" or "no" on whether a treatment is still the video that was asked for: the director answers it
+        taken, q = {str(f.get('id')) for f in findings}, 0
+        for lab, (word, said) in on_req.items():
+            if word == 'yes':
+                continue
+            q += 1
+            while f'Q{q}' in taken:
+                q += 1
+            f = {'id': f'Q{q}', 'severity': 'major' if word == 'no' else 'minor', 'treatment': lab,
+                 'treatment_id': meta['labels'][lab],
+                 'problem': f'Asked whether treatment {lab} is a video about what was asked for '
+                            f'("{meta["scope_request"]}"), the reader answered: {said}',
+                 'viewer_impact': 'the person who asked would get another video than the one they asked for',
+                 'suggestion': 'bring the treatment back to the request, or answer why it still is that video',
+                 'derived_from': {'on_request': lab}}
+            derived.append(f)
+            findings = findings + [f]
+            taken.add(f['id'])
     rec = {'kind': kind, 'round': rnd, 'video': n, 'packet': str(folder / f'packet-{kind}-r{rnd}.md'),
            'subject_sha256': meta['subject_sha256'], 'subject_snapshot': meta.get('subject_snapshot'),
            'holds_snapshot': meta.get('holds_snapshot'),
@@ -9402,6 +10018,8 @@ def cmd_review_record(args):
            'at_normalized': normalized, 'findings_from': str(fpath), 'findings_outside_reader_folder': outside,
            'developments': devs if three_ways else None, 'derived_findings': [f['id'] for f in derived],
            'recorded_at': now()}
+    if on_req:
+        rec['on_request'] = raw.get('on_request')
     write_json(folder / f'{kind}-r{rnd}.json', rec)
     ans_path = folder / f'{kind}-r{rnd}-answers.json'
     if not ans_path.exists():
@@ -9420,7 +10038,23 @@ def cmd_review_record(args):
 
 def cmd_shot_check(args):
     rd, st = run_folder(args)
-    res = shot_facts(rd, args.video)
+    keep = getattr(args, 'keep', '') or ''
+    if keep and n_words(keep) < MIN_NOTE_WORDS:
+        error('Say why the shots of the changed beats still fit (a few words at least).')
+    res = shot_facts(rd, args.video, keep=keep)
+    if res['ready']:
+        # what this passing check saw, beat by beat and shot by shot: a beat changed later names its own shots
+        n = int(args.video)
+        prev = read_json(shot_check_path(rd, n))
+        hist = (prev.get('history') or []) + ([{'at': now(), 'kept': keep, 'beats': res.get('changed_beats')}]
+                                              if keep and res.get('changed_beats') else [])
+        write_json(shot_check_path(rd, n), {
+            'checked_at': now(),
+            'beats': {str(b.get('id')): part_sha(b) for b in read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or []
+                      if isinstance(b, dict)},
+            'shots': {str(s.get('id')): part_sha(s) for s in read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []
+                      if isinstance(s, dict)},
+            'history': hist})
     emit(res, 0 if res['ready'] else 2)
 
 
@@ -9506,6 +10140,10 @@ def cmd_release_check(args):
     issues = ([f'plan:{x}' for x in plan['issues']] + [f'audio:{x}' for x in audio['issues']] +
               [f'shots:{x}' for x in shots['issues']] + [f'edit:{x}' for x in edit['issues']] +
               [f'export:{x}' for x in exp['issues']] + fin['issues'])
+    rc = research_changes(rd, n, read_json(vd / 'direction-lock.json'))
+    if rc:
+        issues.append('research:changed_since_the_direction_lock_and_not_rechecked:' +
+                      ','.join(rc.get('sources', []) + rc.get('claims', [])))
     issues = list(dict.fromkeys(issues))
     warnings = list(dict.fromkeys(plan.get('warnings', []) + shots.get('warnings', []) + edit.get('warnings', []) +
                                   fin['warnings']))
@@ -9692,6 +10330,8 @@ def main():
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--late', default='', help='Only for a video whose script existed first: why (recorded, shown)')
     p.add_argument('--revise', default='', help='Re-lock a changed direction: what changed and why (kept in history)')
+    p.add_argument('--research-rechecked', default='', help='A source or claim changed after the lock: what was '
+                   're-checked where it is used (recorded; nothing is rebuilt)')
     p.set_defaults(func=cmd_direction_lock)
     p = sub.add_parser('review-packet', help='The bare material for ONE fresh reviewer agent')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
@@ -9713,6 +10353,8 @@ def main():
     p.set_defaults(func=cmd_review_read)
     p = sub.add_parser('shot-check', help='The shot plan as a visual argument, plus repetition signals')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--keep', default='', help='Beats changed since the last passing check: why their shots still fit '
+                   '(recorded)')
     p.set_defaults(func=cmd_shot_check)
     p = sub.add_parser('release-check', help='Every recorded gate for one export, final watch review included')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)

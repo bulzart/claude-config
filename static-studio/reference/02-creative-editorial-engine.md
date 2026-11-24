@@ -14,12 +14,18 @@ No title, hook or narrator performance can save a premise with only three minute
 
 Before any approach or treatment, find the strongest subject the user's scope allows, and write the reasoning in
 `direction.json` → `subject` (07). A weak subject is rarely rescued by production; an ordinary-looking one may hold an
-exceptional explanation. Polish does not decide this, the material does.
+exceptional explanation. The material decides this, not polish, fame or drama.
 
 - **Scope first.** The user gave a niche, a subject inside it, an exact topic, or an exact story or concept
-  (`scope.kind`; their own words in `user_words`; the locked niche in `niche`). Inside a niche or a subject, the subject
-  is ours to find. An exact topic or story is kept and developed (`selection.keeps_user_scope`, `how_scope_kept`): never
-  swapped for something more sensational, never moved to another niche. A limit it has is said plainly (below).
+  (`scope.kind`; their own words in `user_words`; the locked niche in `niche`). Inside a niche the subject is ours to
+  find; inside a broad subject, a narrower topic or an original angle within its bounds; an exact topic keeps its topic
+  and researches its strongest angles (the candidates are those angles); an exact story or concept is developed, never
+  replaced. For a subject, a topic or a story, write what the user asked for in your own words (`understood_as`) and
+  where it would stop being that (`boundary`), then how the choice stays inside it (`selection.how_scope_kept`; for an
+  exact topic or story also `keeps_user_scope: true`). Shared words prove nothing either way: "how a white rock paid
+  Roman soldiers" is still "the history of salt", and "salt in the kitchen" is not, whatever words they share. For an
+  exact topic or story the blind treatment reader is also asked whether each treatment is still a video about what was
+  asked (06); a "partly" or "no" is a finding you answer.
 - **What this audience values.** Read it from the references and the niche, never from one niche's idea of interesting:
   a history video may reward consequential decisions, a geography video an extraordinary phenomenon understood, a
   biology video a surprising mechanism, a tutorial a problem solved, a "what if" its logically developed consequences,
@@ -31,31 +37,80 @@ exceptional explanation. Polish does not decide this, the material does.
 - **Research the material, not titles.** For each promising candidate (an event, a mechanism, a phenomenon, a problem
   and its solution, a question, a relationship, a transformation, a concept), find what genuinely makes it worth a
   viewer's time: `what_happens` (what is discovered, explained, shown or experienced), `why_it_matters` (within this
-  subject and experience), `reward`, and its `strongest_material`, each item with its `certainty`: established (with
-  sources in the ledger, `30-research/video-NN/sources.md`), contested (how the film keeps it honest, `hedge`),
-  speculative (how it is framed, `framed_as`) or invented (only where the subject is not factual: a comedy's premise, a
-  fiction). Inside a broad subject look for the strongest angle, not the most famous event or a whole chronology; read
-  a timeline for turning points and dependencies when the subject has one.
+  subject and experience), `reward`, and its `strongest_material`, each item with an `id` (M1, M2...) and how sure the
+  film may be of it (`certainty`):
+  - established: a fact, resting on `claims` (claims.json) whose sources were read;
+  - reasoned: a consequence that follows from established items (`from`) by reasoning you state (`reasoning`);
+  - contested: credible sources disagree, or the evidence leaves it open; said with its `hedge`;
+  - speculative: a possibility beyond the evidence, said as one (`framed_as`);
+  - assumed: an explicit premise of a hypothetical, said as an assumption (`framed_as`);
+  - invented: only where the subject is not factual (a comedy's premise, a fiction).
+
+  Inside a broad subject look for the strongest angle, not the most famous event or a whole chronology; read a timeline
+  for turning points and dependencies when the subject has one.
+- **A recorded source is not evidence; the reading of it is.** Weigh each source before anything rests on it and write
+  what you found in its ledger entry: who made it and with what expertise; primary (the record, the study, the data),
+  secondary (an account of them) or popular (press, encyclopedias, videos); its date, and whether newer work replaced
+  it; whether it really says what you need (the claim itself, not a nearby one; the abstract's own hedges kept);
+  whether independent sources agree or disagree; and how much of it you read (`- Access:` read, indirect or snippet). A
+  search summary is a lead, never a source. Each consequential claim gets its confidence in claims.json: confirmed (a
+  primary record, or two or more independent credible sources, read), likely (one credible source), disputed (credible
+  sources disagree), legend (popular, unverified). Extraordinary claims need strong support: what the choice of subject
+  rests on (`selection.decisive_material`), when it is said as established, must be confirmed. Don't dismiss the
+  surprising either: a strange fact with strong evidence is exactly what this stage is looking for.
+  - Science: keep the mechanism accurate and the uncertainty where the evidence leaves it (a result in cultured cells is
+    not a result in people; a preprint is not a consensus; "may" in an abstract stays "may").
+  - History: established facts, contested interpretations and counterfactuals stay apart; a famous quote or story with
+    no contemporary source is legend until shown otherwise.
+  - A "what if": the premise is assumed, what follows from known science is reasoned, what nobody can know is
+    speculative; a possibility is never presented as a guaranteed consequence.
+  - Fiction and comedy: invented material is fine, and is never dressed as fact.
 - **Magnitude is not sensationalism.** Death, war, huge numbers or a shocking claim are not value by themselves; an
   ingenious mechanism or a useful solution can be the bigger reward. A candidate whose exciting version needs
   exaggeration is not the one. A long build-up must be worth its reward, unless the journey itself is the value; many
   videos reward continuously (discovery, cumulative understanding, progress, humour) rather than once.
-- **Enough for the locked length.** `runtime.material_minutes` and `why`: what fills the length without padding. Below 90%
-  of the lock, report it and record the user's decision (`runtime_decision`): another candidate, a wider or narrower
-  angle, or a length revision through the lock. Never invented developments, repetition, slower speech or pauses.
+- **Enough for the locked length, judged from the material.** No share of minutes decides this: six minutes of notes can
+  hold ten when each development opens the next, and fifteen may not when they repeat. For each candidate write its
+  `runtime.progression` (what the viewer newly gets, step by step, each step resting on its material ids), a `verdict`
+  (sustains, short or uncertain) and `why`, from the density this audience wants, the treatment it could have and the
+  pictures and sound it allows. Where it is thin, say what is missing (`shortfall`). A chosen candidate judged short or
+  uncertain goes back to re-selection (another candidate, or a wider or narrower angle inside the scope) or to the
+  user, whose decision is recorded in `runtime_decision` (`decided_by: "user"`, their words, the decision: another
+  length through the lock, another angle). Never invented developments, repetition, slower speech, pauses or extra
+  exposition to fill it. An estimate of minutes may be noted (`material_minutes`); it never decides.
 - **Can we make it?** `feasibility`: whether stills, drawings, maps, voice and music can carry it.
-- **How many.** No fixed number: research until a strong decision is supported, and stop there. When the scope is open,
-  compare genuinely different alternatives, not five versions of one idea.
-- **Choose in words.** `selection`: the candidate, `why` it is the strongest opportunity in scope, `over_alternatives`
-  (why not the others, or why none was needed). Say when it was close. No scores, weights or thresholds.
+- **How many.** No fixed number: research until a strong decision is supported, and stop there. An open scope (a niche,
+  a subject, an exact topic's angles) needs at least one researched alternative, because a choice with nothing to choose
+  from is the first idea that came up. Compare genuinely different alternatives, not five versions of one idea.
+- **Choose in words, on the evidence.** `selection`: the candidate, `why` it is the strongest opportunity in scope, the
+  material the choice rests on (`decisive_material`), and for each alternative why not (`over_alternatives`: one entry
+  per candidate, each its own reason). Say when it was close. No scores, weights or thresholds. Put every reason through
+  the swap test: if it would still be true with another candidate's name in it ("it changes how the viewer sees X"), it
+  explains nothing, and the checks refuse reasons two candidates share. Signs of a shallow choice, to catch in yourself:
+  the first plausible search result; fame doing the work; a reference's title repeated without further research; a
+  sensational claim preferred over better-supported material; conflict or a climax assumed where the subject offers
+  understanding; material that can't fill the length.
 - **Carry the value forward.** `value_to_carry`: the findings the film must deliver (`what`, `why_it_matters`,
-  `certainty`, sources; what the viewer must know first in `needs_first`). Each is carried by a beat (`carries` in the
-  beat map), at least one of them by a key moment, whose shots say how the picture carries it (`carries_significance`);
-  one the film no longer needs goes in `dropped` with the reason. The readers then test whether the film delivers it
-  (06). Research identifies the opportunity; the director decides how to realise it.
+  `certainty`; `rests_on`: the material ids it stands on, never said more surely than they allow; `needs_first`: the
+  values the viewer must hold before it). Each is carried by a beat (`carries` in the beat map), after what it needs
+  first. Where the video turns or pays off, that beat is a key moment, and its shots say how the picture carries it
+  (`carries_significance`); where value builds step by step (a tutorial, a tour of a mechanism, a run of jokes), no key
+  moment is needed and none is invented: the blueprint says how the value builds (`reward_shape`). The script says each
+  factual value in the beat that carries it (one of its claims tied to a line there) and as surely as it is known (a
+  contested, speculative or assumed value names the line that says so: the beat's `hedges`), and the pictures are given
+  what each beat carries and how sure it is (the media gate), so a possibility is never drawn as a documented fact. One
+  the film no longer needs goes in `dropped` with the reason. Research identifies the opportunity; the director decides
+  how to realise it, and may leave out what weakens the experience, never silently.
+- **When it changes.** Another subject is another film: everything follows. A new angle on the chosen subject (its own
+  description) is another story: the beat map, script and shot plan follow, and the media follow them where they
+  changed. A researched value that changes reaches only the beats that carry it, their lines and their shots. A
+  corrected source or claim is re-checked where it is used (plan-check names the claims, lines and values), then
+  recorded with `direction-lock --research-rechecked`, never rebuilt. The other candidates, the reasons and the research
+  notes feed nothing.
 
-`direction-lock`, `plan-check` and `shot-check` check that this reasoning exists, is sourced, keeps the scope and reaches
-the beat map and the shots. Whether the subject is worth a viewer's time is the director's judgement, not theirs.
+`direction-lock`, `plan-check`, `shot-check` and the media gate check that this reasoning exists, is specific, rests on
+read sources, keeps the scope and reaches the beat map, the script and the pictures. Whether the subject is worth a
+viewer's time, and whether a source deserves trust, is the director's judgement, not theirs.
 
 ## The story engine (author before script)
 
@@ -115,7 +170,7 @@ The strategy then becomes two or three **audiovisual treatments**: narrator, wri
 
 ## Research that supports creativity without turning into a hard documentary
 
-For factual work, obtain primary and credible secondary sources independent of reference videos. `30-research/video-NN/sources.md` records URL/title, author/issuer, publication or revision date, precise claims supported, counterevidence and verification status. `claims.json` lists consequential dates, numbers, quotes, geographic claims, causal assertions, dangerous instructions and contested conclusions with source IDs and confidence. Cite internally in planning; final narration can flow naturally without reading footnotes aloud. `plan-check` lists `numbers_without_claim`: lines that state a date, count or distance and are tied to no claim. Each consequential one gets a claim, verified, before the part that holds it is recorded, because a wrong number found later costs a re-record. A trivial one (a count of sides, the narrator's premise) needs none. If evidence is disputed, narrate the dispute honestly, with distinct perspectives when relevant. For nonfactual/fictional stories, label the genre and keep scene logic consistent; do not falsely imply documentation.
+For factual work, obtain primary and credible secondary sources independent of reference videos. `30-research/video-NN/sources.md` has one `### S1.` entry per source with URL/title, author/issuer, publication or revision date, primary or secondary, `- Access:` (read, indirect or snippet: how much of it was actually read), precise claims supported, counterevidence and verification status. `claims.json` lists consequential dates, numbers, quotes, geographic claims, causal assertions, dangerous instructions and contested conclusions with source IDs, confidence (confirmed, likely, disputed or legend: "Finding the subject") and the script lines that say them (`line_refs`). Cite internally in planning; final narration can flow naturally without reading footnotes aloud. `plan-check` lists `numbers_without_claim`: lines that state a date, count or distance and are tied to no claim. Each consequential one gets a claim, verified, before the part that holds it is recorded, because a wrong number found later costs a re-record. A trivial one (a count of sides, the narrator's premise) needs none. If evidence is disputed, narrate the dispute honestly, with distinct perspectives when relevant. For nonfactual/fictional stories, label the genre and keep scene logic consistent; do not falsely imply documentation.
 
 **Voice and humanism:** Narration is written for *listening*, not silently reading. Use varied sentence length and light, well-placed conversational language. A single vivid detail can do the work of several abstract paragraphs. Use “we” sparingly and “you” only when it genuinely engages the viewer. Personal warmth may be inquisitive, dry, playful or reflective; never one relentless hyped-up sales pitch. Let characters have constraints and decisions, not just pronouncements. Pause to let a consequence land. Nothing about “being engaging” requires fabricated conflict, machine-gun cliffhangers or editing every 1.5 seconds.
 
