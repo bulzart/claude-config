@@ -14,25 +14,29 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" 
 python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" --whisper-model medium
 # Watch the references as films: measurements + one watch sheet per minute (frames with their words).
 python "$HOME/.claude/static-studio/scripts/static_core.py" av-profile --run "RUN" --refs V001,V002,V003
-# Where to look closer, then the content review of each reference (01): what is excluded and what stays useful.
-python "$HOME/.claude/static-studio/scripts/static_core.py" content-review --run "RUN" --ref V001 --signals
+# One frame of every shot, for every reference (the content review needs them; analysis-plan counts them).
 python "$HOME/.claude/static-studio/scripts/static_core.py" content-review --run "RUN" --ref V001 --shot-sheets
+# Split the analysis between agents by reading work alone (01): batches, one brief and one to-do file per agent.
+python "$HOME/.claude/static-studio/scripts/static_core.py" analysis-plan --run "RUN"
+#   -> spawn one analysis agent per batch, all at once, each with its spawn_prompt only.
+# Each agent, per reference: where to look closer, then the content review (01): what is excluded and what stays useful.
+python "$HOME/.claude/static-studio/scripts/static_core.py" content-review --run "RUN" --ref V001 --signals
 python "$HOME/.claude/static-studio/scripts/static_core.py" inspect-window --run "RUN" --ref V001 --from 12:03 --to 12:09 --why "a fast insert"
 python "$HOME/.claude/static-studio/scripts/static_core.py" content-review --run "RUN" --ref V001 --file "RUN/20-analysis/content/V001-draft.json"
-# Agent writes evidence-grounded 20-analysis/cards/V###.json and niche synthesis.
-python "$HOME/.claude/static-studio/scripts/static_core.py" cohorts --run "RUN"
-# User selected a niche/length; examples only after cards exist.
-# Option A: group by niche + story-form (exact string match)
+# Agents write evidence-grounded 20-analysis/cards/V###.json, notes and content reviews. Then the niches (01):
+python "$HOME/.claude/static-studio/scripts/static_core.py" niche-evidence --run "RUN"
+#   -> read 20-analysis/niche-evidence.md whole; write 20-analysis/niche-map.json and niche-synthesis.md.
+python "$HOME/.claude/static-studio/scripts/static_core.py" niche-check --run "RUN"
+#   -> present the niches; the user picks one (or delegates the pick).
+python "$HOME/.claude/static-studio/scripts/static_core.py" niche-lock --run "RUN" --niche N2 \
+  --user-words "the engineering one"
+# The length: Standard from one comparable cohort of the locked niche (its why_comparable goes in as forms_why).
 # Never pass --pace-wpm here: length computes it automatically from the references' own
 # Whisper transcripts (pure narration time, timestamps stripped). A manual number is a guess: it needs --pace-why (03).
 python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
-  --mode standard --niche "military history" --story-form "historical narrative" \
-  --refs V001,V002,V003 --language en
-# Option B: group by cohort_id when labels vary across cards (references of mixed story forms also need
-#   --forms-why "why their lengths compare", 03)
-python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
-  --mode standard --cohort-id "long-military-history" \
-  --refs V001,V002,V003 --language en
+  --mode standard --cohort-id "engineering-investigations-12min" --refs V001,V002 --language en
+# Own length: --mode own --minutes 18 (its references from the locked niche). A run made before niche discovery
+# (no niche_discovery in state.json) still matches labels: --niche "..." --story-form "..." or --cohort-id.
 # Creative direction FIRST (10): 40-plans/video-01/direction.json (evidence, two or more approaches, strategy,
 # two to four treatments with sample moments), a blind read of the treatments, the decision, the lock.
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind treatment
@@ -177,7 +181,60 @@ more>"}]`, in direction.json for a treatment and in beat-map.json for a beat.
 
 ## Reference cards (agent generated)
 
-Create `20-analysis/cards/V001.json` for every unique video in `00-inventory/references.json`. Required minimum for CLI grouping: `reference_id`, `niches` (list of category names), `story_form` (one primary form), and `viewer_experience` (list of timed meaningful moments). Optionally add `cohort_id` (a stable lowercase slug, e.g. `"long-military-history"`) when niche/story_form labels may vary across cards for comparable videos—any cards sharing a `cohort_id` form their own cohort group and can be used directly with `length --cohort-id` (references of different story forms need `--forms-why` for a Standard length, 03; the lock keeps `story_forms` and `forms_why`). The detailed suggested schema is in manual 01; include actual timestamps, source vs interpretation, script delivery, shot/form analysis and tradeoffs.
+Create `20-analysis/cards/V001.json` for every unique video in `00-inventory/references.json`. Required minimum: `reference_id`, `niches` (what the video is about: its subject matter, a list), `story_form` (how it tells it: one primary form), and `viewer_experience` (list of timed meaningful moments); `viewer_reward` keeps what the viewer comes for apart from the rest (01). The analysing agent leaves `cohort_id` out: comparable cohorts are decided in the niche map, with every reference in view. (A run made before niche discovery may carry a director-set `cohort_id` on its cards, which its `length --cohort-id` matches; references of different story forms need `--forms-why`, 03.) The detailed suggested schema is in manual 01; include actual timestamps, source vs interpretation, script delivery, shot/form analysis and tradeoffs.
+
+## Analysis plan and niche discovery (`analysis-plan`, `niche-evidence`, `niche-map.json`, `niche-check`, `niche-lock`)
+
+`20-analysis/agents/plan-r<n>.json` (written by `analysis-plan`, one per round): `basis: "reading work only"`, the
+`settings` used, `total_load`, and `batches` `[{agent: "r1-a1", refs: [{ref, duration_s, watch_sheets, shot_sheets,
+transcript_words, inspect_candidates, load}], load, minutes, brief, todo, spawn_prompt}]`, with `balance` and
+`not_measured_yet`. No subject, niche or format appears in a plan.
+
+`20-analysis/niche-evidence.json` and `.md` (written by `niche-evidence`): `references` in reference order, each
+`{ref, file, card, language, subject{niches, editorial_summary, title_promise}, format{story_form, hook},
+viewer_reward{reward, from}, visual_style{visual_medium, cuts_per_min, shot_median_s, moving_time_share},
+narration{narrator_character, speech_rate_wpm, pitch_range_st, longest_pause_s, pauses_0_8s_plus_per_min,
+silence_share, gap_level_db}, runtime_and_pacing{duration_s, minutes, longform, words, rate_p10_p90_wpm},
+content{excluded, excluded_n, restricted_n, story_without_exclusions}}`, plus `cards_sha256` (what the evidence was
+made from). It holds no time and no batch: the same cards give the same evidence.
+
+`20-analysis/niche-map.json` (the director writes it, 01):
+
+```json
+{"niches": [
+  {"id": "N1", "name": "How great structures stand up",
+   "identity": "the engineering of bridges, towers and dams, told through the problems their builders had to beat",
+   "boundary": "stops being this niche when the structure is only a backdrop: travel, biography or architecture as style",
+   "viewer_reward": "[I] a hidden force made visible, and seeing why the obvious design would have failed",
+   "members": [{"ref": "V104", "role": "core", "why": "one suspension bridge's failure told as a puzzle about wind"},
+               {"ref": "V109", "role": "core", "why": "a dam's near-collapse investigated hour by hour"},
+               {"ref": "V107", "role": "core", "why": "the history of dams told through five floods they had to hold"},
+               {"ref": "V102", "role": "overlap", "why": "a city's water system; it is also about public money"}],
+   "formats": [{"form": "single-failure investigation", "refs": ["V104", "V109"]},
+               {"form": "chronological history through test events", "refs": ["V107"]},
+               {"form": "systems explainer", "refs": ["V102"]}],
+   "comparable_cohorts": [{"id": "engineering-investigations-12min", "refs": ["V104", "V109"],
+                           "why_comparable": "both single-case investigations told as a puzzle, 11-13 min"}],
+   "evidence": [{"ref": "V104", "at": "02:10", "observed": "the obvious fix is drawn first, then crossed out as the wind diagram builds"}]}],
+ "outliers": [{"ref": "V111", "why": "a 3-minute workshop tip whose audience no other reference shares"}],
+ "shared_across_niches": [{"dimension": "format", "what": "second-person simulation", "refs": ["V103", "V106", "V110"],
+                           "note": "a way of telling shared by three niches, not a niche"}],
+ "notes": "anything the director wants the next reader of the map to know"}
+```
+
+(The values are an example of the form, not a niche to reuse.) `niche-check` writes `20-analysis/niche-check.json`:
+`ok`, `issues` (form and traceability: every reference a member or an outlier, a reason per member, a core member per
+niche, formats, evidence and cohorts naming members only, the evidence current), `warnings` (a niche that is exactly
+one analysis batch, or all from one), and `facts`: `niches`, `outliers`, `in_several_niches`, `members` (core and
+overlap per niche), `cohorts` (`{id: {niche, refs, durations_s, median_s, standard_s, standard_min, spread_ratio,
+speech_rate_wpm, story_forms, languages, length_would_refuse}}`) and `batches_per_niche`.
+
+`20-analysis/niche-lock.json` (written by `niche-lock`): `niche_id`, `name`, `identity`, `boundary`, `viewer_reward`,
+`members` `[{ref, role, why}]`, `formats`, `comparable_cohorts` (with their facts and `why_comparable`), `map_sha256`,
+`evidence_sha256`, `user_words`, `decided_by` (`user`, or `director` on the user's delegation with `why`),
+`locked_at`, and `refreshed` (each `--refresh`: when, why, the members before). `state.json` carries
+`selected_niche` (the name), `selected_niche_id` and `niche_discovery`. `length-lock.json` then records `niche` (the
+name), `niche_id`, `niche_lock_sha256` and the `cohort_id` it used.
 
 **Important:** `cohorts` only groups by reported niche/form and measured ffprobe duration. Agents, not a keyword regex, decide what a video is actually about. A video can be in two niches, but a 50-second Short and a 15-minute episode must not share one Standard duration lock. If group spread is large, explicitly choose a narrow set of comparable IDs for `length`.
 

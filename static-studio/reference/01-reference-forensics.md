@@ -12,6 +12,27 @@ Visual pass: two sampled frames per second is broad semantic coverage (the run's
 
 Extract, within the agent's analytical notes: edit boundaries, title-card transitions, types and durations of visual states (still / diagram / archival shot / photo collage / screen recording / artwork), timing of narration relative to image change, silence, sound cues, music intensity, on-screen language, and how graphics convey things the narrator intentionally leaves unsaid. When a visual is technically hard to interpret, mark it as unknown and re-open the relevant source segment. For a factual claim shown on-screen, verify it independently before recycling the *fact*.
 
+## Splitting the analysis work
+
+The references are analysed one by one, and the work is shared between analysis agents by how much there is to read,
+never by what the videos seem to be about. After `av-profile` and the shot sheets of every reference,
+`analysis-plan --run "RUN"` estimates each reference's reading work (its watch sheets, shot sheets, transcript words,
+closer-look candidates and the files it needs written), splits the references so every agent has about the same work
+(longest first, each to the least-loaded agent), and writes `20-analysis/agents/plan-r<n>.json` with one brief
+(`r<n>-a<k>-brief.md`, filled from `reference/templates/analysis-agent-brief.md`) and one to-do file per agent. The
+number of agents follows the workload (`config.json` -> `analysis_batching`: a per-agent budget and a maximum), or
+`--agents N` when you have a reason (time, the machine); it is never chosen to match the kinds of video you expect.
+Spawn one agent per batch, all at once, each given only its `spawn_prompt`.
+
+A batch is a share of the reading, not a group, a cohort or a niche: its references sit together because of their
+workload, and nothing later treats them as related. So never group references by title, channel, thumbnail or first
+impression before they are analysed, never name a batch after a topic, and never ask an agent what its references have
+in common. An agent that compares a reference with the others on its list ("the fastest of my group") compares it with
+an arbitrary sample: the brief rules it out, and measured numbers stand in for such comparisons. A tentative label that
+helps the work (a language, a reference the user named) is metadata to test, never an assignment. On `more`,
+`analysis-plan` plans only the references without a finished analysis (card, notes and content review); `--all` or
+`--ids` plans others again, and a plan whose agents are still at work is replaced only with `--replace-why`.
+
 ## Evidence discipline
 
 For every analytical assertion, distinguish:
@@ -34,12 +55,12 @@ A detailed card in `20-analysis/cards/V###.json` should include these additional
   "reference_id": "V001",
   "niches": ["military history", "decision-making"],
   "story_form": "historical narrative",
-  "cohort_id": "optional-stable-slug",
   "language": "en",
   "visual_medium": "illustrated stills with maps",
   "platform": "YouTube",
   "length_family": "longform-10-to-18-min",
   "title_promise": "Question or expectation set by the title",
+  "viewer_reward": "[I] What the viewer comes for and leaves with",
   "editorial_summary": "What the video is really about beyond its nouns",
   "hook": {"start_s": 0, "end_s": 35, "promise": "...", "evidence": "[O] ..."},
   "viewer_experience": [
@@ -73,6 +94,13 @@ A detailed card in `20-analysis/cards/V###.json` should include these additional
 }
 ```
 
+Each dimension has its own field, filled from this video's own evidence: `niches` is what the video is about (its
+subject matter, never its format, look or tone), `story_form` how it tells it, `viewer_reward` what the viewer comes
+for and leaves with, `visual_medium` its look, `narrator_character` and `narration_delivery` its voice, `length_family`
+its measured runtime. A video can share a subject with one reference and a format with another; keeping the fields
+apart is what lets the niches be discovered afterwards rather than assumed now. The analysing agent leaves `cohort_id`
+out: comparable cohorts are decided with every reference in view ("Discovering the niches").
+
 **Watch the reference as a film: `av-profile --run "RUN" --refs V###,...`** (10 §1). It measures the narration (speaking rate per window and how it varies, pitch range and word-to-word movement, loudness contrast, the level under the voice in its gaps) and the picture (cuts, shot lengths, moving and still time, brightness and saturation, the same picture coming back), side by side in 15-second windows with the words spoken (a pause belongs to the window it starts in, so one that crosses a window's edge is still counted), and writes one **watch sheet** per minute to `20-analysis/av/V###/`: a frame every 5 seconds with its words underneath. Open the sheets in order: they are the closest thing to watching that an agent has, and they show what the viewer sees *while* each sentence is heard. The same functions measure this run's narration and export later, so the numbers compare directly; they are measurements, never verdicts. `pace-profile` remains the quick view of pace and pauses alone.
 
 For `narrator_character` and `narration_delivery`, combine what the words show (diction, humour, asides, direct address, sentence music) with what was measured, and label which is which. Note where the narrator's longest silences fall and what the story is doing there. For `audiovisual_moments`, record the moments where narration, picture, edit and sound work together (or against each other), with what you infer it does for the viewer. For `delight`, what makes this video *enjoyable*, with its evidence and how sure you are. The command also expects a *human-readable* `20-analysis/V###-notes.md` summarizing the reference's 3–6 most useful mechanisms with timestamps and a critique of where it loses the viewer. If a creator succeeds despite apparent repetition or a sparse edit, record that: the voice, concrete tension, or source topic may be doing the work. Do not mistake high shot frequency for high value.
@@ -96,15 +124,64 @@ For each segment: its timestamps, what it is (neutrally, no graphic detail), its
 
 Sparse samples can miss a brief image. Where risk or doubt justifies it, look closer (`inspect-window`) before deciding; a segment you are unsure of and still want to use needs that closer look on record. After looking at disturbing material, remove the window's frames (`inspect-window ... --remove`): the record stays, no extra copy does.
 
-## Cross-video synthesis without niche pollution
+## Discovering the niches
 
-Each reference can have multiple niche tags but must have a primary `story_form`. Distinguish topical niche (“military history”) from story form (“decision-under-pressure reconstruction”) from art style (“charcoal maps”). Runtime is measured by ffprobe, not estimated from cards. Use `cohorts`: it reports median/mean/min/max and warns on high spread. **A combined average over five 40-second explainers and five 15-minute history videos is invalid as the Standard length of either.** Even 8-minute and 35-minute history videos may form separate runtime families. Provide comparable IDs in the length lock. A reference narrated in another language than the run's cannot set the computed pace: choose references in the run's language, or give `--pace-wpm` with `--pace-why` (03).
+Niches are discovered from the finished analyses, never assigned before them. When every reference has its card,
+notes and content review:
 
-When niche or story_form labels vary across cards for what are clearly comparable videos (e.g. one agent wrote `"military history narrative"`, another `"military history"`), assign an explicit `cohort_id` (a stable lowercase slug you choose, e.g. `long-military-history`) to the relevant cards. Any cards sharing a `cohort_id` form their own group in the `cohorts` output and can be used directly in `length --cohort-id` without matching niche/story_form strings.
+1. `niche-evidence --run "RUN"` writes `20-analysis/niche-evidence.md` (and `.json`): every reference in reference
+   order, each dimension on its own line (subject, format, viewer reward, visual style with its measured cut rate and
+   motion, narration with its measured pace, pitch range and pauses, runtime and pace, content), from its own card,
+   measurements and content review. No analysis batch, cohort label or earlier grouping is shown. Read it whole, and
+   open the cards (`moments_that_matter`, `delight`, `transferable_devices`) wherever a reference's place is unclear.
+2. Write `20-analysis/niche-map.json` (07): the niches the evidence holds.
+   - **A niche is what an audience comes for**, usually a subject: what the videos are about and the value a viewer
+     expects from it. It has a `name`, its `identity` (what it is about), its `boundary` (where a subject would stop
+     being of it), its `viewer_reward`, and timed `evidence` from its members for what makes it engaging.
+   - **Members** are `core` (the niche is what the video is about) or `overlap` (it belongs here and to another niche
+     too); each says `why`, from its own card. A reference may sit in two niches.
+   - **Formats stay inside their niche.** `formats` says how the members tell their subject; one niche can hold a
+     short tutorial and a long documentary on the same craft. A format, a look or a voice that several niches
+     share is recorded in `shared_across_niches`, never made a niche by itself; when a format is itself what brings an
+     audience back, say so in that niche's `identity`.
+   - **Comparable cohorts** (`comparable_cohorts`) are members whose lengths compare (the same kind of telling, one
+     long-form runtime family), each with `why_comparable`. A Standard length is taken from one of them (03). A niche
+     may have none; its length is then the user's own.
+   - **Outliers** share no audience with the others; they still teach craft (10 §1, `borrowed`).
+   - There is no expected number of niches. Two references can make a niche; one reference can be an outlier, or a
+     niche of its own when its audience is clearly distinct; overlapping niches are normal. Never merge unrelated
+     subjects to make a niche bigger, or split one audience by format, look or voice.
+3. Write `20-analysis/niche-synthesis.md` from the map: one chapter per niche with (a) its members, roles and
+   durations, (b) the audience experience they give, observed apart from inferred, (c) confidence and disagreement
+   across its members, (d) story-engine candidates, (e) medium and style choices and their limits, (f) pacing ranges
+   (measured), (g) techniques worth borrowing from other niches, with the trade-off. An animated graphic from a short
+   how-to may help a 20-minute strategic history explanation; its aggressive pacing probably should not be copied.
+4. `niche-check --run "RUN"` checks form and traceability only: every reference is a member of a niche or an outlier,
+   every member has its reason, formats, evidence and cohorts name members, the evidence is current. It gathers what a
+   presentation needs (each cohort's durations and median, the Standard it would give and whether `length` would
+   accept it), and reports how the niches fall across the analysis batches: a niche that is exactly one batch's
+   references is a prompt to re-read its members' own evidence, since batches carry no meaning. It never judges
+   whether a niche is a good one, or how many there should be.
+5. Present the niches (the command's B) and lock the user's pick: `niche-lock --run "RUN" --niche <id> --user-words
+   "<their words>"`. The lock keeps the niche's identity, boundary, members (core and overlap, whatever their format)
+   and comparable cohorts: the length takes its references from them (03), the direction's evidence family is its
+   members (a reference outside them is `borrowed`, 10 §1), and the subject's scope names it (02). One niche per run;
+   another niche is a clone. When new references join on `more`, the map is updated and checked, and
+   `niche-lock --refresh --why "..."` brings the same niche's members up to date.
 
-After all cards, create `20-analysis/niche-synthesis.md`: one chapter per niche with (a) primary references and durations, (b) observed audience experiences, (c) confidence and disagreement across references, (d) specific *story engine* candidates, (e) medium/style choices and limits, (f) pacing ranges for that audience, (g) ways to adapt structural techniques borrowed from another niche, with an explanation of the trade-off. An animated graphic from a short how-to may help a 20-minute strategic history explanation; its aggressive pacing probably should not be copied.
+Runtime is measured by ffprobe, not estimated from cards. **A combined average over five 40-second explainers and five
+15-minute history videos is invalid as the Standard length of either.** Even 8-minute and 35-minute videos of one niche
+may form separate runtime families: give them separate cohorts. A reference narrated in another language than the
+run's cannot set the computed pace: choose references in the run's language, or give `--pace-wpm` with `--pace-why`
+(03). `cohorts --run "RUN"` still lists the cards' exact label groups (min, median, max, spread): a quick look, never
+the niches. A run made before niche discovery (no `niche_discovery` in its `state.json`) keeps its earlier way: its
+niche is a card label, or a `cohort_id` the director set on the cards, and `length` takes it from there.
 
-**Outcome:** The user sees distinct creative directions rather than a generic count of references. After picking a direction, derive a **creative profile** (`20-analysis/creative-profiles/[cluster-slug].md`) from the synthesis—what appears to work for that audience, what weaknesses exist, and what creative territory remains unexplored. See §02 for the profile structure. The writer gains *permission to be original*; source titles, names, jokes, voice clones or watermark/overlay text do not get repeated in the new video's final creative work.
+**Outcome:** The user sees distinct creative directions rather than a generic count of references. Each niche gets a
+**creative profile** (`20-analysis/creative-profiles/[niche-slug].md`) from the synthesis: what appears to work for
+that audience, what weaknesses exist, and what creative territory remains unexplored. See §02 for the profile
+structure. The writer gains *permission to be original*; source titles, names, jokes, voice clones or watermark/overlay
+text do not get repeated in the new video's final creative work.
 
 
 Sampled frame filenames have a `frame-index.json`. In a run analysed at 2 fps each frame carries its own exact time (`t_s`, on the transcript's clock: its source timestamp minus the audio stream's start, so a variable frame rate or a start offset never shifts it; `pts_s` is the source's, `slot_s` the half-second it was picked for). What happens between two samples is unseen: a cut is known only to within one interval. File numbers are a sequence, not a clock: a source with uneven frames skips a slot now and then, so look a frame's time up in the index (`t_s`), never compute it from its number. A run made before keeps **nominal** slots (`mode: nominal_sample_time`, within half an interval of the slot). For exact transitions or frame-accurate claims, look at a native-frame window (`inspect-window --native`); never assert precise source timings from samples alone.

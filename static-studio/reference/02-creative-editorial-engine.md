@@ -27,8 +27,10 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   Roman soldiers" is still "the history of salt", and "salt in the kitchen" is not, whatever words they share. For an
   exact topic or story the blind treatment reader is also asked whether each treatment is still a video about what was
   asked (06), and for a niche with its boundary whether each is still a video of that niche; a "partly" or "no" is a
-  finding you answer. A run grouped by `--cohort-id` (03) names its niche (`scope.niche`) by its own names: the cohort
-  id, or a niche its references' cards name, never the internal `__cohort__:` label.
+  finding you answer. With a niche lock (01, "Discovering the niches"), `scope.niche` is the locked niche's name or
+  id, and its `understood_as` and `boundary` start from the niche map's `identity` and `boundary`. A run made before
+  niche discovery and grouped by `--cohort-id` (03) names its niche by its own names: the cohort id, or a niche its
+  references' cards name, never the internal `__cohort__:` label.
 - **What this audience values.** Read it from the references and the niche, never from one niche's idea of interesting:
   a history video may reward consequential decisions, a geography video an extraordinary phenomenon understood, a
   biology video a surprising mechanism, a tutorial a problem solved, a "what if" its logically developed consequences,
@@ -157,9 +159,9 @@ Treat the title/thumbnail as the **opening contract**. The first 30–60 seconds
 
 There is no fixed formula for how-to, historical, counterfactual, or any other niche. The right creative approach depends on the specific subject, the evidence from the references, and what this particular video is trying to achieve. Discover it; don't assume it.
 
-### Generate a creative profile per cluster
+### Generate a creative profile per niche
 
-After grouping references into creative clusters (see §01), generate a **creative profile** for each meaningful cluster. Store it as `20-analysis/creative-profiles/[cluster-slug].md`. This is a diagnostic summary—not a template—covering what appears to work for that audience and format, what weaknesses the references show, and what creative territory remains unexplored.
+After the niches are discovered (01, "Discovering the niches"), generate a **creative profile** for each niche of the map. Store it as `20-analysis/creative-profiles/[niche-slug].md`. This is a diagnostic summary—not a template—covering what appears to work for that audience and format, what weaknesses the references show, and what creative territory remains unexplored.
 
 Each profile should capture, with reference IDs and timestamps:
 
@@ -173,7 +175,7 @@ Each profile should capture, with reference IDs and timestamps:
 - **What to avoid copying:** distinctive aesthetic choices, structural devices, or voice identities that belong to those creators.
 - **How picture, voice and sound work together** in these videos, from their watch sheets and measurements (`av-profile`, 01): the rhythm of cuts against sentences, where the voice lifts or settles, where music sits, what each does when the story turns. Label measured `[O]` and inferred `[I]`; note what makes them enjoyable, not only what they contain.
 
-A technique found effective in one cluster may inspire a genuinely different application elsewhere. Cross-cluster experimentation is encouraged when it serves the specific subject and audience—but transferred techniques must be adapted to the destination context, not transplanted wholesale.
+A technique found effective in one niche may inspire a genuinely different application elsewhere. Cross-niche experimentation is encouraged when it serves the specific subject and audience—but transferred techniques must be adapted to the destination context, not transplanted wholesale.
 
 ### Episode-specific creative strategy
 

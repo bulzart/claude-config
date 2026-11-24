@@ -18,7 +18,7 @@ viewer seeing *while* they hear this sentence?
 
 Profile the comparable references (the length lock's) and any reference whose craft you want to learn from, in any
 niche. A technique from an unrelated niche can be exactly what this story needs; its pacing usually is not. Evidence
-that cites a reference outside the locked niche declares it in `evidence.borrowed` (`[{ref, technique, not_taken}]`):
+that cites a reference outside the locked niche (not among the niche lock's members, 01) declares it in `evidence.borrowed` (`[{ref, technique, not_taken}]`):
 the technique borrowed, and the subject assumptions not taken.
 
 Every reference the direction cites has its content review (01), and no observation sits inside material it
@@ -60,7 +60,7 @@ for the experience it serves. An idea of ours that no reference uses is welcome:
 the viewer, and judge it in context. The aim is informed originality, not evidence-shaped imitation: the references
 show what audiences are used to and what a device can do; this film's choices come from its own story.
 
-Write what you learn into the cards (`audiovisual_moments`, `narration_delivery`, `delight`: 01) and the cluster's
+Write what you learn into the cards (`audiovisual_moments`, `narration_delivery`, `delight`: 01) and the niche's
 creative profile (02): what makes these videos *enjoyable*, not only what they contain, and what remains unexplored.
 
 ## 2. From the story approach to an audiovisual treatment

@@ -265,9 +265,10 @@ def cmd_init(args):
           'stage': 'intake', 'selected_niche': None, 'video_count': 0,
           'format': {'platform': 'YouTube long-form', 'aspect': '16:9', 'width': 1920, 'height': 1080, 'fps': 30},
           'analysis_fps': args.fps, 'analysis_sampler': ANALYSIS_SAMPLER, 'min_longform_s': args.min_longform,
+          'niche_discovery': NICHE_DISCOVERY,
           'notes': 'Static only. Agents invent new subjects within the chosen niche; references teach form, not copied content.'}
     write_json(rd / 'state.json', st)
-    (rd / 'todo.md').write_text('# Static Studio run\n\n- [ ] Inventory and prepare references (av-profile: watch them as films)\n- [ ] Analyze evidence and choose niche\n- [ ] Lock comparable long-form length\n- [ ] Research the story; creative direction: approaches, treatments, blind read, direction-lock (before the script)\n- [ ] Beat directions and script; cold read with every finding answered; plan-check\n- [ ] Record complete narration (calibration part first: pace and delivery per beat)\n- [ ] Design and assemble image-led edit (shot-check, retime-shots)\n- [ ] Export; final watch review answered; release-check\n', encoding='utf-8')
+    (rd / 'todo.md').write_text('# Static Studio run\n\n- [ ] Inventory and prepare references (av-profile: watch them as films)\n- [ ] Split the analysis by reading work (analysis-plan); analyse every reference (card, notes, content review)\n- [ ] Discover the niches (niche-evidence, niche-map.json, niche-synthesis.md, niche-check); the user picks; niche-lock\n- [ ] Lock comparable long-form length (a cohort of the locked niche, or own minutes)\n- [ ] Research the story; creative direction: approaches, treatments, blind read, direction-lock (before the script)\n- [ ] Beat directions and script; cold read with every finding answered; plan-check\n- [ ] Record complete narration (calibration part first: pace and delivery per beat)\n- [ ] Design and assemble image-led edit (shot-check, retime-shots)\n- [ ] Export; final watch review answered; release-check\n', encoding='utf-8')
     emit({'ok': True, 'run': str(rd), 'next': 'scan --run "' + str(rd) + '"'})
 
 
@@ -291,18 +292,25 @@ def cmd_clone(args):
     for d in ['00-inventory', '10-media', '20-analysis/cards', '20-analysis/cohorts',
               '30-research', '40-plans', '50-audio', '60-visuals', '70-edit', '80-deliverables', 'logs']:
         (rd / d).mkdir(parents=True, exist_ok=True)
-    st = {k:v for k,v in previous.items() if k not in ('selected_niche','video_count','stage','created_at','run_id')}
+    st = {k:v for k,v in previous.items() if k not in ('selected_niche','selected_niche_id','video_count','stage',
+                                                      'created_at','run_id')}
     st.update({'selected_niche': None, 'video_count': 0, 'stage': 'reference_analysis_complete',
+               'niche_discovery': NICHE_DISCOVERY,
                'run_id': rd.name, 'created_at': now(), 'cloned_from': str(src),
                # frames are not cloned: the clone's references are prepared again, at the current analysis rate
                'analysis_fps': ANALYSIS_FPS, 'analysis_sampler': ANALYSIS_SAMPLER})
     write_json(rd/'state.json', st)
-    for oldrel in ['00-inventory/references.json', '20-analysis/cohorts/index.json']:
+    # the niches the source run discovered are about the same references (the pick is not: the clone picks again)
+    for oldrel in ['00-inventory/references.json', '20-analysis/cohorts/index.json', '20-analysis/niche-map.json',
+                   '20-analysis/niche-evidence.json', '20-analysis/niche-evidence.md']:
         old = src/oldrel
         if old.is_file():
             target = rd/oldrel; target.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(old, target)
     for card in (src/'20-analysis/cards').glob('V*.json'):
         shutil.copy2(card, rd/'20-analysis/cards'/card.name)
+    for plan in (src/'20-analysis/agents').glob('plan-r*.json'):
+        (rd/'20-analysis/agents').mkdir(parents=True, exist_ok=True)
+        shutil.copy2(plan, rd/'20-analysis/agents'/plan.name)
     # The content reviews are analysis too (their times are the source's, whatever the sampling rate), with the
     # records of their closer looks (index.json only: frames of a closer look are never copied).
     for review in (src/'20-analysis/content').glob('V*.json'):
@@ -312,7 +320,7 @@ def cmd_clone(args):
         target = rd/idx.relative_to(src)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(idx, target)
-    (rd/'todo.md').write_text('# Cloned Static analysis\n\n- [ ] prepare + av-profile the references again (frames and transcripts are not cloned)\n- [ ] Choose niche and lock a new video length\n- [ ] Creative direction and lock before the script; cold read; then produce (create-video.md D-G)\n', encoding='utf-8')
+    (rd/'todo.md').write_text('# Cloned Static analysis\n\n- [ ] prepare + av-profile the references again (frames and transcripts are not cloned)\n- [ ] niche-evidence and niche-check on the copied niche map (revise it if the analyses changed); the user picks; niche-lock; a new video length\n- [ ] Creative direction and lock before the script; cold read; then produce (create-video.md D-G)\n', encoding='utf-8')
     emit({'ok': True, 'run': str(rd), 'source_run': str(src), 'note': 'Only analyses are reused. Source media is read-only; production assets remain independent.'})
 
 
@@ -730,6 +738,620 @@ def cmd_cohorts(args):
           'warning': 'Patterns and duration must be selected from comparable references, not averaged across unrelated niches.'}, 2 if issues else 0)
 
 
+# ---------------------------------------------------------------- the analysis work, then the niches it discovers
+# 2026-11-24 (the user's brief on dynamic niche discovery). References are analysed one by one, and the work is split
+# between analysis agents by how much there is to read, never by what the videos seem to be about: a batch is a share
+# of the reading, not a group, a cohort or a niche, and nothing downstream reads it except niche-check, which reports
+# how the discovered niches fall across the batches (a fact for the director, never a verdict). The niches come
+# afterwards, from the finished cards: niche-evidence lays every reference out with each dimension apart (subject,
+# format, viewer reward, look, narration, runtime and pace, content), in reference order and with no batch, cohort or
+# earlier grouping in sight; the director writes 20-analysis/niche-map.json with as many niches as the evidence holds
+# (one or many, overlapping where a reference belongs to two, outliers kept apart) and the comparable cohorts inside
+# each; niche-check checks its form and traceability only and gathers the facts a presentation needs; niche-lock
+# records the user's pick, which the length, the direction's evidence family and the subject's scope then read.
+NICHE_DISCOVERY = 'niche-map-v1'
+# The reading-work estimate that splits the analysis (config.json -> analysis_batching overrides any of these): each
+# image an agent opens counts one (watch sheets, shot sheets); a transcript counts one per words_per_image words; a
+# closer-look candidate of the av-profile counts inspect_candidate_weight; each reference adds per_reference_overhead
+# (its measurements, its card, its notes and its content review). Sized on the first 38-reference run of 2026-11-24
+# (about 150 images and 7-9 references per agent). They balance work; they say nothing about any video.
+BATCHING_DEFAULTS = {'max_agents': 5, 'per_agent_budget': 260, 'per_reference_overhead': 12,
+                     'words_per_image': 1000, 'inspect_candidate_weight': 0.2}
+NICHE_ROLES = ('core', 'overlap')
+ANALYSIS_BRIEF_TEMPLATE = ROOT / 'reference' / 'templates' / 'analysis-agent-brief.md'
+
+
+def studio_config():
+    return read_json(ROOT / 'config.json')
+
+
+def batching_settings():
+    cfg = studio_config().get('analysis_batching') or {}
+    out = dict(BATCHING_DEFAULTS)
+    for k in out:
+        v = cfg.get(k)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0:
+            out[k] = v
+    out['max_agents'] = int(out['max_agents'])
+    return out
+
+
+def niche_flow(st):
+    """A run made with niche discovery (init or clone since 2026-11-24): its niche is the user's pick from the niche
+    map, locked with niche-lock before any length. A run made before keeps its label-matched niche."""
+    return str((st or {}).get('niche_discovery') or '') == NICHE_DISCOVERY
+
+
+def niche_lock_path(rd):
+    return rd / '20-analysis' / 'niche-lock.json'
+
+
+def niche_map_path(rd):
+    return rd / '20-analysis' / 'niche-map.json'
+
+
+def niche_evidence_path(rd):
+    return rd / '20-analysis' / 'niche-evidence.json'
+
+
+def ref_analysis_state(rd, vid):
+    """What exists of one reference's analysis: its card (with the fields every later step reads), its notes, its
+    content review."""
+    c = read_json(rd / '20-analysis/cards' / f'{vid}.json')
+    card_ok = bool(c and c.get('reference_id') == vid and isinstance(c.get('niches'), list) and c.get('niches')
+                   and c.get('story_form') and isinstance(c.get('viewer_experience'), list)
+                   and c.get('viewer_experience'))
+    return {'card': card_ok, 'notes': (rd / '20-analysis' / f'{vid}-notes.md').is_file(),
+            'content_review': (rd / '20-analysis/content' / f'{vid}.json').is_file()}
+
+
+def transcript_words(rd, vid):
+    t = read_json(rd / '10-media' / vid / 'transcript.json')
+    return sum(n_words(s.get('text')) for s in t.get('segments') or [] if isinstance(s, dict))
+
+
+def ref_work(rd, vid, row, cfg):
+    """How much an analysis agent reads and writes for one reference, from what is on disk; a part that is not
+    measured yet is estimated from the duration and named in `estimated`."""
+    dur = float(row.get('duration_s') or 0)
+    av = read_json(ref_av_path(rd, vid))
+    estimated = []
+    watch = len(av.get('sheets') or []) or len(list((rd / '20-analysis/av' / vid).glob('sheet-*.jpg')))
+    if not watch:
+        watch = max(1, math.ceil(dur / 60)) if dur else 1
+        estimated.append('watch_sheets')
+    ix = read_json(rd / '20-analysis/content' / f'{vid}-shots' / 'index.json')
+    shot_sheets = ix.get('sheets')
+    if isinstance(shot_sheets, list):
+        shot_sheets = len(shot_sheets)
+    if not isinstance(shot_sheets, int) or isinstance(shot_sheets, bool) or shot_sheets <= 0:
+        shot_sheets = len(list((rd / '20-analysis/content' / f'{vid}-shots').glob('sheet-*.jpg')))
+    if not shot_sheets:
+        shots = len(av.get('shots') or [])
+        shot_sheets = math.ceil(shots / SHOTS_PER_SHEET) if shots else watch
+        estimated.append('shot_sheets')
+    words = ((av.get('summary') or {}).get('narration') or {}).get('words')
+    if not isinstance(words, int):
+        words = transcript_words(rd, vid)
+        if not words and row.get('has_audio'):
+            estimated.append('transcript_words')
+    cands = len(av.get('inspect_candidates') or [])
+    load = (watch + shot_sheets + words / cfg['words_per_image'] + cands * cfg['inspect_candidate_weight']
+            + cfg['per_reference_overhead'])
+    return {'ref': vid, 'duration_s': round(dur, 1), 'watch_sheets': watch, 'shot_sheets': shot_sheets,
+            'transcript_words': words, 'inspect_candidates': cands, 'load': round(load, 1),
+            **({'estimated': estimated} if estimated else {})}
+
+
+def analysis_plans(rd):
+    """The analysis plans of this run, oldest first: [(round, plan)]."""
+    out = []
+    for p in (rd / '20-analysis' / 'agents').glob('plan-r*.json'):
+        m = re.fullmatch(r'plan-r(\d+)\.json', p.name)
+        if m:
+            out.append((int(m.group(1)), read_json(p)))
+    return sorted(out, key=lambda x: x[0])
+
+
+def split_work(work, n):
+    """Longest first, each reference to the least-loaded agent (ties: the lower reference number, the first agent).
+    The split depends on the work alone: the same references give the same batches whatever they are about."""
+    loads, batches = [0.0] * n, [[] for _ in range(n)]
+    for v in sorted(work, key=lambda v: (-work[v]['load'], v)):
+        k = min(range(n), key=lambda i: (loads[i], i))
+        batches[k].append(v)
+        loads[k] += work[v]['load']
+    return [sorted(b) for b in batches], [round(x, 1) for x in loads]
+
+
+def fill_template(text, values):
+    for k, v in values.items():
+        text = text.replace('{{' + k + '}}', str(v))
+    left = sorted(set(re.findall(r'\{\{([A-Z_]+)\}\}', text)))
+    if left:
+        error('The analysis brief template has placeholders this tool does not fill', left)
+    return text
+
+
+def cmd_analysis_plan(args):
+    rd, st = run_folder(args)
+    vids = cards_inventory(rd)
+    cfg = batching_settings()
+    if args.ids:
+        want = normalize_refs(args.ids)
+        unknown = [v for v in want if v not in vids]
+        if unknown:
+            error('Unknown reference IDs', unknown)
+    elif args.all:
+        want = sorted(vids)
+    else:
+        want = [v for v in sorted(vids) if not all(ref_analysis_state(rd, v).values())]
+    if not want:
+        emit({'ok': True, 'planned': [], 'note': 'Every reference already has its card, notes and content review: '
+              'nothing to split (--all or --ids plans again).'})
+        return
+    plans = analysis_plans(rd)
+    rnd = (plans[-1][0] + 1) if plans else 1
+    if plans and not args.dry_run:
+        busy = [r['ref'] for b in plans[-1][1].get('batches') or [] for r in b.get('refs') or []
+                if r.get('ref') in want and not all(ref_analysis_state(rd, r['ref']).values())]
+        if busy and n_words(args.replace_why) < 4:
+            error('The latest analysis plan still has these references in analysis: let its agents finish (their '
+                  'to-do files say where they are), or plan them again with --replace-why "why".',
+                  {'plan': f'plan-r{plans[-1][0]}.json', 'references': busy})
+    work = {v: ref_work(rd, v, vids[v], cfg) for v in want}
+    total = round(sum(w['load'] for w in work.values()), 1)
+    if args.agents is not None:
+        if args.agents < 1:
+            error('--agents must be 1 or more')
+        n = args.agents
+    else:
+        n = max(1, min(cfg['max_agents'], math.ceil(total / cfg['per_agent_budget'])))
+    n = min(n, len(want))
+    batches, loads = split_work(work, n)
+    template = ANALYSIS_BRIEF_TEMPLATE.read_text(encoding='utf-8') if ANALYSIS_BRIEF_TEMPLATE.is_file() else None
+    if template is None:
+        error('The analysis brief template is missing', str(ANALYSIS_BRIEF_TEMPLATE))
+    agents_dir = rd / '20-analysis' / 'agents'
+    rows = []
+    for k, refs in enumerate(batches, 1):
+        name = f'r{rnd}-a{k}'
+        brief, todo = agents_dir / f'{name}-brief.md', agents_dir / f'{name}-todo.md'
+        listing = '\n'.join(f'- {v} · {round(work[v]["duration_s"] / 60, 1)} min · {vids[v].get("relative_path")}'
+                            for v in refs)
+        rows.append({'agent': name, 'refs': [work[v] for v in refs], 'load': loads[k - 1],
+                     'minutes': round(sum(work[v]['duration_s'] for v in refs) / 60, 1),
+                     'brief': str(brief), 'todo': str(todo),
+                     'spawn_prompt': f'Read your brief and follow it exactly: {brief}'})
+        if not args.dry_run:
+            brief.parent.mkdir(parents=True, exist_ok=True)
+            brief.write_text(fill_template(template, {
+                'RUN': rd, 'STUDIO': ROOT, 'AGENT': name, 'AGENTS': n, 'REFERENCES': listing, 'TODO': todo,
+                'COUNT': len(refs)}), encoding='utf-8')
+            if not todo.exists():
+                todo.write_text(f'# {name}: analysis to-do (read first when resumed)\n\n'
+                                + ''.join(f'- [ ] {v}: card, notes, content review\n' for v in refs), encoding='utf-8')
+    plan = {'schema': 'analysis-plan-v1', 'round': rnd, 'basis': 'reading work only', 'agents': n,
+            'settings': cfg, 'total_load': total, 'batches': rows,
+            'balance': {'max_load': max(loads), 'min_load': min(loads),
+                        'largest_single_reference_load': max(w['load'] for w in work.values())},
+            'not_measured_yet': sorted(v for v, w in work.items() if w.get('estimated')),
+            'meaning': 'A batch is a share of the reading work. It is not a group, a cohort or a niche: its references '
+                       'were put together by their workload alone, and no later step treats them as related.',
+            **({'replace_why': args.replace_why} if args.replace_why else {}), 'made_at': now()}
+    if not args.dry_run:
+        write_json(agents_dir / f'plan-r{rnd}.json', plan)
+    emit({'ok': True, 'dry_run': bool(args.dry_run), 'plan': None if args.dry_run else str(agents_dir / f'plan-r{rnd}.json'),
+          **{k: plan[k] for k in ('round', 'agents', 'total_load', 'balance', 'not_measured_yet', 'meaning')},
+          'batches': [{'agent': r['agent'], 'refs': [x['ref'] for x in r['refs']], 'load': r['load'],
+                       'minutes': r['minutes'], 'spawn_prompt': r['spawn_prompt']} for r in rows],
+          'next': 'Spawn one analysis agent per batch, all at once, each with its spawn_prompt only. When every '
+                  'reference is analysed: niche-evidence, then the niche map (manual 01).'})
+
+
+def _short(s, n=60):
+    w = str(s or '').split()
+    return ' '.join(w[:n]) + (' ...' if len(w) > n else '')
+
+
+def ref_evidence_row(rd, st, vid, row, card, av, review):
+    """One reference, each dimension apart, from its own card, measurements and content review. Nothing here comes
+    from an analysis batch, a cohort label or an earlier grouping."""
+    s = av.get('summary') or {}
+    nar, pic = s.get('narration') or {}, s.get('picture') or {}
+    pp = nar.get('pause_profile') or {}
+    segs = [x for x in review.get('segments') or [] if isinstance(x, dict)]
+    dur = float(row.get('duration_s') or 0)
+    reward = card.get('viewer_reward')
+    if isinstance(reward, str):
+        reward = [reward]
+    reward_from = 'viewer_reward'
+    if not reward:
+        reward = [str(d.get('what')) for d in card.get('delight') or [] if isinstance(d, dict) and d.get('what')]
+        reward_from = 'delight'
+    swe = review.get('story_without_exclusions')
+    return {
+        'ref': vid, 'file': row.get('relative_path'), 'card': f'20-analysis/cards/{vid}.json',
+        'language': card.get('language'),
+        'subject': {'niches': card.get('niches'), 'editorial_summary': card.get('editorial_summary'),
+                    'title_promise': card.get('title_promise')},
+        'format': {'story_form': card.get('story_form'), 'hook': (card.get('hook') or {}).get('promise')
+                   if isinstance(card.get('hook'), dict) else card.get('hook')},
+        'viewer_reward': {'reward': reward, 'from': reward_from},
+        'visual_style': {'visual_medium': card.get('visual_medium'), 'cuts_per_min': pic.get('cuts_per_min'),
+                         'shot_median_s': (pic.get('shot_length_s') or {}).get('median'),
+                         'moving_time_share': pic.get('moving_time_share')},
+        'narration': {'narrator_character': card.get('narrator_character'),
+                      'speech_rate_wpm': nar.get('speech_rate_wpm'),
+                      'pitch_range_st': (nar.get('pitch_range_st') or {}).get('median'),
+                      'longest_pause_s': pp.get('longest_pause_s'),
+                      'pauses_0_8s_plus_per_min': pp.get('pauses_0_8s_plus_per_min'),
+                      'silence_share': pp.get('silence_share'),
+                      'gap_level_db': (nar.get('gap_level_rel_speech_db') or {}).get('median')},
+        'runtime_and_pacing': {'duration_s': round(dur, 1), 'minutes': round(dur / 60, 1),
+                               'longform': dur >= float(st.get('min_longform_s') or DEFAULT_MIN_LONGFORM),
+                               'words': nar.get('words'),
+                               'rate_p10_p90_wpm': [(nar.get('rate_across_windows_wpm') or {}).get('p10'),
+                                                    (nar.get('rate_across_windows_wpm') or {}).get('p90')]},
+        'content': {'excluded': sorted({str(x.get('kind')) for x in segs if x.get('action') == 'exclude'}),
+                    'excluded_n': sum(1 for x in segs if x.get('action') == 'exclude'),
+                    'restricted_n': sum(1 for x in segs if x.get('action') == 'restrict_visuals'),
+                    'story_without_exclusions': swe.get('status') if isinstance(swe, dict) else swe,
+                    'reviewed': bool(review)},
+        'measured': bool(s)}
+
+
+def evidence_markdown(rows, missing):
+    def num(v, unit=''):
+        return '?' if v is None else f'{v}{unit}'
+    out = ['# Niche evidence', '',
+           'One reference per section, in reference order, each dimension on its own line, from the reference\'s own '
+           'card, measurements and content review. No analysis batch, cohort label or earlier grouping is shown: '
+           'niches are discovered from this evidence (manual 01, "Discovering the niches"). Open a card for its '
+           'timestamps, moments and devices.', '']
+    if missing:
+        out += ['**Not complete yet:** ' + '; '.join(f'{k}: {", ".join(v)}' for k, v in missing.items() if v), '']
+    for r in rows:
+        sub, fmt, rew = r['subject'], r['format'], r['viewer_reward']
+        vis, nar, rt, ct = r['visual_style'], r['narration'], r['runtime_and_pacing'], r['content']
+        out += [f'## {r["ref"]} · {rt["minutes"]} min · {r["file"]}', '',
+                f'- **Subject:** {", ".join(map(str, sub.get("niches") or []))}. {_short(sub.get("editorial_summary"))}',
+                f'- **Title promise:** {_short(sub.get("title_promise"), 45)}',
+                f'- **Format:** {_short(fmt.get("story_form"))}',
+                f'- **Viewer reward** ({rew["from"]}): ' + ' | '.join(_short(x, 30) for x in rew.get('reward') or []),
+                f'- **Visual style:** {_short(vis.get("visual_medium"), 30)} · {num(vis.get("cuts_per_min"))} cuts/min · '
+                f'median shot {num(vis.get("shot_median_s"), " s")} · moving {num(vis.get("moving_time_share"))}',
+                f'- **Narration:** {_short(nar.get("narrator_character"), 30)} · {num(nar.get("speech_rate_wpm"))} wpm '
+                f'while speaking · pitch range {num(nar.get("pitch_range_st"), " st")} · longest pause '
+                f'{num(nar.get("longest_pause_s"), " s")} · pauses of 0.8 s+ {num(nar.get("pauses_0_8s_plus_per_min"))}'
+                f'/min · level in the gaps {num(nar.get("gap_level_db"), " dB")}',
+                f'- **Runtime and pace:** {rt["duration_s"]} s ({"long-form" if rt["longform"] else "under the long-form floor"})'
+                f' · {num(rt.get("words"))} words · rate p10-p90 {num(rt["rate_p10_p90_wpm"][0])}-'
+                f'{num(rt["rate_p10_p90_wpm"][1])} wpm',
+                f'- **Content:** {ct["excluded_n"]} excluded ({", ".join(ct["excluded"]) or "none"}), '
+                f'{ct["restricted_n"]} restricted · story without exclusions: {ct.get("story_without_exclusions") or "n/a"}'
+                + ('' if ct['reviewed'] else ' · NO CONTENT REVIEW YET'),
+                f'- **Language:** {r.get("language") or "?"} · card: `{r["card"]}`', '']
+    return '\n'.join(out)
+
+
+def niche_evidence_facts(rd, st):
+    vids = cards_inventory(rd)
+    rows, missing = [], {'card': [], 'measurements': [], 'content_review': []}
+    shas = {}
+    for vid in sorted(vids):
+        cp = rd / '20-analysis/cards' / f'{vid}.json'
+        card = read_json(cp)
+        if not ref_analysis_state(rd, vid)['card']:
+            missing['card'].append(vid)
+            continue
+        shas[vid] = file_sha256(cp)
+        av = read_json(ref_av_path(rd, vid))
+        review = read_json(rd / '20-analysis/content' / f'{vid}.json')
+        if not av:
+            missing['measurements'].append(vid)
+        if not review:
+            missing['content_review'].append(vid)
+        rows.append(ref_evidence_row(rd, st, vid, vids[vid], card, av, review))
+    return rows, {k: v for k, v in missing.items() if v}, shas
+
+
+def cmd_niche_evidence(args):
+    rd, st = run_folder(args)
+    rows, missing, shas = niche_evidence_facts(rd, st)
+    if not rows:
+        error('No analysed reference yet: every reference needs its card first', missing)
+    # a pure function of the analyses (no time, no batch): the same cards give the same evidence, byte for byte
+    ev = {'schema': 'niche-evidence-v1', 'references': rows, 'cards_sha256': shas, 'not_complete': missing,
+          'dimensions': ['subject', 'format', 'viewer_reward', 'visual_style', 'narration', 'runtime_and_pacing',
+                         'content'],
+          'reading': 'Evidence, not groups: each dimension is listed apart. A niche is what the audience comes for; '
+                     'a format, a look or a voice that several references share is not a niche by itself.'}
+    write_json(niche_evidence_path(rd), ev)
+    md = rd / '20-analysis' / 'niche-evidence.md'
+    md.write_text(evidence_markdown(rows, missing) + '\n', encoding='utf-8')
+    emit({'ok': not missing, 'evidence': str(niche_evidence_path(rd)), 'markdown': str(md),
+          'references': len(rows), 'evidence_sha256': canonical_sha(ev), 'not_complete': missing,
+          'next': 'Read the markdown, open the cards you need, write 20-analysis/niche-map.json (manual 01 and 07), '
+                  'then niche-check.'}, 0 if not missing else 2)
+
+
+def batch_of(rd):
+    """{ref: 'r1-a2'} from this run's analysis plans (the latest plan of a reference wins)."""
+    out = {}
+    for _rnd, plan in analysis_plans(rd):
+        for b in plan.get('batches') or []:
+            for r in b.get('refs') or []:
+                ref = r.get('ref') if isinstance(r, dict) else r
+                if ref:
+                    out[str(ref)] = str(b.get('agent'))
+    return out
+
+
+def cohort_facts(rd, st, cohort, cards, vids):
+    """The numbers a Standard length from this cohort would rest on, and which of length's own rules they meet."""
+    refs = [r for r in cohort.get('refs') or [] if r in vids]
+    durs = {r: float(vids[r].get('duration_s') or 0) for r in refs}
+    vals = sorted(v for v in durs.values() if v)
+    minimum = float(st.get('min_longform_s') or DEFAULT_MIN_LONGFORM)
+    paces = {}
+    for r in refs:
+        w = ((read_json(ref_av_path(rd, r)).get('summary') or {}).get('narration') or {}).get('speech_rate_wpm')
+        if isinstance(w, (int, float)) and w:
+            paces[r] = w
+    forms = sorted({str((cards.get(r) or {}).get('story_form') or '').strip().lower() for r in refs} - {''})
+    langs = sorted({str((cards.get(r) or {}).get('language') or '').strip().lower()[:2] for r in refs} - {''})
+    refusals = []
+    if len(refs) < 2:
+        refusals.append('fewer than two references')
+    if vals and min(vals) < minimum:
+        refusals.append('a reference under the long-form floor: ' + ','.join(r for r, d in durs.items() if d < minimum))
+    if vals and max(vals) / min(vals) > 1.8:
+        refusals.append('lengths span more than 1.8x')
+    if len(paces) >= 2 and max(paces.values()) / min(paces.values()) > PACE_SPREAD_MAX:
+        refusals.append('paces differ by more than 20% (the pace then needs --pace-wpm with its reason)')
+    if len(langs) > 1:
+        refusals.append('references in different languages')
+    med = statistics.median(vals) if vals else None
+    return {'id': cohort.get('id'), 'refs': refs, 'durations_s': {r: round(d, 1) for r, d in durs.items()},
+            'median_s': round(med, 1) if med else None, 'standard_s': round(med / 5) * 5 if med else None,
+            'standard_min': round(round(med / 5) * 5 / 60, 2) if med else None,
+            'spread_ratio': round(max(vals) / min(vals), 2) if vals else None,
+            'speech_rate_wpm': paces, 'story_forms': len(forms), 'languages': langs,
+            'length_would_refuse': refusals}
+
+
+def niche_check_facts(rd, st, m=None):
+    """Issues (form and traceability), warnings and facts for 20-analysis/niche-map.json. Nothing here judges whether
+    a niche is a good one or how many there should be."""
+    m = read_json(niche_map_path(rd)) if m is None else m
+    vids, cards, _card_issues = card_set(rd)
+    iss, warn = [], []
+    if not m:
+        return ['niche_map_missing:write_20-analysis/niche-map.json'], warn, {}
+    ev = read_json(niche_evidence_path(rd))
+    if not ev:
+        iss.append('niche_evidence_missing:run_niche-evidence_and_read_it_before_the_map')
+    else:
+        stale = sorted(v for v, h in (ev.get('cards_sha256') or {}).items()
+                       if (rd / '20-analysis/cards' / f'{v}.json').is_file()
+                       and file_sha256(rd / '20-analysis/cards' / f'{v}.json') != h)
+        new = sorted(v for v in cards if v not in (ev.get('cards_sha256') or {}))
+        if stale or new:
+            iss.append('niche_evidence_outdated:run_niche-evidence_again:' + ','.join(stale + new))
+    niches = [x for x in m.get('niches') or [] if isinstance(x, dict)]
+    if not niches:
+        iss.append('niche_map_needs_at_least_one_niche')
+    ids = [str(x.get('id') or '').strip() for x in niches]
+    if '' in ids or len(set(i.lower() for i in ids)) != len(ids):
+        iss.append('niche_ids_must_be_present_and_distinct')
+    names = [str(x.get('name') or '').strip().lower() for x in niches]
+    if len(set(names)) != len(names):
+        iss.append('niche_names_must_be_distinct')
+    where, cohort_ids, cohorts_out = {}, set(), {}
+    for n in niches:
+        nid = str(n.get('id') or '').strip() or '?'
+        if n_words(n.get('name')) < 1:
+            iss.append(f'niche_{nid}_needs_a_name')
+        for k in ('identity', 'boundary', 'viewer_reward'):
+            if n_words(n.get(k)) < MIN_FIELD_WORDS:
+                iss.append(f'niche_{nid}_needs_{k}')
+        mem = [x for x in n.get('members') or [] if isinstance(x, dict)]
+        if not mem:
+            iss.append(f'niche_{nid}_has_no_members')
+        refs_here = set()
+        for x in mem:
+            r = str(x.get('ref') or '').strip().upper()
+            if r not in vids:
+                iss.append(f'niche_{nid}_member_is_not_a_reference_of_this_run:{r}')
+                continue
+            if r not in cards:
+                iss.append(f'niche_{nid}_member_has_no_card:{r}')
+            if str(x.get('role') or '').strip().lower() not in NICHE_ROLES:
+                iss.append(f'niche_{nid}_member_{r}_role_must_be:' + '/'.join(NICHE_ROLES))
+            if n_words(x.get('why')) < 4:
+                iss.append(f'niche_{nid}_member_{r}_needs_why_from_its_own_evidence')
+            if r in refs_here:
+                iss.append(f'niche_{nid}_lists_{r}_twice')
+            refs_here.add(r)
+            where.setdefault(r, []).append((nid, str(x.get('role') or '').strip().lower()))
+        if mem and not any(str(x.get('role') or '').strip().lower() == 'core' for x in mem):
+            iss.append(f'niche_{nid}_needs_a_core_member')
+        fmts = [f for f in n.get('formats') or [] if isinstance(f, dict)]
+        if not fmts:
+            iss.append(f'niche_{nid}_needs_its_formats:how_its_members_tell_their_subject')
+        in_fmt = set()
+        for i, f in enumerate(fmts, 1):
+            if n_words(f.get('form')) < 2:
+                iss.append(f'niche_{nid}_format_{i}_needs_the_form_in_words')
+            fr = {str(r).strip().upper() for r in f.get('refs') or []}
+            if not fr:
+                iss.append(f'niche_{nid}_format_{i}_names_no_references')
+            if fr - refs_here:
+                iss.append(f'niche_{nid}_format_{i}_names_non_members:' + ','.join(sorted(fr - refs_here)))
+            in_fmt |= fr
+        if fmts and refs_here - in_fmt:
+            iss.append(f'niche_{nid}_members_without_a_format:' + ','.join(sorted(refs_here - in_fmt)))
+        obs = [o for o in n.get('evidence') or [] if isinstance(o, dict)]
+        if not obs:
+            iss.append(f'niche_{nid}_needs_timed_evidence_for_what_makes_it_engaging')
+        for i, o in enumerate(obs, 1):
+            r = str(o.get('ref') or '').strip().upper()
+            if r not in refs_here:
+                iss.append(f'niche_{nid}_evidence_{i}_cites_a_non_member:{r}')
+            if parse_span(o.get('at'))[0] is None:
+                iss.append(f'niche_{nid}_evidence_{i}_needs_a_time:at')
+            if n_words(o.get('observed')) < 4:
+                iss.append(f'niche_{nid}_evidence_{i}_needs_what_is_observed')
+        for c in [c for c in n.get('comparable_cohorts') or [] if isinstance(c, dict)]:
+            cid = str(c.get('id') or '').strip().lower()
+            if not cid or cid in cohort_ids:
+                iss.append(f'niche_{nid}_cohort_ids_must_be_present_and_distinct_across_the_map:{cid or "?"}')
+            cohort_ids.add(cid)
+            cr = [str(r).strip().upper() for r in c.get('refs') or []]
+            if len(set(cr)) < 2:
+                iss.append(f'niche_{nid}_cohort_{cid}_needs_two_references_or_more')
+            if set(cr) - refs_here:
+                iss.append(f'niche_{nid}_cohort_{cid}_names_non_members:' + ','.join(sorted(set(cr) - refs_here)))
+            if n_words(c.get('why_comparable')) < MIN_NOTE_WORDS:
+                iss.append(f'niche_{nid}_cohort_{cid}_needs_why_comparable')
+            cohorts_out[cid] = {**cohort_facts(rd, st, {'id': cid, 'refs': cr}, cards, vids), 'niche': nid}
+    outl = [o for o in m.get('outliers') or [] if isinstance(o, dict)]
+    for o in outl:
+        r = str(o.get('ref') or '').strip().upper()
+        if r not in vids:
+            iss.append(f'outlier_is_not_a_reference_of_this_run:{r}')
+        if n_words(o.get('why')) < 4:
+            iss.append(f'outlier_{r}_needs_why')
+        where.setdefault(r, []).append(('outlier', ''))
+    unaccounted = sorted(v for v in vids if v not in where)
+    if unaccounted:
+        iss.append('references_not_in_any_niche_or_outliers:' + ','.join(unaccounted))
+    for s_ in [x for x in m.get('shared_across_niches') or [] if isinstance(x, dict)]:
+        if n_words(s_.get('what')) < 2 or not s_.get('refs'):
+            iss.append('shared_across_niches_entries_need_what_and_refs')
+        unknown = {str(r).strip().upper() for r in s_.get('refs') or []} - set(vids)
+        if unknown:
+            iss.append('shared_across_niches_names_unknown_references:' + ','.join(sorted(unknown)))
+    # Where cards already carry a cohort_id, it agrees with the map's cohorts (one source for length).
+    for v, c in cards.items():
+        cid = str(c.get('cohort_id') or '').strip().lower()
+        if cid and cid in cohorts_out and v not in cohorts_out[cid]['refs']:
+            iss.append(f'card_{v}_cohort_id_{cid}_disagrees_with_the_niche_map')
+    # How the niches fall across the analysis batches: batches carry no meaning, so a niche that is exactly one batch
+    # is worth a second look (a fact for the director, never a verdict).
+    bo = batch_of(rd)
+    align = {}
+    for n in niches:
+        nid = str(n.get('id') or '').strip()
+        mem = {str(x.get('ref') or '').strip().upper() for x in n.get('members') or [] if isinstance(x, dict)}
+        counts = {}
+        for r in mem:
+            counts[bo.get(r, 'no plan on record')] = counts.get(bo.get(r, 'no plan on record'), 0) + 1
+        align[nid] = counts
+        batch_refs = {}
+        for r, b in bo.items():
+            batch_refs.setdefault(b, set()).add(r)
+        same = [b for b, rs in batch_refs.items() if len(mem) > 1 and rs == mem]
+        if same:
+            warn.append(f'niche {nid} is exactly the references of analysis batch {same[0]}: batches are a split of the '
+                        'reading work, so make sure this niche stands on its members\' own evidence')
+        elif len(mem) > 2 and len(counts) == 1 and 'no plan on record' not in counts:
+            warn.append(f'every member of niche {nid} was analysed in batch {next(iter(counts))}: make sure the niche '
+                        'stands on its members\' own evidence, not on how the work was split')
+    facts = {'niches': len(niches), 'references': len(vids), 'outliers': [str(o.get('ref')) for o in outl],
+             'in_several_niches': {r: [f'{a}:{b}' for a, b in w] for r, w in where.items()
+                                   if len([a for a, _ in w if a != 'outlier']) > 1},
+             'members': {str(n.get('id')): {'core': sorted(str(x.get('ref')).upper() for x in n.get('members') or []
+                                                          if isinstance(x, dict) and x.get('role') == 'core'),
+                                            'overlap': sorted(str(x.get('ref')).upper() for x in n.get('members') or []
+                                                             if isinstance(x, dict) and x.get('role') == 'overlap')}
+                         for n in niches},
+             'cohorts': cohorts_out, 'batches_per_niche': align}
+    return iss, warn, facts
+
+
+def cmd_niche_check(args):
+    rd, st = run_folder(args)
+    m = read_json(niche_map_path(rd))
+    iss, warn, facts = niche_check_facts(rd, st, m)
+    rec = {'ok': not iss, 'map_sha256': canonical_sha(m) if m else None,
+           'evidence_sha256': (canonical_sha(read_json(niche_evidence_path(rd)))
+                               if niche_evidence_path(rd).is_file() else None),
+           'issues': iss, 'warnings': warn, 'facts': facts, 'checked_at': now()}
+    write_json(rd / '20-analysis' / 'niche-check.json', rec)
+    emit({**rec, 'next': ('Present the niches to the user (what each is about, what makes it engaging with its '
+                          'evidence, its formats, its Standard lengths from facts.cohorts), then niche-lock their pick.')
+          if not iss else 'Fix the map and check again.'}, 0 if not iss else 2)
+
+
+def cmd_niche_lock(args):
+    rd, st = run_folder(args)
+    m = read_json(niche_map_path(rd))
+    iss, _warn, facts = niche_check_facts(rd, st, m)
+    if iss:
+        error('The niche map does not pass niche-check: fix it before locking a niche', iss)
+    want = str(args.niche or '').strip().lower()
+    n = next((x for x in m.get('niches') or [] if isinstance(x, dict) and want in
+              {str(x.get('id') or '').strip().lower(), str(x.get('name') or '').strip().lower()}), None)
+    if n is None:
+        error('No niche with that id or name in the niche map',
+              {'asked': args.niche, 'niches': {str(x.get('id')): x.get('name') for x in m.get('niches') or []
+                                               if isinstance(x, dict)}})
+    old = read_json(niche_lock_path(rd))
+    if not old and n_words(args.user_words) < 1:
+        error('Record the user\'s own words for their pick (--user-words), or theirs delegating it')
+    if not old and args.decided_by == 'director' and n_words(args.why) < MIN_NOTE_WORDS:
+        error('A niche the director picks on the user\'s delegation says why (--why)')
+    if old:
+        if str(old.get('niche_id')).lower() != str(n.get('id')).lower():
+            error('This run is one niche only. Use clone for a different niche.',
+                  {'locked': old.get('name'), 'requested': n.get('name')})
+        if not args.refresh:
+            emit({'ok': True, 'unchanged': True, 'lock': str(niche_lock_path(rd)), 'niche': old.get('name')})
+            return
+        # the same niche, its members brought up to a revised map (new references on 'more'): a reference a locked
+        # length rests on stays a member
+        if n_words(args.why) < MIN_NOTE_WORDS:
+            error('A refreshed niche lock says why the map changed (--why)')
+        keep = {str(x.get('ref') or '').strip().upper() for x in n.get('members') or [] if isinstance(x, dict)}
+        cited = {r for lp in rd.glob('40-plans/video-*/length-lock.json') for r in read_json(lp).get('reference_ids') or []}
+        if cited - keep:
+            error('A locked length rests on references the revised map leaves out of this niche', sorted(cited - keep))
+    legacy = {str(read_json(p).get('niche') or '') for p in rd.glob('40-plans/video-*/length-lock.json')} - {''}
+    if legacy and {x.lower() for x in legacy} != {str(n.get('name')).strip().lower()}:
+        error('A length is already locked on another niche in this run', sorted(legacy))
+    nid = str(n.get('id')).strip()
+    members = [{'ref': str(x.get('ref')).strip().upper(), 'role': str(x.get('role')).strip().lower(),
+                'why': x.get('why')} for x in n.get('members') or [] if isinstance(x, dict)]
+    cohorts = [{**c, 'why_comparable': next((cc.get('why_comparable') for cc in n.get('comparable_cohorts') or []
+                                             if str(cc.get('id') or '').strip().lower() == cid), None)}
+               for cid, c in (facts.get('cohorts') or {}).items() if c.get('niche') == nid]
+    lock = {'schema': 'niche-lock-v1', 'niche_id': nid, 'name': str(n.get('name')).strip(),
+            'identity': n.get('identity'), 'boundary': n.get('boundary'), 'viewer_reward': n.get('viewer_reward'),
+            'members': members, 'formats': n.get('formats'), 'comparable_cohorts': cohorts,
+            'map_sha256': canonical_sha(m), 'evidence_sha256': canonical_sha(read_json(niche_evidence_path(rd))),
+            'user_words': old.get('user_words') if old else args.user_words,
+            'decided_by': old.get('decided_by') if old else args.decided_by,
+            **({'why': old.get('why')} if old and old.get('why') else {'why': args.why} if args.why and not old else {}),
+            'locked_at': old.get('locked_at') if old else now(),
+            **({'refreshed': (old.get('refreshed') or []) + [{'at': now(), 'why': args.why,
+                                                            'members_before': [m.get('ref') for m in old.get('members') or []]}]}
+               if old else {}),
+            'rule': 'One niche per run: a different niche is a clone. Its members are the evidence family every '
+                    'video of this run draws on; a reference outside them is borrowed (its technique, not its subject).'}
+    write_json(niche_lock_path(rd), lock)
+    st['selected_niche'] = lock['name']
+    st['selected_niche_id'] = nid
+    st['niche_discovery'] = NICHE_DISCOVERY
+    write_json(rd / 'state.json', st)
+    advance_stage(rd, 'reference_analysis_complete')
+    emit({'ok': True, 'lock': str(niche_lock_path(rd)), 'niche': lock['name'], 'niche_id': nid,
+          'members': members, 'comparable_cohorts': [{k: c.get(k) for k in ('id', 'refs', 'standard_min',
+                                                                              'length_would_refuse')} for c in cohorts],
+          'next': 'length: Standard from one of these cohorts (--cohort-id), or own minutes; refs from this niche.'})
+
+
 def video_dir(rd, video):
     n = int(video)
     if n < 1:
@@ -754,24 +1376,61 @@ def cmd_length(args):
     cohort_id = (getattr(args, 'cohort_id', None) or '').strip().lower()
     niche_arg = (args.niche or '').strip().lower()
     form_arg = (args.story_form or '').strip().lower()
-    if not cohort_id and not (niche_arg and form_arg):
-        error('Provide either --cohort-id or both --niche and --story-form')
-    if cohort_id:
-        family = {i: vids[i] for i, c in cards.items()
-                  if str(c.get('cohort_id', '')).strip().lower() == cohort_id}
-        if not family:
-            error('No references with that cohort_id in their cards', {'cohort_id': cohort_id})
-        effective_niche = '__cohort__:' + cohort_id
-        effective_form = ''
-    else:
-        family = {i: vids[i] for i, c in cards.items()
-                  if niche_arg in [str(x).lower() for x in c.get('niches') or []]
-                  and str(c.get('story_form', '')).lower() == form_arg}
-        if not family:
-            error('No references in selected niche and story form', {'niche': niche_arg, 'form': form_arg})
-        effective_niche = niche_arg
+    forms_why = str(getattr(args, 'forms_why', '') or '')
+    # The niche is the user's pick from the niche map (niche-lock): the comparable references come from inside it,
+    # from one of its comparable cohorts or one of its formats; a run made before niche discovery keeps its
+    # label-matched niche below.
+    nl = read_json(niche_lock_path(rd))
+    if niche_flow(st) and not nl:
+        error("Lock the user's niche first: niche-evidence, the niche map, niche-check, then niche-lock with their "
+              "pick (manual 01). The length's comparable references come from inside that niche.")
+    if nl:
+        members = [str(m.get('ref')) for m in nl.get('members') or [] if isinstance(m, dict) and m.get('ref') in vids]
+        names = {str(nl.get('name') or '').strip().lower(), str(nl.get('niche_id') or '').strip().lower()}
+        if niche_arg and niche_arg not in names:
+            error('This run is one niche only. Use clone for a different niche.',
+                  {'locked_niche': nl.get('name'), 'requested': niche_arg})
+        map_cohort = next((c for c in nl.get('comparable_cohorts') or []
+                           if str(c.get('id') or '').strip().lower() == cohort_id), None) if cohort_id else None
+        if map_cohort:
+            family = {i: vids[i] for i in map_cohort.get('refs') or [] if i in vids}
+            if not forms_why:
+                forms_why = str(map_cohort.get('why_comparable') or '')
+        elif cohort_id:
+            family = {i: vids[i] for i in members
+                      if str((cards.get(i) or {}).get('cohort_id') or '').strip().lower() == cohort_id}
+            if not family:
+                error('No comparable cohort with that id in the locked niche',
+                      {'cohort_id': cohort_id, 'niche': nl.get('name'),
+                       'cohorts': [c.get('id') for c in nl.get('comparable_cohorts') or []]})
+        elif form_arg:
+            family = {i: vids[i] for i in members
+                      if str((cards.get(i) or {}).get('story_form') or '').strip().lower() == form_arg}
+            if not family:
+                error('No reference of that story form in the locked niche', {'form': form_arg, 'niche': nl.get('name')})
+        else:
+            family = {i: vids[i] for i in members}
+        effective_niche = str(nl.get('name') or '').strip()
         effective_form = form_arg
-    if st.get('selected_niche') and st['selected_niche'] != effective_niche:
+    else:
+        if not cohort_id and not (niche_arg and form_arg):
+            error('Provide either --cohort-id or both --niche and --story-form')
+        if cohort_id:
+            family = {i: vids[i] for i, c in cards.items()
+                      if str(c.get('cohort_id', '')).strip().lower() == cohort_id}
+            if not family:
+                error('No references with that cohort_id in their cards', {'cohort_id': cohort_id})
+            effective_niche = '__cohort__:' + cohort_id
+            effective_form = ''
+        else:
+            family = {i: vids[i] for i, c in cards.items()
+                      if niche_arg in [str(x).lower() for x in c.get('niches') or []]
+                      and str(c.get('story_form', '')).lower() == form_arg}
+            if not family:
+                error('No references in selected niche and story form', {'niche': niche_arg, 'form': form_arg})
+            effective_niche = niche_arg
+            effective_form = form_arg
+    if st.get('selected_niche') and str(st['selected_niche']).strip().lower() != effective_niche.lower():
         error('This run is one niche/channel only. Use clone for a different niche.',
               {'locked_niche': st['selected_niche'], 'requested': effective_niche})
     refs = normalize_refs(args.refs)
@@ -779,12 +1438,12 @@ def cmd_length(args):
         if len(refs) < 2:
             error('Standard requires >=2 explicitly selected comparable reference IDs (no mixed-folder averages).')
         if any(x not in family for x in refs):
-            error('A selected reference is not in the selected group', refs)
+            error('A selected reference is not in the selected group', {'refs': refs, 'group': sorted(family)})
         durations = [family[i]['duration_s'] for i in refs]
         # A cohort is the user's own group: its references may be of different story forms, whose lengths are made for
         # different kinds of video (a tutorial's and a documentary's median is neither's length).
         forms = sorted({str(cards[i].get('story_form') or '').strip().lower() for i in refs} - {''})
-        if cohort_id and len(forms) > 1 and n_words(getattr(args, 'forms_why', '')) < MIN_NOTE_WORDS:
+        if (cohort_id or nl) and len(forms) > 1 and n_words(forms_why) < MIN_NOTE_WORDS:
             error('This cohort mixes story forms: a Standard length from their median mixes lengths made for different '
                   'kinds of video. Choose references of one form, or say why these lengths compare (--forms-why).',
                   {'forms': forms, 'references': refs})
@@ -859,10 +1518,13 @@ def cmd_length(args):
             # the evidence the script stage reads before deciding any pause, hold or tag.
             'reference_pause_profiles': ref_pause_profiles(rd, refs),
             'locked_at': now(), 'rule': 'Immutable unless user explicitly approves a revised length.'}
-    if cohort_id:
+    if nl:
+        lock.update({'niche_id': nl.get('niche_id'), 'niche_lock_sha256': canonical_sha(nl),
+                     **({'cohort_id': cohort_id} if cohort_id else {})})
+    if cohort_id or nl:
         lock['story_forms'] = sorted({str(cards[i].get('story_form') or '').strip().lower() for i in refs} - {''})
-        if getattr(args, 'forms_why', ''):
-            lock['forms_why'] = args.forms_why
+        if forms_why:
+            lock['forms_why'] = forms_why
     write_json(lockfile, lock)
     st['selected_niche'] = effective_niche
     st['video_count'] = max(st.get('video_count', 0), int(args.video))
@@ -2562,8 +3224,12 @@ def payoff_value_issues(vals, chosen):
 
 
 def locked_niche_names(rd, lock):
-    """The names the run's locked niche goes by: the niche itself, or, for a cohort the user grouped, its id and the
-    niches its references' cards name (never the internal '__cohort__:' label)."""
+    """The names the run's locked niche goes by: the user's pick from the niche map (niche-lock: its name and id); in
+    a run made before niche discovery, the niche itself, or, for a cohort the user grouped, its id and the niches its
+    references' cards name (never the internal '__cohort__:' label)."""
+    nl = read_json(niche_lock_path(rd))
+    if nl.get('niche_id'):
+        return {str(nl.get('name') or '').strip().lower(), str(nl.get('niche_id') or '').strip().lower()} - {''}
     niche = str((lock or {}).get('niche') or '').strip().lower()
     if not niche.startswith('__cohort__:'):
         return {niche} if niche else set()
@@ -2575,7 +3241,12 @@ def locked_niche_names(rd, lock):
 
 
 def niche_family_refs(rd, lock):
-    """The references in the locked niche: their cards name it (a cohort: the cohort's own cards)."""
+    """The references in the locked niche: the niche map's members of the user's pick (niche-lock: core and overlap,
+    whatever their format); in a run made before niche discovery, the references whose cards name it (a cohort: the
+    cohort's own cards)."""
+    nl = read_json(niche_lock_path(rd))
+    if nl.get('niche_id'):
+        return {str(m.get('ref')).strip().upper() for m in nl.get('members') or [] if isinstance(m, dict) and m.get('ref')}
     niche = str((lock or {}).get('niche') or '').strip().lower()
     if not niche:
         return set()
@@ -3010,7 +3681,7 @@ def direction_facts(rd, video):
         src_p = sources_path(rd, video)
         s_iss, s_warn = subject_issues(d.get('subject'), src_p.read_text(encoding='utf-8', errors='replace')
                                        if src_p.is_file() else '', ll.get('target_length_s'), refs,
-                                       locked_niche_names(rd, ll) if ll.get('niche') else None,
+                                       locked_niche_names(rd, ll) or None,
                                        read_json(claims_path(rd, video)))
         iss += s_iss
         warn += s_warn
@@ -12183,6 +12854,7 @@ def cmd_status(args):
             advance_stage(rd, least)
             st = read_json(rd / 'state.json')
     emit({'ok': True, 'run': str(rd), 'stage': st.get('stage'), 'selected_niche': st.get('selected_niche'),
+          'selected_niche_id': st.get('selected_niche_id'), 'niche_discovery': st.get('niche_discovery'),
           'reference_videos': len([x for x in inv.get('items', []) if x.get('kind') == 'video']),
           'videos': videos})
 
@@ -12216,6 +12888,29 @@ def main():
     p.add_argument('--reason', default='', help='--skip-whisper: why this reference goes without its words')
     p.set_defaults(func=cmd_prepare)
     p = sub.add_parser('cohorts'); p.add_argument('--run', required=True); p.set_defaults(func=cmd_cohorts)
+    p = sub.add_parser('analysis-plan', help='Split the reference analysis between agents by reading work alone (never '
+                       'by subject): batches, one brief and one to-do file per agent')
+    p.add_argument('--run', required=True); p.add_argument('--agents', type=int, help='how many analysis agents '
+                   '(default: the work over config analysis_batching.per_agent_budget, at most max_agents)')
+    p.add_argument('--ids', help='these references only'); p.add_argument('--all', action='store_true',
+                   help='every reference, analysed or not (default: those without card, notes and content review)')
+    p.add_argument('--dry-run', action='store_true'); p.add_argument('--replace-why', default='',
+                   help='plan again references the latest plan still has in analysis, and why')
+    p.set_defaults(func=cmd_analysis_plan)
+    p = sub.add_parser('niche-evidence', help='Every analysed reference with each dimension apart, in reference '
+                       'order, no batch or grouping shown (20-analysis/niche-evidence.json and .md)')
+    p.add_argument('--run', required=True); p.set_defaults(func=cmd_niche_evidence)
+    p = sub.add_parser('niche-check', help="The niche map's form and traceability, and the facts its presentation needs")
+    p.add_argument('--run', required=True); p.set_defaults(func=cmd_niche_check)
+    p = sub.add_parser('niche-lock', help="Lock the user's pick from the niche map for this run (one niche per run)")
+    p.add_argument('--run', required=True); p.add_argument('--niche', required=True, help='the niche id or name')
+    p.add_argument('--user-words', default='', help="the user's own words for the pick, or for delegating it "
+                   "(required for the first lock)")
+    p.add_argument('--decided-by', choices=['user', 'director'], default='user')
+    p.add_argument('--why', default='', help="a pick the director makes on the user's delegation: why this niche "
+                   "(with --refresh: why the map changed)")
+    p.add_argument('--refresh', action='store_true', help='the same niche, its members brought up to a revised map')
+    p.set_defaults(func=cmd_niche_lock)
     p = sub.add_parser('length'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--mode', choices=['standard','own'], required=True); p.add_argument('--niche', default='')
     p.add_argument('--story-form', default=''); p.add_argument('--cohort-id', default='')

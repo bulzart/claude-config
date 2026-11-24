@@ -118,6 +118,7 @@ class StaticStudioTests(unittest.TestCase):
                 mod.preflight_elevenlabs_balance('test-not-a-real-key',100)
 
     def test_niche_grouping_and_longform_lock(self):
+        self.legacy_run()                       # the label-matched niche of a run made before niche discovery
         groups=cli('cohorts','--run',self.run)['groups']
         self.assertEqual(len(groups),2)
         self.assertEqual(next(x for x in groups if x['niche']=='military history')['median_s'],600)
@@ -145,6 +146,30 @@ class StaticStudioTests(unittest.TestCase):
         rp=self.home/f'review-{ref}.json'; save(rp,doc)
         cli('content-review','--run',self.run,'--ref',ref,'--shot-sheets')      # every shot seen once
         return cli('content-review','--run',self.run,'--ref',ref,'--file',rp,expected=expected)
+
+    def lock_niche(self, name='military history', core=('V001', 'V002'), outliers=('V003',)):
+        """The niche discovery an agent does (01): the evidence, a map written from it, its check, the user's pick."""
+        cli('niche-evidence', '--run', self.run, expected=None)       # 2 while measurements or reviews are missing
+        save(self.run/'20-analysis/niche-map.json', {
+            'niches': [{'id': 'N1', 'name': name,
+                        'identity': f'videos about {name}: what happened, why it mattered and what it cost',
+                        'boundary': 'stops being this niche when the subject is no longer about this kind of past',
+                        'viewer_reward': 'a hard choice understood from the inside, and its cost felt by the viewer',
+                        'members': [{'ref': r, 'role': 'core', 'why': 'its card names this subject as what it is about'}
+                                    for r in core],
+                        'formats': [{'form': 'historical narrative', 'refs': list(core)}],
+                        'comparable_cohorts': [{'id': 'n1-narratives', 'refs': list(core),
+                                                'why_comparable': 'both historical narratives of one runtime family'}],
+                        'evidence': [{'ref': core[0], 'at': '00:10',
+                                      'observed': 'the narrator names the cost before the decision'}]}],
+            'outliers': [{'ref': r, 'why': 'a tutorial whose audience no other reference shares'} for r in outliers]})
+        cli('niche-check', '--run', self.run)
+        return cli('niche-lock', '--run', self.run, '--niche', 'N1', '--user-words', f'the {name} one')
+
+    def legacy_run(self):
+        """A run made before niche discovery: no niche_discovery in its state, its niche matched from the cards."""
+        sp = self.run/'state.json'; st = json.loads(sp.read_text(encoding='utf-8'))
+        st.pop('niche_discovery', None); save(sp, st)
 
     def add_ref(self, vid, path, duration, audio, fps=30):
         invp=self.run/'00-inventory/references.json'; inv=json.loads(invp.read_text())
@@ -290,6 +315,7 @@ class StaticStudioTests(unittest.TestCase):
                            {'F1':{'action':'kept','note':'the slow start is the treatment choice'}})
 
     def write_plan(self, lock=True, review_script=True):
+        self.lock_niche()
         cli('length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
             '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145,'--pace-why','the test narrator reads at this pace')
         vd=self.run/'40-plans/video-01'
@@ -1109,6 +1135,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('Q1',json.dumps(cli('review-packet','--run',self.run,'--video',1,'--kind','treatment',expected=2)))
 
     def test_an_interrupted_research_resumes_from_its_files(self):
+        self.lock_niche()
         cli('length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
             '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145,'--pace-why','the test narrator reads at this pace')
         vd=self.run/'40-plans/video-01'
@@ -1992,6 +2019,7 @@ class StaticStudioTests(unittest.TestCase):
 
     # ---------------------------------------------------------------- remediation 2026-11-24: niche, readers, hand-offs
     def test_a_cohort_length_refuses_mixed_story_forms_unless_explained(self):
+        self.legacy_run()                       # a director-set cohort_id on the cards (before niche discovery)
         for i,(form,cid) in enumerate((('tutorial','mine'),('historical narrative','mine')),1):
             cp=self.run/f'20-analysis/cards/V00{i}.json'
             card=json.loads(cp.read_text(encoding='utf-8')); card.update(story_form=form,cohort_id=cid); save(cp,card)
@@ -2221,6 +2249,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertTrue(any('visual_language_changed' in x for x in core.style_lock_state(self.run,1)[1]))
 
     def test_pace_needs_its_reason_and_is_never_a_blind_average(self):
+        self.lock_niche()
         core=self.load_core()
         args=['length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
               '--story-form','historical narrative','--refs','V001,V002']
@@ -2525,6 +2554,7 @@ class StaticStudioTests(unittest.TestCase):
                 t+=1.6
             save(m/'transcript.json',{'status':'transcribed','segments':segs})
             (m/'transcript.txt').write_text('\n'.join(f"[{s['start_s']:.1f}-{s['end_s']:.1f}] {s['text']}" for s in segs),encoding='utf-8')
+        self.lock_niche()
         lock=cli('length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
                  '--story-form','historical narrative','--refs','V001,V002')
         pp=lock['pace_profile']
@@ -3407,6 +3437,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertTrue((cp/'20-analysis/cards/V001.json').exists())
         self.assertFalse((cp/'40-plans/video-01/length-lock.json').exists())
         self.assertEqual(json.loads((cp/'state.json').read_text())['selected_niche'],None)
+        self.assertEqual(json.loads((cp/'state.json').read_text())['niche_discovery'],'niche-map-v1')
         self.assertFalse(cli('status','--run',cp)['videos'])
 
     # ---------------------------------------------------------------- held silences: proposed, measured, decided
@@ -5756,6 +5787,7 @@ class TopicPathTests(unittest.TestCase):
         rp = run / '30-research/video-01'
         shutil.copyfile(fx / 'sources.md', rp / 'sources.md')
         save(rp / 'claims.json', claims)
+        h.lock_niche(name=niche)
         cli('length', '--run', run, '--video', 1, '--mode', 'standard', '--niche', niche, '--story-form', form,
             '--refs', 'V001,V002', '--pace-wpm', 145, '--pace-why', 'the test narrator reads at this pace')
         vd = run / '40-plans/video-01'
@@ -5976,6 +6008,269 @@ class TopicPathTests(unittest.TestCase):
         # the same history brief, run again once the manual asked for a wide survey first, read finalists, an ending
         # from the subject's own material and single-source key moments attributed or corroborated
         self.run_path('history-r2')
+
+
+class NicheDiscoveryTests(unittest.TestCase):
+    """2026-11-24, the user's brief on dynamic niche discovery: the analysis work is split by reading work alone, the
+    niches are discovered from the finished analyses (any number of them, overlapping, with outliers), and the user's
+    pick is locked for the length, the direction's evidence family and the subject's scope."""
+    # id: (duration_s, watch sheets, shots, words, card niches, story form). Made-up subjects, unrelated to any run.
+    REFS = {'V001': (1800., 30, 600, 5200, ['lighthouses'], 'single-night investigation'),
+            'V002': (600., 10, 180, 1700, ['lighthouses'], 'single-night investigation'),
+            'V003': (660., 11, 200, 1800, ['lighthouses', 'sourdough'], 'second-person life story'),
+            'V004': (540., 9, 300, 1500, ['sourdough'], 'recipe tutorial'),
+            'V005': (900., 15, 260, 2600, ['sourdough', 'food chemistry'], 'myth-busting explainer'),
+            'V006': (720., 12, 150, 2000, ['tide pools'], 'nature documentary'),
+            'V007': (200., 4, 90, 600, ['sourdough'], 'quick tip')}
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name)
+        refs = self.home/'references'
+        refs.mkdir()
+        colours = ('red', 'blue', 'green', 'yellow', 'cyan', 'magenta', 'white')      # distinct clips, no duplicates
+        for i, _vid in enumerate(self.REFS, 1):
+            subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i',
+                            f'color=c={colours[i - 1]}:s=64x36:r=5', '-t', '0.6', '-pix_fmt', 'yuv420p',
+                            str(refs/f'clip_{i}.mp4')], check=True)
+        self.run = Path(cli('init', '--references', refs, '--workspace', self.home/'runs', '--slug', 'discovery')['run'])
+        cli('scan', '--run', self.run)
+        invp = self.run/'00-inventory/references.json'
+        inv = json.loads(invp.read_text(encoding='utf-8'))
+        for row in inv['items']:
+            if row['id'] in self.REFS:
+                row['duration_s'] = self.REFS[row['id']][0]
+        save(invp, inv)
+        for vid in self.REFS:
+            self.analyse(vid)
+
+    def analyse(self, vid, niches=None):
+        """A finished analysis: measurements, shot sheets index, card, notes, content review."""
+        dur, watch, shots, words, nn, form = self.REFS[vid]
+        av = self.run/'20-analysis/av'
+        save(av/f'{vid}.json', {'sheets': [str(av/vid/f'sheet-{k:03d}.jpg') for k in range(1, watch + 1)],
+                                'shots': [{'start_s': k} for k in range(shots)],
+                                'inspect_candidates': [{} for _ in range(shots // 50)],
+                                'summary': {'narration': {'words': words, 'speech_rate_wpm': 150 + int(vid[1:]) * 5,
+                                                          'pitch_range_st': {'median': 9.0},
+                                                          'pause_profile': {'longest_pause_s': 0.8}},
+                                            'picture': {'cuts_per_min': round(shots / (dur / 60), 1)}}})
+        save(self.run/'20-analysis/content'/f'{vid}-shots'/'index.json', {'reference_id': vid, 'sheets': -(-shots // 36)})
+        save(self.run/'20-analysis/cards'/f'{vid}.json', {
+            'reference_id': vid, 'niches': niches or nn, 'story_form': form, 'language': 'en',
+            'editorial_summary': 'a video about ' + ', '.join(niches or nn), 'visual_medium': 'drawn stills',
+            'narrator_character': 'a calm guide', 'delight': [{'what': 'a concrete surprise every minute'}],
+            'viewer_experience': [{'start_s': 0, 'end_s': 30, 'question': 'what', 'evidence': '[O] 00:10'}]})
+        (self.run/'20-analysis'/f'{vid}-notes.md').write_text('notes', encoding='utf-8')
+        save(self.run/'20-analysis/content'/f'{vid}.json', {'reference_id': vid, 'segments': [],
+                                                           'story_without_exclusions': {'status': 'coherent'}})
+
+    def plan(self, *extra, expected=0):
+        return cli('analysis-plan', '--run', self.run, *extra, expected=expected)
+
+    @staticmethod
+    def niche(nid, name, core, overlap=(), cohorts=(), forms=None):
+        refs = list(core) + list(overlap)
+        return {'id': nid, 'name': name, 'identity': f'videos about {name}: what it is and why people care about it',
+                'boundary': f'stops being this niche when the video is no longer about {name} at all',
+                'viewer_reward': f'the satisfaction of understanding {name} from the inside, step by step',
+                'members': [{'ref': r, 'role': 'core', 'why': f'its card says it is about {name}'} for r in core]
+                + [{'ref': r, 'role': 'overlap', 'why': f'it is partly about {name} too'} for r in overlap],
+                'formats': forms or [{'form': 'how they tell it', 'refs': refs}],
+                'comparable_cohorts': [{'id': c, 'refs': list(r), 'why_comparable': 'the same kind of telling at one '
+                                        'runtime family'} for c, r in cohorts],
+                'evidence': [{'ref': core[0], 'at': '00:10', 'observed': f'the opening shows {name} at work'}]}
+
+    def check_map(self, m, expected=0):
+        cli('niche-evidence', '--run', self.run)
+        save(self.run/'20-analysis/niche-map.json', m)
+        return cli('niche-check', '--run', self.run, expected=expected)
+
+    def three_niches(self, extra_n2=()):
+        return {'niches': [self.niche('N1', 'lighthouses', ['V001', 'V002'], overlap=['V003'],
+                                      cohorts=[('keeper-nights', ['V002', 'V003'])]),
+                           self.niche('N2', 'sourdough', ['V004', 'V005', 'V007'], overlap=['V003', *extra_n2],
+                                      cohorts=[('bread-explainers', ['V004', 'V005'])],
+                                      forms=[{'form': 'recipe tutorial', 'refs': ['V004', 'V007']},
+                                             {'form': 'myth-busting explainer', 'refs': ['V005']},
+                                             {'form': 'second-person life story', 'refs': ['V003', *extra_n2]}]),
+                           self.niche('N3', 'tide pools', ['V006'])]}
+
+    def test_the_analysis_is_split_by_reading_work_alone(self):
+        for n in (2, 3, 5):
+            out = self.plan('--all', '--dry-run', '--agents', n)
+            refs = [r for b in out['batches'] for r in b['refs']]
+            self.assertEqual(sorted(refs), sorted(self.REFS))                     # every reference, once
+            self.assertEqual(len(out['batches']), n)
+            loads = [b['load'] for b in out['batches']]
+            self.assertLessEqual(max(loads) - min(loads), out['balance']['largest_single_reference_load'])
+            self.assertEqual(out, self.plan('--all', '--dry-run', '--agents', n))   # the same work, the same split
+        # what the videos are about never moves a reference between batches
+        before = self.plan('--all', '--dry-run', '--agents', 3)['batches']
+        for vid in self.REFS:
+            self.analyse(vid, niches=['something else entirely'])
+        self.assertEqual(before, self.plan('--all', '--dry-run', '--agents', 3)['batches'])
+        # without --agents: the work over the per-agent budget, at most the configured maximum
+        out = self.plan('--all', '--dry-run')
+        self.assertEqual(out['agents'], max(1, min(5, -(-out['total_load'] // 260))))
+        # the written plan: rows of work only; one brief per agent naming its own references and no others
+        out = self.plan('--all', '--agents', 2)
+        plan = json.loads(Path(out['plan']).read_text(encoding='utf-8'))
+        self.assertEqual(set(plan['batches'][0]['refs'][0]), {'ref', 'duration_s', 'watch_sheets', 'shot_sheets',
+                                                              'transcript_words', 'inspect_candidates', 'load'})
+        for b in plan['batches']:
+            brief = Path(b['brief']).read_text(encoding='utf-8')
+            self.assertNotIn('{{', brief)
+            mine = {r['ref'] for r in b['refs']}
+            for vid in self.REFS:
+                self.assertEqual(f'- {vid} ·' in brief, vid in mine, (vid, b['agent']))
+            self.assertIn('by reading work alone', brief)
+            self.assertIn('Never compare a reference with the others on your list', brief)
+            self.assertIn('Leave `cohort_id` out', brief)
+            self.assertTrue(Path(b['todo']).is_file())
+        # by default only what is not analysed yet; a plan still at work is replaced only with a reason
+        (self.run/'20-analysis'/'V004-notes.md').unlink()
+        self.assertEqual([r for b in self.plan('--dry-run')['batches'] for r in b['refs']], ['V004'])
+        self.assertIn('still has these references in analysis', self.plan(expected=2)['error'])
+        self.assertEqual(self.plan('--replace-why', 'the agent of V004 stopped before its notes')['round'], 2)
+
+    def test_the_evidence_is_the_same_whatever_the_batches(self):
+        cli('niche-evidence', '--run', self.run)
+        ev, md = self.run/'20-analysis/niche-evidence.json', self.run/'20-analysis/niche-evidence.md'
+        first = (ev.read_bytes(), md.read_bytes())
+        for n in (2, 4):
+            self.plan('--all', '--agents', n)
+            cli('niche-evidence', '--run', self.run)
+            self.assertEqual(first, (ev.read_bytes(), md.read_bytes()))
+        data = json.loads(first[0])
+        self.assertEqual([r['ref'] for r in data['references']], sorted(self.REFS))
+        self.assertNotIn('r1-a', first[1].decode('utf-8'))
+        self.assertEqual(set(data['references'][0]) - {'ref', 'file', 'card', 'language', 'measured'},
+                         {'subject', 'format', 'viewer_reward', 'visual_style', 'narration', 'runtime_and_pacing',
+                          'content'})                                          # each dimension apart
+
+    def test_any_evidence_supported_number_of_niches(self):
+        one = {'niches': [self.niche('N1', 'lighthouses', ['V001', 'V002', 'V003'])],
+               'outliers': [{'ref': r, 'why': 'no audience in common with the others'}
+                            for r in ('V004', 'V005', 'V006', 'V007')]}
+        three = self.three_niches()
+        for agents in (2, 5):                    # however the analysis was split, the map alone says how many
+            self.plan('--all', '--agents', agents)
+            self.assertEqual(self.check_map(one)['facts']['niches'], 1)
+            out = self.check_map(three)
+            self.assertEqual(out['facts']['niches'], 3)
+        self.assertEqual(out['facts']['in_several_niches'], {'V003': ['N1:overlap', 'N2:overlap']})
+        self.assertEqual(out['facts']['members']['N2'], {'core': ['V004', 'V005', 'V007'], 'overlap': ['V003']})
+        c = out['facts']['cohorts']['keeper-nights']
+        self.assertEqual((c['standard_s'], c['length_would_refuse']), (630, []))
+        b = out['facts']['cohorts']['bread-explainers']
+        self.assertEqual((b['standard_s'], b['story_forms'], b['niche']), (720, 2, 'N2'))
+
+    def test_the_check_holds_the_map_to_its_evidence(self):
+        m = {'niches': [self.niche('N1', 'lighthouses', ['V001', 'V002'], cohorts=[('c1', ['V002', 'V006'])])],
+             'outliers': [{'ref': 'V004', 'why': ''}]}
+        m['niches'][0]['members'].append({'ref': 'V009', 'role': 'core', 'why': 'a reference that is not in this run'})
+        m['niches'][0]['members'][1]['why'] = ''
+        iss = self.check_map(m, expected=2)['issues']
+        for want in ('references_not_in_any_niche_or_outliers:V003,V005,V006,V007',
+                     'niche_N1_member_is_not_a_reference_of_this_run:V009',
+                     'niche_N1_member_V002_needs_why_from_its_own_evidence',
+                     'niche_N1_cohort_c1_names_non_members:V006', 'outlier_V004_needs_why'):
+            self.assertIn(want, iss)
+        only_overlap = self.niche('N2', 'tide pools', ['V006'])
+        only_overlap['members'][0]['role'] = 'overlap'
+        iss = self.check_map({'niches': [only_overlap, self.niche('N1', 'all the rest', ['V001', 'V002', 'V003', 'V004',
+                                                                                           'V005', 'V007'])]},
+                             expected=2)['issues']
+        self.assertIn('niche_N2_needs_a_core_member', iss)
+        # a card changed after the evidence was laid out: the map would rest on evidence that is no longer there
+        good = self.three_niches()
+        self.check_map(good)
+        cp = self.run/'20-analysis/cards/V001.json'
+        card = json.loads(cp.read_text(encoding='utf-8')); card['niches'] = ['weather']; save(cp, card)
+        self.assertIn('niche_evidence_outdated:run_niche-evidence_again:V001',
+                      cli('niche-check', '--run', self.run, expected=2)['issues'])
+        self.assertIn('needs_a_name', ' '.join(self.check_map({'niches': [{**good['niches'][0], 'name': ''}]
+                                                                + good['niches'][1:]}, expected=2)['issues']))
+
+    def test_a_niche_that_is_one_batch_is_reported(self):
+        out = self.plan('--all', '--agents', 2)
+        b1, b2 = out['batches'][0]['refs'], out['batches'][1]['refs']
+        res = self.check_map({'niches': [self.niche('N1', 'first share', b1), self.niche('N2', 'second share', b2)]})
+        self.assertTrue(any('exactly the references of analysis batch r1-a1' in w for w in res['warnings']),
+                        res['warnings'])
+        self.assertEqual(res['facts']['batches_per_niche']['N1'], {'r1-a1': len(b1)})
+        # the warning names exactly the niches whose members are one batch's references, whichever they are
+        m = self.three_niches()
+        res = self.check_map(m)
+        batches = [set(b['refs']) for b in out['batches']]
+        want = sorted(n['id'] for n in m['niches']
+                      if len(n['members']) > 1 and {x['ref'] for x in n['members']} in batches)
+        self.assertEqual(sorted(w.split()[1] for w in res['warnings'] if 'exactly the references' in w), want)
+
+    def test_the_users_pick_is_locked_and_carried_downstream(self):
+        pace = ('--pace-wpm', 150, '--pace-why', 'the test narrator reads at this pace')
+        out = cli('length', '--run', self.run, '--video', 1, '--mode', 'own', '--minutes', 11, *pace, expected=2)
+        self.assertIn('niche-lock', out['error'])                               # a new run picks its niche first
+        self.check_map(self.three_niches())
+        self.assertIn('--user-words', cli('niche-lock', '--run', self.run, '--niche', 'N2', expected=2)['error'])
+        out = cli('niche-lock', '--run', self.run, '--niche', 'sourdough', '--user-words', 'the bread one')
+        self.assertEqual((out['niche'], out['niche_id']), ('sourdough', 'N2'))
+        st = json.loads((self.run/'state.json').read_text(encoding='utf-8'))
+        self.assertEqual((st['selected_niche'], st['selected_niche_id']), ('sourdough', 'N2'))
+        self.assertIn('one niche only', cli('niche-lock', '--run', self.run, '--niche', 'N1', '--user-words', 'x',
+                                            expected=2)['error'])
+        self.assertTrue(cli('niche-lock', '--run', self.run, '--niche', 'N2', '--user-words', 'again')['unchanged'])
+        spec = importlib.util.spec_from_file_location('static_studio_core', TOOL)
+        core = importlib.util.module_from_spec(spec); spec.loader.exec_module(core)
+        self.assertEqual(core.locked_niche_names(self.run, {}), {'sourdough', 'n2'})
+        # the overlap member told in another format is part of the niche's evidence family
+        self.assertEqual(core.niche_family_refs(self.run, {}), {'V003', 'V004', 'V005', 'V007'})
+        # Standard from the niche's own cohort: two forms, and the map's reason why their lengths compare
+        out = cli('length', '--run', self.run, '--video', 1, '--mode', 'standard', '--cohort-id', 'bread-explainers',
+                  '--refs', 'V004,V005', *pace)
+        self.assertEqual(out['locked_target_s'], 720)
+        ll = json.loads((self.run/'40-plans/video-01/length-lock.json').read_text(encoding='utf-8'))
+        self.assertEqual((ll['niche'], ll['niche_id'], ll['cohort_id']), ('sourdough', 'N2', 'bread-explainers'))
+        self.assertEqual(ll['forms_why'], 'the same kind of telling at one runtime family')
+        self.assertEqual(ll['story_forms'], ['myth-busting explainer', 'recipe tutorial'])
+        # a reference outside the niche cannot set a length, and another niche cannot be asked for
+        self.assertIn('must still match the selected group', cli(
+            'length', '--run', self.run, '--video', 2, '--mode', 'own', '--minutes', 12, '--refs', 'V001', *pace,
+            expected=2)['error'])
+        self.assertIn('one niche only', cli('length', '--run', self.run, '--video', 2, '--mode', 'own', '--niche',
+                                            'lighthouses', '--minutes', 12, *pace, expected=2)['error'])
+        cli('length', '--run', self.run, '--video', 2, '--mode', 'own', '--minutes', 12, *pace)   # the whole niche
+        # 'more': a revised map gains a member; the same niche's lock is refreshed, with why
+        self.check_map(self.three_niches(extra_n2=('V006',)))
+        self.assertIn('--why', cli('niche-lock', '--run', self.run, '--niche', 'N2', '--refresh', expected=2)['error'])
+        cli('niche-lock', '--run', self.run, '--niche', 'N2', '--refresh', '--why', 'a new reference joined the map')
+        lock = json.loads((self.run/'20-analysis/niche-lock.json').read_text(encoding='utf-8'))
+        self.assertIn('V006', {m['ref'] for m in lock['members']})
+        self.assertEqual((lock['user_words'], len(lock['refreshed'])), ('the bread one', 1))
+        # a member a locked length rests on cannot leave the niche
+        gone = self.three_niches()
+        n2 = gone['niches'][1]
+        n2['members'] = [m for m in n2['members'] if m['ref'] != 'V005']
+        n2['formats'] = [f for f in n2['formats'] if f['refs'] != ['V005']]
+        n2['comparable_cohorts'] = []
+        gone['outliers'] = [{'ref': 'V005', 'why': 'moved out in a revised reading of its card'}]
+        self.check_map(gone)
+        self.assertIn('locked length rests on', cli('niche-lock', '--run', self.run, '--niche', 'N2', '--refresh',
+                                                    '--why', 'the map was read again', expected=2)['error'])
+
+    def test_a_clone_keeps_the_map_and_picks_again(self):
+        self.plan('--all', '--agents', 2)
+        self.check_map(self.three_niches())
+        cli('niche-lock', '--run', self.run, '--niche', 'N1', '--user-words', 'lighthouses please')
+        clone = Path(cli('clone', '--from-run', self.run, '--workspace', self.home/'runs')['run'])
+        st = json.loads((clone/'state.json').read_text(encoding='utf-8'))
+        self.assertEqual((st['selected_niche'], st.get('selected_niche_id'), st['niche_discovery']),
+                         (None, None, 'niche-map-v1'))
+        self.assertTrue((clone/'20-analysis/niche-map.json').is_file())
+        self.assertTrue((clone/'20-analysis/agents/plan-r1.json').is_file())
+        self.assertFalse((clone/'20-analysis/niche-lock.json').exists())
 
 if __name__=='__main__':
     unittest.main()
