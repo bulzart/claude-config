@@ -127,7 +127,18 @@ No numbers decide this. Two things do:
    fits the subject's truth and the audience's purpose, and is most distinct from the references; and what you take
    from the others. Write it in `decision`, with `carries_payoff`: how the chosen treatment makes the payoff land.
 
-Then `direction-lock`. The script and the beat directions are written from the locked treatment. Changing course
+Then `direction-lock`. The script and the beat directions are written from the locked treatment. A new lock is
+stamped `planning_rules: 2`, kept through `--revise`. A lock without the stamp was approved before 2026-11-24, and it
+keeps its plan: the planning rules added that day reach it only as warnings that start "advisory (this direction was
+approved before the planning rules of 2026-11-24, which it need not follow): ..." in plan-check, shot-check,
+audio-check, media-check (both workers) and release-check's final review. They are: evidence from outside the locked
+niche (`evidence.borrowed`), `chosen_approach.exploration`, the comprehension classification and its grouping, the
+blueprint's `audience_knows`, the niche scope's `understood_as` and `boundary`, every payoff check (the candidate's
+`payoff`, the payoff value, each treatment's `carries_values` for it, `decision.carries_payoff`), a shot's
+`uncertainty_shown`, a music track's `serves`, a missing style lock, pace signals not examined, key moments not
+reconciled, and the fresh read after a revision where it matters. Never advisory, for any run: safety and content
+flags, an added child, money (the paid ledger, calibration), asset integrity (file fingerprints, stale renders, a
+changed bed), and the export and release checks. Changing course
 later is allowed and sometimes right: re-lock with `--revise "what changed and why"`. The lock compares the direction
 field by field and says what the change touched (`affects`, and `outdated_now` for what exists):
 
@@ -158,8 +169,9 @@ says:
 - `visual_intent`: what the pictures show that the words don't; composition, motion, atmosphere.
 - `sound_direction`: music, bed, silence, a single sound with a job.
 - `pace`: brisk, unhurried, quickening, a held breath. It is read against this film's own pace, never a universal
-  range, and slower is not better: once recorded, `narration-measure` compares each beat with the narration's median
-  (`pace_findings`, 05), and an explicit `pace_relative` (`slower`, `same` or `faster`) says it outright.
+  range, and slower is not better: once recorded, `narration-measure` reads each beat against the narration's median
+  and its natural variation (`pace_signals`, 05: evidence to examine, never a verdict), and an explicit
+  `pace_relative` (`slower`, `same` or `faster`) says it outright.
 
 **What happens, why it matters, what it pays.** A viewer can follow every event and still not feel why the important
 ones matter; they can know why and still not get the reward. These fail separately, and an accurate, coherent script

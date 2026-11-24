@@ -365,6 +365,18 @@ def cmd_focus(a):
     out({'ok': capcut_in_front(), 'window': w, 'capcut_in_front': capcut_in_front()}, 0 if capcut_in_front() else 1)
 
 
+def _store_users() -> list:
+    """Others' live leases on CapCut's shared project store (gpu_lease.capcut_store_users), [] without the shared folder."""
+    try:
+        here = str(Path(__file__).resolve().parent)
+        if here not in sys.path:
+            sys.path.insert(0, here)
+        import gpu_lease
+        return gpu_lease.capcut_store_users()
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def cmd_app(a):
     if a.action == 'status':
         out({'ok': True, 'running': capcut_running(), 'windows': capcut_windows(), 'capcut_in_front': capcut_in_front()})
@@ -375,6 +387,11 @@ def cmd_app(a):
             out({'ok': False, 'refused': 'CapCut is already open, and not by this tool: the user (or another session) is '
                                          'using it. Never take it over or close it: wait until it is closed, or ask.',
                  'windows': capcut_windows()}, 2)
+        writing = [x for x in _store_users() if str(x.get('name') or '').startswith('capcut-build-')]
+        if writing:
+            out({'ok': False, 'refused': f"another pipeline is writing a project into CapCut's store ({writing[0].get('name')} "
+                                         f"since {writing[0].get('at')}): CapCut started now could read a half-written "
+                                         'project list. Wait until it ends.', 'lease': writing[0]}, 2)
         if not CAPCUT_EXE.is_file():
             out({'ok': False, 'error': f'no CapCut at {CAPCUT_EXE}'}, 1)
         flags = 0x00000008 | 0x00000200          # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP: CapCut outlives this command

@@ -9,6 +9,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+# the PC's shared lease folder (create-clips' CapCut store coordination) is never written by these tests
+import os as _os, tempfile as _tempfile
+_os.environ.setdefault("STATIC_GPU_LEASE_DIR", _tempfile.mkdtemp(prefix="capcut-test-leases-"))
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOL = ROOT / 'scripts' / 'capcut_tools.py'

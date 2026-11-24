@@ -211,7 +211,7 @@ class GpuLeaseTests(unittest.TestCase):
         took = time.time() - t0
         self.assertTrue(0.55 <= took < 5, took)
         self.assertIn(f"create-video-music-{p.pid} holds it (8000 MB, by create-video since ", flux.info["why"])
-        self.assertIn("waiting up to 0.6 s for the GPU", self.err.getvalue())
+        self.assertIn("waiting for the GPU (up to 1 s)", self.err.getvalue())
         self.assertIn("going ahead on the GPU after", self.err.getvalue())
         self.assertTrue(flux.held)
         self.assertEqual(sorted(x["name"] for x in L.leases()),
@@ -291,7 +291,8 @@ class GpuLeaseTests(unittest.TestCase):
         lease.release()
         self.assertTrue(0.35 <= took < 5, took)
         self.assertEqual(lease.info["why"], "only 3000 MB free of the 7168 MB this job needs")
-        self.assertIn("waiting up to 30 s for the GPU: only 3000 MB free", self.err.getvalue())
+        self.assertIn("waiting for the GPU (up to 0 s): only 3000 MB free", self.err.getvalue())
+        self.assertEqual((lease.info["waited_for"], lease.info["card_mb"]), ("outside", CARD))
         self.assertIn("going ahead on the GPU after", self.err.getvalue())
         t0 = time.time()                                       # a wait ends on time, not a whole poll later
         L.acquire("flux", need_mb=7168, wait_s=0.5, poll_s=2.0, settle_s=30).release()
@@ -341,6 +342,80 @@ class GpuLeaseTests(unittest.TestCase):
         lease = L.acquire("flux", need_mb=7168, wait_s=0.3, poll_s=0.05, wait_for=("capcut-*",))
         lease.release()
         self.assertIn("capcut-export holds it (0 MB, by sess since ", lease.info["why"])
+
+    def test_the_wait_follows_who_holds_the_card(self):
+        # No universal wait (the user, 2026-11-24). An earlier GPU job is waited for until it ends, or until it has run
+        # twice the time it said it needs (then it is treated as stuck); create-clips' recorder is given the time it
+        # takes to let an idle Whisper go; memory held outside the leases only settle_s.
+        # (taken a little earlier: two leases written in one tick of the Windows clock would tie on t)
+        self.put("create-video-music-9", need_mb=8000, pid=os.getpid(), expected_s=0.5, by="create-video",
+                 t=time.time() - 0.1)
+        self.gpu["free_mb"] = CARD - 9000
+        t0 = time.time()
+        lease = L.acquire("flux", need_mb=7168, poll_s=0.05, expected_s=120)
+        took = time.time() - t0
+        lease.release()
+        self.assertTrue(0.6 <= took < 5, took)                 # 2 x 0.5 s from when that lease was taken
+        self.assertEqual(lease.info["waited_for"], "lease")
+        self.assertIn("create-video-music-9 holds it", lease.info["why"])
+        (self.dir / "lease-create-video-music-9.json").unlink()
+        # create-clips' recorder holds its Whisper: the wait is its yield time (capped here by wait_s)
+        (self.dir / "whisper.json").write_text(json.dumps({"loaded": True, "pid": os.getpid(), "at": "x"}), encoding="utf-8")
+        self.gpu["free_mb"] = 3000
+        lease = L.acquire("flux", need_mb=7168, wait_s=0.3, poll_s=0.05)
+        lease.release()
+        self.assertEqual(lease.info["waited_for"], "recorder")
+        self.assertIn("the recorder beside the leases holds its Whisper", lease.info["why"])
+        self.assertIn("waiting for the GPU (up to 0 s)", self.err.getvalue())
+        (self.dir / "whisper.json").write_text(json.dumps({"loaded": False, "pid": os.getpid(), "at": "x"}), encoding="utf-8")
+        lease = L.acquire("flux", need_mb=7168, poll_s=0.05, settle_s=0.2)
+        lease.release()
+        self.assertEqual(lease.info["waited_for"], "outside")
+        # a job's own estimate is published for the others' wait
+        lease = L.acquire("whisper", need_mb=2200, wait_s=0, expected_s=42)
+        self.assertEqual(self.read(self.file_of("whisper"))["expected_s"], 42.0)
+        lease.release()
+        # a job that declares more than the card holds is said so
+        lease = L.acquire("flux", need_mb=CARD + 1000, wait_s=0)
+        lease.release()
+        self.assertIn("the card has 12288 MB in all", lease.info["why"])
+
+    def test_capcut_store_is_coordinated_with_the_other_capcut_users(self):
+        # create-clips' builds (capcut-build-*) and GUI exports (capcut-export) in the same folder: ours wait for them,
+        # and our build holds its own capcut-build lease (their export waits for it), never counted against ourselves.
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.assertEqual(L.capcut_store_users(), [])
+        lease, busy = L.hold_capcut_build("a test build")
+        self.assertEqual(busy, [])
+        f = self.dir / f"lease-{L.OWN_BUILD_PREFIX}{os.getpid()}.json"
+        self.assertTrue(f.is_file())
+        self.assertEqual(L.capcut_store_users(), [])                   # our own build is not in our way
+        self.assertFalse((self.dir / L.CAPCUT_DESK_LOCK).exists())     # the desk lock is let go at once
+        lease.release()
+        self.assertFalse(f.exists())
+        self.put("capcut-build-07-4242", need_mb=0, pid=os.getpid(), by="create-clips")
+        self.assertEqual([x["name"] for x in L.capcut_store_users()], ["capcut-build-07-4242"])
+        lease, busy = L.hold_capcut_build("a test build")
+        self.assertIsNone(lease)
+        self.assertEqual(busy[0]["name"], "capcut-build-07-4242")
+        (self.dir / "lease-capcut-build-07-4242.json").unlink()
+        self.put("capcut-export", need_mb=0, pid=os.getpid(), by="caseoh-export")
+        self.assertEqual([x["name"] for x in L.capcut_store_users()], ["capcut-export"])
+
+    def test_the_shared_lease_folder_is_used_only_where_it_exists(self):
+        # A copy of gpu_lease.py in a temporary layout: create-clips without data/gpu is not written into.
+        import shutil
+        root = Path(tempfile.mkdtemp(prefix="lease-layout-"))
+        self.addCleanup(shutil.rmtree, root, True)
+        (root / "static-studio" / "scripts").mkdir(parents=True)
+        (root / "create-clips").mkdir()
+        shutil.copy(SCRIPTS / "gpu_lease.py", root / "static-studio" / "scripts" / "gpu_lease.py")
+        spec = importlib.util.spec_from_file_location("gpu_lease_layout_t", root / "static-studio" / "scripts" / "gpu_lease.py")
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        self.assertEqual(m.default_lease_dir(), root / "static-studio" / "data" / "gpu")
+        (root / "create-clips" / "data" / "gpu").mkdir(parents=True)
+        self.assertEqual(m.default_lease_dir(), root / "create-clips" / "data" / "gpu")
 
     def test_a_lease_that_cannot_be_written_never_stops_the_job(self):
         blocker = self.root / "a-file"
@@ -430,7 +505,8 @@ class GpuLeaseTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     iw.op_generate({**job, "comfy_args": args})
         self.assertEqual(seen, [{"need_mb": None, "reserve_gb": 5, "wait_s": 7,
-                                 "note": "flux3-image-klein-int8: 1 image(s), 1216x2160"}, None])
+                                 "note": "flux3-image-klein-int8: 1 image(s), 1216x2160",
+                                 "expected_s": round(iw.flux_expected_s([{"width": 1216, "height": 2160}]), 1)}, None])
         # music_worker: the lease is held while the models load and play, and let go however that ends
         mw = load("music_worker_gpu_lease_t", "music_worker.py")
         inside = []

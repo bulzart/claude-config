@@ -23,10 +23,12 @@ job's commit memory to the models' own size on this PC; job "low_commit": false 
 says which ran.
 
 The GPU: while the models load and play, a generate job holds the PC's GPU lease (gpu_lease.py, next to this file), so the PC's
-other GPU users make room: GPU_NEED_MB (or the job's gpu_need_mb), a wait of up to gpu_wait_s (default 300) for that memory or for
-a GPU job that took the card first and would not fit beside it (said on stderr), then the job goes ahead with the same models; the
-lease is let go however the job ends. The answer's gpu_lease says what it waited for. A job on the CPU ("device") holds none.
+other GPU users make room: GPU_NEED_MB (or the job's gpu_need_mb) and how long it expects to hold the card (music_expected_s), a
+wait as long as whoever holds the card warrants (gpu_lease.py; the job's gpu_wait_s caps it), said on stderr, then the job goes
+ahead with the same models; the lease is let go however the job ends. The answer's gpu_lease says what it waited for and the
+card's size. A job on the CPU ("device") holds none.
 """
+import hashlib
 import json
 import os
 import shutil
@@ -37,7 +39,17 @@ import traceback
 from pathlib import Path
 
 GPU_NEED_MB = 8000        # ACE-Step 1.5 held about 8 GB once loaded (2026-11-09; commit memory, which counts its GPU memory)
-GPU_WAIT_S = 300          # the longest a generate job waits for the GPU (gpu_lease.py) before it goes ahead anyway
+MUSIC_LOAD_S, MUSIC_S_PER_S = 90.0, 3.0   # how long a job holds the card (gpu_lease expected_s): loading, then per second of music
+
+
+def music_expected_s(job):
+    secs = 0.0
+    for t in job.get("tracks") or []:
+        try:
+            secs += float((t or {}).get("duration") or 0)
+        except (TypeError, ValueError):
+            pass
+    return MUSIC_LOAD_S + MUSIC_S_PER_S * secs
 
 
 def out(obj, code=0):
@@ -190,8 +202,9 @@ def gpu_take(job):
         return gpu_lease.unheld("the job runs on the CPU")
     need, wait = job.get("gpu_need_mb"), job.get("gpu_wait_s")
     return gpu_lease.acquire("music", need_mb=GPU_NEED_MB if need is None else int(need),
-                             wait_s=GPU_WAIT_S if wait is None else float(wait),
-                             note=f"ACE-Step 1.5: {len(job.get('tracks') or [])} track(s)")
+                             wait_s=None if wait is None else float(wait),
+                             note=f"ACE-Step 1.5: {len(job.get('tracks') or [])} track(s)",
+                             expected_s=round(music_expected_s(job), 1))
 
 
 def op_generate(job):
@@ -302,7 +315,11 @@ def main():
         # pace, a key moment's meaning) and the job's own account of how its caption serves it: shown, and on record
         res["direction"] = gate.get("direction")
         made = {str(Path(m["out"]).resolve()) for m in res.get("made") or [] if m.get("out")}
-        entries = [{"out": str(Path(tr["out"]).resolve()), **rec, "engine": "ace-step-1.5"}
+        # exactly what ACE-Step was given for each track: the caption as sent (its sha256), the model, steps and seed
+        entries = [{"out": str(Path(tr["out"]).resolve()), **rec, "engine": "ace-step-1.5",
+                    "config": str(job.get("config") or "acestep-v15-turbo"), "steps": int(job.get("steps") or 8),
+                    "seed": int(tr.get("seed") or 1234), "duration": tr.get("duration"),
+                    "caption_sent_sha256": hashlib.sha256(str(tr.get("caption") or "")[:500].encode("utf-8")).hexdigest()}
                    for tr, rec in zip(job.get("tracks") or [], gate["records"])
                    if str(Path(str(tr.get("out") or "")).resolve()) in made]
         if entries:

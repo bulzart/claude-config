@@ -1039,6 +1039,28 @@ def _capcut_system_font() -> str:
     return str(max(found)[1]).replace("\\", "/") if found else ""
 
 
+STORE_WRITERS = ("capcut-prep", "capcut-build", "capcut-repair", "capcut-font", "capcut-motion", "capcut-transitions",
+                 "capcut-text-anim")
+
+
+def _gpu_lease():
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import gpu_lease
+    return gpu_lease
+
+
+def _store_users() -> list:
+    """Others using CapCut's shared project store now (another pipeline's builds and GUI exports, in the PC's shared lease
+    folder): a project written meanwhile could lose their entry in CapCut's project list, or show CapCut a half-written
+    one."""
+    try:
+        return _gpu_lease().capcut_store_users()
+    except Exception:  # noqa: BLE001 - no shared folder, nobody to coordinate with
+        return []
+
+
 def _capcut_running() -> bool:
     if os.name != "nt":
         return False
@@ -2085,6 +2107,20 @@ def main():
     p.set_defaults(fn=cmd_capcut_text_anim, run=None)
 
     a = ap.parse_args()
+    # CapCut's project store is shared with the PC's other CapCut users (their builds and GUI exports hold leases in the shared
+    # folder): a command that writes into it refuses while one of theirs is in use, and a build holds its own lease while
+    # it writes, so their GUI export waits for it (gpu_lease.capcut_store_users, hold_capcut_build).
+    if a.cmd in STORE_WRITERS and not getattr(a, "dry_run", False) and not getattr(a, "list", False):
+        busy = _store_users()
+        if not busy and a.cmd == "capcut-build":
+            try:
+                _, busy = _gpu_lease().hold_capcut_build(f"capcut-build: video {getattr(a, 'video', '?')}")
+            except Exception:  # noqa: BLE001
+                busy = []
+        if busy:
+            x = busy[0]
+            fail(f"another pipeline is using CapCut's project store ({x.get('name')} by {x.get('by') or 'another job'} since "
+                 f"{x.get('at')}): wait until it ends, then run this again (nothing was changed)", 3)
     try:
         a.fn(a)
     except SystemExit:

@@ -87,7 +87,8 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" hold-decide --run "R
   --stage narration --total 1.4 --reason "the map finishes drawing the route; longer and the next line waits"
 # The look every still carries, after direction-lock and the style bible (example words, not a default; a change: --why):
 python "$HOME/.claude/static-studio/scripts/static_core.py" style-lock --run "RUN" --video 1 \
-  --style-prompt "gouache illustration, warm muted palette" --palette "#8A5A3C,#D9C7A3"
+  --style-prompt "gouache illustration, warm muted palette" --departs-when "photorealistic, flat vector, neon" \
+  --palette "#8A5A3C,#D9C7A3"
 python "$HOME/.claude/static-studio/scripts/static_core.py" shot-check --run "RUN" --video 1   # before stills; retime-shots refuses a failing plan
 # The same gate the image and music workers run before they load anything (free), and the direction each item carries out:
 python "$HOME/.claude/static-studio/scripts/static_core.py" media-check --job "RUN/60-visuals/video-01/stills-job.json" --kind stills
@@ -162,8 +163,10 @@ reference's review.
 A closer look (`inspect-window`) writes `20-analysis/inspect/V###/<from>-<to>@<rate>/` with its frames (each at its
 own `t_s`), `sheet.jpg` and `index.json` (window, rate, why, the words said). `--remove` deletes the frames and keeps
 the index. Every picture of an edit: `content-review --video NN --pictures --file looks.json` with
-`{"never_show_checked": true, "looks": [{"file": "60-visuals/video-01/S01.png", "result": "clean", "note": "a ridge
-road in snow at dawn, two trucks, no people close"}]}` (an `issue` also names its `category`; `never_show_checked` is
+`{"never_show_checked": true, "looks": [{"file": "60-visuals/video-01/S01.png", "result": "clean", "people": "none",
+"note": "a ridge road in snow at dawn, two trucks, nobody in sight"}]}` (an `issue` also names its `category`, which is
+`people_not_asked_for` when someone appears that the still's prompt does not ask for; `people` is required for a still
+whose record carries a `people_question`: `"none"`, or no one, nobody, no people, a note may follow, or who appears; `never_show_checked` is
 required while the cited references' reviews rule anything out); `content-review --ref V### --archive` moves a review
 and its closer looks to `20-analysis/content-archive/V###-r<n>/` before a blind second review; saved in `60-visuals/video-NN/content-looks.json`
 with each file's hash and the content reviews it was checked against (`themes_sha256`: when those change, the timeline
@@ -222,7 +225,7 @@ Minimal `40-plans/video-01/blueprint.json`:
 }
 ```
 
-`pace_wpm` above (190) is an example number, not a universal default. So are the pause lengths: each is set by its own moment and decided again on the recorded voice and the picture, never copied. Write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then the voice's real one (`60-voice/video-NN/voice-lock.json` → `measured.wpm`) once its first part is measured. The two genuinely differ: on one run the references measured 195–206 WPM and the voice 186–187. `text` is sent exactly as written, inline tags included, and tags are not counted as words; it holds nothing else (no SSML, braces, asterisks, stage directions in parentheses, notes in brackets or IPA). `pause_after_s` up to 1 s needs nothing, since the voice's own gap gives it. A longer one names `pause_via` (`"tag"`: a pause tag at this line's end or the next line's start; `"edit"`: a hold inserted by `retime-shots`) and its `pause_purpose`. Each kept tag gets a line under "Delivery and tags" in `editorial-review.md` (plan-check checks it), and each `content_flags` hit gets one under "Content flags". Each comprehension signal gets one under "Comprehension" (its first line id, one kind, the decision: plan-check checks it), and each `pace_findings` entry one under "Pace" (the beat id and why the measured pace fits, or what changes: the audio gate checks it).
+`pace_wpm` above (190) is an example number, not a universal default. So are the pause lengths: each is set by its own moment and decided again on the recorded voice and the picture, never copied. Write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then the voice's real one (`60-voice/video-NN/voice-lock.json` → `measured.wpm`) once its first part is measured. The two genuinely differ: on one run the references measured 195–206 WPM and the voice 186–187. `text` is sent exactly as written, inline tags included, and tags are not counted as words; it holds nothing else (no SSML, braces, asterisks, stage directions in parentheses, notes in brackets or IPA). `pause_after_s` up to 1 s needs nothing, since the voice's own gap gives it. A longer one names `pause_via` (`"tag"`: a pause tag at this line's end or the next line's start; `"edit"`: a hold inserted by `retime-shots`) and its `pause_purpose`. Each kept tag gets a line under "Delivery and tags" in `editorial-review.md` (plan-check checks it), and each `content_flags` hit gets one under "Content flags". Each comprehension signal gets a line under "Comprehension", or shares one with signals of the same root (a name in common, or one beat): the ids, one kind and the reason (plan-check checks it; `comprehension_signals_grouped_without_a_shared_cause` names a line that groups unrelated ones). Each pace signal is examined under "Pace": a line naming the beat id (or `overall`), five words or more, which beats with one shared cause may share (the audio gate checks it).
 
 `40-plans/video-01/pronunciation.json` (optional; only the words the voice may say wrong):
 
@@ -349,7 +352,7 @@ A variant left blank takes the voice lock's voice, model and settings; `tags` is
 `50-audio/video-01/line-times.json` (from `narration-measure`) contains:
 - `complete`, `script_sha256` (stale once the script changes), `parts[]` (offset, duration, fingerprint, words, speech, WPM, alignment);
 - `wpm` (while speaking), `overall_wpm` (pauses included), `per_line_overhead_s`, `natural_line_gap_median_s`, `tags_measured[]` (line, tag, gap, excess), `pause_profile` (the same keys `pace-profile` gives for the references);
-- `unheard_lines` (lines still missing after their own window was heard again), `missing_runs[]` (a run of four or more words of a heard line still not heard after its own listen: `line`, `words`, `count`), `rechecked_lines[]`, `tags_read_aloud[]`, `possible_repeats[]`, `seams[]` (each join: gap, natural gap, `seam_hold_s`, pace, level and pitch range on each side, `level_step_lu`: the voice's level step across it, from 3 s of speech on each side; words heard twice), `beats[]` (pace while speaking and overall, longest gap, numbers per minute, tags, what the beat asked for), `pronunciation_heard[]`, `pace_findings[]` (a beat against this narration's own median pace while speaking: `beat`, `wpm_inside_lines`, `video_median_wpm`, `ratio`, `asked`, and `kind`: `asked_slower_heard_faster`, `asked_faster_heard_slower` or `fast_and_dense`);
+- `unheard_lines` (lines still missing after their own window was heard again), `missing_runs[]` (a run of four or more words of a heard line still not heard after its own listen: `line`, `words`, `count`), `rechecked_lines[]`, `tags_read_aloud[]`, `possible_repeats[]`, `seams[]` (each join: gap, natural gap, `seam_hold_s`, pace, level and pitch range on each side, `level_step_lu`: the voice's level step across it, from 3 s of speech on each side; words heard twice), `beats[]` (pace while speaking and overall, longest gap, numbers per minute, tags, what the beat asked for), `pronunciation_heard[]`, `pace_signals[]` (evidence, never verdicts: `beat` or `overall`; `kind`: `asked_slower_runs_faster_than_usual`, `asked_faster_runs_slower_than_usual`, `fast_where_densest` or `narration_outside_every_references_pace`; with `wpm_inside_lines`, `ratio`, `natural_variations_from_median`, `asked`, `asked_relative`, `numbers_per_min`, `narration_median_wpm`, `natural_variation_pct`, `variation_from`, `target_wpm`, `narrator_norm_wpm` and `references_wpm`; an older file's `pace_findings[]` is read the same way);
 - `lines[]`: `{id, index, part, start_s, end_s, matched_words, words, word_times, gap_after_s, gap_span_s, gap_basis, gap_is_tail?, heard_on_recheck?, interpolated?}`; `gap_after_s` is the silence after the line read from the audio (`gap_basis` `audio`; `whisper` when no quiet run was found; `unknown`, with `null`, while the next line is not recorded); `gap_subrun_s` and `gap_insert_at_s` (the quiet stretch an added silence goes into and where: never into a word, a release or a breath), `gap_floor_under_speech_db` (the voice's own quiet there, dB under its speech), `gap_other_material_s` (a breath or a click inside the silence); `cadence` (with the delivery pass): how the line ends (`last_vowel_vs_line_st`, `last_vowel_fall_st`, `soft_end_s`, `end_level_db`) and the next begins (`next_reset_st`, `next_lead_in_s`, `next_onset_level_db`), and `cadence_usual` the same voice's medians; `line_gaps_from_audio` sums the gaps up (median, p10, p90, shortest, longest); `word_times` is each comparable token's `[start_s, end_s]` on the narration (`null` where Whisper did not hear it): what the captions are timed by.
 
 `70-edit/video-01/captions.json` (from `captions-plan`): `{video, captions: "on"|"off", style: "luckiest-guy"|"montserrat-highlight", box_color?, box_color_why?, language, fps, words: [{w, s, e, line, timing}], timing_evidence: {whisper, shared, between, words, whisper_share}, holds_applied, made_from: {script_sha256, narration_for_edit_sha256, line_times_measured_at, edit_plan_made_at}}`. `w` is the word as the caption shows it (the script's spelling and punctuation), `s`/`e` its time on the edit's timeline; `timing` says where the time came from: `whisper` (its own word time), `shared` (a number written over two words, its time split by length) or `between` (no time from Whisper: placed between its timed neighbours by length). `captions-built.json` beside it records the last build (draft, canvas, size, tracks, texts, the read-back). `state.json` holds the choice: `captions` (`on`/`off`), `caption_style`, `captions_chosen_at`, and `captions_history[]` when the user changed it.
@@ -475,8 +478,9 @@ approaches cover it. Two to four treatments, each with `carries_values` (`[{valu
 value, in its own terms), and the `decision` with `carries_payoff` (how the chosen treatment makes the payoff land); a
 change to the chosen treatment's `carries_values` marks the beat map and script. Evidence that cites a reference
 outside the locked niche declares it in `evidence.borrowed` (`[{ref, technique, not_taken}]`: the technique borrowed,
-and the subject assumptions not taken). `direction-lock.json` keeps the hash, the time, the
-treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
+and the subject assumptions not taken). `direction-lock.json` keeps the hash, the time, `planning_rules` (2 on a lock made since 2026-11-24, kept through
+`--revise`; a lock without it was approved before them, and the planning rules added that day are advisory for it,
+10 §3), the treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
 follows: `production_rev` (raised by a change that alters what production must do), `sections` (one hash per field,
 so a revision knows exactly what changed; the chosen subject's own description, its research, the other
 candidates and each researched value apart), `required` (per artifact, the revision that last touched it and, for a
@@ -496,11 +500,16 @@ wrote), `<kind>-r<N>.json` (sealed: the version it read, its findings and their 
   "F1": {"action": "revised", "lines": ["L003-L011"], "note": "Cut the recap to two lines; the question hangs."},
   "F2": {"action": "disputed", "note": "The repetition is the refrain the ending pays off; kept on purpose."},
   "F3": {"action": "kept", "note": "A minor rhythm note; this line is the breath before the turn."}
-}}
+ },
+ "revision_notes": {"L045": "Reworded for the ear only: the same fact, the same order, the same hedge."}}
 ```
 
 A major finding is `revised` or `disputed`, never just `kept`, and gets a fresh read in the next round (until round 2
-for the script and the final review, round 1 for the treatments).
+for the script and the final review, round 1 for the treatments). A fresh read also follows a changed line the
+reader's verdict rested on (`script_revised_where_it_matters_since_its_last_read:L045(key_moment:B05),...`: a key
+moment's lines and what they depend on, a hedge, a value's beat, a claim's line, a comprehension gap), however few its
+words; the share of words changed is only a warning. `revision_notes` says, per line and in five words or more, that
+a change is wording only: that line then forces no fresh read, and it leaves the count of lines edited after review.
 
 ## Measured evidence (`av-profile`, `narration-measure`)
 
@@ -544,16 +553,24 @@ With `capcut_draft`, `timeline-check` reads the narration's segments (file, time
 ## Media records (written by the gated workers, never by hand)
 
 `60-visuals/video-01/stills-provenance.json`: `{"video": 1, "images": {"<file>": {"shot_id", "beat_id",
-"uncertainty_shown", "style_lock_rev", "frame_prompt_sha256", "production_rev", "treatment", "engine", "submitted_prompt",
+"uncertainty_shown", "style_lock_rev", "style_note", "style_departure", "frame_prompt_sha256", "production_rev", "treatment", "engine", "submitted_prompt",
 "submitted_prompt_sha256", "drew_from", "file_sha256", "made_at"}}}`; a FLUX still adds `precision` (int8), `comfyui`
-(its version), `models` and `model_bytes`, `request_sha256`, `caption_checks`, `caption_notes`, `seed`, `steps`, `size`
-and `refs` (each with its sha256). `submitted_prompt` is what the image model drew (the upsampler's caption, or the
+(its version), `models` and `model_bytes`, `request_sha256`, `caption_checks`, `caption_notes`, `caption_sha256`, `seed`, `steps`,
+`size` and `refs` (each with its path and sha256: the run's own material or a style-lock reference, refused otherwise
+as `item_N_reference_outside_the_run`), and, when there is one, `caption_accepted` (`issues`, `why`, `sha256`: a
+stopped caption drawn on the director's word, from the job item's `accept_caption`, `{"sha256": "<the stopped
+caption's>", "why": "<five words or more>"}`) and `people_question` (`prompt_excludes_people`, `hints`: what the
+still's look must answer). A stills job item may also carry `style_note`, `style_departure`, `content_note` and
+`on_caption_refused` (04). `submitted_prompt` is what the image model drew (the upsampler's caption, or the
 approved request itself); `drew_from` says which: `caption`, `request`, or `request (its caption was refused)`;
 `uncertainty_shown` appears for a shot that has one (04), and `style_lock_rev` names the style lock the still
-was made under. `60-visuals/video-01/style-lock.json` (from `style-lock`, 04): `{video, rev, style_prompt, palette, refs:
-[{file, sha256}], visual_language_sha256, style_bible_sha256, locked_at, why, history}`. `70-edit/video-01/music-provenance.json`: the same with
+was made under. `60-visuals/video-01/style-lock.json` (from `style-lock`, 04): `{video, rev, style_prompt, departs_when, palette, refs:
+[{file, sha256}], visual_language_sha256, style_bible_sha256, locked_at, why, history}` (`departs_when`: the
+phrases that would be another look, kept in `history` too). `70-edit/video-01/music-provenance.json`: the same with
 `beats`, `caption_sha256`, `serves` and `direction` (the treatment's `sound`, and per beat its `sound_direction`,
-`experience` and `pace`, with a key moment's meaning) per track. `timeline-check` and `release-check` trace the project through
+`experience` and `pace`, with a key moment's meaning) per track, and its `config`, `steps`, `seed`, `duration` and
+`caption_sent_sha256` (exactly what ACE-Step got: the worker sends at most 500 characters of a caption, and the gate
+refuses a longer one, `track_N_caption_longer_than_the_music_model_reads`). `timeline-check` and `release-check` trace the project through
 them. Pictures made any other way (supplied by the user, drawn) are accepted as a set with `direction-reapprove
 --artifact stills --reason "..."`, on record.
 

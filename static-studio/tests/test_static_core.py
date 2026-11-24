@@ -861,7 +861,7 @@ class StaticStudioTests(unittest.TestCase):
         save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
         if (self.run/'40-plans/video-01/direction-lock.json').is_file() and \
                 not (self.run/'60-visuals/video-01/style-lock.json').is_file():
-            cli('style-lock','--run',self.run,'--video',1,'--style-prompt','painterly, soft edges')
+            cli('style-lock','--run',self.run,'--video',1,'--style-prompt','painterly, soft edges','--departs-when','photorealistic, flat vector')
         return shots
 
     def test_generation_follows_the_approved_plan(self):
@@ -936,7 +936,7 @@ class StaticStudioTests(unittest.TestCase):
         # the look changed: the style lock follows it, with its reason, as a new revision (never silently)
         self.assertIn('style_lock_outdated:the_chosen_treatments_visual_language_changed:relock_with_--why',
                       cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
-        cli('style-lock','--run',self.run,'--video',1,'--style-prompt','painterly',
+        cli('style-lock','--run',self.run,'--video',1,'--style-prompt','painterly','--departs-when','photorealistic, flat vector',
             '--why','the colder sparser look keeps only the painterly finish')
         self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
         # Explicit reapproval accepts pictures as they are (user-supplied, say), on record.
@@ -1165,7 +1165,7 @@ class StaticStudioTests(unittest.TestCase):
         stills=self.home/'stills'; stills.mkdir()
         sl=self.run/'60-visuals/video-01/style-lock.json'
         if not sl.is_file():
-            cli('style-lock','--run',self.run,'--video',1,'--style-prompt','ink wash')
+            cli('style-lock','--run',self.run,'--video',1,'--style-prompt','ink wash','--departs-when','photorealistic, flat vector')
         style=json.loads(sl.read_text(encoding='utf-8'))['style_prompt']
         job={'run':str(self.run),'video':1,'images':[{'shot_id':s['id'],'prompt':s['frame_prompt']+', '+style,
                                                       'out':str(stills/f"{s['id']}.png")} for s in shots]}
@@ -1676,22 +1676,64 @@ class StaticStudioTests(unittest.TestCase):
               " composition.")
         self.assertEqual(core.caption_review_with((),smoke,real),
                          {'issues':[],'notes':['caption_says_faces,silhouettes:words_that_may_name_people:'
-                                               'look_for_people_in_the_still_when_it_lands']})
-        for extra,word in (('A lone figure stands on the ridge.','figure'),('Her face is lit by the dawn.','face'),
-                           ('Two workers unload the crates.','workers')):
+                                               'look_for_people_in_the_still_when_it_lands'],
+                          'people_hints':['faces','silhouettes']})
+        # a word that clearly names a person stops the caption for a decision; one that only may goes to the look
+        for extra,word in (('Her face is lit by the dawn.','face'),('Two workers unload the crates.','workers'),
+                           ('A hooded figure walks along the ridge.','figure')):
             self.assertEqual(core.caption_issues_with((),smoke,smoke+'. '+extra),
                              [f'caption_adds_people_the_prompt_does_not_have:{word}'])
-        # a figure is a person unless a material or a number sense says otherwise; a lighthouse stands, it is no one
-        self.assertEqual(core.caption_issues_with((),smoke,smoke+'. A figure in the doorway.'),
-                         ['caption_adds_people_the_prompt_does_not_have:figure'])
-        self.assertEqual(core.caption_issues_with((),smoke,smoke+'. A carved figure decorates the gate.'),[])
-        self.assertEqual(core.caption_issues_with((),smoke,smoke+'. The ledger holds columns of figures in faded ink.'),[])
-        self.assertEqual(core.caption_issues_with((),smoke,smoke+". The lighthouse's dark silhouette is standing on the far point."),[])
+        for extra,word in (('A lone figure stands on the ridge.','figure'),('A figure in the doorway.','figure'),
+                           ("The lighthouse's dark silhouette is standing on the far point.",'silhouette'),
+                           ('A carved figure decorates the gate.','figure')):
+            r=core.caption_review_with((),smoke,smoke+'. '+extra)
+            self.assertEqual((r['issues'],r['people_hints']),([],[word]))          # drawn; its look answers it
+            self.assertEqual(core.people_question(smoke,r),{'prompt_excludes_people':True,'hints':[word]})
         self.assertEqual(core.caption_review_with((),smoke,smoke+'. No figures or workers appear anywhere.'),
-                         {'issues':[],'notes':[]})
+                         {'issues':[],'notes':[],'people_hints':[]})
         self.assertEqual(core.caption_review_with((),'a lone figure standing on a ridge at dawn',
                                                   'A lone figure stands on a ridge at dawn, his coat moving in the wind.'),
-                         {'issues':[],'notes':[]})
+                         {'issues':[],'notes':[],'people_hints':[]})
+        # a prompt that rules people out asks every still's look the question, whatever words the caption uses
+        self.assertTrue(core.people_excluded('an empty quay at dusk, nobody in sight'))
+        self.assertTrue(core.people_excluded('a ledger on a desk, no people'))
+        self.assertFalse(core.people_excluded('a soldier reads the order by lamplight'))
+        self.assertEqual(core.people_question('a ledger on a desk, no people',{'people_hints':[]}),
+                         {'prompt_excludes_people':True,'hints':[]})
+        self.assertIsNone(core.people_question('a ledger on a desk',{'people_hints':[]}))
+        # words in quotation marks are what FLUX writes into the picture: ones the prompt does not give are stopped
+        led='a cluttered desk with an open ledger of handwritten names, no people'
+        self.assertEqual(core.caption_issues_with((),led,'A cluttered desk with an open ledger of handwritten names '
+                                                   'in brown ink: "Arthur Bell", \u201cEleanor Finch\u201d; no people.'),
+                         ['caption_adds_words_to_draw:Arthur Bell|Eleanor Finch'])
+        self.assertEqual(core.caption_issues_with((),'a shop sign reading "OPEN" above the door',
+                                                  'A wooden shop sign reading "OPEN" above a green door.'),[])
+        # an edit caption from a reference image says what to take out: "remove all people" rules people out (a real
+        # FLUX caption, 2026-11-24); "Crowd the pages" is a verb no word list can tell apart: that is a decision
+        desk='the same desk seen closer, an open ledger of illegible entries, no people'
+        self.assertEqual(core.caption_issues_with((),desk,'Keep the same desk seen closer with an open ledger of '
+                                                  'illegible entries, but remove all people.'),[])
+        self.assertEqual(core.caption_issues_with((),desk,'Keep the same desk seen closer, an open ledger of illegible '
+                                                  'entries, no people. Crowd both pages with dense columns.'),
+                         ['caption_adds_people_the_prompt_does_not_have:crowd'])
+        # ...and a removal reaches only what closely follows it: a person revealed further on is still a person
+        self.assertEqual(core.caption_issues_with((),desk,'Keep the same desk seen closer, an open ledger of illegible '
+                                                  'entries; remove the fog to reveal two soldiers by the window.'),
+                         ['caption_adds_people_the_prompt_does_not_have:soldiers'])
+        # a stopped caption is drawn only when accepted for exactly that caption, with its reason; an added child never
+        cap=smoke+". A soldier's helmet lies in the grass."
+        iss=core.caption_issues_with((),smoke,cap)
+        self.assertEqual(iss,['caption_adds_people_the_prompt_does_not_have:soldier'])
+        sha=hashlib.sha256(cap.encode('utf-8')).hexdigest()
+        self.assertEqual(core.caption_acceptance({'sha256':sha,'why':'only the helmet is there, nobody wears it'},cap,iss),
+                         (True,None))
+        self.assertFalse(core.caption_acceptance({'sha256':'0'*64,'why':'only the helmet is there, nobody wears it'},cap,iss)[0])
+        self.assertFalse(core.caption_acceptance({'sha256':sha,'why':'fine'},cap,iss)[0])
+        kid=smoke+'. A boy runs along the road.'
+        kid_iss=core.caption_issues_with((),smoke,kid)
+        self.assertIn('never accepted',core.caption_acceptance({'sha256':hashlib.sha256(kid.encode('utf-8')).hexdigest(),
+                                                                'why':'he is only a small part of the wide scene'},
+                                                               kid,kid_iss)[1])
 
     def flux_worker(self):
         spec=importlib.util.spec_from_file_location('flux_image_worker_t', ROOT/'scripts/image_worker.py')
@@ -1772,6 +1814,35 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual((code,drawn),(0,[req]))
         v=next(iter(json.loads((self.run/'60-visuals/video-01/stills-provenance.json').read_text())['images'].values()))
         self.assertEqual((v['submitted_prompt'],v['drew_from']),(req,'request (its caption was refused)'))
+        # A caption stopped for a word that does not mean what it seems is drawn when the director accepts exactly
+        # that caption, with the reason; the still then carries the people question its look must answer.
+        job['images'][0].pop('on_caption_refused')
+        helmet=req+" A soldier's helmet lies in the grass, no people anywhere."
+        if (stills/'S1.png').exists():
+            (stills/'S1.png').unlink()
+        drawn.clear()
+        code,out=self.run_flux(iw,job,[helmet],drawn)
+        sha=hashlib.sha256(helmet.encode('utf-8')).hexdigest()
+        self.assertEqual((code,drawn),(1,[]))
+        self.assertIn(sha,out['images'][0]['error'])
+        job['images'][0]['accept_caption']={'sha256':sha,'why':'only the helmet lies there, nobody wears it'}
+        code,out=self.run_flux(iw,job,[helmet],drawn)
+        self.assertEqual((code,drawn),(0,[helmet]))
+        v=next(iter(json.loads((self.run/'60-visuals/video-01/stills-provenance.json').read_text())['images'].values()))
+        self.assertEqual(v['caption_accepted']['issues'],['caption_adds_people_the_prompt_does_not_have:soldier'])
+        self.assertEqual(v['people_question'],{'prompt_excludes_people':False,'hints':['soldier']})
+        looks=self.home/'looks.json'
+        save(looks,{'never_show_checked':True,'looks':[{'file':str(stills/'S1.png'),'result':'clean','note':'a helmet in the grass at dawn'}]})
+        r=cli('content-review','--run',self.run,'--video',1,'--pictures','--file',looks,expected=2)
+        self.assertIn('must_say_whether_anyone_appears',' '.join(r['details']))
+        save(looks,{'never_show_checked':True,'looks':[{'file':str(stills/'S1.png'),'result':'clean','note':'a helmet in the grass at dawn',
+                              'people':'a soldier stands behind the helmet'}]})
+        r=cli('content-review','--run',self.run,'--video',1,'--pictures','--file',looks,expected=2)
+        self.assertIn('someone_appears_that_its_prompt_does_not_ask_for',' '.join(r['details']))
+        save(looks,{'never_show_checked':True,'looks':[{'file':str(stills/'S1.png'),'result':'clean','note':'a helmet in the grass at dawn',
+                              'people':'none: only the helmet, nobody near it'}]})
+        self.assertTrue(cli('content-review','--run',self.run,'--video',1,'--pictures','--file',looks)['ok'])
+        job['images'][0].pop('accept_caption')
         # A job cannot swap the model or its precision.
         job['models']={'unet':'flux-dev-fp16.safetensors'}
         code,out=self.run_flux(iw,job,[good],drawn)
@@ -1985,28 +2056,41 @@ class StaticStudioTests(unittest.TestCase):
         warn=cli('plan-check','--run',self.run,'--video',1,expected=None).get('warnings') or []
         self.assertTrue(any('review-read confines' in w for w in warn))
 
-    def test_a_large_revision_gets_a_fresh_read(self):
+    def test_a_revision_gets_a_fresh_read_where_it_matters(self):
+        # A fresh read follows a revision that touches what the reader's verdict rested on, however few its words; many
+        # words reworded elsewhere do not force one (the user, 2026-11-24: no percentage decides it).
         core=self.load_core()
         old={f'L{i:03}':'the quiet order moved the depots before the march began at dawn' for i in range(1,21)}
         new=dict(old)
         self.assertEqual(core.script_revised_share(old,new),0.0)
-        for i in range(1,4):
-            new[f'L{i:03}']='an entirely different sentence about the river and the bridge and the town'
-        self.assertLess(core.script_revised_share(old,new),core.SUBSTANTIAL_REVISION_SHARE)
         for i in range(1,11):
             new[f'L{i:03}']='an entirely different sentence about the river and the bridge and the town'
-        self.assertGreater(core.script_revised_share(old,new),core.SUBSTANTIAL_REVISION_SHARE)
-        # through the gate: a script rewritten past a quarter after its read, by answers to minor findings, is read again
+        self.assertGreater(core.script_revised_share(old,new),0.25)
         vd=self.write_plan(review_script=False)
-        lines=json.loads((vd/'script.json').read_text(encoding='utf-8'))['lines']
-        _,rec=self.review('script',[{'id':'F1','severity':'minor','lines':[f'L001-L030'],'problem':'the first half drags on'}])
+        _,rec=self.review('script',[{'id':'F1','severity':'minor','lines':['L001-L030'],'problem':'the first half drags on'}])
         sc=json.loads((vd/'script.json').read_text(encoding='utf-8'))
         for l in sc['lines'][:30]:
             l['text']='a rewritten line that tells the depot story from the river crossing instead, plainly and briefly now.'
         save(vd/'script.json',sc)
         self.answer_file(rec['answers_file'],{'answers':{'F1':{'action':'revised','lines':['L001-L030'],'note':''}}})
+        pc=cli('plan-check','--run',self.run,'--video',1,expected=None)
+        self.assertFalse([x for x in pc['issues'] if x.startswith('script_revised_where_it_matters')],pc['issues'])
+        self.assertTrue(any(w.startswith('script revised since its last read:') and 'none carries' in w
+                            for w in pc['warnings']),pc['warnings'])
+        deps=core.script_dependencies(vd)
+        self.assertIn('key_moment:B05',deps['L045'])
+        self.assertIn('payoff:R1',deps['L045'])
+        self.assertNotIn('L001',deps)
+        # one sentence of the key moment rewritten: its reader read another ending
+        sc['lines'][44]['text']='and in the end the order saved nobody, because the depots burned before the march came.'
+        save(vd/'script.json',sc)
         iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
-        self.assertTrue(any(x.startswith('script_substantially_revised_since_its_last_read') for x in iss),iss)
+        self.assertTrue(any(x.startswith('script_revised_where_it_matters_since_its_last_read:L045(key_moment:B05)')
+                            for x in iss),iss)
+        # the director says on record that the change is wording only: no fresh read forced for it
+        self.answer_file(rec['answers_file'],{'revision_notes':{'L045':'a clearer word order, the same ending and meaning'}})
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in iss if x.startswith('script_revised_where_it_matters')],iss)
 
     def test_uncertain_research_reaches_the_picture_and_the_music_its_direction(self):
         core=self.load_core()
@@ -2062,13 +2146,54 @@ class StaticStudioTests(unittest.TestCase):
         jp=self.home/'style-job.json'; save(jp,job)
         ok=cli('media-check','--job',jp,'--kind','stills')
         self.assertEqual(ok['direction']['style_prompt'],'painterly, soft edges')
+        # another look: the style is not carried and the added words reach for what the lock calls another look
         job['images'][0]['prompt']=shots[0]['frame_prompt']+', photorealistic, harsh flash'
         save(jp,job)
-        self.assertTrue(any(x.startswith('item_1_style_words_are_not_the_locked_style')
-                            for x in cli('media-check','--job',jp,'--kind','stills',expected=2)['issues']))
+        iss=cli('media-check','--job',jp,'--kind','stills',expected=2)['issues']
+        self.assertTrue(any(x.startswith('item_1_does_not_carry_the_locked_style') for x in iss),iss)
+        self.assertTrue(any(x.startswith('item_1_reaches_for_another_look:photorealistic') for x in iss),iss)
+        # a shot's own light and framing are free with their reason: the look is an identity, not identical wording
+        job['images'][0]['prompt']=shots[0]['frame_prompt']+', painterly, soft edges, low warm rim light from the lamp'
+        save(jp,job)
+        self.assertTrue(any(x.startswith('item_1_adds_words_beyond_the_approved_prompt_and_the_style') for x in
+                            cli('media-check','--job',jp,'--kind','stills',expected=2)['issues']))
+        job['images'][0]['style_note']='the lamp is the only light in this shot, so its rim light belongs to the picture'
+        save(jp,job)
+        self.assertTrue(cli('media-check','--job',jp,'--kind','stills')['ok'])
+        job['images'][0]['prompt']=shots[0]['frame_prompt']+', a soft-edged painterly wash'
+        job['images'][0]['style_note']='the same painterly soft look, worded for a wash of mist over the valley'
+        save(jp,job)
+        self.assertTrue(cli('media-check','--job',jp,'--kind','stills')['ok'])
+        self.assertEqual(core.media_gate(job,'stills')['records'][0]['style_note'],job['images'][0]['style_note'])
+        # a note never covers another look: that is a relock, or one picture's departure said on purpose
+        job['images'][0]['prompt']=shots[0]['frame_prompt']+', painterly, soft edges, photorealistic detail'
+        save(jp,job)
+        self.assertTrue(any(x.startswith('item_1_reaches_for_another_look:photorealistic') for x in
+                            cli('media-check','--job',jp,'--kind','stills',expected=2)['issues']))
+        job['images'][0]['style_departure']='an archival photograph insert, shown as a document inside the painted film'
+        save(jp,job)
+        self.assertTrue(cli('media-check','--job',jp,'--kind','stills')['ok'])
+        for k in ('style_departure','style_note'):
+            job['images'][0].pop(k)
+        # a reference image steers the picture like words: the run's own material, or a locked style reference
+        job['images'][0]['prompt']=shots[0]['frame_prompt']+', painterly, soft edges'
+        outside=self.home/'elsewhere.png'; outside.write_bytes(b'\x89PNG\r\n\x1a\n'+b'0'*64)
+        job['images'][0]['refs']=[str(outside)]
+        save(jp,job)
+        self.assertTrue(any(x.startswith('item_1_reference_outside_the_run:elsewhere.png') for x in
+                            cli('media-check','--job',jp,'--kind','stills',expected=2)['issues']))
+        inside=self.run/'60-visuals/video-01/stills/S0.png'; inside.parent.mkdir(parents=True,exist_ok=True)
+        inside.write_bytes(outside.read_bytes())
+        job['images'][0]['refs']=[str(inside)]
+        save(jp,job)
+        self.assertTrue(cli('media-check','--job',jp,'--kind','stills')['ok'])
+        job['images'][0].pop('refs')
+        # a lock without what would be another look is refused
+        self.assertIn('--departs-when',cli('style-lock','--run',self.run,'--video',1,'--style-prompt','oil paint',
+                                           '--why','trying another look entirely',expected=2)['error'])
         # a change of style is a new revision with its reason, kept in history
-        cli('style-lock','--run',self.run,'--video',1,'--style-prompt','gouache, warm muted palette',expected=2)
-        r=cli('style-lock','--run',self.run,'--video',1,'--style-prompt','gouache, warm muted palette',
+        cli('style-lock','--run',self.run,'--video',1,'--style-prompt','gouache, warm muted palette','--departs-when','photorealistic, flat vector',expected=2)
+        r=cli('style-lock','--run',self.run,'--video',1,'--style-prompt','gouache, warm muted palette','--departs-when','photorealistic, flat vector',
               '--palette','#AA8844,#334455','--why','the treatment reader found the painterly look too soft')
         lock=json.loads((self.run/'60-visuals/video-01/style-lock.json').read_text(encoding='utf-8'))
         self.assertEqual((r['rev'],lock['history'][0]['style_prompt']),(2,'painterly, soft edges'))
@@ -2076,7 +2201,7 @@ class StaticStudioTests(unittest.TestCase):
         th={'run':str(self.run),'video':1,'purpose':'thumbnail',
             'images':[{'prompt':'a bold close portrait of a surveyor at dawn with a broken bridge behind','out':str(stills/'t.png')}]}
         save(jp,th)
-        self.assertTrue(any('thumbnail_not_in_the_locked_style' in x for x in cli('media-check','--job',jp,'--kind','stills',expected=2)['issues']))
+        self.assertTrue(any('thumbnail_does_not_carry_the_locked_style' in x for x in cli('media-check','--job',jp,'--kind','stills',expected=2)['issues']))
         th['images'][0]['style_departure']='a thumbnail must read at a tiny size, so it is flatter and bolder than the film'
         save(jp,th)
         self.assertTrue(cli('media-check','--job',jp,'--kind','stills')['ok'])
@@ -2086,6 +2211,9 @@ class StaticStudioTests(unittest.TestCase):
             (),req,'A photorealistic wide valley at dawn under a cold sky.',None,'gouache, warm muted palette')['issues']))
         self.assertEqual(core.caption_review_with((),req,'A gouache painting of a wide valley at dawn in a warm muted '
                                                   'palette.',None,'gouache, warm muted palette')['issues'],[])
+        self.assertIn('caption_reaches_for_another_look:photorealistic',core.caption_review_with(
+            (),req,'A gouache, warm muted palette view of a wide valley at dawn, photorealistic.',None,
+            'gouache, warm muted palette',['photorealistic'])['issues'])
         # the lock goes stale when the treatment's visual language changes
         d=json.loads((self.run/'40-plans/video-01/direction.json').read_text(encoding='utf-8'))
         d['treatments'][0]['visual_language']='charcoal sketches on grey paper, high contrast, for this video'
@@ -2104,11 +2232,23 @@ class StaticStudioTests(unittest.TestCase):
         # intent against delivery, relative to this narration's own norm (never a universal range)
         beats=[{'id':'B1','pace':'slow and reflective'},{'id':'B2','pace_relative':'faster'},{'id':'B3','pace':'steady'},
                {'id':'B4','pace':'steady'},{'id':'B5','pace':'unhurried'}]
-        rows=[{'id':'B1','wpm_inside_lines':172,'numbers_per_min':1},{'id':'B2','wpm_inside_lines':135,'numbers_per_min':0},
-              {'id':'B3','wpm_inside_lines':150,'numbers_per_min':0},{'id':'B4','wpm_inside_lines':175,'numbers_per_min':9},
-              {'id':'B5','wpm_inside_lines':140,'numbers_per_min':0}]
-        kinds={f['beat']:f['kind'] for f in core.pace_findings(rows,beats)}
-        self.assertEqual(kinds,{'B1':'asked_slower_heard_faster','B2':'asked_faster_heard_slower','B4':'fast_and_dense'})
+        beats+=[{'id':'B6','pace':'steady'},{'id':'B7','pace':'steady'}]
+        rows=[{'id':'B1','wpm_inside_lines':180,'numbers_per_min':1},{'id':'B2','wpm_inside_lines':120,'numbers_per_min':0},
+              {'id':'B3','wpm_inside_lines':150,'numbers_per_min':0},{'id':'B4','wpm_inside_lines':178,'numbers_per_min':9},
+              {'id':'B5','wpm_inside_lines':125,'numbers_per_min':0},{'id':'B6','wpm_inside_lines':152,'numbers_per_min':0},
+              {'id':'B7','wpm_inside_lines':148,'numbers_per_min':0}]
+        sig=core.pace_signals(rows,beats)
+        self.assertEqual({f['beat']:f['kind'] for f in sig},{'B1':'asked_slower_runs_faster_than_usual',
+                                                             'B2':'asked_faster_runs_slower_than_usual',
+                                                             'B4':'fast_where_densest'})
+        self.assertEqual((sig[0]['narration_median_wpm'],sig[0]['variation_from']),(150,'beats'))
+        # the same beats in a narration whose lines vary this much anyway: natural variation, nothing to examine
+        lines=[{'words':12,'start_s':0,'end_s':12*60/v} for v in (90,110,135,150,165,190,210)]
+        self.assertEqual(core.pace_signals(rows,beats,lines),[])
+        # a whole narration outside the pace of every reference is examined once, for the whole
+        whole=core.pace_signals(rows,beats,lines,{'reference_wpm':[120,140],'target_wpm':135})
+        self.assertEqual([(f['beat'],f['kind'],f['references_wpm']) for f in whole],
+                         [('overall','narration_outside_every_references_pace',[120,140])])
         self.assertEqual(core.pace_intent({'pace':'brisk but calm'}),None)            # mixed words: not inferred
         txt='## Self-audit\nok\n## Pace\n- B1: the quickening is the point here, the reveal rushes in\n## Next\n'
         self.assertIn('B1',core.editorial_section(txt,'pace'))
@@ -2131,6 +2271,49 @@ class StaticStudioTests(unittest.TestCase):
         b=json.loads((vd/'blueprint.json').read_text(encoding='utf-8')); b.pop('audience_knows'); save(vd/'blueprint.json',b)
         self.assertTrue(any(x.startswith('blueprint_missing_audience_knows') for x in
                             cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']))
+        # one line may answer signals that share a root (a name, a beat); never a blanket line over unrelated ones
+        core=self.load_core()
+        sig=['L001-L003: 4 names to hold arrive in about 30 s (Anna, Boris, Carla, Dmitri). Can a first-time viewer hold them?',
+             'L020: "Boris" returns after about 4.0 min, heard only once or twice before. Does the viewer still know?',
+             'L040: "Vienna" returns after about 5.0 min, heard only once or twice before. Does the viewer still know?']
+        beat_of={'L001':'B01','L020':'B02','L040':'B04'}
+        ok='- L001, L020: necessary_complexity: Boris is the thread the story follows, and his return pays it off\n'
+        self.assertEqual(core.comprehension_unclassified(sig,ok,beat_of),(['L040'],[]))
+        blanket='- L001, L020, L040: necessary_complexity: all of these are fine, the viewer will cope with them\n'
+        self.assertEqual(core.comprehension_unclassified(sig,blanket,beat_of),([],['L040']))
+        own=blanket+'- L040: missing_context: Vienna needs a reminder of the station where it all began\n'
+        self.assertEqual(core.comprehension_unclassified(sig,own,beat_of),([],[]))
+        self.assertEqual(core.comprehension_unclassified(sig,blanket,{'L001':'B01','L020':'B01','L040':'B01'}),([],[]))
+        # a line the editorial review names as a comprehension gap is one a later revision must have read again
+        self.assertNotIn('comprehension_gap',core.script_dependencies(vd).get('L001',[]))      # necessary_complexity
+        rv=(vd/'editorial-review.md').read_text(encoding='utf-8')
+        (vd/'editorial-review.md').write_text(rv+'- L002: accidental_confusion: the maps need a word of context before '
+                                              'they matter\n',encoding='utf-8')
+        self.assertIn('comprehension_gap',core.script_dependencies(vd).get('L002',[]))
+
+    def test_an_older_direction_keeps_its_plan_and_hears_the_new_rules_as_advice(self):
+        # A direction approved before the planning rules of 2026-11-24 (its lock has no planning_rules stamp) is never
+        # sent back to re-plan: those checks become advisories. Its other checks stay as they are.
+        vd=self.write_plan()
+        lock=json.loads((vd/'direction-lock.json').read_text(encoding='utf-8'))
+        self.assertEqual(lock['planning_rules'],2)                                   # a new lock is stamped
+        b=json.loads((vd/'blueprint.json').read_text(encoding='utf-8')); b.pop('audience_knows'); save(vd/'blueprint.json',b)
+        self.assertTrue(any(x.startswith('blueprint_missing_audience_knows') for x in
+                            cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']))
+        lock.pop('planning_rules'); save(vd/'direction-lock.json',lock)             # an older direction's lock
+        pc=cli('plan-check','--run',self.run,'--video',1,expected=None)
+        self.assertFalse([x for x in pc['issues'] if x.startswith('blueprint_missing_audience_knows')],pc['issues'])
+        self.assertTrue(any(w.startswith('advisory') and 'blueprint_missing_audience_knows' in w for w in pc['warnings']))
+        (vd/'editorial-review.md').unlink()                                         # not a planning rule: still an issue
+        self.assertIn('editorial_review_missing',cli('plan-check','--run',self.run,'--video',1,expected=None)['issues'])
+        core=self.load_core()
+        iss=['style_lock_missing:x','item_1_prompt_does_not_carry_shot_S1_frame_prompt','caption_adds_a_child:boy',
+             'track_1_needs_serves:y','content_flag_unanswered:z']
+        warn=[]
+        self.assertEqual(core.older_plan_advisory(self.run,1,iss,warn),['style_lock_missing:x','track_1_needs_serves:y'])
+        self.assertEqual(iss,['item_1_prompt_does_not_carry_shot_S1_frame_prompt','caption_adds_a_child:boy',
+                              'content_flag_unanswered:z'])
+        self.assertEqual(len(warn),2)
 
     def test_a_changed_beat_flags_its_unchanged_lines(self):
         vd=self.write_plan()
@@ -2199,7 +2382,7 @@ class StaticStudioTests(unittest.TestCase):
         # its colours are read against the locked palette; a render no longer of its spec is stale.
         vd=self.write_plan()
         self.shots_for_plan()
-        cli('style-lock','--run',self.run,'--video',1,'--style-prompt','painterly, soft edges','--palette','#2B1D14,#B0302A',
+        cli('style-lock','--run',self.run,'--video',1,'--style-prompt','painterly, soft edges','--departs-when','photorealistic, flat vector','--palette','#2B1D14,#B0302A',
             '--why','a palette for the drawings of this test')
         sc=json.loads((vd/'script.json').read_text(encoding='utf-8'))
         sc['lines'][0]['text']='Twenty-seven agents existed only on paper, and every one of them was believed for years.'
@@ -3377,7 +3560,7 @@ class StaticStudioTests(unittest.TestCase):
         stills=self.home/'stills'; stills.mkdir()
         sl=self.run/'60-visuals/video-01/style-lock.json'
         if not sl.is_file():
-            cli('style-lock','--run',self.run,'--video',1,'--style-prompt','ink wash')
+            cli('style-lock','--run',self.run,'--video',1,'--style-prompt','ink wash','--departs-when','photorealistic, flat vector')
         style=json.loads(sl.read_text(encoding='utf-8'))['style_prompt']
         job={'run':str(self.run),'video':1,'images':[{'shot_id':s['id'],'prompt':s['frame_prompt']+', '+style,
                                                       'out':str(stills/f"{s['id']}.png")} for s in shots]}
@@ -5688,7 +5871,7 @@ class TopicPathTests(unittest.TestCase):
         self.assertTrue(sc['ready'], (name, sc['issues']))
         # what the image and music workers would be given
         jobp = h.home / 'job.json'
-        cli('style-lock', '--run', run, '--video', 1, '--style-prompt', 'illustrated, muted palette')   # the locked look
+        cli('style-lock', '--run', run, '--video', 1, '--style-prompt', 'illustrated, muted palette', '--departs-when', 'photorealistic, flat vector')   # the locked look
         save(jobp, {'op': 'generate', 'run': str(run), 'video': 1,
                     'images': [{'shot_id': s['id'], 'prompt': s['frame_prompt'] + ', illustrated, muted palette',
                                 'out': str(h.home / f'{s["id"]}.png')} for s in shots]})

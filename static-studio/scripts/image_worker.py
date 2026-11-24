@@ -23,7 +23,7 @@ Jobs:
              recorded with its shot, beat and direction revision (60-visuals/video-NN/stills-provenance.json)
              (optional job keys: alpha, models, timeout_per_image, start_timeout, reserve_vram_gb: the GPU memory ComfyUI leaves
              unused, default 5, 0 for none; comfy_args: extra ComfyUI flags; log_out: a path ComfyUI's log is copied to;
-             gpu_wait_s, default 300, and gpu_need_mb: the GPU lease below)
+             gpu_wait_s: a cap on the GPU wait, none by default, and gpu_need_mb: the GPU lease below)
 
 Each image runs in two stages in the same ComfyUI: the upsampler writes the caption, every model is unloaded (POST /free), then the
 image model draws it. ComfyUI's dynamic VRAM otherwise keeps the upsampler staged next to the text encoder and the transformer: on a
@@ -34,9 +34,11 @@ worker also holds 5 GB of VRAM back (reserve_vram_gb): 11.8 GB for caption plus 
 process or another, whatever is held back.
 
 While its ComfyUI runs, a generate job holds the PC's GPU lease (gpu_lease.py, next to this file), so the PC's other GPU users make
-room: it declares the card's memory less what ComfyUI holds back (reserve_vram_gb, at least 1 GB), waits up to gpu_wait_s for that
-memory or for a GPU job that took the card first and would not fit beside it (said on stderr), then goes ahead with the same model
-and precision; stop() lets it go, also after an error. The answer's gpu_lease says what it waited for.
+room: it declares the card's memory less what ComfyUI holds back (reserve_vram_gb, at least 1 GB) and how long it expects to hold
+the card (FLUX_EXPECTED_S per image, measured), waits as long as whoever holds the card warrants (gpu_lease.py: an earlier GPU job
+until it ends, a recorder while it lets its Whisper go, memory held by another program only briefly; gpu_wait_s caps
+it), said on stderr, then goes ahead with the same model and precision; stop() lets it go, also after an error. The answer's
+gpu_lease says what it waited for and the card's size.
 
 The workflow is the one of ComfyUI's own FLUX 3 Image Klein templates (comfyui-workflow-templates 0.11.101:
 image_flux3_klein_distilled_t2i and image_flux3_klein_distilled_image_edit): UNETLoader (the int8 transformer), CLIPLoader type flux3
@@ -80,7 +82,13 @@ STEPS, SAMPLER, SCHEDULER = 16, "euler", "simple"
 # GPU room ComfyUI leaves unused is commit other programs keep. 5 GB held back: a 1216x2160 image peaked at 11.8 GB instead of about
 # 15 GB, with the same speed and the same pixels (dynamic VRAM streams the rest from the mapped model files).
 RESERVE_VRAM_GB = 5
-GPU_WAIT_S = 300          # the longest a generate job waits for the GPU (gpu_lease.py) before it goes ahead anyway
+# How long one image holds the card, for the others' wait (gpu_lease expected_s): 26-48 s per 1280x720 image, caption
+# included, on this PC's RTX 3060 (2026-11-24); 60 s for ComfyUI's start; a larger canvas takes longer in proportion.
+FLUX_EXPECTED_S, FLUX_START_S = 45.0, 60.0
+
+
+def flux_expected_s(imgs):
+    return FLUX_START_S + sum(FLUX_EXPECTED_S * max(1.0, im["width"] * im["height"] / (1280 * 720)) for im in imgs)
 UPSAMPLER_TOKENS = 3584
 PRESENCE = {"t2i": 1.5, "i2i": 0.0}
 I2I_SCAFFOLD = "Reference images follow in order (the first image, the second image, ...).\nUser request: {instruction}\nOutput the caption."
@@ -92,6 +100,8 @@ ENGINE = "flux3-image-klein-int8"
 # Set by main() for a gated job: (approved request, the upsampler's caption, the item's content note) -> the issues of what the
 # caption adds that the approved prompt does not ask for (static_core.caption_issues). A refused caption is never drawn.
 CAPTION_CHECK = None
+CAPTION_ACCEPT = None        # static_core.caption_acceptance: a stopped caption drawn on the director's reason
+PEOPLE_QUESTION = None       # static_core.people_question: what the still's content look must answer
 _GPU = {}                 # the running ComfyUI's GPU lease: start() takes it, stop() lets it go
 
 
@@ -147,8 +157,8 @@ def gpu_take(gpu):
         v = gpu_lease.vram()
         need = int(v["total_mb"] - max(float(gpu.get("reserve_gb") or 0) * 1024, 1024)) if v else 0
     wait = gpu.get("wait_s")
-    return gpu_lease.acquire("flux", need_mb=int(need), wait_s=GPU_WAIT_S if wait is None else float(wait),
-                             note=str(gpu.get("note") or ENGINE))
+    return gpu_lease.acquire("flux", need_mb=int(need), wait_s=None if wait is None else float(wait),
+                             note=str(gpu.get("note") or ENGINE), expected_s=gpu.get("expected_s"))
 
 
 def start(comfy, work, port, extra=(), gpu=None):
@@ -392,10 +402,13 @@ def normalise(img, i, earlier_outs=()):
     refused = str(img.get("on_caption_refused") or "stop")
     if refused not in ("stop", "draw_request"):
         raise ValueError(f"image {i + 1}: on_caption_refused must be stop or draw_request, got {refused!r}")
+    accept = img.get("accept_caption")
+    if accept is not None and not isinstance(accept, dict):
+        raise ValueError(f"image {i + 1}: accept_caption is {{\"sha256\": the caption's, \"why\": what its stopped words mean}}")
     return {"prompt": str(img["prompt"]).strip(), "out": str(img["out"]), "width": w, "height": h, "seed": seed,
             "steps": _int(img.get("steps") or STEPS, "steps"), "upsample": img.get("upsample", True) is not False,
             "refs": [str(r) for r in refs], "alpha": img.get("alpha"), "mtp": img.get("mtp"),
-            "content_note": img.get("content_note"), "on_caption_refused": refused}
+            "content_note": img.get("content_note"), "on_caption_refused": refused, "accept_caption": accept}
 
 
 # ---- the jobs
@@ -486,7 +499,8 @@ def op_generate(job):
         extra = ([] if reserve in (None, 0) else ["--reserve-vram", str(reserve)]) + list(job.get("comfy_args") or ())
         gpu = None if "--cpu" in extra else {     # ComfyUI on the GPU: the GPU lease (gpu_lease.py) while it runs
             "need_mb": job.get("gpu_need_mb"), "reserve_gb": reserve or 0, "wait_s": job.get("gpu_wait_s"),
-            "note": f"{ENGINE}: {len(imgs)} image(s), {imgs[0]['width']}x{imgs[0]['height']}"}
+            "note": f"{ENGINE}: {len(imgs)} image(s), {imgs[0]['width']}x{imgs[0]['height']}",
+            "expected_s": round(flux_expected_s(imgs), 1)}
         proc, log = start(comfy, work, port, extra, gpu=gpu)
         stats, err = wait_ready(proc, port, float(job.get("start_timeout") or 300))
         if err:
@@ -514,16 +528,30 @@ def op_generate(job):
                                   else {"issues": [], "notes": []})
                         refused = review["issues"]
                         res["caption_checks"] = refused
+                        res["caption_sha256"] = hashlib.sha256(caption.encode("utf-8")).hexdigest()
                         if review["notes"]:
                             res["caption_notes"] = review["notes"]   # drawn; what to look for when the still lands
-                        if refused and img.get("on_caption_refused") == "draw_request":
+                        if review.get("people_hints") is not None and PEOPLE_QUESTION:
+                            pq = PEOPLE_QUESTION(img["prompt"], review)
+                            if pq:
+                                res["people_question"] = pq          # the still's content look must answer it
+                        accepted, why_not = (CAPTION_ACCEPT(img.get("accept_caption"), caption, refused)
+                                             if CAPTION_ACCEPT else (not refused, None))
+                        if refused and accepted:
+                            res["caption_accepted"] = {"issues": refused, "why": img["accept_caption"].get("why"),
+                                                       "sha256": res["caption_sha256"]}
+                        elif refused and img.get("on_caption_refused") == "draw_request":
                             res.update({"caption_refused": caption, "drew_from": "request (its caption was refused)"})
                             caption = img["prompt"]
                         elif refused:
                             res["caption_refused"] = caption
                             err = ("the upsampler's caption adds what the approved prompt does not ask for: "
-                                   + "; ".join(refused) + " (nothing drawn: rewrite the prompt, or set the item's "
-                                   "on_caption_refused to draw_request to draw the approved prompt itself)")
+                                   + "; ".join(refused) + " (nothing drawn. Read the caption (caption_refused): when the "
+                                   "stopped words do not mean what they seem, accept exactly this caption with the item's "
+                                   "accept_caption {\"sha256\": \"" + res["caption_sha256"] + "\", \"why\": \"...\"}; or set "
+                                   "on_caption_refused to draw_request to draw the approved prompt itself; or rewrite the "
+                                   "prompt" + (f". Not acceptable here: {why_not}" if why_not and why_not != "not accepted"
+                                               else "") + ")")
                     if not err:
                         free_models(port)
                 if not err:                  # stage 2: the image from the caption
@@ -589,7 +617,7 @@ def main():
     op = {"check": op_check, "generate": op_generate}.get(job.get("op"))
     if op is None:
         out({"ok": False, "error": f"unknown op {job.get('op')!r} (check | generate)"}, 2)
-    global CAPTION_CHECK
+    global CAPTION_CHECK, CAPTION_ACCEPT, PEOPLE_QUESTION
     gate, sc = None, None
     if job.get("op") == "generate":
         # Before ComfyUI starts: the job names its run and video, every image a shot of the checked shot plan carrying
@@ -603,6 +631,7 @@ def main():
             out({"ok": False, "error": "Static Studio: these stills cannot be generated yet (fix the plan, not the gate).",
                  "issues": gate["issues"]}, 2)
         CAPTION_CHECK = (lambda request, caption, note: sc.caption_review(gate["run"], gate["video"], request, caption, note))
+        CAPTION_ACCEPT, PEOPLE_QUESTION = sc.caption_acceptance, sc.people_question
     try:
         res = op(job)
     except Exception as e:  # noqa: BLE001
@@ -625,6 +654,7 @@ def main():
                             "submitted_prompt_sha256": hashlib.sha256(given.encode("utf-8")).hexdigest(),
                             "drew_from": r.get("drew_from"), "caption_checks": r.get("caption_checks") or [],
                             "caption_notes": r.get("caption_notes") or [],
+                            **{k: r[k] for k in ("caption_sha256", "caption_accepted", "people_question") if r.get(k)},
                             "seed": r.get("seed"), "steps": r.get("steps"), "size": [r.get("width"), r.get("height")],
                             "refs": [{"file": str(x), "sha256": (hashlib.sha256(Path(x).read_bytes()).hexdigest()
                                                                  if Path(x).is_file() else None)}

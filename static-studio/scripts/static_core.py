@@ -374,12 +374,14 @@ _WHISPER = {}
 _DLL_DIRS = []
 _CPU_APPROVAL = None
 # The GPU lease of a Whisper job (gpu_lease.py, beside this file): medium in float16 holds about 2.2 GB. Before the model
-# loads, the job may wait up to WHISPER_GPU_WAIT_S for that memory (said on stderr), then it goes ahead on the GPU: the
-# lease never changes the device, the model or the precision, and there is none on the CPU.
-WHISPER_GPU_NEED_MB, WHISPER_GPU_WAIT_S = 2200, 60
+# loads, the job waits as long as whoever holds the card warrants (gpu_lease.py: an earlier GPU job until it ends,
+# a recorder while it lets its Whisper go, another program only briefly), said on stderr, then it goes ahead
+# on the GPU: the lease never changes the device, the model or the precision, and there is none on the CPU. It says how
+# long it expects to hold the card: WHISPER_LOAD_S to load, a file's length over WHISPER_SPEED to transcribe it.
+WHISPER_GPU_NEED_MB, WHISPER_LOAD_S, WHISPER_SPEED = 2200, 60.0, 6.0
 
 
-def whisper_gpu_lease(model_name, device, compute_type, doing):
+def whisper_gpu_lease(model_name, device, compute_type, doing, seconds=None):
     """The GPU lease of one Whisper job, a gpu_lease.Lease (a context manager; release() lets it go, and so does the end
     of the process): it waits only while the model is not loaded yet. On the CPU it holds nothing."""
     here = str(Path(__file__).resolve().parent)
@@ -389,8 +391,9 @@ def whisper_gpu_lease(model_name, device, compute_type, doing):
     if device != 'cuda':
         return gpu_lease.unheld('Whisper on the CPU (--cpu-approved)')
     loaded = (model_name, device, compute_type) in _WHISPER
-    return gpu_lease.acquire('whisper', need_mb=WHISPER_GPU_NEED_MB, wait_s=0 if loaded else WHISPER_GPU_WAIT_S,
-                             note=f'Whisper {model_name} {compute_type}: {doing}')
+    expected = WHISPER_LOAD_S + (float(seconds) / WHISPER_SPEED if seconds else 0.0)
+    return gpu_lease.acquire('whisper', need_mb=WHISPER_GPU_NEED_MB, wait_s=0 if loaded else None,
+                             note=f'Whisper {model_name} {compute_type}: {doing}', expected_s=round(expected, 1))
 
 
 def cuda_dll_dirs():
@@ -525,7 +528,11 @@ def add_whisper_args(p):
 
 def transcribe(path, outpath, model_name, device, compute_type):
     model, eng = whisper_model(model_name, device, compute_type)   # loaded under its own lease, once per process
-    with whisper_gpu_lease(model_name, device, compute_type, f'transcribing {Path(path).name}'):
+    try:
+        secs = probe(path)['duration_s']
+    except Exception:  # noqa: BLE001 - the length only sizes the lease
+        secs = None
+    with whisper_gpu_lease(model_name, device, compute_type, f'transcribing {Path(path).name}', secs):
         t0 = time.time()
         segs, info = model.transcribe(str(path), beam_size=5, word_timestamps=True, vad_filter=True,
                                       condition_on_previous_text=False)
@@ -1521,6 +1528,16 @@ def picture_looks_path(rd, video):
     return rd / '60-visuals' / f'video-{int(video):02d}' / 'content-looks.json'
 
 
+# A look's own issue categories beyond the content reviews': a person the picture's prompt does not ask for.
+LOOK_CATEGORIES = ('excluded_theme', 'people_not_asked_for')
+NOBODY_SEEN = re.compile(r'(?i)\s*(none|no one|nobody|no people|no person|no-one)\b[\s\S]*')
+
+
+def still_provenance_by_file(rd, video):
+    """The stills' provenance records of a video, by file key (_pkey), as record_media keeps them."""
+    return read_json(artifact_path(rd, int(video), 'stills')).get('images') or {}
+
+
 def closer_looks(rd, ref, a=None, b=None):
     """The closer looks (inspect-window) taken at a reference, overlapping [a, b] when given."""
     out = []
@@ -1839,6 +1856,7 @@ def cmd_content_review(args):
         path = picture_looks_path(rd, args.video)
         data = read_json(path) or {'video': int(args.video), 'looks': {}}
         problems, saved = [], 0
+        prov_ = still_provenance_by_file(rd, args.video)
         for k, lk in enumerate(looks, 1):
             f = _run_file(rd, (lk or {}).get('file'))
             if not f.is_file():
@@ -1849,13 +1867,23 @@ def cmd_content_review(args):
                 problems.append(f'look_{k}_result_must_be_clean_or_issue')
             if n_words(lk.get('note')) < 3:
                 problems.append(f'look_{k}_note_must_say_what_the_picture_shows')
-            if res == 'issue' and str(lk.get('category') or '') not in SAFETY_CATEGORIES + CONTENT_KINDS[1:] + ('excluded_theme',):
+            if res == 'issue' and str(lk.get('category') or '') not in SAFETY_CATEGORIES + CONTENT_KINDS[1:] + LOOK_CATEGORIES:
                 problems.append(f'look_{k}_an_issue_needs_its_category')
+            pq = (prov_.get(_pkey(f)) or {}).get('people_question')
+            ppl = str(lk.get('people') or '').strip()
+            if pq and not ppl:
+                problems.append(f'look_{k}_must_say_whether_anyone_appears_(people:"none"_or_who):its_prompt_'
+                                + ('rules_people_out' if pq.get('prompt_excludes_people') else 'asks_for_no_one')
+                                + (':look_at:' + ','.join(pq.get('hints') or []) if pq.get('hints') else ''))
+            elif pq and not NOBODY_SEEN.fullmatch(ppl) and (res != 'issue' or lk.get('category') != 'people_not_asked_for'):
+                problems.append(f'look_{k}_someone_appears_that_its_prompt_does_not_ask_for:result_issue,_category_'
+                                'people_not_asked_for_(the_still_is_remade,_never_patched)')
             if not problems:
                 data['looks'][_pkey(f)] = {'file': str(f), 'sha256': file_sha256(f), 'result': res,
                                            'note': lk.get('note'), 'category': lk.get('category'), 'looked_at': now(),
                                            'never_show_checked': bool(ruled_out),
-                                           'themes_sha256': canonical_sha(ruled_out)}
+                                           'themes_sha256': canonical_sha(ruled_out),
+                                           **({'people': ppl, 'people_question': pq} if pq else {})}
                 saved += 1
         if problems:
             error('The looks file does not follow the format; nothing was recorded.', problems)
@@ -3079,6 +3107,7 @@ def direction_facts(rd, video):
                            + ':carries_values[{value,how}]')
         if n_words(dec.get('carries_payoff')) < MIN_FIELD_WORDS:
             iss.append('decision_missing_carries_payoff:how_the_chosen_treatment_makes_the_payoff_land')
+    older_plan_advisory(rd, video, iss, warn)
     return out
 
 
@@ -3621,6 +3650,55 @@ COMPREHENSION_KINDS = ('necessary_complexity', 'intentional_mystery', 'accidenta
                        'redundancy', 'missing_context')
 
 
+def comprehension_signal_facts(sgl):
+    """(first line id, names) of one comprehension signal: the names held at once, or the name that returns."""
+    m = re.match(r'(L\d+)', str(sgl or ''))
+    names = set()
+    if ' names to hold arrive' in str(sgl):
+        g = re.search(r'\(([^)]*)\)', sgl)
+        names = {x.strip().lower() for x in (g.group(1).split(',') if g else []) if x.strip()}
+    else:
+        g = re.search(r'"([^"]+)" returns', str(sgl))
+        names = {g.group(1).lower()} if g else set()
+    return (m.group(1) if m else None), names
+
+
+def comprehension_unclassified(signals, section_text, line_beat):
+    """(unclassified ids, grouped-without-a-cause ids) of the signals against the editorial review's Comprehension
+    section. A line classifies the signals it names when it gives a kind and a reason; one line may answer several
+    when they share a root: a name in common, or one beat (the user, 2026-11-24: related signals together, never a
+    blanket line over unrelated ones). Signals a line groups with nothing they share are returned apart, to be answered
+    each on its own line."""
+    facts = {}
+    for s in signals:
+        lid, names = comprehension_signal_facts(s)
+        if lid:
+            facts.setdefault(lid, set()).update(names)
+
+    def related(a, b):
+        return bool(facts[a] & facts[b]) or (line_beat.get(a) is not None and line_beat.get(a) == line_beat.get(b))
+
+    done, apart = set(), set()
+    kinds = re.compile(r'\b(' + '|'.join(COMPREHENSION_KINDS) + r')\b')
+    for ln in str(section_text or '').splitlines():
+        if n_words(ln) < MIN_NOTE_WORDS or not kinds.search(ln):
+            continue
+        ids = [x for x in dict.fromkeys(re.findall(r'\bL\d+\b', ln)) if x in facts]
+        if not ids:
+            continue
+        group, grew = {ids[0]}, True
+        while grew:
+            grew = False
+            for x in ids:
+                if x not in group and any(related(x, g) for g in group):
+                    group.add(x)
+                    grew = True
+        done |= group
+        apart |= set(ids) - group
+    apart -= done
+    return [x for x in facts if x not in done and x not in apart], sorted(apart)
+
+
 def comprehension_signals(lines, beats=None, pace_wpm=150, language='en', window_s=30.0, dense_at=4, return_after_s=180.0):
     """Facts for the agent, never a gate (manual 03). Names the viewer is asked to hold (heard more than once in the
     film) arriving several at a time within about window_s of planned narration, and a name coming back after a long
@@ -3745,11 +3823,11 @@ def media_gate(job, kind, engine=None):
         for i, it in enumerate(items, 1):
             if n_words(it.get('prompt')) < 8:
                 iss.append(f'item_{i}_missing_prompt')
-            if slock and _style_words(slock.get('style_prompt')) not in _style_words(it.get('prompt')) \
-                    and n_words(it.get('style_departure')) < MIN_FIELD_WORDS:
-                iss.append(f'item_{i}_thumbnail_not_in_the_locked_style:carry_the_style_words_or_say_why_(style_departure)')
+            if slock:
+                iss += style_identity_issues(f'item_{i}_thumbnail', slock, it)
             iss += prompt_flag_issues(f'item_{i}_prompt', prompt_flags(it.get('prompt'), themes), it.get('content_note'))
         out['direction'] = {'treatment': treatment, 'visual_language': chosen.get('visual_language')}
+        older_plan_advisory(rd, n, iss, out['warnings'])
         out['ok'] = not iss
         return out
     iss += beat_map_facts(rd, n)
@@ -3786,11 +3864,11 @@ def media_gate(job, kind, engine=None):
             if not fp or fp not in _norm(it.get('prompt')):
                 iss.append(f'item_{i}_prompt_does_not_carry_shot_{s.get("id")}_frame_prompt')
             elif slock:
-                # around the approved frame prompt: exactly the locked style words (the shot's own framing and light
-                # are in its frame prompt; the look is the same everywhere)
-                extra = _style_words(_norm(it.get('prompt')).replace(fp, ' ', 1))
-                if extra != _style_words(slock.get('style_prompt')):
-                    iss.append(f'item_{i}_style_words_are_not_the_locked_style:"{extra[:60]}"_vs_"{_style_words(slock.get("style_prompt"))[:60]}"')
+                # the locked look as an identity: its words (or a note on how this wording keeps it), additions with
+                # their reason, and what the lock names as another look only as a relock or a stated departure
+                iss += style_identity_issues(f'item_{i}', slock, it, fp)
+            # reference images steer the picture like words: the run's own material or the style lock's references
+            iss += reference_issues(f'item_{i}', rd, slock, it.get('refs'))
             # style words added around the approved frame prompt may not bring in what the prompt itself doesn't
             extra = [k for k in prompt_flags(it.get('prompt'), themes_now)
                      if k not in prompt_flags(s.get('frame_prompt') or s.get('prompt'), themes_now)]
@@ -3817,6 +3895,7 @@ def media_gate(job, kind, engine=None):
             out['direction']['items'].append(item)
             out['records'].append({'shot_id': str(s.get('id')), 'beat_id': str(s.get('beat_id')),
                                    **({'uncertainty_shown': s.get('uncertainty_shown')} if s.get('uncertainty_shown') else {}),
+                                   **{k: it.get(k) for k in ('style_note', 'style_departure') if it.get(k)},
                                    **({'style_lock_rev': slock.get('rev')} if slock else {}),
                                    'frame_prompt_sha256': hashlib.sha256(fp.encode('utf-8')).hexdigest(),
                                    'production_rev': rev, 'treatment': treatment})
@@ -3830,6 +3909,10 @@ def media_gate(job, kind, engine=None):
                 iss.append(f'track_{i}_is_for_another_video')
             if n_words(it.get('caption')) < 3:
                 iss.append(f'track_{i}_missing_caption')
+            elif len(str(it.get('caption') or '')) > MUSIC_CAPTION_MAX:
+                # the worker sends the first MUSIC_CAPTION_MAX characters: a longer caption would not be what is played
+                iss.append(f'track_{i}_caption_longer_than_the_music_model_reads:{len(str(it.get("caption")))}_of_'
+                           f'{MUSIC_CAPTION_MAX}_characters')
             if n_words(it.get('serves')) < MIN_FIELD_WORDS:
                 # the bed carries out its beats' sound direction (and at a key moment, what the moment means): the
                 # agent says how the caption does it, and that goes on record with the direction it answered
@@ -3839,6 +3922,7 @@ def media_gate(job, kind, engine=None):
             out['records'].append({'beats': bs, 'caption_sha256': hashlib.sha256(_norm(it.get('caption')).encode('utf-8')).hexdigest(),
                                    'production_rev': rev, 'treatment': treatment, 'serves': it.get('serves'),
                                    'direction': {'sound': chosen.get('sound'), 'beats': bdir}})
+    older_plan_advisory(rd, n, iss, out['warnings'])
     out['ok'] = not iss
     return out
 
@@ -3848,6 +3932,7 @@ def media_gate(job, kind, engine=None):
 # engine (OpenAI Images) is used only on the user's explicit choice on record (image-engine); it is never a fallback when
 # FLUX fails: the failure is reported and the job stops.
 IMAGE_ENGINES = ('flux-klein', 'openai')
+MUSIC_CAPTION_MAX = 500      # music_worker.py sends at most this many characters of a track's caption to ACE-Step
 
 
 def style_lock_path(rd, video):
@@ -3856,6 +3941,63 @@ def style_lock_path(rd, video):
 
 def _style_words(text):
     return ' '.join(re.findall(r"[a-z0-9']+", str(text or '').lower()))
+
+
+def reference_issues(tag, rd, slock, refs):
+    """A still's reference images, held like its words: each is the run's own material (an earlier still, a user asset
+    copied into the run) or a reference the style lock fixed, so its path and sha256 stay on the run's record."""
+    iss = []
+    locked = {_pkey(r.get('file')) for r in (slock or {}).get('refs') or [] if r.get('file')}
+    root = _pkey(rd)
+    for r in refs or []:
+        p = Path(str(r)).expanduser()
+        p = p if p.is_absolute() else rd / p
+        k = _pkey(p)
+        if not (k == root or k.startswith(root + os.sep)) and k not in locked:
+            iss.append(f'{tag}_reference_outside_the_run:{p.name}:copy_it_into_the_run_or_lock_it_as_a_style_reference')
+    return iss
+
+
+def _phrase_in(phrase, text):
+    """A phrase's words, in order, as whole words of the text."""
+    p = _style_words(phrase)
+    return bool(p) and f' {p} ' in f' {_style_words(text)} '
+
+
+def departs_when_of(slock):
+    """The phrases the director named, at lock time, as another look than the locked one."""
+    d = (slock or {}).get('departs_when') or []
+    return [x.strip() for x in (d if isinstance(d, list) else str(d).split(',')) if str(x).strip()]
+
+
+def style_identity_issues(tag, slock, item, approved=None):
+    """The locked look kept as an identity, not as identical wording (the user, 2026-11-24). The prompt carries the
+    locked style words in any order, or says in style_note how its own wording keeps that look. Words added around the
+    approved frame prompt (a shot's own light, framing, atmosphere or rendering) are allowed with their reason
+    (style_note). What the lock names as another look (departs_when) in those added words is a style change: relock
+    (style-lock --why), or say why this one picture departs on purpose (style_departure). A thumbnail (approved None)
+    has no approved prompt: its whole prompt is checked for the look and for a departure."""
+    iss = []
+    prompt = _norm(item.get('prompt'))
+    added = prompt.replace(approved, ' ', 1) if approved else prompt
+    style = _style_words(slock.get('style_prompt'))
+    sw = {w for w in style.split() if w not in _CAPTION_STOP}
+    pw = set(_style_words(prompt).split())
+    note = n_words(item.get('style_note')) >= MIN_NOTE_WORDS
+    departure = n_words(item.get('style_departure')) >= MIN_FIELD_WORDS
+    if sw and not sw <= pw and not note and not departure:
+        iss.append(f'{tag}_does_not_carry_the_locked_style:"{style[:60]}":its_words,_or_how_this_wording_keeps_the_'
+                   'look_(style_note)')
+    if approved is not None:
+        extra = [w for w in _style_words(added).split() if w not in sw and w not in _CAPTION_STOP]
+        if extra and not note and not departure:
+            iss.append(f'{tag}_adds_words_beyond_the_approved_prompt_and_the_style:"{" ".join(extra)[:60]}":say_why_'
+                       '(style_note)')
+    hit = [d for d in departs_when_of(slock) if _phrase_in(d, added)]
+    if hit and not departure:
+        iss.append(f'{tag}_reaches_for_another_look:{",".join(hit)[:80]}:relock_the_style_(style-lock_--why)_or_say_'
+                   'why_this_picture_departs_(style_departure)')
+    return iss
 
 
 def style_lock_state(rd, video):
@@ -3888,6 +4030,11 @@ def cmd_style_lock(args):
         error('Lock the creative direction first: the style comes from the chosen treatment\'s visual language.')
     if n_words(args.style_prompt) < 1:
         error('Give the style words every still carries (--style-prompt), e.g. "gouache illustration, warm muted palette".')
+    departs = [x.strip() for x in str(args.departs_when or '').split(',') if x.strip()]
+    if not departs:
+        error('Name what would be ANOTHER look than this one (--departs-when "photorealistic, flat vector, neon"): a still '
+              'whose added words reach for it is a style change (a relock, or a departure said on purpose); light, '
+              'framing and atmosphere of a shot stay free.')
     old = read_json(style_lock_path(rd, n))
     if old and n_words(args.why) < 4:
         error('The style is already locked: a change needs its reason (--why), and is kept as a new revision.')
@@ -3903,14 +4050,17 @@ def cmd_style_lock(args):
         error('Palette colours are hex: #RRGGBB', bad)
     vl = chosen_treatment_of(read_json(video_dir(rd, n) / 'direction.json')).get('visual_language')
     rec = {'video': n, 'rev': int(old.get('rev') or 0) + 1, 'style_prompt': args.style_prompt.strip(),
-           'palette': ['#' + p.lstrip('#').upper() for p in pal], 'refs': refs,
+           'palette': ['#' + p.lstrip('#').upper() for p in pal], 'refs': refs, 'departs_when': departs,
            'visual_language_sha256': canonical_sha(vl), 'style_bible_sha256': artifact_sha(rd, n, 'style-bible'),
            'locked_at': now(), 'why': args.why or 'first lock',
-           'history': (old.get('history') or []) + ([{k: old.get(k) for k in ('rev', 'style_prompt', 'palette', 'locked_at', 'why')}]
+           'history': (old.get('history') or []) + ([{k: old.get(k) for k in ('rev', 'style_prompt', 'palette', 'departs_when',
+                                                                               'locked_at', 'why')}]
                                                     if old else [])}
     write_json(style_lock_path(rd, n), rec)
     emit({'ok': True, 'file': str(style_lock_path(rd, n)), 'rev': rec['rev'], 'style_prompt': rec['style_prompt'],
-          'next': 'every stills job prompt: the shot\'s approved frame_prompt, then exactly these style words'})
+          'departs_when': departs,
+          'next': 'every stills job prompt: the shot\'s approved frame_prompt, then these style words (another wording '
+                  'that keeps the look, or added words for the shot, with their reason in style_note)'})
 
 
 def engine_family(engine):
@@ -3937,18 +4087,26 @@ CAPTION_PEOPLE = re.compile(r"\b(man|men|woman|women|person|persons|people|crowd
 # described "weathered plank faces" and hills as "overlapping blue-green silhouettes": not people. Near a person cue
 # ("a lone figure standing", "her face") they are; without one they are noted for the look every still gets when it lands.
 CAPTION_PEOPLE_AMBIGUOUS = re.compile(r"\b(figure|figures|silhouette|silhouettes|face|faces)\b", re.I)
-# Only cues that mean a person (a lighthouse stands, boats sit, a mast leans: a second real FLUX caption, 2026-11-24)
+# Only cues that mean a person (a lighthouse stands, boats sit, a mast leans: a second real FLUX caption, 2026-11-24).
+# They only decide whether the caption is stopped for a decision before drawing; whether a person is IN the picture is
+# answered by the look at the still (people question), never by a word list.
 CAPTION_PERSON_CUES = re.compile(r"\b(walk|walks|walking|wear|wears|wearing|dressed|cloaked|hooded|waving|smiling|staring|"
                                  r"gazing|peering|eyes|hair|shoulders|human|humans|his|her)\b", re.I)
-# "figure" in a picture caption is a person unless a material or a number sense says otherwise
-CAPTION_FIGURE_NOT_PERSON = re.compile(r"\b(carved|stone|wooden|bronze|clay|marble|geometric|toy|stick|decorative|painted|"
-                                       r"wax|plaster|porcelain|ice|columns|column|rows|row|lines|handwritten|written|"
-                                       r"numerical|numbers|sums|totals|ledger|accounts|tallies|of)\W*$", re.I)
+CAPTION_NOBODY = re.compile(r"\b(nobody|no one|no-one|unpeopled|uninhabited|deserted|empty of people)\b", re.I)
 CAPTION_MINORS = re.compile(r"\b(child|children|boy|boys|girl|girls|kid|kids|baby|babies|infant|infants|toddler|"
                             r"toddlers|teen|teens|teenager|teenagers)\b", re.I)
 CAPTION_TEXT = re.compile(r"\b(text|lettering|inscription|inscriptions|typography|caption|captions|headline|headlines|"
                           r"logo|logos|subtitle|subtitles)\b", re.I)
+CAPTION_QUOTED = re.compile('["\u201c\u201d]([^"\u201c\u201d\n]{2,80})["\u201c\u201d]')
 CAPTION_NEGATION = re.compile(r"\b(no|not|without|never|nor|none|avoid|avoiding|absent|exclude|excluding|free of)\b", re.I)
+# "remove all people" in an edit caption written from a reference image rules people out (a real FLUX caption, 2026-11-24),
+# but only for what closely follows the verb: "remove the fog to reveal two soldiers" still asks for soldiers
+CAPTION_REMOVAL = re.compile(r"\b(remove|removed|removing|omit|omitted|omitting)\W+(?:\w+\W+){0,2}$", re.I)
+
+
+def _negated(before):
+    """The words before a match rule it out: a negation anywhere earlier in its clause, or a removal verb just before."""
+    return bool(CAPTION_NEGATION.search(before) or CAPTION_REMOVAL.search(before))
 CAPTION_KEEP_MIN = 0.5
 _CAPTION_STOP = set('a an the and or of in on at to with by for from as is are was were be its it his her their this that '
                     'these those into over under near while one two three very'.split())
@@ -3959,41 +4117,64 @@ def _affirmed(rx, text):
     found = set()
     for clause in re.split(r'[.;:!?\n]', str(text or '')):
         for m in rx.finditer(clause):
-            if not CAPTION_NEGATION.search(clause[:m.start()]):
+            if not _negated(clause[:m.start()]):
                 found.add(m.group(0).lower())
     return found
 
 
 def _ambiguous_people(text):
-    """(person words, unsure words) among the ambiguous ones, outside negated clauses: a person cue within five words
-    makes one a person; without a cue it is unsure."""
+    """(likely-person words, unsure words) among the ambiguous ones, outside negated clauses: a person cue within five
+    words makes one likely a person; without one it is unsure. Neither is a verdict: a likely one stops the caption for a
+    decision (accept_caption), and both put a people question on the still for its look."""
     sure, unsure = set(), set()
     for clause in re.split(r'[.;:!?\n]', str(text or '')):
         for m in CAPTION_PEOPLE_AMBIGUOUS.finditer(clause):
-            if CAPTION_NEGATION.search(clause[:m.start()]):
+            if _negated(clause[:m.start()]):
                 continue
-            w = m.group(0).lower()
-            before = ' '.join(clause[:m.start()].split()[-3:])
             near = ' '.join(clause[:m.start()].split()[-5:] + clause[m.end():].split()[:5])
-            if w.startswith('figure') and not CAPTION_FIGURE_NOT_PERSON.search(before + ' '):
-                sure.add(w)
-            else:
-                (sure if CAPTION_PERSON_CUES.search(near) else unsure).add(w)
+            (sure if CAPTION_PERSON_CUES.search(near) else unsure).add(m.group(0).lower())
     return sure, unsure
+
+
+def people_excluded(text):
+    """The text rules people out ("no people", "nobody", "without figures"): a word that may name a person inside a
+    negated clause, or a word that itself means nobody."""
+    for clause in re.split(r'[.;:!?\n]', str(text or '')):
+        if CAPTION_NOBODY.search(clause):
+            return True
+        for rx in (CAPTION_PEOPLE, CAPTION_PEOPLE_AMBIGUOUS, CAPTION_MINORS):
+            if any(_negated(clause[:m.start()]) for m in rx.finditer(clause)):
+                return True
+    return False
+
+
+def people_question(request, review):
+    """The question a still's content look must answer, or None: whether anyone appears in a picture whose approved
+    prompt asks for no one, and which caption words to look at (hints). Asked when the prompt rules people out, or
+    when the caption has words that may name a person the prompt does not ask for."""
+    hints = sorted(set((review or {}).get('people_hints') or []))
+    excl = people_excluded(request)
+    if not hints and not excl:
+        return None
+    return {'prompt_excludes_people': excl, 'hints': hints}
 
 
 def _caption_words(text):
     return {w for w in re.findall(r"[a-z][a-z'-]+", str(text or '').lower()) if len(w) > 2 and w not in _CAPTION_STOP}
 
 
-def caption_review_with(themes, request, caption, content_note=None, style=None):
-    """What a caption adds to the approved prompt it was written from. issues (the caption is not drawn): an excluded or
-    restricted theme or a content flag (a plain one answered by the item's content note), a child, people where the
-    prompt has none, written text where the prompt has none, a caption keeping under half of the prompt's words
-    (another picture). notes (drawn, and recorded): a word that may name a person in a picture meant to have none."""
+def caption_review_with(themes, request, caption, content_note=None, style=None, departs=()):
+    """What a caption adds to the approved prompt it was written from. issues (the caption is not drawn unless it is
+    accepted for exactly this caption with a reason, accept_caption; an added child never): an excluded or restricted
+    theme or a content flag (a plain one answered by the item's content note), a child, likely people where the prompt
+    has none, written text where the prompt has none, a caption keeping under half of the prompt's words (another
+    picture), the locked style dropped, or what the style lock names as another look. notes (drawn, and recorded): a word
+    that may name a person in a picture meant to have none. people_hints: every caption word that may name a person the
+    prompt does not ask for, for the look the still gets (people_question)."""
     req, cap = strip_tags(str(request or '')), strip_tags(str(caption or ''))
     iss, notes = prompt_flag_issues('caption', [k for k in prompt_flags(cap, themes) if k not in prompt_flags(req, themes)
                                                 and k != 'minor_in_the_picture'], content_note), []
+    hints = set()
     kids = _affirmed(CAPTION_MINORS, cap) - _affirmed(CAPTION_MINORS, req)
     if kids:
         iss.append('caption_adds_a_child:' + ','.join(sorted(kids)))
@@ -4001,6 +4182,7 @@ def caption_review_with(themes, request, caption, content_note=None, style=None)
     if not _affirmed(CAPTION_PEOPLE, req) and not _affirmed(CAPTION_MINORS, req) and not req_sure:
         sure, unsure = _ambiguous_people(cap)
         ppl = _affirmed(CAPTION_PEOPLE, cap) | (sure - req_unsure)
+        hints |= ppl | (unsure - req_unsure)
         if ppl:
             iss.append('caption_adds_people_the_prompt_does_not_have:' + ','.join(sorted(ppl)))
         if unsure - req_unsure:
@@ -4010,6 +4192,13 @@ def caption_review_with(themes, request, caption, content_note=None, style=None)
         txt = _affirmed(CAPTION_TEXT, cap)
         if txt:
             iss.append('caption_adds_written_text:' + ','.join(sorted(txt)))
+    # words in quotation marks are what the image model writes into the picture: the ones the approved prompt does not
+    # give were invented by the upsampler (a real caption, 2026-11-24: "a ledger of handwritten names" became eight
+    # legible invented names)
+    quoted = [q.strip() for q in CAPTION_QUOTED.findall(cap)]
+    new_words = [q for q in dict.fromkeys(quoted) if q and q.lower() not in req.lower()]
+    if new_words:
+        iss.append('caption_adds_words_to_draw:' + '|'.join(new_words[:6])[:120])
     rw, cw = _caption_words(req), _caption_words(cap)
     keep = len(rw & cw) / len(rw) if rw else 1.0
     if rw and keep < CAPTION_KEEP_MIN:
@@ -4017,7 +4206,31 @@ def caption_review_with(themes, request, caption, content_note=None, style=None)
     sw = _caption_words(style)
     if sw and _style_words(style) in _style_words(req) and len(sw & cw) / len(sw) < CAPTION_KEEP_MIN:
         iss.append('caption_drops_the_locked_style:' + ','.join(sorted(sw - cw))[:80])
-    return {'issues': iss, 'notes': notes}
+    gone = [d for d in departs or () if _phrase_in(d, cap) and not _phrase_in(d, req)]
+    if gone:
+        iss.append('caption_reaches_for_another_look:' + ','.join(gone)[:80])
+    return {'issues': iss, 'notes': notes, 'people_hints': sorted(hints)}
+
+
+CAPTION_NEVER_ACCEPTED = ('caption_adds_a_child',)
+
+
+def caption_acceptance(accept, caption, issues):
+    """(accepted, why not) for an item's accept_caption {"sha256", "why"}: the director read THIS caption (its sha256)
+    and says why what the check stopped is not what it looks like (a soldier's helmet, a hill's silhouette). Never for
+    an added child."""
+    if not issues:
+        return True, None
+    if not isinstance(accept, dict) or not accept:
+        return False, 'not accepted'
+    never = [x for x in issues if str(x).startswith(CAPTION_NEVER_ACCEPTED)]
+    if never:
+        return False, 'never accepted: ' + '; '.join(never)
+    if str(accept.get('sha256') or '').lower() != hashlib.sha256(str(caption or '').encode('utf-8')).hexdigest():
+        return False, 'accept_caption.sha256 is not this caption\'s (the acceptance holds for exactly the caption read)'
+    if n_words(accept.get('why')) < MIN_NOTE_WORDS:
+        return False, 'accept_caption.why must say what the stopped words mean in this caption'
+    return True, None
 
 
 def caption_issues_with(themes, request, caption, content_note=None):
@@ -4026,10 +4239,11 @@ def caption_issues_with(themes, request, caption, content_note=None):
 
 
 def caption_review(run, video, request, caption, content_note=None):
-    """caption_review_with the themes this video's content reviews rule out."""
+    """caption_review_with the themes this video's content reviews rule out and its style lock."""
     rd = Path(str(run)).expanduser().resolve()
+    slock = read_json(style_lock_path(rd, int(video)))
     return caption_review_with(excluded_themes(rd, int(video)), request, caption, content_note,
-                               read_json(style_lock_path(rd, int(video))).get('style_prompt'))
+                               slock.get('style_prompt'), departs_when_of(slock))
 
 
 def caption_issues(run, video, request, caption, content_note=None):
@@ -4163,6 +4377,7 @@ def review_records(vd, kind):
         doc = read_json(p.with_name(f'{kind}-r{m.group(1)}-answers.json'))
         ans = doc.get('answers') or {}
         rec['_reconcile'] = doc.get('reconcile') if isinstance(doc.get('reconcile'), dict) else {}
+        rec['_revision_notes'] = doc.get('revision_notes') if isinstance(doc.get('revision_notes'), dict) else {}
         out.append((rec, ans if isinstance(ans, dict) else {}))
     return sorted(out, key=lambda x: x[0]['_round'])
 
@@ -4184,6 +4399,55 @@ def expand_lines(spec, order):
 
 
 ANSWER_RULES = 2       # 2 (2026-11-24): a revised significance finding names its cause; rounds recorded before keep rule 1
+# The planning rules added on 2026-11-24 (PLANNING_RULES 2): what a NEW direction must plan. A direction approved before
+# them (its lock carries no planning_rules) keeps the plan it was approved with: these checks are shown to it as
+# advisories, never as re-planning (the user, 2026-11-24). Safety and content, money, asset integrity and release
+# validation are never in this list: they hold for every run.
+PLANNING_RULES = 2
+NEW_PLANNING_RULES = re.compile(
+    r'(direction_evidence_\w+?_is_outside_the_locked_niche'
+    r'|chosen_approach_missing_exploration'
+    r'|comprehension_signals_(not_classified|grouped_without_a_shared_cause)'
+    r'|blueprint_missing_audience_knows'
+    r'|subject_niche_scope_needs_'
+    r'|subject_candidate_\w+?_(needs_its_payoff_assessed|payoff_)'
+    r'|subject_value_to_carry_names_no_payoff_value'
+    r'|subject_value_\w+?_is_the_payoff_but'
+    r'|(progressive_)?payoff_value_\w+?_(is_dropped|reaches_no_key_moment|is_carried_by_one_beat)'
+    r'|treatment_\w+?_does_not_say_how_it_delivers_the_payoff'
+    r'|decision_missing_carries_payoff'
+    r'|shot_\w+?_of_beat_\w+?_needs_uncertainty_shown'
+    r'|track_\d+_needs_serves'
+    r'|style_lock_missing'
+    r'|pace_signals_not_examined'
+    r'|\w+?_review_r\d+_key_moments_not_reconciled'
+    r'|script_revised_where_it_matters)')
+
+
+def planning_rules_of(rd, video):
+    """The planning rules a video's direction is held to: its lock's stamp (1 for a lock made before the stamp
+    existed), or today's for a direction not locked yet."""
+    lock = read_json(video_dir(rd, int(video)) / 'direction-lock.json')
+    if not lock:
+        return PLANNING_RULES
+    try:
+        return int(lock.get('planning_rules') or 1)
+    except (TypeError, ValueError):
+        return 1
+
+
+def older_plan_advisory(rd, video, issues, warnings):
+    """In place: for a direction approved before PLANNING_RULES, the planning checks added since move from issues to
+    warnings, said as advisories. Returns what moved."""
+    if planning_rules_of(rd, video) >= PLANNING_RULES:
+        return []
+    moved = [x for x in issues if NEW_PLANNING_RULES.match(str(x))]
+    if moved:
+        issues[:] = [x for x in issues if x not in moved]
+        warnings.extend(f'advisory (this direction was approved before the planning rules of 2026-11-24, which it '
+                        f'need not follow): {x}' for x in moved)
+    return moved
+
 
 
 def answer_problem(kind, finding, ans, rules=ANSWER_RULES):
@@ -4241,7 +4505,63 @@ def reconcile_gaps(rec):
 
 
 HOLDS_SMALL_CHANGE = (2, 5.0, 0.005)   # lines, seconds, share of the runtime: a hold tweak after a read, not a new film
-SUBSTANTIAL_REVISION_SHARE = 0.25      # of the script's words rewritten since a read: a new script for a reader
+COMPREHENSION_GAP_KINDS = ('accidental_confusion', 'poor_sequencing', 'missing_context')
+
+
+def script_dependencies(vd):
+    """{line id: [what it carries]} for the lines a reader's verdict rests on: a key moment's lines, what it depends on
+    (depends_on.from, a withheld fact's revealed_in), the line that hedges it, the lines of a beat that carries a
+    researched value (the payoff marked), the lines a claim is tied to (claims.json line_refs), and the lines the
+    editorial review's Comprehension section named as a gap (accidental_confusion, poor_sequencing, missing_context).
+    A change there can turn what a reader understood, however few its words."""
+    lines = read_json(vd / 'script.json').get('lines') or []
+    ids = [str((l or {}).get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
+    beats = read_json(vd / 'beat-map.json').get('beats') or []
+    by_beat = {str(b.get('id')): b for b in beats if isinstance(b, dict)}
+    out = {}
+
+    def lines_of(b):
+        try:
+            return ids[int(b['line_start']) - 1:int(b['line_end'])]
+        except (KeyError, TypeError, ValueError):
+            return []
+
+    def add(ls, why):
+        for x in ls:
+            if why not in out.setdefault(x, []):
+                out[x].append(why)
+
+    d = read_json(vd / 'direction.json')
+    subj = d.get('subject') if isinstance(d.get('subject'), dict) else {}
+    payoff = {str(v.get('id')) for v in subj.get('value_to_carry') or [] if isinstance(v, dict) and v.get('payoff') is True}
+    for b in by_beat.values():
+        bid = str(b.get('id'))
+        km = b.get('key_moment')
+        if km not in (None, False) and str(km).strip():
+            add(lines_of(b), f'key_moment:{bid}')
+            sg = b.get('significance') if isinstance(b.get('significance'), dict) else {}
+            if str(sg.get('hedge') or '') in ids:
+                add([str(sg['hedge'])], f'hedge_of:{bid}')
+            for dep in b.get('depends_on') or []:
+                for src in ((dep.get('from'), dep.get('revealed_in')) if isinstance(dep, dict) else ()):
+                    s = str(src or '')
+                    add(lines_of(by_beat[s]) if s in by_beat else ([s] if s in ids else []), f'setup_of:{bid}')
+        for v in b.get('carries') or []:
+            add(lines_of(b), f'payoff:{v}' if str(v) in payoff else f'value:{v}')
+    try:
+        n = int(re.sub(r'\D', '', vd.name))
+    except ValueError:
+        n = 0
+    claims = read_json(vd.parent.parent / '30-research' / f'video-{n:02d}' / 'claims.json')
+    for c in (claims.get('claims') or []) if isinstance(claims, dict) else []:
+        if isinstance(c, dict):
+            add([str(x) for x in c.get('line_refs') or [] if str(x) in ids], f'claim:{c.get("id")}')
+    ed = vd / 'editorial-review.md'
+    comp = editorial_section(ed.read_text(encoding='utf-8', errors='replace') if ed.is_file() else '', 'comprehension')
+    for ln in comp.splitlines():
+        if re.search(r'\b(' + '|'.join(COMPREHENSION_GAP_KINDS) + r')\b', ln):
+            add([x for x in re.findall(r'\bL\d+\b', ln) if x in ids], 'comprehension_gap')
+    return out
 
 
 def script_revised_share(old, new):
@@ -4377,16 +4697,37 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
         if kind == 'script' and snapshot is not None:
             old = rec.get('subject_snapshot') or {}
             changed = [k for k in dict.fromkeys(list(old) + list(snapshot)) if old.get(k) != snapshot.get(k)]
-            share = script_revised_share(old, snapshot)
-            if share > SUBSTANTIAL_REVISION_SHARE:
-                # answering findings can rewrite a script past what its reader read: a fresh read of what exists now
-                st['issues'].append(f'script_substantially_revised_since_its_last_read:{round(100 * share)}pct_of_its_'
-                                    'words:a_fresh_read_follows')
+            # A fresh read follows a revision that touches what the reader's verdict rested on, however few its
+            # words; many words reworded elsewhere do not force one (the user, 2026-11-24). A line's revision note in
+            # the answers file (revision_notes: {"L012": "why its meaning is unchanged"}) says the change is wording.
+            notes = {k for k, v in (rec.get('_revision_notes') or {}).items() if n_words(v) >= MIN_NOTE_WORDS}
+            deps = script_dependencies(vd)
+            order_old = list(old)
+            for k in changed:
+                if k in old and k not in snapshot and not deps.get(k):     # a removed line: what its neighbours carry
+                    i = order_old.index(k)
+                    near = [x for x in order_old[max(0, i - 1):i + 2] if x != k and deps.get(x)]
+                    if near:
+                        deps[k] = [f'removed_beside:{near[0]}({deps[near[0]][0]})']
+            weighty = [k for k in changed if deps.get(k) and k not in notes]
+            if weighty:
+                st['issues'].append('script_revised_where_it_matters_since_its_last_read:'
+                                    + ','.join(f'{k}({deps[k][0]})' for k in weighty[:8])
+                                    + ('...' if len(weighty) > 8 else '')
+                                    + ':a_fresh_read_follows,_or_a_revision_note_per_line_says_its_meaning_is_unchanged')
+            if changed:
+                share = script_revised_share(old, snapshot)
+                carried = [k for k in changed if deps.get(k)]
+                st['warnings'].append(f'script revised since its last read: {round(100 * share)}% of its words on '
+                                      f'{len(changed)} line(s); ' + (f'{len(carried)} of them carry what the reader\'s '
+                                                                     'verdict rested on' if carried else
+                                                                     'none carries a key moment, its setup or hedge, a '
+                                                                     'value, a claim or a comprehension gap'))
             asked = set()
             for a in ans.values():
                 if isinstance(a, dict) and str(a.get('action')).strip().lower() == 'revised':
                     asked |= set(expand_lines(a.get('lines'), list(dict.fromkeys(list(old) + list(snapshot)))) or [])
-            loose = [k for k in changed if k not in asked]
+            loose = [k for k in changed if k not in asked and k not in notes]
             if loose:
                 total = sum(n_words(strip_tags(t)) for t in snapshot.values()) or 1
                 moved = sum(n_words(strip_tags(snapshot.get(k) or old.get(k) or '')) for k in loose)
@@ -4644,6 +4985,7 @@ def shot_facts(rd, video, keep=''):
             else:
                 out['issues'].append(msg + ':update_them_or_shot-check_--keep_why_they_still_fit')
     out['overlays'] = sum(1 for s in shots if str(s.get('diagram_or_overlay')).lower() not in ('', 'false', 'none', '0'))
+    older_plan_advisory(rd, n, out['issues'], out['warnings'])
     out['ready'] = not out['issues']
     return out
 
@@ -5056,17 +5398,22 @@ def plan_facts(rd, video):
     # Each signal is classified in context (a Comprehension section of editorial-review.md: its line id, one kind and
     # the decision): density can be the point, a mystery held on purpose, or a fix in order, context or picture.
     comp = editorial_section(review_text, 'comprehension')
-    loose = []
-    for sgl in signals:
-        m = re.match(r'(L\w+)', sgl)
-        lid = m.group(1) if m else None
-        if lid and not any(lid in ln and re.search(r'\b(' + '|'.join(COMPREHENSION_KINDS) + r')\b', ln) and
-                           n_words(ln) >= MIN_NOTE_WORDS for ln in comp.splitlines()):
-            loose.append(lid)
-    loose = list(dict.fromkeys(loose))
+    ids_ = [str((l or {}).get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
+    line_beat = {}
+    for b in beats.get('beats') or []:
+        try:
+            for x in ids_[int(b['line_start']) - 1:int(b['line_end'])]:
+                line_beat[x] = str(b.get('id'))
+        except (KeyError, TypeError, ValueError):
+            continue
+    loose, apart = comprehension_unclassified(signals, comp, line_beat)
     if loose:
         issues.append('comprehension_signals_not_classified_in_the_editorial_review:' + ','.join(loose[:12])
-                      + ':under_a_Comprehension_heading_one_of_' + '/'.join(COMPREHENSION_KINDS))
+                      + ':under_a_Comprehension_heading_one_of_' + '/'.join(COMPREHENSION_KINDS)
+                      + '_(signals_with_a_shared_name_or_beat_may_share_a_line)')
+    if apart:
+        issues.append('comprehension_signals_grouped_without_a_shared_cause:' + ','.join(apart[:12])
+                      + ':answer_each_on_its_own_line_(a_line_answers_together_only_signals_that_share_a_name_or_a_beat)')
     if n_words(blue.get('audience_knows')) < MIN_FIELD_WORDS:
         issues.append('blueprint_missing_audience_knows:what_the_intended_viewer_already_knows_(nothing_they_know_is_'
                       'explained,_nothing_they_lack_is_assumed)')
@@ -5100,6 +5447,7 @@ def plan_facts(rd, video):
                         "pace_wpm to it so one number is in use")
     if not review.exists():
         issues.append('editorial_review_missing')
+    older_plan_advisory(rd, video, issues, warnings)
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'script_lines': len(lines),
             'words': words, 'narration_pace_wpm': pace,
             'pace_sources': {'references_wpm': lock.get('pace_wpm'), 'references_overall_wpm': pp.get('overall_wpm'),
@@ -7254,12 +7602,14 @@ def audio_facts(rd, video):
             # delivery against intent, answered in context (editorial-review.md, a Pace heading: the beat id and why)
             pace_txt = editorial_section((vd / 'editorial-review.md').read_text(encoding='utf-8', errors='replace')
                                          if (vd / 'editorial-review.md').is_file() else '', 'pace')
-            unanswered = [f['beat'] for f in lt.get('pace_findings') or []
+            sigs = lt.get('pace_signals') if 'pace_signals' in lt else (lt.get('pace_findings') or [])
+            unanswered = [f['beat'] for f in sigs or []
                           if not any(re.search(r'\b' + re.escape(f['beat']) + r'\b', ln) and n_words(ln) >= MIN_NOTE_WORDS
                                      for ln in pace_txt.splitlines())]
             if unanswered:
-                issues.append('pace_findings_not_answered_in_the_editorial_review:' + ','.join(unanswered)
-                              + ':under_a_Pace_heading_say_per_beat_why_the_measured_pace_fits_or_what_changes')
+                issues.append('pace_signals_not_examined_in_the_editorial_review:' + ','.join(unanswered)
+                              + ':under_a_Pace_heading_say_what_the_measured_pace_does_there_and_whether_it_stays_'
+                                '(beats_with_one_shared_cause_may_share_a_line)')
             for s in lt.get('seams') or []:
                 if s.get('level_step_lu') is not None and abs(float(s['level_step_lu'])) >= JOIN_LEVEL_STEP_LU:
                     warnings.append(f'the voice steps {float(s["level_step_lu"]):+g} LU across the join after part '
@@ -7286,6 +7636,7 @@ def audio_facts(rd, video):
             issues.append('narration_plus_edit_holds_longer_than_export_window')
         elif duration + holds + seam_s < target - tol_e:
             issues.append('narration_plus_edit_holds_shorter_than_export_window')
+    older_plan_advisory(rd, video, issues, warnings)
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'duration_s': duration,
             'target_length_s': target, 'edit_holds_s': holds, 'seam_holds_s': round(seam_s, 2),
             'expected_edit_s': round(duration + holds + seam_s, 2) if duration else None, 'export_window_s': window,
@@ -7423,14 +7774,17 @@ def timeline_facts(rd, video):
         except (KeyError, TypeError, ValueError):
             issues.append(f'bad_visual_segment_{i}')
     looks = read_json(picture_looks_path(rd, n)).get('looks') or {}
+    prov_people = still_provenance_by_file(rd, n)
     unlooked, flagged = [], []
     themes_sha = canonical_sha(excluded_themes(rd, n))
     for f in dict.fromkeys(_run_file(rd, c.get('asset_path')) for c in seq
                            if isinstance(c, dict) and str(c.get('asset_path') or '').strip()):
         rec = looks.get(_pkey(f))
-        # a look taken before the content reviews changed did not check for what they rule out now
+        pq = (prov_people.get(_pkey(f)) or {}).get('people_question')
+        # a look taken before the content reviews changed did not check for what they rule out now; a still with a
+        # people question needs a look that answered it
         if not rec or not f.is_file() or rec.get('sha256') != file_sha256(f) or \
-                ('themes_sha256' in rec and rec['themes_sha256'] != themes_sha):
+                ('themes_sha256' in rec and rec['themes_sha256'] != themes_sha) or (pq and not rec.get('people')):
             unlooked.append(f.name)
         elif rec.get('result') != 'clean':
             flagged.append(f.name)
@@ -8817,6 +9171,18 @@ def _segment_loudness(path, start, secs):
 
 
 PACE_SPREAD_MAX = 1.2       # references further apart than this in pace are not averaged blindly
+
+
+def pace_context(rd, video):
+    """What a narration's pace is examined against besides itself: the locked target, the references' paces while
+    speaking (length lock per_ref_wpm) and the narrator's measured norm (the voice lock), when known."""
+    vd = video_dir(rd, int(video))
+    ll = read_json(vd / 'length-lock.json')
+    vl = read_json(vd / 'voice-lock.json') or read_json(rd / 'voice-lock.json')
+    per = ll.get('per_ref_wpm') or {}
+    return {'target_wpm': ll.get('pace_wpm'),
+            'reference_wpm': [v for v in (per.values() if isinstance(per, dict) else per) if v],
+            'voice_wpm': vl.get('measured_wpm')}
 PACE_SLOW_WORDS = ('slow', 'slower', 'unhurried', 'reflective', 'measured', 'calm', 'gentle', 'lingering', 'deliberate',
                    'quiet', 'patient', 'breathing', 'hushed')
 PACE_FAST_WORDS = ('brisk', 'quick', 'quicker', 'urgent', 'fast', 'faster', 'rapid', 'energetic', 'punchy', 'driving',
@@ -8834,31 +9200,63 @@ def pace_intent(beat):
     return 'slower' if slow and not fast else ('faster' if fast and not slow else None)
 
 
-def pace_findings(beat_rows, beats):
-    """Beats whose delivery runs against what they asked, relative to this narration's own median pace while speaking
-    (never a universal range): asked slower and heard faster, asked faster and heard slower, and fast while dense with
-    numbers (a first-time viewer may not keep up). Each is answered in context under a Pace heading in the editorial
-    review: the measured pace can be right where the moment needs it."""
+def pace_signals(beat_rows, beats, line_rows=None, context=None):
+    """Where the measured delivery may not be what a beat asked for: evidence to examine in context, never a verdict
+    (the user, 2026-11-24: no fixed percentage decides that a narration is wrong). Each beat is read against this
+    narration's own median pace while speaking and its own natural variation: how far its lines' rates spread anyway
+    (their median absolute deviation, from lines of six words or more; from the beats when the lines are too few).
+    A signal: a beat that asked to be slower and runs faster than this narration's usual by more than that natural
+    variation, one that asked to be faster and runs slower by as much, one of the densest beats in numbers running fast
+    by as much (unless it asked for speed), and a whole narration outside the pace of every reference. Each carries
+    what the examination needs: the beat's rate and what it asked, the narration's median and variation, its density,
+    the locked target pace, the narrator's measured norm and the references' paces. A beat that asked for speed and
+    has it is never a signal: intentional variation stays."""
+    ctx = context or {}
     rates = [r['wpm_inside_lines'] for r in beat_rows if r.get('wpm_inside_lines')]
-    if len(rates) < 3:
-        return []
-    norm = statistics.median(rates)
-    by_id = {str(b.get('id')): b for b in beats or []}
     out = []
+    if not rates:
+        return out
+    norm = statistics.median(rates)
+    lr = []
+    for x in line_rows or []:
+        try:
+            dur = float(x['end_s']) - float(x['start_s'])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if int(x.get('words') or 0) >= 6 and dur > 0:
+            lr.append(int(x['words']) / dur * 60)
+    basis, vals = ('lines', lr) if len(lr) >= 5 else ('beats', rates)
+    mid = statistics.median(vals)
+    spread = statistics.median([abs(v / mid - 1) for v in vals]) if mid else 0.0
+    refs = sorted(float(v) for v in (ctx.get('reference_wpm') or []) if v)
+    evidence = {'narration_median_wpm': round(norm), 'natural_variation_pct': round(100 * spread, 1),
+                'variation_from': basis, 'target_wpm': ctx.get('target_wpm'), 'narrator_norm_wpm': ctx.get('voice_wpm'),
+                'references_wpm': [round(v) for v in refs] or None}
+    if refs and not refs[0] <= norm <= refs[-1]:
+        out.append({'beat': 'overall', 'kind': 'narration_outside_every_references_pace',
+                    'wpm_inside_lines': round(norm), **evidence})
+    if len(rates) < 3 or spread <= 0:
+        return out            # too little narration, or none of it varies: nothing to tell an unusual beat from a usual one
+    dens = sorted((float(r.get('numbers_per_min') or 0) for r in beat_rows if r.get('wpm_inside_lines')), reverse=True)
+    densest = dens[max(0, len(dens) // 4 - 1)]
+    by_id = {str(b.get('id')): b for b in beats or []}
     for r in beat_rows:
         rate = r.get('wpm_inside_lines')
         if not rate:
             continue
-        ratio = rate / norm
-        want = pace_intent(by_id.get(str(r.get('id'))))
-        row = {'beat': str(r.get('id')), 'wpm_inside_lines': rate, 'video_median_wpm': round(norm),
-               'ratio': round(ratio, 2), 'asked': (by_id.get(str(r.get('id'))) or {}).get('pace')}
-        if want == 'slower' and ratio >= 1.08:
-            out.append({**row, 'kind': 'asked_slower_heard_faster'})
-        elif want == 'faster' and ratio <= 0.92:
-            out.append({**row, 'kind': 'asked_faster_heard_slower'})
-        elif ratio >= 1.12 and float(r.get('numbers_per_min') or 0) >= 6:
-            out.append({**row, 'kind': 'fast_and_dense', 'numbers_per_min': r.get('numbers_per_min')})
+        dev = (rate / norm - 1) / spread
+        b = by_id.get(str(r.get('id'))) or {}
+        want = pace_intent(b)
+        npm = float(r.get('numbers_per_min') or 0)
+        row = {'beat': str(r.get('id')), 'wpm_inside_lines': rate, 'ratio': round(rate / norm, 2),
+               'natural_variations_from_median': round(dev, 1), 'asked': b.get('pace'), 'asked_relative': want,
+               'numbers_per_min': npm, **evidence}
+        if want == 'slower' and dev >= 1:
+            out.append({**row, 'kind': 'asked_slower_runs_faster_than_usual'})
+        elif want == 'faster' and dev <= -1:
+            out.append({**row, 'kind': 'asked_faster_runs_slower_than_usual'})
+        elif npm > 0 and npm >= densest and dev >= 1 and want != 'faster':
+            out.append({**row, 'kind': 'fast_where_densest'})
     return out
 
 
@@ -9344,7 +9742,8 @@ def cmd_narration_measure(args):
            'alignment_match_ratio': round(ratio_all, 3), 'tags_measured': measured_tags,
            'cue_observations': cue_obs, 'cue_outcomes': cue_outcomes, 'unheard_lines': unheard, 'rechecked_lines': rechecks,
            'tags_read_aloud': read_aloud, 'missing_runs': missing_runs,
-           'pace_findings': pace_findings(beat_rows, read_json(vd / 'beat-map.json').get('beats') or []),
+           'pace_signals': pace_signals(beat_rows, read_json(vd / 'beat-map.json').get('beats') or [],
+                                        [rows[li] for li in order], pace_context(rd, n)),
            'possible_repeats': repeats, 'seams': seams, 'beats': beat_rows, 'pronunciation_heard': pron_heard,
            'pause_profile': profile, 'lines': [rows[li] for li in order], 'measured_at': now(),
            'method': 'transcribe() + wpm_from_transcript_raw on each part, exactly as on the references; lines '
@@ -10367,7 +10766,7 @@ def cmd_direction_lock(args):
         required.update({m: {'rev': 1} for m in MEDIA_ARTIFACTS if media_present(rd, n, m)})
         hit = list(required)
         lock = {**entry, 'late_reason': args.late or None, 'history': [], 'production_rev': 1, 'required': required,
-                'reapproved': {}, 'changed_sections': [], 'affects': hit}
+                'reapproved': {}, 'changed_sections': [], 'affects': hit, 'planning_rules': PLANNING_RULES}
     else:
         if not args.revise:
             error('The direction changed since it was locked. Re-lock with --revise "what changed and why".')
@@ -11567,6 +11966,7 @@ def cmd_release_check(args):
     edit = timeline_facts(rd, n)
     exp = export_facts(rd, n, args.file, deep=False)
     fin = review_state(vd, 'final', quick_fingerprint(Path(args.file).expanduser().resolve()))
+    older_plan_advisory(rd, n, fin['issues'], fin.setdefault('warnings', []))
     issues = ([f'plan:{x}' for x in plan['issues']] + [f'audio:{x}' for x in audio['issues']] +
               [f'shots:{x}' for x in shots['issues']] + [f'edit:{x}' for x in edit['issues']] +
               [f'export:{x}' for x in exp['issues']] + fin['issues'])
@@ -11820,6 +12220,8 @@ def main():
     p = sub.add_parser('style-lock', help='The look every still carries: style words, palette, references (versioned)')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--style-prompt', required=True, help='The words every still prompt carries after its frame prompt')
+    p.add_argument('--departs-when', default='', help='Comma-separated: what would be ANOTHER look than this one '
+                                                      '(a still whose added words reach for it is a style change)')
     p.add_argument('--palette', default='', help='Hex colours, comma-separated')
     p.add_argument('--ref', action='append', help='A style reference image (repeatable)')
     p.add_argument('--why', default='', help='A change to an existing lock: why')
