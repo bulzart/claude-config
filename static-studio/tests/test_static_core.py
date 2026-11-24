@@ -84,7 +84,7 @@ class StaticStudioTests(unittest.TestCase):
              'confidence':'likely','line_refs':[]}]})
 
     def test_prepare_index_and_images_dry_run(self):
-        self.assertTrue(cli('prepare','--run',self.run,'--ids','V001','--skip-whisper')['ok'])
+        self.assertTrue(cli('prepare','--run',self.run,'--ids','V001','--skip-whisper','--reason','the test references carry no narration worth transcribing')['ok'])
         index=self.run/'10-media/V001/frame-index.json'
         self.assertTrue(index.is_file())
         data=json.loads(index.read_text())
@@ -132,7 +132,7 @@ class StaticStudioTests(unittest.TestCase):
 
     # ---- the creative process, run through the real CLI the way an agent would (no media is generated)
     def measure_refs(self):
-        cli('prepare','--run',self.run,'--ids','V001,V002','--skip-whisper')
+        cli('prepare','--run',self.run,'--ids','V001,V002','--skip-whisper','--reason','the test references carry no narration worth transcribing')
         out=cli('av-profile','--run',self.run,'--refs','V001,V002','--no-sheets')
         self.assertTrue((self.run/'20-analysis/av/V001.json').is_file())
         for v in ('V001','V002'):
@@ -1071,10 +1071,12 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('beat_B03_changed_since_its_shots_were_checked:S3:update_them_or_shot-check_--keep_why_they_still_fit',sf['issues'])
         # the other shots' stills can still be made; S3's waits for its beat
         job={'op':'generate','run':str(self.run),'video':1,
-             'images':[{'shot_id':'S1','prompt':'a distinct picture 1 of the valley, dawn light, one clear subject','out':str(self.home/'S1.png')}]}
+             'images':[{'shot_id':'S1','prompt':'a distinct picture 1 of the valley, dawn light, one clear subject, painterly, soft edges',
+                        'out':str(self.home/'S1.png')}]}
         jobp=self.home/'job.json'; save(jobp,job)
         self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
-        job['images'][0].update(shot_id='S3',prompt='a distinct picture 3 of the valley, dusk light, one clear subject')
+        job['images'][0].update(shot_id='S3',prompt='a distinct picture 3 of the valley, dusk light, one clear subject, '
+                                                   'painterly, soft edges')
         save(jobp,job)
         self.assertIn('item_1_shot_S3_waits:its_beat_B03_changed_since_the_shot_plan_was_checked',
                       cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
@@ -1128,7 +1130,7 @@ class StaticStudioTests(unittest.TestCase):
         shots=self.shots_for_plan()
         jobp=self.home/'job.json'
         save(jobp,{'op':'generate','run':str(self.run),'video':1,
-                   'images':[{'shot_id':'S5','prompt':shots[4]['frame_prompt'],'out':str(self.home/'S5.png')}]})
+                   'images':[{'shot_id':'S5','prompt':shots[4]['frame_prompt']+', painterly, soft edges','out':str(self.home/'S5.png')}]})
         item=cli('media-check','--job',jobp,'--kind','stills')['direction']['items'][0]
         self.assertEqual(item['carries_values'][0]['id'],'R1')
         self.assertEqual(item['carries_values'][0]['certainty'],'established')
@@ -1679,7 +1681,12 @@ class StaticStudioTests(unittest.TestCase):
                            ('Two workers unload the crates.','workers')):
             self.assertEqual(core.caption_issues_with((),smoke,smoke+'. '+extra),
                              [f'caption_adds_people_the_prompt_does_not_have:{word}'])
-        self.assertEqual(core.caption_review_with((),smoke,smoke+'. A figure in the doorway.')['issues'],[])
+        # a figure is a person unless a material or a number sense says otherwise; a lighthouse stands, it is no one
+        self.assertEqual(core.caption_issues_with((),smoke,smoke+'. A figure in the doorway.'),
+                         ['caption_adds_people_the_prompt_does_not_have:figure'])
+        self.assertEqual(core.caption_issues_with((),smoke,smoke+'. A carved figure decorates the gate.'),[])
+        self.assertEqual(core.caption_issues_with((),smoke,smoke+'. The ledger holds columns of figures in faded ink.'),[])
+        self.assertEqual(core.caption_issues_with((),smoke,smoke+". The lighthouse's dark silhouette is standing on the far point."),[])
         self.assertEqual(core.caption_review_with((),smoke,smoke+'. No figures or workers appear anywhere.'),
                          {'issues':[],'notes':[]})
         self.assertEqual(core.caption_review_with((),'a lone figure standing on a ridge at dawn',
@@ -2823,7 +2830,7 @@ class StaticStudioTests(unittest.TestCase):
                         '-f','lavfi','-i','color=c=blue:s=64x36:r=30:d=2.2','-f','lavfi','-i','color=c=green:s=64x36:r=30:d=1.3',
                         '-filter_complex','[0:v][1:v][2:v]concat=n=3:v=1:a=0','-pix_fmt','yuv420p',str(src)],check=True)
         self.add_ref('V004',src,6.0,False)
-        self.assertTrue(cli('prepare','--run',self.run,'--ids','V004','--skip-whisper')['ok'])
+        self.assertTrue(cli('prepare','--run',self.run,'--ids','V004','--skip-whisper','--reason','the test references carry no narration worth transcribing')['ok'])
         media=self.run/'10-media/V004'
         fi=json.loads((media/'frame-index.json').read_text())
         self.assertEqual([f['t_s'] for f in fi['frames']],[0.0,0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5])
@@ -2844,7 +2851,7 @@ class StaticStudioTests(unittest.TestCase):
         v0,a0=float(starts['video']),float(starts['audio'])
         self.assertAlmostEqual(v0-a0,0.37,places=2)
         self.add_ref('V005',mixed,4.5,True)
-        self.assertTrue(cli('prepare','--run',self.run,'--ids','V005','--skip-whisper')['ok'])
+        self.assertTrue(cli('prepare','--run',self.run,'--ids','V005','--skip-whisper','--reason','the test references carry no narration worth transcribing')['ok'])
         fi=json.loads((self.run/'10-media/V005/frame-index.json').read_text())
         self.assertAlmostEqual(fi['clock_origin_s'],a0,places=3)
         blue0,green0=v0+1.3,v0+1.3+27/24          # the 24 fps part holds 27 frames (1.125 s)
@@ -2857,7 +2864,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertAlmostEqual(fi['frames'][0]['t_s'],0.37,delta=0.01)
         # One rate per run: another rate is refused and nothing is re-sampled.
         before=sorted((media/'sampled-frames').glob('*.jpg'))
-        self.assertIn('Clone the run',cli('prepare','--run',self.run,'--ids','V004','--fps',5,'--skip-whisper',expected=2)['error'])
+        self.assertIn('Clone the run',cli('prepare','--run',self.run,'--ids','V004','--fps',5,'--skip-whisper','--reason','the test references carry no narration worth transcribing',expected=2)['error'])
         self.assertEqual(sorted((media/'sampled-frames').glob('*.jpg')),before)
         # The frames and the transcript are cached apart: new frames never re-run Whisper. Frames made the older way
         # (one key for both, nominal slots) are not reused by a 2 fps run; the transcript still is.
@@ -2906,14 +2913,14 @@ class StaticStudioTests(unittest.TestCase):
         del st['analysis_fps'], st['analysis_sampler']; save(self.run/'state.json',st)
         dry=cli('prepare','--run',self.run,'--ids','V004','--dry-run')
         self.assertEqual((dry['fps'],dry['sampler']),(5.0,'nominal'))
-        cli('prepare','--run',self.run,'--ids','V001','--skip-whisper')
+        cli('prepare','--run',self.run,'--ids','V001','--skip-whisper','--reason','the test references carry no narration worth transcribing')
         self.assertEqual(json.loads((self.run/'10-media/V001/frame-index.json').read_text())['mode'],'nominal_sample_time')
         frames_v1=lambda:[(f.name,f.stat().st_mtime_ns) for f in sorted((self.run/'10-media/V001/sampled-frames').glob('*.jpg'))]
         save(self.run/'10-media/V001/preparation.json',{'id':'V001','signature':{'fingerprint':json.loads(
             (self.run/'10-media/V001/preparation.json').read_text())['frames_signature']['fingerprint'],
             'fps':5.0,'width':960,'whisper_model':'medium'}})
         kept=frames_v1(); time.sleep(0.05)
-        cli('prepare','--run',self.run,'--ids','V001','--skip-whisper')
+        cli('prepare','--run',self.run,'--ids','V001','--skip-whisper','--reason','the test references carry no narration worth transcribing')
         self.assertEqual(frames_v1(),kept)
         st['analysis_fps'],st['analysis_sampler']=2.0,'pts-v1'; save(self.run/'state.json',st)
         # A clone prepares its references again at the current rate, and keeps the content reviews (source times)
@@ -2934,7 +2941,7 @@ class StaticStudioTests(unittest.TestCase):
                         '-f','lavfi','-i','color=c=white:s=64x36:r=30:d=0.2','-f','lavfi','-i','color=c=red:s=64x36:r=30:d=2.7',
                         '-filter_complex','[0:v][1:v][2:v]concat=n=3:v=1:a=0','-pix_fmt','yuv420p',str(src)],check=True)
         self.add_ref('V006',src,6.0,False)
-        cli('prepare','--run',self.run,'--ids','V006','--skip-whisper')
+        cli('prepare','--run',self.run,'--ids','V006','--skip-whisper','--reason','the test references carry no narration worth transcribing')
         media=self.run/'10-media/V006'
         fi=json.loads((media/'frame-index.json').read_text())
         self.assertNotIn('white',[self.colour(media/'sampled-frames'/f['file']) for f in fi['frames']])
@@ -2966,7 +2973,7 @@ class StaticStudioTests(unittest.TestCase):
                         '-f','lavfi','-i','color=c=blue:s=64x36:r=30:d=1.8','-f','lavfi','-i','color=c=red:s=64x36:r=30:d=4.2',
                         '-filter_complex','[0:v][1:v][2:v]concat=n=3:v=1:a=0','-pix_fmt','yuv420p',str(src)],check=True)
         self.add_ref('V007',src,14.0,False)
-        cli('prepare','--run',self.run,'--ids','V007','--skip-whisper')
+        cli('prepare','--run',self.run,'--ids','V007','--skip-whisper','--reason','the test references carry no narration worth transcribing')
         cli('av-profile','--run',self.run,'--refs','V007')
         media=self.run/'10-media/V007/sampled-frames'
         times={f['t_s']:f['file'] for f in json.loads((self.run/'10-media/V007/frame-index.json').read_text())['frames']}
@@ -2987,7 +2994,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(json.loads((self.run/'20-analysis/content/V007.json').read_text())['shot_sheets'],1)
 
     def test_content_review_keeps_safety_and_creative_exclusions_apart(self):
-        cli('prepare','--run',self.run,'--ids','V001','--skip-whisper')
+        cli('prepare','--run',self.run,'--ids','V001','--skip-whisper','--reason','the test references carry no narration worth transcribing')
         def seg(sid, kind, cat, action, **kw):
             return {'id':sid,'from':'00:01','to':'00:02','kind':kind,'category':cat,'action':action,
                     'what':'a short neutral description of the moment','role':'it sets up the next scene',
@@ -3067,7 +3074,7 @@ class StaticStudioTests(unittest.TestCase):
         vd=self.write_plan(lock=False)
         # V001: a superstitious device at 04:50-05:10 with its payoff at 06:10-06:30, excluded; V002: a graphic moment
         # at 02:00-02:20 whose subject may be told but never shown.
-        cli('prepare','--run',self.run,'--ids','V001,V002','--skip-whisper')
+        cli('prepare','--run',self.run,'--ids','V001,V002','--skip-whisper','--reason','the test references carry no narration worth transcribing')
         def seg(sid, a, b_, kind, cat, action, **kw):
             return {'id':sid,'from':a,'to':b_,'kind':kind,'category':cat,'action':action,'confidence':'sure',
                     'what':'a soldier reads an omen in the crows' if kind!='safety' else 'a close view of a wound',
@@ -3142,7 +3149,7 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('restricted_theme:V002/S1',core.prompt_flags('a medic kneels by the open wound in the snow',core.excluded_themes(self.run,1)))
         self.assertIn('may be told, but never shown',core.house_rules(self.run,1))
         save(jobp_r:=self.home/'never.json',{'run':str(self.run),'video':1,'purpose':'thumbnail','images':[{'prompt':
-             'a medic kneels by the open wound in the snow at dawn','content_note':'the medic is the subject here, nothing else',
+             'a medic kneels by the open wound in the snow at dawn, painterly, soft edges','content_note':'the medic is the subject here, nothing else',
              'out':str(self.home/'never.png')}]})
         self.assertIn('item_1_prompt_shows_what_a_content_review_rules_out_rewrite_it:restricted_theme:V002/S1',
                       cli('media-check','--job',jobp_r,'--kind','stills',expected=2)['issues'])          # enforced, not a warning
@@ -3164,7 +3171,7 @@ class StaticStudioTests(unittest.TestCase):
         save(jobp,{'run':str(self.run),'video':1,'purpose':'thumbnail','images':[{'prompt':'blood on the snow beside a fallen soldier at the bridge','out':str(stills/'t.png')}]})
         self.assertIn('item_1_prompt_content_flag_unanswered:injury_gore_distress',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
         # The safer picture that keeps the meaning: what is left behind, not the wound.
-        save(jobp,{'run':str(self.run),'video':1,'purpose':'thumbnail','images':[{'prompt':'an empty helmet in the trampled snow at the bridge, dawn light behind','out':str(stills/'t.png')}]})
+        save(jobp,{'run':str(self.run),'video':1,'purpose':'thumbnail','images':[{'prompt':'an empty helmet in the trampled snow at the bridge, dawn light behind, painterly, soft edges','out':str(stills/'t.png')}]})
         self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
         # A story that depends on what was excluded: its craft may still be cited, never its story.
         self.content_review('V002',[seg('S1','02:00','02:20','safety','graphic_injury','exclude',severity='high',avoid=['the wound'],
@@ -4208,6 +4215,14 @@ class ExportBindingTests(unittest.TestCase):
         c['tracks'][0]['segments'][1]['target_timerange']['start'] += 30000          # a CapCut re-save: 0.03 s
         save(self.draft / 'draft_content.json', c)
         self.assertEqual(self.core.project_changes(a, self.core.project_snapshot(self.rd, 1, self.draft)), [])
+        # the real CapCut desktop re-saves a project it opened with its frame rate as 30.0 (2026-11-24): the same project
+        c['fps'] = 30.0
+        save(self.draft / 'draft_content.json', c)
+        self.assertEqual(self.core.project_changes(a, self.core.project_snapshot(self.rd, 1, self.draft)), [])
+        c['fps'] = 25
+        save(self.draft / 'draft_content.json', c)
+        self.assertEqual(self.core.project_changes(a, self.core.project_snapshot(self.rd, 1, self.draft)), ['fps 30 -> 25'])
+        c['fps'] = 30
         c['tracks'][0]['segments'][0]['material_id'], c['tracks'][0]['segments'][1]['material_id'] = 'v2', 'v1'
         save(self.draft / 'draft_content.json', c)
         self.assertTrue(self.core.project_changes(a, self.core.project_snapshot(self.rd, 1, self.draft)))

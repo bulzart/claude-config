@@ -2916,8 +2916,8 @@ def music_beat_direction(b):
 
 def direction_facts(rd, video):
     """Structure of 40-plans/video-NN/direction.json (10-creative-direction.md): evidence read from measured
-    references, five approaches that differ in how the story is told, the episode strategy, two or three
-    audiovisual treatments with sample moments, and the decision. Presence and shape only."""
+    references, at least two approaches that differ in how the story is told (with the range considered), the episode
+    strategy, two to four audiovisual treatments with sample moments, and the decision. Presence and shape only."""
     vd = video_dir(rd, video)
     d = read_json(vd / 'direction.json')
     out = {'issues': [], 'warnings': [], 'direction_sha256': None, 'treatments_sha256': None,
@@ -3937,9 +3937,13 @@ CAPTION_PEOPLE = re.compile(r"\b(man|men|woman|women|person|persons|people|crowd
 # described "weathered plank faces" and hills as "overlapping blue-green silhouettes": not people. Near a person cue
 # ("a lone figure standing", "her face") they are; without one they are noted for the look every still gets when it lands.
 CAPTION_PEOPLE_AMBIGUOUS = re.compile(r"\b(figure|figures|silhouette|silhouettes|face|faces)\b", re.I)
-CAPTION_PERSON_CUES = re.compile(r"\b(stand|stands|standing|stood|walk|walks|walking|sit|sits|sitting|seated|lean|leans|"
-                                 r"leaning|wear|wears|wearing|dressed|cloaked|hooded|holding|waving|smiling|staring|gazing|"
-                                 r"peering|eyes|hair|shoulders|lone|human|humans|his|her)\b", re.I)
+# Only cues that mean a person (a lighthouse stands, boats sit, a mast leans: a second real FLUX caption, 2026-11-24)
+CAPTION_PERSON_CUES = re.compile(r"\b(walk|walks|walking|wear|wears|wearing|dressed|cloaked|hooded|waving|smiling|staring|"
+                                 r"gazing|peering|eyes|hair|shoulders|human|humans|his|her)\b", re.I)
+# "figure" in a picture caption is a person unless a material or a number sense says otherwise
+CAPTION_FIGURE_NOT_PERSON = re.compile(r"\b(carved|stone|wooden|bronze|clay|marble|geometric|toy|stick|decorative|painted|"
+                                       r"wax|plaster|porcelain|ice|columns|column|rows|row|lines|handwritten|written|"
+                                       r"numerical|numbers|sums|totals|ledger|accounts|tallies|of)\W*$", re.I)
 CAPTION_MINORS = re.compile(r"\b(child|children|boy|boys|girl|girls|kid|kids|baby|babies|infant|infants|toddler|"
                             r"toddlers|teen|teens|teenager|teenagers)\b", re.I)
 CAPTION_TEXT = re.compile(r"\b(text|lettering|inscription|inscriptions|typography|caption|captions|headline|headlines|"
@@ -3968,8 +3972,13 @@ def _ambiguous_people(text):
         for m in CAPTION_PEOPLE_AMBIGUOUS.finditer(clause):
             if CAPTION_NEGATION.search(clause[:m.start()]):
                 continue
+            w = m.group(0).lower()
+            before = ' '.join(clause[:m.start()].split()[-3:])
             near = ' '.join(clause[:m.start()].split()[-5:] + clause[m.end():].split()[:5])
-            (sure if CAPTION_PERSON_CUES.search(near) else unsure).add(m.group(0).lower())
+            if w.startswith('figure') and not CAPTION_FIGURE_NOT_PERSON.search(before + ' '):
+                sure.add(w)
+            else:
+                (sure if CAPTION_PERSON_CUES.search(near) else unsure).add(w)
     return sure, unsure
 
 
@@ -4174,8 +4183,11 @@ def expand_lines(spec, order):
     return out
 
 
-def answer_problem(kind, finding, ans):
-    """Why an answer to a finding is not yet an answer, or None."""
+ANSWER_RULES = 2       # 2 (2026-11-24): a revised significance finding names its cause; rounds recorded before keep rule 1
+
+
+def answer_problem(kind, finding, ans, rules=ANSWER_RULES):
+    """Why an answer to a finding is not yet an answer, or None. rules: the answer rules the round was recorded under."""
     ans = ans if isinstance(ans, dict) else {}
     act = str(ans.get('action') or '').strip().lower()
     if act not in REVIEW_ACTIONS:
@@ -4188,7 +4200,7 @@ def answer_problem(kind, finding, ans):
         return 'revised needs the lines that changed'
     if act == 'revised' and kind != 'script' and n_words(ans.get('note')) < MIN_NOTE_WORDS:
         return 'revised needs a note saying what changed'
-    if act == 'revised' and _significance_finding(finding):
+    if act == 'revised' and int(rules or 1) >= 2 and _significance_finding(finding):
         cause = str(ans.get('cause') or '').strip().lower()
         if cause.split(':')[0].strip() not in SIGNIFICANCE_CAUSES:
             return 'revised needs the cause it fixes (cause: ' + ' | '.join(SIGNIFICANCE_CAUSES) + ')'
@@ -4336,7 +4348,7 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
         for f in fs:
             fid = str(f.get('id'))
             a = ans.get(fid) or {}
-            if answer_problem(kind, f, a):
+            if answer_problem(kind, f, a, rec.get('answer_rules', 1)):
                 open_ids.append(fid)
                 continue
             if kind == 'script' and str(a.get('action')).strip().lower() == 'revised' and later is not None:
@@ -5141,8 +5153,13 @@ def beat_line_issues(rd, video, keep=''):
     """A beat whose direction changed since the last passing plan-check while its lines did not: its lines were written
     for the old beat (2026-11-24 audit: changed beats did not flag their lines). Revise them, or keep them with a reason
     (plan-check --keep)."""
-    rec = read_json(plan_check_path(rd, video)).get('beats') or {}
+    rec_all = read_json(plan_check_path(rd, video))
+    rec = rec_all.get('beats') or {}
     if not rec or keep:
+        return []
+    # the director's explicit answer for the direction change that moved these beats: the script stands as it is
+    ra = reapproved_for(read_json(video_dir(rd, video) / 'direction-lock.json'), 'script')
+    if ra and str(ra.get('at') or '') > str(rec_all.get('checked_at') or ''):
         return []
     out = []
     for bid, now_ in beat_line_state(video_dir(rd, video)).items():
@@ -7862,7 +7879,8 @@ def narration_track_issues(rd, segs, expect):
 
 def capcut_project_timeline(rd, video, draft, sounds=None):
     """timeline.json written from a saved CapCut project, never from the plan (manual 05): every picture clip on the main
-    video track traced to its shot by its start (within half a frame) and its file (a callback shows its source's still),
+    video track traced to its shot by its start (within one frame: CapCut snaps clips to its frame grid when it saves)
+    and its file (a callback shows its source's still),
     every overlay on another video track, every audio clip as the narration, a music bed (its beats from
     music-provenance.json) or a sound named in `sounds` ({file name: {"kind", "beats", "purpose"}}). What cannot be traced
     is listed in `problems`, never guessed."""
@@ -8010,9 +8028,14 @@ def project_changes(a, b, tol=0.05):
     """What differs between two snapshots of a project (project_snapshot) beyond CapCut's frame snapping (tol seconds):
     a clip added, removed, moved, swapped or re-timed, a speed or volume, a text's words, the canvas, a media file."""
     out = []
-    for k in ('canvas', 'fps'):
-        if str(a.get(k)) != str(b.get(k)):
-            out.append(f'{k} {a.get(k)} -> {b.get(k)}')
+    if str(a.get('canvas')) != str(b.get('canvas')):
+        out.append(f'canvas {a.get("canvas")} -> {b.get("canvas")}')
+    try:            # CapCut writes 30.0 where the build wrote 30 when it re-saves a project it opened (seen 2026-11-24)
+        fps_same = abs(float(a.get('fps')) - float(b.get('fps'))) < 0.01
+    except (TypeError, ValueError):
+        fps_same = str(a.get('fps')) == str(b.get('fps'))
+    if not fps_same:
+        out.append(f'fps {a.get("fps")} -> {b.get("fps")}')
     for key, label in (('visual', 'picture clips'), ('overlays', 'overlays'), ('audio', 'sound clips'), ('texts', 'texts')):
         x, y = a.get(key) or [], b.get(key) or []
         if len(x) != len(y):
@@ -10662,7 +10685,8 @@ def cmd_review_packet(args):
     recs = review_records(vd, kind)
     if recs:
         last, ans = recs[-1]
-        open_ids = [str(f.get('id')) for f in last.get('findings') or [] if answer_problem(kind, f, ans.get(str(f.get('id'))))]
+        open_ids = [str(f.get('id')) for f in last.get('findings') or []
+                    if answer_problem(kind, f, ans.get(str(f.get('id'))), last.get('answer_rules', 1))]
         if open_ids:
             error('Answer every finding of the previous round first (revised with its lines, kept or disputed with a '
                   'reason), then ask for a fresh read.', {'round': last['_round'], 'open': open_ids})
@@ -11330,7 +11354,7 @@ def cmd_review_record(args):
            'verdict': raw.get('verdict') or {k: raw.get(k) for k in ('would_watch', 'why', 'per_treatment') if k in raw},
            'strongest': raw.get('strongest'), 'findings': findings, 'findings_sha256': canonical_sha(findings),
            'at_normalized': normalized, 'findings_from': str(fpath), 'findings_outside_reader_folder': outside,
-           'reader_route': reader_route, 'reader_confined': bool(route),
+           'reader_route': reader_route, 'reader_confined': bool(route), 'answer_rules': ANSWER_RULES,
            'developments': devs if three_ways else None, 'derived_findings': [f['id'] for f in derived],
            'recorded_at': now()}
     if on_req:

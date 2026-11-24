@@ -157,7 +157,9 @@ says:
   list, land, go quiet).
 - `visual_intent`: what the pictures show that the words don't; composition, motion, atmosphere.
 - `sound_direction`: music, bed, silence, a single sound with a job.
-- `pace`: brisk, unhurried, quickening, a held breath.
+- `pace`: brisk, unhurried, quickening, a held breath. It is read against this film's own pace, never a universal
+  range, and slower is not better: once recorded, `narration-measure` compares each beat with the narration's median
+  (`pace_findings`, 05), and an explicit `pace_relative` (`slower`, `same` or `faster`) says it outright.
 
 **What happens, why it matters, what it pays.** A viewer can follow every event and still not feel why the important
 ones matter; they can know why and still not get the reward. These fail separately, and an accurate, coherent script

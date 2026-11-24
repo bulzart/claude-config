@@ -24,7 +24,7 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" cohorts --run "RUN"
 # User selected a niche/length; examples only after cards exist.
 # Option A: group by niche + story-form (exact string match)
 # Never pass --pace-wpm here: length computes it automatically from the references' own
-# Whisper transcripts (pure narration time, timestamps stripped). A manual number is a guess.
+# Whisper transcripts (pure narration time, timestamps stripped). A manual number is a guess: it needs --pace-why (03).
 python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
   --mode standard --niche "military history" --story-form "historical narrative" \
   --refs V001,V002,V003 --language en
@@ -85,6 +85,9 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" holds --run "RUN" --
 # Each one decided: the WHOLE silence after the line (the voice's own gap included), or --no-hold, and why.
 python "$HOME/.claude/static-studio/scripts/static_core.py" hold-decide --run "RUN" --video 1 --line L042 \
   --stage narration --total 1.4 --reason "the map finishes drawing the route; longer and the next line waits"
+# The look every still carries, after direction-lock and the style bible (example words, not a default; a change: --why):
+python "$HOME/.claude/static-studio/scripts/static_core.py" style-lock --run "RUN" --video 1 \
+  --style-prompt "gouache illustration, warm muted palette" --palette "#8A5A3C,#D9C7A3"
 python "$HOME/.claude/static-studio/scripts/static_core.py" shot-check --run "RUN" --video 1   # before stills; retime-shots refuses a failing plan
 # The same gate the image and music workers run before they load anything (free), and the direction each item carries out:
 python "$HOME/.claude/static-studio/scripts/static_core.py" media-check --job "RUN/60-visuals/video-01/stills-job.json" --kind stills
@@ -113,6 +116,11 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run 
 python "$HOME/.claude/static-studio/scripts/static_core.py" release-check --run "RUN" --video 1 --file "C:/videos/final.mp4"
 python "$HOME/.claude/static-studio/scripts/static_core.py" status --run "RUN"
 ```
+
+`status` reports each video's stage from its recorded gates, never a stored guess: `planning`, `direction_locked`,
+`script_checked`, `narration_recorded`, `narration_measured`, `stills`, `edit_checked`, `exported`, `released`. It moves
+`state.json`'s `stage` forward when it lags (the run's stage is its least advanced video's), never backward; a passing
+`plan-check` advances it too.
 
 ## Content review (agent written; `content-review` checks and saves it)
 
@@ -158,7 +166,11 @@ the index. Every picture of an edit: `content-review --video NN --pictures --fil
 road in snow at dawn, two trucks, no people close"}]}` (an `issue` also names its `category`; `never_show_checked` is
 required while the cited references' reviews rule anything out); `content-review --ref V### --archive` moves a review
 and its closer looks to `20-analysis/content-archive/V###-r<n>/` before a blind second review; saved in `60-visuals/video-NN/content-looks.json`
-with each file's hash.
+with each file's hash and the content reviews it was checked against (`themes_sha256`: when those change, the timeline
+asks for the looks again); `release-check --thumbnail FILE` requires the thumbnail's look clean. Treatment and
+beat-map text that names what a cited reference's review cut is rewritten, or carries a recorded context:
+`"content_context": [{"where": "treatment T1" | "beat B03", "theme": "excluded_theme:V001/S2", "context": "<six words or
+more>"}]`, in direction.json for a treatment and in beat-map.json for a beat.
 
 ## Reference cards (agent generated)
 
@@ -176,6 +188,7 @@ Minimal `40-plans/video-01/blueprint.json`:
   "narrative_approach": "Decision-reconstruction narrative following a commander through incomplete information",
   "why_this_length": "The answer requires three meaningful discoveries and context",
   "original_angle": "Follow the overlooked supply decision, not just the battle",
+  "audience_knows": "Knows the war happened and roughly when; not the units, the ground or how supply worked",
   "ending_payoff": "The constraint found in B02 settles the choice the viewer weighed in B01: the plan was never possible, so the blame moves from the commander to the map (from this story's own material; a video whose value builds up instead gives reward_shape)",
   "visual_grammar": "Earth-tone maps, aerial diagrams, restrained artifact illustration",
   "factuality": "factual",
@@ -209,7 +222,7 @@ Minimal `40-plans/video-01/blueprint.json`:
 }
 ```
 
-`pace_wpm` above (190) is an example number, not a universal default. So are the pause lengths: each is set by its own moment and decided again on the recorded voice and the picture, never copied. Write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then the voice's real one (`60-voice/video-NN/voice-lock.json` → `measured.wpm`) once its first part is measured. The two genuinely differ: on one run the references measured 195–206 WPM and the voice 186–187. `text` is sent exactly as written, inline tags included, and tags are not counted as words; it holds nothing else (no SSML, braces, asterisks, stage directions in parentheses, notes in brackets or IPA). `pause_after_s` up to 1 s needs nothing, since the voice's own gap gives it. A longer one names `pause_via` (`"tag"`: a pause tag at this line's end or the next line's start; `"edit"`: a hold inserted by `retime-shots`) and its `pause_purpose`. Each kept tag gets a line under "Delivery and tags" in `editorial-review.md` (plan-check checks it), and each `content_flags` hit gets one under "Content flags".
+`pace_wpm` above (190) is an example number, not a universal default. So are the pause lengths: each is set by its own moment and decided again on the recorded voice and the picture, never copied. Write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then the voice's real one (`60-voice/video-NN/voice-lock.json` → `measured.wpm`) once its first part is measured. The two genuinely differ: on one run the references measured 195–206 WPM and the voice 186–187. `text` is sent exactly as written, inline tags included, and tags are not counted as words; it holds nothing else (no SSML, braces, asterisks, stage directions in parentheses, notes in brackets or IPA). `pause_after_s` up to 1 s needs nothing, since the voice's own gap gives it. A longer one names `pause_via` (`"tag"`: a pause tag at this line's end or the next line's start; `"edit"`: a hold inserted by `retime-shots`) and its `pause_purpose`. Each kept tag gets a line under "Delivery and tags" in `editorial-review.md` (plan-check checks it), and each `content_flags` hit gets one under "Content flags". Each comprehension signal gets one under "Comprehension" (its first line id, one kind, the decision: plan-check checks it), and each `pace_findings` entry one under "Pace" (the beat id and why the measured pace fits, or what changes: the audio gate checks it).
 
 `40-plans/video-01/pronunciation.json` (optional; only the words the voice may say wrong):
 
@@ -256,6 +269,11 @@ Minimal `40-plans/video-01/blueprint.json`:
   ]
 }
 ```
+
+A passing `plan-check` writes `40-plans/video-01/plan-check.json`: `{"checked_at", "beats": {"B02": {"sha", "lines_sha",
+"lines"}}, "history": [{"at", "kept"}]}`, each beat's direction hash and its lines' text hash. A beat whose direction
+changed since, while its lines did not, is flagged (`beat_B02_changed_since_its_lines_were_checked`) until its lines are
+revised or `plan-check --keep "why they still fit"` is recorded in `history`.
 
 **These snippets are schema examples, not executable complete 12-minute scripts**. A real plan must have sufficient original words, all lines covered by a gap-free map to exactly the locked target, independent sources for all consequential facts, an actual editorial review and complete audio. Copying these snippets alone should correctly fail `plan-check`.
 
@@ -331,7 +349,7 @@ A variant left blank takes the voice lock's voice, model and settings; `tags` is
 `50-audio/video-01/line-times.json` (from `narration-measure`) contains:
 - `complete`, `script_sha256` (stale once the script changes), `parts[]` (offset, duration, fingerprint, words, speech, WPM, alignment);
 - `wpm` (while speaking), `overall_wpm` (pauses included), `per_line_overhead_s`, `natural_line_gap_median_s`, `tags_measured[]` (line, tag, gap, excess), `pause_profile` (the same keys `pace-profile` gives for the references);
-- `unheard_lines` (lines still missing after their own window was heard again), `missing_runs[]` (a run of four or more words of a heard line still not heard after its own listen: `line`, `words`, `count`), `rechecked_lines[]`, `tags_read_aloud[]`, `possible_repeats[]`, `seams[]` (each join: gap, natural gap, `seam_hold_s`, pace, level and pitch range on each side, `level_step_lu`: the voice's level step across it, from 3 s of speech on each side; words heard twice), `beats[]` (pace while speaking and overall, longest gap, numbers per minute, tags, what the beat asked for), `pronunciation_heard[]`;
+- `unheard_lines` (lines still missing after their own window was heard again), `missing_runs[]` (a run of four or more words of a heard line still not heard after its own listen: `line`, `words`, `count`), `rechecked_lines[]`, `tags_read_aloud[]`, `possible_repeats[]`, `seams[]` (each join: gap, natural gap, `seam_hold_s`, pace, level and pitch range on each side, `level_step_lu`: the voice's level step across it, from 3 s of speech on each side; words heard twice), `beats[]` (pace while speaking and overall, longest gap, numbers per minute, tags, what the beat asked for), `pronunciation_heard[]`, `pace_findings[]` (a beat against this narration's own median pace while speaking: `beat`, `wpm_inside_lines`, `video_median_wpm`, `ratio`, `asked`, and `kind`: `asked_slower_heard_faster`, `asked_faster_heard_slower` or `fast_and_dense`);
 - `lines[]`: `{id, index, part, start_s, end_s, matched_words, words, word_times, gap_after_s, gap_span_s, gap_basis, gap_is_tail?, heard_on_recheck?, interpolated?}`; `gap_after_s` is the silence after the line read from the audio (`gap_basis` `audio`; `whisper` when no quiet run was found; `unknown`, with `null`, while the next line is not recorded); `gap_subrun_s` and `gap_insert_at_s` (the quiet stretch an added silence goes into and where: never into a word, a release or a breath), `gap_floor_under_speech_db` (the voice's own quiet there, dB under its speech), `gap_other_material_s` (a breath or a click inside the silence); `cadence` (with the delivery pass): how the line ends (`last_vowel_vs_line_st`, `last_vowel_fall_st`, `soft_end_s`, `end_level_db`) and the next begins (`next_reset_st`, `next_lead_in_s`, `next_onset_level_db`), and `cadence_usual` the same voice's medians; `line_gaps_from_audio` sums the gaps up (median, p10, p90, shortest, longest); `word_times` is each comparable token's `[start_s, end_s]` on the narration (`null` where Whisper did not hear it): what the captions are timed by.
 
 `70-edit/video-01/captions.json` (from `captions-plan`): `{video, captions: "on"|"off", style: "luckiest-guy"|"montserrat-highlight", box_color?, box_color_why?, language, fps, words: [{w, s, e, line, timing}], timing_evidence: {whisper, shared, between, words, whisper_share}, holds_applied, made_from: {script_sha256, narration_for_edit_sha256, line_times_measured_at, edit_plan_made_at}}`. `w` is the word as the caption shows it (the script's spelling and punctuation), `s`/`e` its time on the edit's timeline; `timing` says where the time came from: `whisper` (its own word time), `shared` (a number written over two words, its time split by length) or `between` (no time from Whisper: placed between its timed neighbours by length). `captions-built.json` beside it records the last build (draft, canvas, size, tracks, texts, the read-back). `state.json` holds the choice: `captions` (`on`/`off`), `caption_style`, `captions_chosen_at`, and `captions_history[]` when the user changed it.
@@ -526,12 +544,14 @@ With `capcut_draft`, `timeline-check` reads the narration's segments (file, time
 ## Media records (written by the gated workers, never by hand)
 
 `60-visuals/video-01/stills-provenance.json`: `{"video": 1, "images": {"<file>": {"shot_id", "beat_id",
-"uncertainty_shown", "frame_prompt_sha256", "production_rev", "treatment", "engine", "submitted_prompt",
+"uncertainty_shown", "style_lock_rev", "frame_prompt_sha256", "production_rev", "treatment", "engine", "submitted_prompt",
 "submitted_prompt_sha256", "drew_from", "file_sha256", "made_at"}}}`; a FLUX still adds `precision` (int8), `comfyui`
 (its version), `models` and `model_bytes`, `request_sha256`, `caption_checks`, `caption_notes`, `seed`, `steps`, `size`
 and `refs` (each with its sha256). `submitted_prompt` is what the image model drew (the upsampler's caption, or the
 approved request itself); `drew_from` says which: `caption`, `request`, or `request (its caption was refused)`;
-`uncertainty_shown` appears for a shot that has one (04). `70-edit/video-01/music-provenance.json`: the same with
+`uncertainty_shown` appears for a shot that has one (04), and `style_lock_rev` names the style lock the still
+was made under. `60-visuals/video-01/style-lock.json` (from `style-lock`, 04): `{video, rev, style_prompt, palette, refs:
+[{file, sha256}], visual_language_sha256, style_bible_sha256, locked_at, why, history}`. `70-edit/video-01/music-provenance.json`: the same with
 `beats`, `caption_sha256`, `serves` and `direction` (the treatment's `sound`, and per beat its `sound_direction`,
 `experience` and `pace`, with a key moment's meaning) per track. `timeline-check` and `release-check` trace the project through
 them. Pictures made any other way (supplied by the user, drawn) are accepted as a set with `direction-reapprove
