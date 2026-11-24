@@ -1,0 +1,393 @@
+{
+ "niches": [
+  {
+   "id": "N1",
+   "name": "Bodyweight training, explained by the research",
+   "identity": "research-checked answers to practical bodyweight-training questions (isometric holds, push-ups a day): what a small habit really does inside the body and when, and how to do it at home, with honest limits",
+   "boundary": "stops being this niche when the body is not being trained: diets and weight loss, injury or medical treatment, sports biography, or a follow-along workout with no science behind it",
+   "viewer_reward": "[I] the truth about a small training habit from someone who read the studies: what changes inside the body and when, something to try at home, and the underdog hope that the slim one wins",
+   "members": [
+    {
+     "ref": "V002",
+     "role": "core",
+     "why": "its card: fitness and bodyweight strength, exercise science explained; isometric holds train tendons, told with a self-test, the studies and a 12-week home plan"
+    },
+    {
+     "ref": "V024",
+     "role": "core",
+     "why": "its card: fitness science, bodyweight training, exercise physiology; what 20 push-ups a day do to the body from the first rep to ten years, each stage a study with its caveat"
+    }
+   ],
+   "formats": [
+    {
+     "form": "underdog-promise explainer: a self-test now, the research, a home routine, the result decoded at the end",
+     "refs": [
+      "V002"
+     ]
+    },
+    {
+     "form": "evidence-led timeline of a daily habit (first rep to ten years), one study and one caveat per stage",
+     "refs": [
+      "V024"
+     ]
+    }
+   ],
+   "comparable_cohorts": [
+    {
+     "id": "bodyweight-science-7-8min",
+     "refs": [
+      "V002",
+      "V024"
+     ],
+     "why_comparable": "both answer one practical training question from the studies in a single sitting, 7.4 and 7.8 min (both under the long-form floor)"
+    }
+   ],
+   "evidence": [
+    {
+     "ref": "V002",
+     "at": "00:00",
+     "observed": "the slim hero still hangs after the big guy drops, then wins the arm wrestle: the underdog promise comes before any science"
+    },
+    {
+     "ref": "V002",
+     "at": "00:44",
+     "observed": "the viewer does a half push-up hold now against an on-screen stopwatch and keeps the number; it is decoded at 06:24 on 'our own simple scale, not a medical test'"
+    },
+    {
+     "ref": "V002",
+     "at": "05:20",
+     "observed": "the week-four plateau is predicted before the viewer hits it: 'that's exactly when most people quit'"
+    },
+    {
+     "ref": "V024",
+     "at": "02:06",
+     "observed": "'your chest has opinions' over the mascot in bed reaching for coffee: personified biology and a dry joke at the point most people quit"
+    },
+    {
+     "ref": "V024",
+     "at": "04:12",
+     "observed": "'Here's the honest part though': fat and size unchanged at one month, 'anybody promising you a new chest in 30 days is selling something'"
+    },
+    {
+     "ref": "V024",
+     "at": "05:51",
+     "observed": "the famous 96% heart statistic is shown big, then 'I'd be lying to you if I left it there' and corrected"
+    }
+   ]
+  },
+  {
+   "id": "N2",
+   "name": "The whole story of a famous company",
+   "identity": "a famous company's history from its founding to its empire, told fast as a chain of turning points (accidents, failures, blunders) that turned out to be the strategy; the promise of the complete history in a fixed number of minutes is itself part of what brings the audience back",
+   "boundary": "stops being this niche when the company is not the protagonist: a founder's biography, a product review, an industry or market explainer, or business advice without the company's story",
+   "viewer_reward": "[I] the surprise that a world-famous company nearly failed and was made by accidents, blunders and one insight; absurd true details and small hard numbers; the whole arc in one sitting",
+   "members": [
+    {
+     "ref": "V004",
+     "role": "core",
+     "why": "its card: business history, company origin stories, brands and marketing; Coca-Cola from a failed medicine to a world brand through a chain of accidents and turning points"
+    },
+    {
+     "ref": "V005",
+     "role": "core",
+     "why": "its card: business history, company origin stories, space and technology; SpaceX from rejection and three failed launches to reusable rockets, the same complete-history-in-minutes series promise as V004"
+    }
+   ],
+   "formats": [
+    {
+     "form": "chronological speedrun of lucky accidents and turning points, closed by a recap that names them",
+     "refs": [
+      "V004"
+     ]
+    },
+    {
+     "form": "underdog company history: rejection, near-ruin, a last chance, escalating wins, a full-circle callback",
+     "refs": [
+      "V005"
+     ]
+    }
+   ],
+   "comparable_cohorts": [
+    {
+     "id": "company-history-9-11min",
+     "refs": [
+      "V004",
+      "V005"
+     ],
+     "why_comparable": "the same series promise and telling (a whole company history in a stated number of minutes), 8.9 and 11.0 min, both long-form"
+    }
+   ],
+   "evidence": [
+    {
+     "ref": "V004",
+     "at": "00:00",
+     "observed": "four contrasting facts in 17 s (two billion servings a day, a failed medicine, money lost in year one, one of the best-known brands), then the title line"
+    },
+    {
+     "ref": "V004",
+     "at": "03:35",
+     "observed": "the 'greatest business mistake' is announced with a trophy 30 s before it happens, then reversed: the $1 bottling rights 'accidentally created a genius system'"
+    },
+    {
+     "ref": "V004",
+     "at": "08:25",
+     "observed": "'What they forgot to test was what the Old Coke meant to people.' over endless taste-test tables, then a protest crowd"
+    },
+    {
+     "ref": "V005",
+     "at": "00:50",
+     "observed": "the spreadsheet on the flight home: 'the problem wasn't physics, it was price', the insight every later turn serves"
+    },
+    {
+     "ref": "V005",
+     "at": "01:52",
+     "observed": "three failed launches, each with a year and a cause (a corroded nut), both companies short of cash, then 'Last chance. And it worked.'"
+    },
+    {
+     "ref": "V005",
+     "at": "06:25",
+     "observed": "'Remember where this story started?' over a humiliation / vindication diptych: the opening rejection paid off as a full circle"
+    }
+   ]
+  },
+  {
+   "id": "N3",
+   "name": "How people survive the desert's heat and drought",
+   "identity": "how people live where heat and missing water should make life impossible (50-degree days, no rivers): the counterintuitive physics and engineering behind it, explained step by step until the paradox makes sense",
+   "boundary": "stops being this niche when the desert or the heat is only a setting (travel, war, wildlife, a culture's history for its own sake), or when the story is about money, politics or markets rather than how people get through the climate",
+   "viewer_reward": "[I] a paradox of desert life (thick walls, more clothes, water with no rivers) made to make sense step by step, the pleasure of a wrong intuition corrected, and admiration or alarm at what it takes",
+   "members": [
+    {
+     "ref": "V013",
+     "role": "core",
+     "why": "its card: everyday science, architecture and engineering; how homes stayed cool in 50-degree heat without machines, passive cooling as a system (ancient Egypt is the setting, the cooling is the subject)"
+    },
+    {
+     "ref": "V020",
+     "role": "core",
+     "why": "its card: everyday science, culture and survival, human body; why desert peoples wear more clothes in extreme heat, the robe as a wearable cooling system and the viewer's instinct corrected"
+    },
+    {
+     "ref": "V010",
+     "role": "overlap",
+     "why": "its card: geography and infrastructure, water and resources; how a desert country with no rivers gets its water belongs here, but its subject is also oil-wealth economics and a fragile national infrastructure, a geography explainer's territory"
+    }
+   ],
+   "formats": [
+    {
+     "form": "problem-solution chain: each fix creates the next problem",
+     "refs": [
+      "V013",
+      "V010"
+     ]
+    },
+    {
+     "form": "paradox explainer with a second paradox held back for the last third",
+     "refs": [
+      "V020"
+     ]
+    }
+   ],
+   "comparable_cohorts": [
+    {
+     "id": "desert-heat-explainers-9-10min",
+     "refs": [
+      "V013",
+      "V020"
+     ],
+     "why_comparable": "both a second-person teacher's explainer that voices the viewer's doubt and corrects it with heat physics, step by step, in one long-form sitting, 9.2 and 10.2 min; V010 (9.5 min) is left out for its telling, a third-person documentary read at 145 wpm over a music bed, not for its runtime"
+    }
+   ],
+   "evidence": [
+    {
+     "ref": "V013",
+     "at": "00:00",
+     "observed": "'You wake up, and the air is already trying to kill you': second-person peril, then people sitting cool inside thick walls and a one-word 'How?' at 01:05"
+    },
+    {
+     "ref": "V013",
+     "at": "02:04",
+     "observed": "the viewer's objection is voiced ('It seems like it should make things worse'), then 'Here's the part almost no one expects': the wall delays the heat until after dark"
+    },
+    {
+     "ref": "V013",
+     "at": "04:12",
+     "observed": "'Problem solved, right?' 'Not quite': the sealed box traps air, and that side effect opens the next section"
+    },
+    {
+     "ref": "V020",
+     "at": "00:37",
+     "observed": "'Your instinct screams that this is insane': the viewer's own intuition is set up as what the video will correct"
+    },
+    {
+     "ref": "V020",
+     "at": "02:17",
+     "observed": "'That air is no longer cooling you. It's cooking you.': the paradox dissolves because a hidden premise changes"
+    },
+    {
+     "ref": "V020",
+     "at": "06:32",
+     "observed": "a second paradox held back (black absorbs heat, yet Bedouins wear black), answered by an experiment's null result and the bellows effect taught earlier"
+    },
+    {
+     "ref": "V010",
+     "at": "00:07",
+     "observed": "after oil gushes with cash, 'But there is a slight problem. You cannot drink crude oil.', then a dry riverbed: the paradox as a joke"
+    },
+    {
+     "ref": "V010",
+     "at": "02:00",
+     "observed": "the wheat miracle is shown at full glory, then 'completely backfired': mud from a pipe in a cave, a rusted pivot over dead stalks"
+    }
+   ]
+  },
+  {
+   "id": "N4",
+   "name": "Money decisions after 60, with the real math",
+   "identity": "money decisions people face around retirement (here renting vs buying a home after 60), worked out with real numbers over the years that follow and with the factors specific to older viewers: a fixed income, aging in place, flexibility",
+   "boundary": "stops being this niche when the viewer is not at or near retirement (general investing, a first home, budgeting for young people), or when it becomes market news or product selling rather than one decision worked out",
+   "viewer_reward": "[I] a fair, numbers-first answer to a decision the viewer faces now, a race with a running score to follow, and a twist that hands the outcome back to the viewer's own behaviour",
+   "members": [
+    {
+     "ref": "V030",
+     "role": "core",
+     "why": "its card: personal finance, retirement planning, housing; renting vs buying after 60, two matched retirees followed for 20 years and then stress-tested, built around a fixed income and aging in place"
+    }
+   ],
+   "formats": [
+    {
+     "form": "two-character head-to-head simulation with checkpoints, then a stress test that flips the verdict",
+     "refs": [
+      "V030"
+     ]
+    }
+   ],
+   "comparable_cohorts": [],
+   "evidence": [
+    {
+     "ref": "V030",
+     "at": "00:10",
+     "observed": "the two retirees are made identical item by item (age 62, the same street, $400,000 each, the same Social Security check) before one choice splits them"
+    },
+    {
+     "ref": "V030",
+     "at": "04:40",
+     "observed": "'the first number that should make every retiree sit up': rent of $2,015 eats almost the whole average Social Security check, drawn as a house biting a cheque"
+    },
+    {
+     "ref": "V030",
+     "at": "07:40",
+     "observed": "'They are basically tied' at year 5, then the question is turned to the viewer: 'Not would I like to. Am I actually going to?'"
+    },
+    {
+     "ref": "V030",
+     "at": "09:05",
+     "observed": "Bill's $30,000 aging-in-place remodel against Margaret moving on one month's notice: 'flexibility is... a health plan'"
+    },
+    {
+     "ref": "V030",
+     "at": "11:00",
+     "observed": "'Case closed? Not so fast': if Bill spends the difference, Margaret wins by almost half a million"
+    }
+   ]
+  }
+ ],
+ "outliers": [
+  {
+   "ref": "V035",
+   "why": "its card: prehistory and human origins, animals and evolution, human-animal relationships; how wolves became dogs, from fear to love. No other reference shares that audience (dog lovers, animal-evolution and human-origins viewers), and one broad-curiosity video does not settle which of them it serves. It still teaches craft: the fear-to-love arc set in the first minute, the 'this sounds fake' experiment as proof (02:20), the word ladder performed by the edit (06:10)"
+  }
+ ],
+ "shared_across_niches": [
+  {
+   "dimension": "look",
+   "what": "unmoving illustrated stills on a fast cut: nothing moves inside the picture (moving share 0.0-0.001) and a new still arrives every 2-3.5 s (16.9-26.6 cuts/min)",
+   "refs": [
+    "V004",
+    "V005",
+    "V013",
+    "V020",
+    "V035"
+   ],
+   "note": "shared by the company histories, two desert explainers and the outlier: a production look, not an audience"
+  },
+  {
+   "dimension": "look",
+   "what": "fewer, longer shots kept alive by light motion on the drawings (pulses, small moves, slow push-ins): median shot 5-6 s, 7.6-9.8 cuts/min, moving share 0.28-0.87",
+   "refs": [
+    "V002",
+    "V024",
+    "V030"
+   ],
+   "note": "shared by the fitness and retirement niches"
+  },
+  {
+   "dimension": "look",
+   "what": "a recurring host or cast the viewer returns to between diagrams",
+   "refs": [
+    "V002",
+    "V024",
+    "V020",
+    "V030"
+   ],
+   "note": "V002's slim hero and rival, V024's mascot, V020's big-eyed stick-figure host (about fifteen returns), V030's host with Bill and Margaret"
+  },
+  {
+   "dimension": "voice",
+   "what": "a narrator who never stops: longest pause 1.0 s or less and almost no pauses of 0.8 s or more (0-0.23 per minute)",
+   "refs": [
+    "V004",
+    "V005",
+    "V010",
+    "V013",
+    "V020",
+    "V024",
+    "V035"
+   ],
+   "note": "measured across the fitness, company-history and desert niches and the outlier (V002 and V030 are the exceptions, with a 3.6 s and a 1.7 s rest); the notes name it where these videos lose the viewer: nothing is allowed to land"
+  },
+  {
+   "dimension": "format",
+   "what": "a progression through dated checkpoints the viewer follows to the end (day 1, week 2, month 1, ten years; year 1, 3, 5, 10, 20)",
+   "refs": [
+    "V024",
+    "V030"
+   ],
+   "note": "a structure shared by the fitness and retirement niches"
+  },
+  {
+   "dimension": "device",
+   "what": "a study or experiment as the turn that proves the mechanism or corrects the claim",
+   "refs": [
+    "V002",
+    "V024",
+    "V020",
+    "V035"
+   ],
+   "note": "V002 the heavy-load study (02:28), V024 the firefighter correction (05:51), V020 the black-robe null result (06:53), V035 the fox experiment (02:20)"
+  },
+  {
+   "dimension": "device",
+   "what": "the viewer's intuition or a popular claim voiced aloud, then overturned",
+   "refs": [
+    "V013",
+    "V020",
+    "V024",
+    "V030"
+   ],
+   "note": "V013 'it seems like it should make things worse' (02:04), V020 'your instinct screams' (00:37), V024 'I'd be lying to you if I left it there' (05:51), V030 'Case closed? Not so fast' (11:00)"
+  },
+  {
+   "dimension": "thumbnail",
+   "what": "a strained or sweating figure beside a calm or stronger one",
+   "refs": [
+    "V002",
+    "V024",
+    "V010",
+    "V020"
+   ],
+   "note": "V002 a big man straining against a calm slim one, V024 a straining thin figure beside a huge mascot, V010 a sweating man pushing a pipe uphill while a camel in sunglasses watches, V020 a sweating tourist beside a calm robed figure (V005 and V013 had no thumbnail in the folder)"
+  }
+ ],
+ "notes": "Placed by subject, the audience's reason to come; looks, formats and voices shared across groups are in shared_across_niches. The cards' cohort_id labels were not used: cohorts here were decided with every reference in view. V013 and V035 share a setting (the deep human past), not a subject (cooling physics vs the dog's origin), so no ancient-life niche was made. V010 differs from V013 and V020 in look (moving AI clips), voice (145 wpm and a showman's register, against 178 and 213 wpm) and mood (irony and alarm rather than admiration); those do not split an audience, but its subject reaches into oil economics and national infrastructure, hence overlap. A first desert cohort of all three (V010, V013, V020: Standard 575 s) was replaced by the two core members: V010's runtime compares, its telling does not (third person, 145 wpm against 178 and 213). N4 rests on one reference whose audience is defined by life stage; it has no comparable cohort, so its length would be the user's own. V035 could stand as a niche of its own (animal origins, the human-animal bond) if the user wants that direction. Both N1 references are under the long-form floor."
+}

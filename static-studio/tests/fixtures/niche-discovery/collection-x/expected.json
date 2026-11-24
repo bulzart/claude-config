@@ -1,0 +1,45 @@
+{
+ "niches": 4,
+ "outliers": [
+  "V035"
+ ],
+ "members": {
+  "N1": {
+   "core": [
+    "V002",
+    "V024"
+   ],
+   "overlap": []
+  },
+  "N2": {
+   "core": [
+    "V004",
+    "V005"
+   ],
+   "overlap": []
+  },
+  "N3": {
+   "core": [
+    "V013",
+    "V020"
+   ],
+   "overlap": [
+    "V010"
+   ]
+  },
+  "N4": {
+   "core": [
+    "V030"
+   ],
+   "overlap": []
+  }
+ },
+ "lock_niche": "N3",
+ "cohort": "desert-heat-explainers-9-10min",
+ "cohort_refs": [
+  "V013",
+  "V020"
+ ],
+ "standard_s": 580,
+ "recorded": "a fresh agent wrote the map from niche-evidence and the cards alone (manual 01), 2026-11-24"
+}

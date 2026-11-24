@@ -1,0 +1,1165 @@
+[
+ {
+  "id": "V006",
+  "relative_path": "Curious_POV_Guy_Your_Life_at_Every_Level_of_Building_a_Cabin_in_the_Middle_of_Nowhere_E16DWKPiTAs.mp4",
+  "duration_s": 1359.807,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V006",
+   "niches": [
+    "off-grid living and homesteading",
+    "life change and personal finance"
+   ],
+   "story_form": "second-person life simulation that climbs numbered levels over years of one invented person's life",
+   "language": "en",
+   "editorial_summary": "[I] Not really a building guide: an honest-ledger story about trading a salary for a life that accumulates. Every level answers 'what does it actually cost and what does it give back', in dollars, hours, loneliness and relationships, and ends on 'worth it, but only known after enough winters'.",
+   "title_promise": "[O] title 'Your Life at Every Level of Building a Cabin in the Middle of Nowhere': you will live the whole arc, stage by stage, from deciding to leave to what the cabin life becomes. [O] no thumbnail in the folder.",
+   "visual_medium": "flat cartoon stills (one bald everyman 'you' in a consistent 2D world), hard cuts, black title cards per level, document close-ups for the numbers",
+   "narrator_character": "[I] a calm, honest older self or knowing friend telling 'you' your own life; dry, unsentimental, repeatedly guarding against romance ('You don't romanticize it', 02:10; 'You're not romanticizing it', 07:22; 17:05)",
+   "length_family": "longform-20-to-25-min (measured 22:40)",
+   "hook": {
+    "promise": "a 29-year-old whose body is rejecting the routine sees a man build on $38,000 of land; will he do it, and what will it cost?"
+   },
+   "delight": [
+    {
+     "what": "exact, plausible prices at every step ($38,000 land, $2,800 trailer, $25 gym, $280 month, $900 vs $1,100)"
+    },
+    {
+     "what": "a small, warm supporting cast with one trait each (mother's practical questions, Dale who never makes you feel stupid, Marcus, Linda's honey, Carl's meat at the driveway)"
+    },
+    {
+     "what": "dry one-liners that puncture the romance"
+    },
+    {
+     "what": "a recognisable everyman in a tidy cartoon world, so each still reads at a glance"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 60,
+     "question": "why is this life breaking, and what is the way out?",
+     "new_value": "the grind in numbers; the land video at $38,000",
+     "emotional_turn": "recognition, then a spark",
+     "visual_function": "literal stills of each routine item, one per phrase",
+     "breathing_room": "none: 167-173 wpm, no pause over 0.5 s",
+     "evidence": "[O] 00:00-01:00, sheet-001"
+    },
+    {
+     "start_s": 60,
+     "end_s": 140,
+     "question": "does the math really work?",
+     "new_value": "the research questions, '$200 a month instead of $2,200', $41,000 saved",
+     "emotional_turn": "curiosity turning into a plan",
+     "visual_function": "same character at a desk with notebooks and laptops, cut on each question (01:05-01:23)",
+     "breathing_room": "a wide forest still at 01:49-01:53",
+     "evidence": "[O] 01:00-02:20, sheets 002-003; [I] the cut-per-question montage reads as obsession"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 23,
+   "shots_n": 551,
+   "inspect_candidates_n": 16,
+   "summary": {
+    "narration": {
+     "words": 4051,
+     "speech_rate_wpm": 191.0,
+     "pitch_range_st": {
+      "median": 8.53
+     },
+     "gap_level_rel_speech_db": {
+      "median": -46.2
+     },
+     "rate_across_windows_wpm": {
+      "p10": 168.0,
+      "median": 192.0,
+      "p90": 215.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.8,
+      "pauses_0_8s_plus_per_min": 0.0,
+      "silence_share": 0.12
+     }
+    },
+    "picture": {
+     "cuts_per_min": 24.27,
+     "shot_length_s": {
+      "median": 2.0
+     },
+     "moving_time_share": 0.001
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing is excluded; the neighbour's death can be said plainly or replaced by another closing return for him (a handed-on tool, a last visit) without changing the arc"
+   }
+  },
+  "shot_sheets": 16
+ },
+ {
+  "id": "V008",
+  "relative_path": "Galactic_Highway_How_To_Survive_When_The_Grid_Goes_Down_rYqndDrxTpg.mp4",
+  "duration_s": 1011.786,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V008",
+   "niches": [
+    "emergency preparedness",
+    "practical survival how-to"
+   ],
+   "story_form": "second-person survival walkthrough: one scenario (the grid goes down) followed in order of urgency as a ranked checklist, with numbered 'boring mistakes' and callbacks",
+   "language": "en",
+   "editorial_summary": "[I] A survival guide built as a countdown of priorities (diagnose, power, water, sanitation, food, medicine, places, the long term) whose real argument is that preparedness fails on boring mistakes and on waiting, not on darkness or hunger. It closes on the question it deliberately left out: stay or go.",
+   "title_promise": "[O] title 'How To Survive When The Grid Goes Down': a practical guide for the day the power does not come back. [O] no thumbnail in the folder.",
+   "visual_medium": "stick-figure line drawings on a white page (one orange-cap 'you' figure), coloured objects, a keyword caption in capitals on most stills, hard cuts",
+   "narrator_character": "[I] an urgent, confident survival mentor speaking to 'you' in the moment; myth-busting, practical, dry ('You don't feel ridiculous now do ya?' 01:44; 'Eat the refrigerator. Just kidding.' 09:12)",
+   "length_family": "longform-15-to-18-min (measured 16:52)",
+   "hook": {
+    "promise": "the power has just died for good; what you do in the next four hours decides everything, and the likeliest way this ends for you is 'something stupid'"
+   },
+   "delight": [
+    {
+     "what": "useful 'huh' facts the viewer can use tomorrow (40-50 gallons in the water heater, toilet tanks, AM at night, frozen bottles that become drinking water, 60 gallons from a tarp per inch of rain)"
+    },
+    {
+     "what": "myth corrections and counter-tropes (EMP cars, 'not monsters')"
+    },
+    {
+     "what": "dry asides in an urgent voice"
+    },
+    {
+     "what": "callbacks that make the list feel designed (the can, the water mistake, the four hours)"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 27,
+     "question": "what just happened?",
+     "new_value": "the exact minute, no fridge groan, a stalled truck, a street with no motor",
+     "emotional_turn": "unease",
+     "visual_function": "the stick figure in a room, on a silent street",
+     "breathing_room": "none (198-264 wpm)",
+     "evidence": "[O] sheet-001"
+    },
+    {
+     "start_s": 27,
+     "end_s": 55,
+     "question": "will my preparation be enough?",
+     "new_value": "two years of supplies decided in four hours; 'something stupid'",
+     "emotional_turn": "stakes raised, a promise of help",
+     "visual_function": "garage shelf, a 4 HOURS clock, crossed-out hunger and dark icons",
+     "breathing_room": "short punch lines (00:43 'It's something stupid.')",
+     "evidence": "[O] 00:27-00:55, sheet-001"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 17,
+   "shots_n": 268,
+   "inspect_candidates_n": 5,
+   "summary": {
+    "narration": {
+     "words": 3170,
+     "speech_rate_wpm": 200.0,
+     "pitch_range_st": {
+      "median": 5.78
+     },
+     "gap_level_rel_speech_db": {
+      "median": -25.1
+     },
+     "rate_across_windows_wpm": {
+      "p10": 165.0,
+      "median": 196.0,
+      "p90": 235.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.8,
+      "pauses_0_8s_plus_per_min": 0.0,
+      "silence_share": 0.115
+     }
+    },
+    "picture": {
+     "cuts_per_min": 15.83,
+     "shot_length_s": {
+      "median": 3.5
+     },
+     "moving_time_share": 0.0
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing is excluded; every restricted step keeps its fact (generator outside, sanitation matters, cuts need clean water, pack rehydration salts, avoid pharmacies) told plainly without the pictures"
+   }
+  },
+  "shot_sheets": 8
+ },
+ {
+  "id": "V015",
+  "relative_path": "Headlamp_Guy_Absolute_Zero_100_Hours_Survival_in_a_Frozen_City_oxj91T7Li34.mp4",
+  "duration_s": 1010.254,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V015",
+   "niches": [
+    "survival scenario fiction",
+    "cold physics explained"
+   ],
+   "story_form": "second-person survival short story told hour by hour, with physics explained at each threat and a neighbour mystery as the emotional spine",
+   "language": "en",
+   "editorial_summary": "[I] A survival story whose real subject is connection: the one old tile stove everyone else ripped out keeps 'you' alive, while the knocks of the family upstairs, who removed theirs, count down. The physics lessons (diesel to wax, ice plugs, dry ice flowing into the metro) are the obstacles; the neighbour thread is the heart.",
+   "title_promise": "[O] title 'Absolute Zero: 100 Hours Survival in a Frozen City'; [O] thumbnail: the worried figure with a candle jar by a glowing tile stove, an icy city outside, '-100°C ABSOLUTE ZERO SHORT MOVIE'. [I] promises a story (a 'short movie'), not a guide; the title's 'absolute zero' is hyperbole (the story's low is -140)",
+   "visual_medium": "illustrated stills (detailed painted apartment and city backgrounds with a simple round-headed 'you' figure), clean infographic cards for the physics, hour/temperature title overlays",
+   "narrator_character": "[I] a calm, close storyteller who also knows the physics: half campfire narrator, half survival instructor; second person present tense; instructs with a single 'Don't.'",
+   "length_family": "longform-15-to-18-min (measured 16:50)",
+   "hook": {
+    "promise": "at minus 100 the rules of physics change; 100 hours in an apartment, and the knocking from above every night at 9, 'until one night, it wasn't knocking anymore'"
+   },
+   "delight": [
+    {
+     "what": "surprising true-sounding physics as plot obstacles (alcohol vs mercury thermometers, ice plug in a chimney, dry-ice snow, CO2 pooling in the metro, trees bursting)"
+    },
+    {
+     "what": "homely tools solving deadly problems (a spoon, a scarf, baking soda, grandmother's sweep rods, a candle on a string)"
+    },
+    {
+     "what": "recurring counts and refrains (hours, knocks at nine, warm windows)"
+    },
+    {
+     "what": "a mystery with a payoff planted in the first minute"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 28,
+     "question": "what happens at minus 100, and what happened upstairs?",
+     "new_value": "three cold wonders; the knocking mystery",
+     "emotional_turn": "awe, then dread",
+     "visual_function": "frozen city with a thermometer; the tile stove glowing in the dark",
+     "breathing_room": "1.7 s pause after 'it wasn't knocking anymore'",
+     "evidence": "[O] sheet-001"
+    },
+    {
+     "start_s": 28,
+     "end_s": 118,
+     "question": "how fast does it come, and what must you not do?",
+     "new_value": "ordinary evening, the polar vortex breaks, -20 to -85 in forty minutes; the alcohol thermometer; the man running to his car: 'Don't.'",
+     "emotional_turn": "cozy, then alarm",
+     "visual_function": "a warm kitchen, a polar diagram, thermometer and clock cards, the car diagram",
+     "breathing_room": "none",
+     "evidence": "[O] 00:28-01:58, sheets 001-002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 17,
+   "shots_n": 213,
+   "inspect_candidates_n": 29,
+   "summary": {
+    "narration": {
+     "words": 2854,
+     "speech_rate_wpm": 195.0,
+     "pitch_range_st": {
+      "median": 8.25
+     },
+     "gap_level_rel_speech_db": {
+      "median": -13.3
+     },
+     "rate_across_windows_wpm": {
+      "p10": 167.0,
+      "median": 198.0,
+      "p90": 216.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 2.98,
+      "pauses_0_8s_plus_per_min": 1.68,
+      "silence_share": 0.208
+     }
+    },
+    "picture": {
+     "cuts_per_min": 12.59,
+     "shot_length_s": {
+      "median": 4.0
+     },
+     "moving_time_share": 0.078
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "exclude"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "bridged",
+    "note": "the survival spine (stove, physics obstacles, hour clock, window counts, candle test) holds without the family's deaths; the neighbour thread needs an original bridge, e.g. the knocks lead to a shared fire or a rescue of living neighbours, never a count of the dying"
+   }
+  },
+  "shot_sheets": 6
+ },
+ {
+  "id": "V016",
+  "relative_path": "Highfinance_View_You_Started_With_10_Chickens._15_Years_Later,_You_Were_a_Billionaire_Yq7RxVaxabU.mp4",
+  "duration_s": 532.387,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V016",
+   "niches": [
+    "entrepreneurship fiction",
+    "small business and farming",
+    "rags-to-riches"
+   ],
+   "story_form": "second-person fictional life story: an ordinary laid-off person grows a tiny side project into a billion-dollar company over 15 years, told as 'you'",
+   "language": "en",
+   "editorial_summary": "[I] Really about agency after a setback: a laid-off person finds purpose in caring for something, and the fortune is the by-product of a run of small decisions to say yes. The billion is the frame; the emotional payoff is 'you were finally building something that belongs entirely to you', and the ending insists the start mattered more than the sum.",
+   "title_promise": "[O] title 'You Started With 10 Chickens. 15 Years Later, You Were a Billionaire'; thumbnail: the protagonist with a clipboard in front of a backyard coop, a wall calendar '3'. [I] promises a step-by-step, believable path from almost nothing to everything, lived from the inside; the thumbnail sells the humble start, not the money.",
+   "visual_medium": "AI-style illustrated stills in a consistent cartoon character style (one recurring protagonist with stable face, hair and outfits; warm cinematic lighting), no motion, hard cuts every ~5 s",
+   "narrator_character": "[I] an intimate second-person storyteller, like a friend narrating your life back to you: specific, sensory, wry ('a username you'll never admit to'), a little sentimental at the end; never hypes the money.",
+   "length_family": "midform-8-to-12-min (measured 532.4 s = 8.9 min)",
+   "hook": {
+    "promise": "You, at your lowest, buy ten chicks on a whim. Where does that lead?"
+   },
+   "delight": [
+    {
+     "what": "specific, human details: a username you'll never admit to, eggs eaten standing over the sink, 'the kind of guy who notices everything on the block'"
+    },
+    {
+     "what": "a consistent protagonist the viewer can follow across 15 years (same face, outfits that age with him)"
+    },
+    {
+     "what": "the payoff that reframes the billion as freedom from dread"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 62,
+     "question": "Who am I and why chickens?",
+     "new_value": "a specific day and place; unemployment as 'one long, shapeless stretch of nothing'; ten birds for $47",
+     "emotional_turn": "empathy, mild melancholy, then a small lift",
+     "visual_function": "the protagonist in each beat (store, desk with a box, couch, car, shed under a heat lamp)",
+     "breathing_room": "[O] a 1.3 s pause after '$47' (00:41)",
+     "evidence": "[O] 00:00-01:01 sheet-001"
+    },
+    {
+     "start_s": 62,
+     "end_s": 123,
+     "question": "Can I even do this?",
+     "new_value": "trial and error, one bird lost to the cold, forums, first eggs, fresh food tastes different, birds kept for meat; 'you're just a person with birds'",
+     "emotional_turn": "quiet satisfaction",
+     "visual_function": "laptop at night, an egg held up, eating at the sink, a roast chicken on a table with eyes closed",
+     "breathing_room": "none: ~218 wpm minute",
+     "evidence": "[O] 01:02-02:03 sheet-002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 9,
+   "shots_n": 108,
+   "inspect_candidates_n": 0,
+   "summary": {
+    "narration": {
+     "words": 1539,
+     "speech_rate_wpm": 193.0,
+     "pitch_range_st": {
+      "median": 10.5
+     },
+     "gap_level_rel_speech_db": {
+      "median": -39.6
+     },
+     "rate_across_windows_wpm": {
+      "p10": 160.0,
+      "median": 193.0,
+      "p90": 237.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 1.54,
+      "pauses_0_8s_plus_per_min": 4.86,
+      "silence_share": 0.189
+     }
+    },
+    "picture": {
+     "cuts_per_min": 12.06,
+     "shot_length_s": {
+      "median": 4.5
+     },
+     "moving_time_share": 0.0
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "keep"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing excluded or restricted"
+   }
+  },
+  "shot_sheets": 3
+ },
+ {
+  "id": "V018",
+  "relative_path": "Ink_Story_POV_You_Are_a_Soldier_in_World_War_2_8KdfbA78GjM.mp4",
+  "duration_s": 1230.89,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V018",
+   "niches": [
+    "military history",
+    "world war two",
+    "historical fiction",
+    "soldier's life"
+   ],
+   "story_form": "second-person historical fiction: one invented soldier's whole war, from draft letter to old age, carried by keepsakes and a promise",
+   "language": "en",
+   "editorial_summary": "[I] Under the D-Day set piece, the video is about what a war takes from an ordinary man and what he carries home: a photograph from his girlfriend, a dead friend's silver case, and one carved word ('Move'). Each object is planted early, changes meaning as people die, and returns at the end, when the old man finally sets the case down on the beach and walks away from the water by choice. Invented characters (Ruth, Eddie, Miller, Billy) inside real events (Omaha Beach, the hedgerows, Saint-Lo, the surrender).",
+   "title_promise": "[O] title 'POV: You Are a Soldier in World War 2'; thumbnail: [O] seen (a big-eyed young soldier in the cartoon style). [I] Promises immersion: the war lived from inside one man's boots rather than explained.",
+   "visual_medium": "detailed cartoon stills (big-eyed round faces, warm painted backgrounds) with no camera motion, comic-panel splits and thought-bubble insets, small place-and-date caption boxes",
+   "narrator_character": "[I] An intimate storyteller who speaks to 'you' in the present tense, like a voice inside your own memory: plain words, short declaratives, emotional understatement ('Ruth does not. Not at first.'), aphorisms that grow from scenes ('Fear with no release has nowhere to go', 'Courage does not look like the posters'), and dialogue reported in a few words. No jokes except the characters' own (Eddie's 'amazing how bullets respect arrows').",
+   "length_family": "long-18-to-22-min (measured 20:31, 1230.9 s)",
+   "hook": {
+    "promise": "You are nineteen with ordinary plans when the draft letter arrives; the photograph you are given will survive a beach where almost everything else is lost."
+   },
+   "delight": [
+    {
+     "what": "keepsakes that carry the story and change meaning (photograph, case, carved word)"
+    },
+    {
+     "what": "exact callbacks of short lines ('Come home before the leaves change', 'I lost my rifle', 'Move')"
+    },
+    {
+     "what": "small human details amid the war (Eddie's bread at four in the morning, the father who understands silence)"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 83,
+     "question": "What will happen to this ordinary boy?",
+     "new_value": "draft letter, family, Ruth's photograph and its line; flash-forward to the beach",
+     "emotional_turn": "tenderness, dread",
+     "visual_function": "store, kitchen, river photograph, split panel of landing craft and beach (01:17-01:22)",
+     "breathing_room": "fast: 220-253 wpm in the first 2.5 minutes",
+     "evidence": "[O] 00:00-01:23, sheets 001-002"
+    },
+    {
+     "start_s": 83,
+     "end_s": 180,
+     "question": "Who will he serve with?",
+     "new_value": "basic training; Eddie the baker's son with his dead brother's silver case; Sergeant Miller who 'has already seen the ending'; the Atlantic crossing and its fear",
+     "emotional_turn": "comradeship, unease",
+     "visual_function": "training scenes, thought-bubble insets (bread, North Africa), crowded troop ship",
+     "breathing_room": "-",
+     "evidence": "[O] 01:23-03:00, sheets 002-003"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 21,
+   "shots_n": 218,
+   "inspect_candidates_n": 2,
+   "summary": {
+    "narration": {
+     "words": 3661,
+     "speech_rate_wpm": 208.0,
+     "pitch_range_st": {
+      "median": 12.62
+     },
+     "gap_level_rel_speech_db": {
+      "median": -18.1
+     },
+     "rate_across_windows_wpm": {
+      "p10": 172.0,
+      "median": 211.0,
+      "p90": 244.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 1.28,
+      "pauses_0_8s_plus_per_min": 1.66,
+      "silence_share": 0.212
+     }
+    },
+    "picture": {
+     "cuts_per_min": 10.58,
+     "shot_length_s": {
+      "median": 5.5
+     },
+     "moving_time_share": 0.0
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "religion_superstition",
+     "action": "exclude"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "holiday",
+     "action": "exclude"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "holiday",
+     "action": "exclude"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "only the holiday images and the prayer framing go; the hoped-for return is already carried by the 'leaves change' line and the seasons, and the keepsake stays a remembrance and a command; the many restrictions change how the battle is shown, not the beats"
+   }
+  },
+  "shot_sheets": 7
+ },
+ {
+  "id": "V019",
+  "relative_path": "Ink_Story_What_Did_WW2_Soldiers_Actually_Do_All_Day_z4DB1tppFU8.mp4",
+  "duration_s": 1066.748,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V019",
+   "niches": [
+    "military history",
+    "world war two",
+    "daily life history",
+    "logistics of war"
+   ],
+   "story_form": "second-person 'one day in the life' reconstruction, clocked hour by hour, that corrects the movie picture of war",
+   "language": "en",
+   "editorial_summary": "[I] The video argues that an infantryman's war was mostly work and waiting that made the rare fighting possible and frightening. It follows one representative rifleman through one July day in Normandy, hour by hour, turning every chore (digging, rations, latrines, feet, water, ammunition, patrol, mail, watch) into a small lesson with a payoff, plants a 'most dangerous sentence' early and pays it off at night, and closes on a receipt of the day: zero rounds fired, every hour spent being ready.",
+   "title_promise": "[O] title 'What Did WW2 Soldiers Actually Do All Day'; thumbnail: a smiling soldier dozing under an apple tree with a rifle across his lap, men digging and reading behind him, smoke on the horizon, caption 'NO FIGHTING'. [I] Promises a myth-busting, surprisingly ordinary answer; 'NO FIGHTING' overstates it, since the video includes a mortar strike and a night alarm.",
+   "visual_medium": "painted-cartoon stills (round white faces, soft painted backgrounds) with slow pans and zooms, burned-in word-highlight captions at the bottom, flat infographic cards on graph paper, clock title cards, top-down maps, labels and stamps",
+   "narrator_character": "[I] A wry, warm companion speaking to 'you' throughout: dry one-line jokes ('stop having elbows', 'enemy machinery' for a snorer, 'nearly ends both of your careers through embarrassment'), plain explanation, frequent myth-versus-reality asides ('That's the part war movies usually skip'), and honest uncertainty ('I don't know. That is the most common honest answer in war'). Never mocks the soldiers; humour comes from their situation.",
+   "length_family": "long-15-to-20-min (measured 17:47, 1066.7 s)",
+   "hook": {
+    "promise": "What did a soldier actually do all day? Not what the movies show; and a warning that the night's 'everything is quiet' will be the most dangerous sentence of the day."
+   },
+   "delight": [
+    {
+     "what": "dry second-person humour tied to real hardship (elbows, the snorer, the cook who thinks he is insulted)"
+    },
+    {
+     "what": "infographics that act as jokes: complaint-o-meter, receipt, negotiation bars, sleep-debt battery"
+    },
+    {
+     "what": "a planted line that pays off at night, and a looping ending"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 91,
+     "question": "What is a soldier's day really like?",
+     "new_value": "it starts in a damp hole; movies skip the digging and waiting; one believable day; a warning planted",
+     "emotional_turn": "amused recognition, curiosity",
+     "visual_function": "sleeping soldier, label tags, movies vs reality card, title card, timeline bar",
+     "breathing_room": "-",
+     "evidence": "[O] 00:00-01:31, sheets 001-002"
+    },
+    {
+     "start_s": 91,
+     "end_s": 171,
+     "question": "What happens at dawn and breakfast?",
+     "new_value": "stand-to (patrol, sentry or enemy look the same in the dark), K-rations, how the army feeds you, latrines and disease",
+     "emotional_turn": "tension, then dry humour",
+     "visual_function": "5:00 A.M. STAND-TO clock card; three silhouettes that all turn grey (01:37-01:43); K-RATION and HOW THE ARMY FEEDS YOU cards; a latrine being dug (02:32-02:42); STOMACH ILLNESS = SAME RESULT card",
+     "breathing_room": "-",
+     "evidence": "[O] 01:30-02:51, sheets 002-003"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 18,
+   "shots_n": 203,
+   "inspect_candidates_n": 99,
+   "summary": {
+    "narration": {
+     "words": 3192,
+     "speech_rate_wpm": 196.0,
+     "pitch_range_st": {
+      "median": 11.32
+     },
+     "gap_level_rel_speech_db": {
+      "median": -5.1
+     },
+     "rate_across_windows_wpm": {
+      "p10": 171.0,
+      "median": 198.0,
+      "p90": 222.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.66,
+      "pauses_0_8s_plus_per_min": 0.0,
+      "silence_share": 0.148
+     }
+    },
+    "picture": {
+     "cuts_per_min": 11.36,
+     "shot_length_s": {
+      "median": 4.0
+     },
+     "moving_time_share": 0.522
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": null
+  },
+  "shot_sheets": 6
+ },
+ {
+  "id": "V022",
+  "relative_path": "Mighty_Arrow_Your_Life_as_Every_Car_Flipper_Rank_y4PNmsjPRKA.mp4",
+  "duration_s": 955.548,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V022",
+   "niches": [
+    "side hustles and small business",
+    "cars and used-car trade"
+   ],
+   "story_form": "second-person life simulation that climbs numbered ranks over twenty years of one invented career",
+   "language": "en",
+   "editorial_summary": "[I] A coming-of-age business story about seeing value others miss and learning that trust, not cars, is the product. Each rank adds a skill and a temptation (hide a flaw, lose your fear, scale past yourself) and ends on the cost of never switching the appraising eye off.",
+   "title_promise": "[O] title 'Your Life as Every Car Flipper Rank': you will live each stage from a first $300 flip to a dealership. [O] no thumbnail in the folder.",
+   "visual_medium": "illustrated stills (painted, slightly realistic backgrounds with a round-headed cartoon 'you' who ages), black title cards per level, hard cuts, no motion",
+   "narrator_character": "[I] a reflective older self telling 'you' your career; wry, literary, morally serious without preaching ('a mathematical one that happened to line up with being decent')",
+   "length_family": "longform-15-to-18-min (measured 15:56)",
+   "hook": {
+    "promise": "a 15-year-old buys a forgotten Corolla for $300 and hears in its idle 'a number' the family could not"
+   },
+   "delight": [
+    {
+     "what": "insider trade knowledge as small reveals (a check-engine light is often a $30 sensor, a $9 gasket worth $1,000, listings read like poker tells, cash flow kills dealers)"
+    },
+    {
+     "what": "a moral thread with real temptation (the unmentioned pump, the cheap patch)"
+    },
+    {
+     "what": "aphorisms that close each beat"
+    },
+    {
+     "what": "the hero visibly ages across consistent painted scenes"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 167,
+     "question": "can a kid turn $300 into profit?",
+     "new_value": "the deal, the $40 clean-up, $850 sale to a night-shift nurse; 'value isn't fixed'; the notebook",
+     "emotional_turn": "satisfaction, a quiet thrill",
+     "visual_function": "the same driveway and car before and after; the boy at a desk at night",
+     "breathing_room": "the sleepless-night stills 02:20-02:35",
+     "evidence": "[O] sheets 001-003"
+    },
+    {
+     "start_s": 167,
+     "end_s": 309,
+     "question": "what is the trick?",
+     "new_value": "buyers' mistakes are the margin (midnight listings, grief-priced estates, a $30 sensor), walking away, a $9 gasket worth $1,000; the father's worry; the Jetta pump not mentioned",
+     "emotional_turn": "cleverness, then a twinge of guilt",
+     "visual_function": "listing on a phone, a garage, the father at a kitchen table, an angry buyer on the interstate",
+     "breathing_room": "little",
+     "evidence": "[O] 02:47-05:09, sheets 003-006"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 16,
+   "shots_n": 162,
+   "inspect_candidates_n": 1,
+   "summary": {
+    "narration": {
+     "words": 2945,
+     "speech_rate_wpm": 197.0,
+     "pitch_range_st": {
+      "median": 7.13
+     },
+     "gap_level_rel_speech_db": {
+      "median": -39.1
+     },
+     "rate_across_windows_wpm": {
+      "p10": 171.0,
+      "median": 197.0,
+      "p90": 223.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 1.26,
+      "pauses_0_8s_plus_per_min": 0.38,
+      "silence_share": 0.114
+     }
+    },
+    "picture": {
+     "cuts_per_min": 10.11,
+     "shot_length_s": {
+      "median": 6.0
+     },
+     "moving_time_share": 0.002
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing is excluded; the upset seller can be shown without the bottle"
+   }
+  },
+  "shot_sheets": 5
+ },
+ {
+  "id": "V023",
+  "relative_path": "Mr._DoomStick_How_to_Survive_When_It_Rains_for_1_Year_CQPdTavLD8o.mp4",
+  "duration_s": 822.637,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V023",
+   "niches": [
+    "survival scenario fiction",
+    "disaster and emergency response"
+   ],
+   "story_form": "second-person survival chronicle told as a day counter across a year, one setback after another until the rain stops",
+   "language": "en",
+   "editorial_summary": "[I] An endurance chronicle: a year of rain told as a long sequence of losses (power, water, food, rescue attempts, the building itself) answered by community and patience, ending with the sky clearing and the harder question of rebuilding.",
+   "title_promise": "[O] title 'How to Survive When It Rains for 1 Year'; [O] thumbnail: the two characters, open-mouthed, on a rusty balcony above a brown flooded city of half-submerged towers, '1 YEAR'. [I] promises spectacle and a how-to; the video delivers mostly a chronicle of waiting with little how-to",
+   "visual_medium": "ink-and-wash cartoon stills (stick-figure 'you' in a skull cap and a beanie-wearing neighbour, detailed painted flooded cityscapes), cream 'DAY N' cards flashed for half a second, small day labels in corners, a few infographic cards",
+   "narrator_character": "[I] a calm, neutral chronicler addressing 'you'; reports events and rules plainly with almost no humour or personality",
+   "length_family": "longform-12-to-15-min (measured 13:43)",
+   "hook": {
+    "promise": "an ordinary alert you ignore becomes a flood; the forecast shows rain every day for a year; 11 days of food and nowhere to go"
+   },
+   "delight": [
+    {
+     "what": "the escalating 'what next' of a long ordeal, with a day counter as a clock"
+    },
+    {
+     "what": "detailed painted disaster cityscapes behind a simple figure"
+    },
+    {
+     "what": "small cooperative moments (neighbours relaying supplies, the tower trade, the orange flag)"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 40,
+     "question": "how bad will it get?",
+     "new_value": "ignored alerts, a flooded garage, a year of rain on the forecast, 11 days of food",
+     "emotional_turn": "mild alarm",
+     "visual_function": "bed, phone, window over a grey city, forecast calendar",
+     "breathing_room": "slower opening (147-149 wpm in the first 30 s)",
+     "evidence": "[O] sheet-001"
+    },
+    {
+     "start_s": 40,
+     "end_s": 137,
+     "question": "can you stay up here safely?",
+     "new_value": "the river spills, roads close, the neighbour Beanie, power fails, 50 floors of stairs, the tap runs dry, rainwater must be treated",
+     "emotional_turn": "isolation tightening",
+     "visual_function": "flooded streets, a building cutaway of failed pumps, infographic cards (roof contaminants, treat before drinking)",
+     "breathing_room": "none",
+     "evidence": "[O] 00:40-02:17, sheets 001-003"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 14,
+   "shots_n": 310,
+   "inspect_candidates_n": 5,
+   "summary": {
+    "narration": {
+     "words": 2030,
+     "speech_rate_wpm": 166.0,
+     "pitch_range_st": {
+      "median": 8.86
+     },
+     "gap_level_rel_speech_db": {
+      "median": -59.7
+     },
+     "rate_across_windows_wpm": {
+      "p10": 147.0,
+      "median": 168.0,
+      "p90": 185.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 1.0,
+      "pauses_0_8s_plus_per_min": 0.29,
+      "silence_share": 0.18
+     }
+    },
+    "picture": {
+     "cuts_per_min": 22.54,
+     "shot_length_s": {
+      "median": 2.5
+     },
+     "moving_time_share": 0.004
+    }
+   }
+  },
+  "content": {
+   "segments": [],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing restricted or excluded"
+   }
+  },
+  "shot_sheets": 9
+ },
+ {
+  "id": "V025",
+  "relative_path": "My_Chaotic_Stories_POV_You_Have_$1_Trillion_(But_Only_7_Days_To_Spend_It)_dwSfdH1K7Zk.mp4",
+  "duration_s": 634.926,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V025",
+   "niches": [
+    "money thought experiments",
+    "economics and markets",
+    "wealth and power"
+   ],
+   "story_form": "second-person thought experiment with a ticking constraint: a day-by-day attempt to spend an impossible sum that keeps failing, and each failure teaches how the real economy works",
+   "language": "en",
+   "editorial_summary": "[I] Really about the limits of money: a trillion dollars outruns everything that can be bought fast, and the attempts to buy food security, a country and the stock market each hit a wall made of logistics, sovereignty and markets. The fantasy is the hook; the payoff is understanding why the richest people's wealth keeps growing ('the earning is faster than the spending').",
+   "title_promise": "[O] title 'POV: You Have $1 Trillion (But Only 7 Days To Spend It)'; thumbnail: the sketch protagonist standing on a mountain of gold, cash, oil barrels, yachts, rockets and buildings under the hand-lettered title. [I] promises a fantasy of unlimited spending with a deadline twist; the video delivers the fantasy for two minutes, then turns it into a lesson that the money cannot be spent.",
+   "visual_medium": "pencil-sketch illustrated stills on cream paper (one recurring cartoon protagonist with glasses and a suit; faceless black silhouettes for everyone else; hand-lettered labels, simple diagrams and bar meters), almost no motion, a few fade-to-white transitions",
+   "narrator_character": "[I] a cool, deadpan observer narrating the viewer's own actions back to them, like a thriller voice-over or a report: clipped, dry, unimpressed by luxury, occasionally aphoristic ('You are a weather event and they are closing the airports'). No humour beyond understatement.",
+   "length_family": "midform-8-to-12-min (measured 634.9 s = 10.6 min)",
+   "hook": {
+    "promise": "Spend $1 trillion in seven days, by strict rules, or lose it all. Can you?"
+   },
+   "delight": [
+    {
+     "what": "the game frame: explicit rules, a deadline, a scoreboard at each day's end, and interest refilling the pot"
+    },
+    {
+     "what": "absurd scale made concrete (the ring count, 4,000 yacht crew, gold buying that makes everyone who owns gold richer, a rock off Norway and a Fijian island with 'the same signature')"
+    },
+    {
+     "what": "each failure teaches a real mechanism (logistics, sovereignty, market impact, circuit breakers)"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 40,
+     "question": "What are the rules?",
+     "new_value": "the sum, the deadline, the interest that refills it, the ban on giving it away",
+     "emotional_turn": "intrigue, game mode",
+     "visual_function": "phone screens, a three-panel 'no donations / no gifts / no financial instruments', 'Money -> Ownership' diagram",
+     "breathing_room": "none",
+     "evidence": "[O] 00:00-00:40 sheet-001"
+    },
+    {
+     "start_s": 40,
+     "end_s": 152,
+     "question": "How fast can I spend it on luxury?",
+     "new_value": "80 properties in 12 countries by noon, watches, hypercars, jets, 43 superyachts; 'not the number, the ring count'; 'the desensitization takes about six hours'; end of day two: $25B spent, $975B left, $272M of interest earned meanwhile",
+     "emotional_turn": "wish-fulfilment turning into numbness, then the first shock",
+     "visual_function": "a still per purchase category; silhouetted brokers; a crowd of 4,000 crew silhouettes; an 'End of Day 2' bar; a vault of interest; a bar chart where 'spent' is a sliver",
+     "breathing_room": "none",
+     "evidence": "[O] 00:40-02:32 sheet-001..003"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 11,
+   "shots_n": 144,
+   "inspect_candidates_n": 25,
+   "summary": {
+    "narration": {
+     "words": 1798,
+     "speech_rate_wpm": 187.0,
+     "pitch_range_st": {
+      "median": 7.95
+     },
+     "gap_level_rel_speech_db": {
+      "median": -18.2
+     },
+     "rate_across_windows_wpm": {
+      "p10": 156.0,
+      "median": 191.0,
+      "p90": 220.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.82,
+      "pauses_0_8s_plus_per_min": 0.09,
+      "silence_share": 0.135
+     }
+    },
+    "picture": {
+     "cuts_per_min": 13.51,
+     "shot_length_s": {
+      "median": 4.0
+     },
+     "moving_time_share": 0.005
+    }
+   }
+  },
+  "content": {
+   "segments": [],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing excluded or restricted"
+   }
+  },
+  "shot_sheets": 4
+ },
+ {
+  "id": "V033",
+  "relative_path": "The_Hidden_Why_What_If_You_Woke_Up_20,000_Years_Ago_myAGmeMR_vQ.mp4",
+  "duration_s": 675.817,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V033",
+   "niches": [
+    "prehistory and human origins",
+    "daily life in the past",
+    "archaeology and evidence"
+   ],
+   "story_form": "second-person time-travel immersion: you, a helpless modern outsider, live one day from waking to sleep in an Ice Age camp, and learn that the 'primitive' people are the experts",
+   "language": "en",
+   "editorial_summary": "[I] Really a humility story: everything a modern person depends on is accumulated knowledge from others, and the Ice Age people already lived by that same principle. The 'what if' frame turns archaeology into a lived day.",
+   "title_promise": "[O] title 'What If You Woke Up 20,000 Years Ago'; thumbnail: 'WRONG ERA?!' over the stick-figure modern man in a hoodie, startled on a fur bed in a cave beside a blushing woman in furs, with smiling cave people, a wolf and a spear. [I] promises a fish-out-of-water adventure with comedy.",
+   "visual_medium": "painterly AI-style illustrations of an Ice Age camp in northern Spain (warm firelit palette, detailed realistic people) with a white round-headed stick figure in a blue hoodie inserted as 'you'; split-screen modern/past comparisons; slow pans and zooms on stills",
+   "narrator_character": "[I] A calm, respectful guide and companion who walks beside 'you' through the day; careful about what archaeology can and cannot say ('We cannot reconstruct...', 'it would be a mistake to assume...'); warm rather than witty.",
+   "length_family": "longform-7-to-13-min (measured 675.8 s = 11.3 min)",
+   "hook": {
+    "promise": "Dropped 20,000 years back, you would be the least capable person in the community. What was an ordinary day like?"
+   },
+   "delight": [
+    {
+     "what": "the outsider stick figure dropped into painterly scenes: shivering, failing at knapping, lying by the fire"
+    },
+    {
+     "what": "'To you, the landscape looks almost empty. To them, it is filled with information.'"
+    },
+    {
+     "what": "a stone engraving that outlives the animal it shows, seen by a human thousands of years later"
+    },
+    {
+     "what": "the night with no city glow"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 56,
+     "question": "Where am I, and could I cope?",
+     "new_value": "you wake under skins in a rock shelter in northern Spain; ice sheets cover northern Europe",
+     "emotional_turn": "disorientation, curiosity",
+     "visual_function": "split screen: a modern bedroom beside the shelter (00:26-00:28), sleeping bodies under furs, an ice-age map, panning landscapes",
+     "breathing_room": "slow pans; few cuts (15 in the first minute)",
+     "evidence": "[O] 00:00-00:56, sheet-001"
+    },
+    {
+     "start_s": 56,
+     "end_s": 111,
+     "question": "How do I get warm?",
+     "new_value": "the people wear worked, sewn skins; bone needles; making a garment is hours of skilled work",
+     "emotional_turn": "humility",
+     "visual_function": "the stick figure shivering, a ragged vs a tailored figure, needles, hide scraping in three panels, the jacket in your wardrobe split against a woman sewing",
+     "breathing_room": "'begins to look like an extraordinary luxury' 01:46",
+     "evidence": "[O] 00:56-01:51, sheets 001-002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 12,
+   "shots_n": 135,
+   "inspect_candidates_n": 1,
+   "summary": {
+    "narration": {
+     "words": 1910,
+     "speech_rate_wpm": 176.0,
+     "pitch_range_st": {
+      "median": 11.96
+     },
+     "gap_level_rel_speech_db": {
+      "median": 3.3
+     },
+     "rate_across_windows_wpm": {
+      "p10": 152.0,
+      "median": 178.0,
+      "p90": 200.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.5,
+      "pauses_0_8s_plus_per_min": 0.0,
+      "silence_share": 0.071
+     }
+    },
+    "picture": {
+     "cuts_per_min": 11.9,
+     "shot_length_s": {
+      "median": 4.0
+     },
+     "moving_time_share": 0.391
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing is excluded; the hunt's aftermath is told through the materials, and the outsider premise works with everyone dressed"
+   }
+  },
+  "shot_sheets": 4
+ }
+]

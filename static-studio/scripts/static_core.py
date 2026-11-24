@@ -1139,6 +1139,9 @@ def niche_check_facts(rd, st, m=None):
         new = sorted(v for v in cards if v not in (ev.get('cards_sha256') or {}))
         if stale or new:
             iss.append('niche_evidence_outdated:run_niche-evidence_again:' + ','.join(stale + new))
+        if ev.get('not_complete'):
+            warn.append('the evidence was laid out before every analysis was finished: '
+                        + '; '.join(f'{k}: {",".join(v)}' for k, v in (ev.get('not_complete') or {}).items()))
     niches = [x for x in m.get('niches') or [] if isinstance(x, dict)]
     if not niches:
         iss.append('niche_map_needs_at_least_one_niche')
@@ -1216,6 +1219,10 @@ def niche_check_facts(rd, st, m=None):
             if n_words(c.get('why_comparable')) < MIN_NOTE_WORDS:
                 iss.append(f'niche_{nid}_cohort_{cid}_needs_why_comparable')
             cohorts_out[cid] = {**cohort_facts(rd, st, {'id': cid, 'refs': cr}, cards, vids), 'niche': nid}
+            if cohorts_out[cid]['length_would_refuse']:
+                warn.append(f'cohort {cid} of niche {nid} gives no Standard length as it stands ('
+                            + '; '.join(cohorts_out[cid]['length_would_refuse']) + '): present it that way, or choose '
+                            'members whose lengths compare')
     outl = [o for o in m.get('outliers') or [] if isinstance(o, dict)]
     for o in outl:
         r = str(o.get('ref') or '').strip().upper()

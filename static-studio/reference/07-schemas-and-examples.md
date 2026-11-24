@@ -225,7 +225,8 @@ made from). It holds no time and no batch: the same cards give the same evidence
 (The values are an example of the form, not a niche to reuse.) `niche-check` writes `20-analysis/niche-check.json`:
 `ok`, `issues` (form and traceability: every reference a member or an outlier, a reason per member, a core member per
 niche, formats, evidence and cohorts naming members only, the evidence current), `warnings` (a niche that is exactly
-one analysis batch, or all from one), and `facts`: `niches`, `outliers`, `in_several_niches`, `members` (core and
+one analysis batch, or all from one; a cohort that gives no Standard length as it stands; evidence laid out
+before every analysis was finished), and `facts`: `niches`, `outliers`, `in_several_niches`, `members` (core and
 overlap per niche), `cohorts` (`{id: {niche, refs, durations_s, median_s, standard_s, standard_min, spread_ratio,
 speech_rate_wpm, story_forms, languages, length_would_refuse}}`) and `batches_per_niche`.
 

@@ -1,0 +1,39 @@
+{
+ "niches": 3,
+ "outliers": [],
+ "members": {
+  "N1": {
+   "core": [
+    "V008",
+    "V015",
+    "V023"
+   ],
+   "overlap": []
+  },
+  "N2": {
+   "core": [
+    "V006",
+    "V016",
+    "V022",
+    "V025"
+   ],
+   "overlap": []
+  },
+  "N3": {
+   "core": [
+    "V018",
+    "V019",
+    "V033"
+   ],
+   "overlap": []
+  }
+ },
+ "lock_niche": "N1",
+ "cohort": "survival-story-14-17min",
+ "cohort_refs": [
+  "V015",
+  "V023"
+ ],
+ "standard_s": 915,
+ "recorded": "a fresh agent wrote the map from niche-evidence and the cards alone (manual 01), 2026-11-24"
+}

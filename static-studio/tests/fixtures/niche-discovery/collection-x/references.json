@@ -1,0 +1,973 @@
+[
+ {
+  "id": "V002",
+  "relative_path": "arata_Do_This_for_20_Seconds_to_Get_Stronger_Than_Big_Guys_FgQQXpXti48.mp4",
+  "duration_s": 443.617,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V002",
+   "niches": [
+    "fitness and bodyweight strength",
+    "exercise science explained"
+   ],
+   "story_form": "underdog-promise science explainer: a test you do now, the research behind it, a home routine, then your result decoded",
+   "language": "en",
+   "editorial_summary": "[I] Isometric holds train tendons, not just muscle; the twist is that holds only work if they are heavy enough and kept up past the plateau at week four. The underdog image (the skinny guy who hangs on longest) carries a practical 12-week plan.",
+   "title_promise": "[O] title 'Do This for 20 Seconds to Get Stronger Than Big Guys'; [O] thumbnail: a huge sweating man straining to push a calm slim one whose arm glows red, 'not genetics'. [I] promises a secret that beats size, delivered as a short routine",
+   "visual_medium": "manga-style ink figures on black (a slim hero in green shorts vs a hulking rival), anatomy drawings with red highlights, icon cards, light animation (pulses, small moves, cross-fades)",
+   "narrator_character": "[I] a friendly coach and science explainer, confident, with a small rivalry story (skinny guy vs big guy) and direct instructions",
+   "length_family": "midform-6-to-8-min (measured 7:24)",
+   "hook": {
+    "promise": "there is always one skinny guy stronger than he looks; he trained something most people never train; you can too, 20 seconds at a time at home; and a second rule almost everyone misses"
+   },
+   "delight": [
+    {
+     "what": "the underdog image (slim guy outlasts, out-wrestles and out-pushes the big one)"
+    },
+    {
+     "what": "a test you take now and a result decoded at the end"
+    },
+    {
+     "what": "clean cause-effect science with study results drawn"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 44,
+     "question": "what did the skinny guy train?",
+     "new_value": "the underdog image, a hidden thing, a promise of a test and a plan",
+     "emotional_turn": "curiosity, a little wish-fulfilment",
+     "visual_function": "hero vs rival hanging, arm wrestling, pushing; a blurred arm with '?'",
+     "breathing_room": "none (183-215 wpm)",
+     "evidence": "[O] sheet-001"
+    },
+    {
+     "start_s": 44,
+     "end_s": 92,
+     "question": "where do I stand?",
+     "new_value": "the push-up hold test with a running timer; 'write your time in the comments'; notice the pressure",
+     "emotional_turn": "participation",
+     "visual_function": "the hero in a half push-up, a stopwatch counting, a notebook '0:34'",
+     "breathing_room": "short imperative lines ('Don't go up. Don't go down.')",
+     "evidence": "[O] 00:44-01:32, sheets 001-002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 8,
+   "shots_n": 57,
+   "inspect_candidates_n": 49,
+   "summary": {
+    "narration": {
+     "words": 1222,
+     "speech_rate_wpm": 180.0,
+     "pitch_range_st": {
+      "median": 13.02
+     },
+     "gap_level_rel_speech_db": {
+      "median": -18.8
+     },
+     "rate_across_windows_wpm": {
+      "p10": 159.0,
+      "median": 182.0,
+      "p90": 208.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 3.61,
+      "pauses_0_8s_plus_per_min": 0.41,
+      "silence_share": 0.178
+     }
+    },
+    "picture": {
+     "cuts_per_min": 7.57,
+     "shot_length_s": {
+      "median": 5.0
+     },
+     "moving_time_share": 0.37
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing excluded; the same images work with clothed figures"
+   }
+  },
+  "shot_sheets": 2
+ },
+ {
+  "id": "V004",
+  "relative_path": "CEOzoned_The_ENTIRE_History_of_Coca-Cola_in_11_Minutes__OuJBX6Q4Cc.mp4",
+  "duration_s": 660.701,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V004",
+   "niches": [
+    "business history",
+    "company origin stories",
+    "brands and marketing"
+   ],
+   "story_form": "chronological company-history speedrun: founder to empire through a chain of lucky accidents and turning points, closed by a recap that names them",
+   "language": "en",
+   "editorial_summary": "[I] Really about how a brand, not a product, wins: the drink nearly failed, and survived because others saw the brand (Candler), a careless deal built the bottling system, a war spread it, and a blunder (New Coke) proved the attachment. The history is told as a chain of accidents that turned out to be strategy.",
+   "title_promise": "[O] title 'The ENTIRE History of Coca-Cola in 11 Minutes'; thumbnail: the founder as a mustached pharmacist with folded arms, the pharmacy in front of a modern bottling plant and trucks, 'COCA-COLA 1886 - 2026', brand icons (bottle, cooler, vending machine, polar bear, globe). [I] promises completeness compressed into a set time: a whole arc from one shop to the world, told fast.",
+   "visual_medium": "AI-style illustrated stills (detailed period backgrounds, simple round meme-face characters in the foreground), no motion at all, hard cuts every ~3.5 s",
+   "narrator_character": "[I] a brisk, confident business storyteller: plain short sentences, set-ups with a question ('and the sales? Terrible.'), a few punchy reversals, mild wonder; no jokes in the words (the comedy is in the meme-face pictures). A guide reading a highlight reel, not a sceptic.",
+   "length_family": "midform-8-to-12-min (measured 660.7 s = 11.0 min)",
+   "hook": {
+    "promise": "How did a money-losing failed medicine become the world's best-known drink?"
+   },
+   "delight": [
+    {
+     "what": "the accidents of the story: an alcohol ban forces the recipe, a $1 deal builds the empire, a blunder makes it more loved"
+    },
+    {
+     "what": "meme-face comedy in the pictures (the panicked face at the sales chart, the smug wave at bottling, the crying face over Old Coke)"
+    },
+    {
+     "what": "small concrete numbers: nine glasses a day, $2,000, $1, 79 days"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 19,
+     "question": "How did this start so badly and end so big?",
+     "new_value": "scale today vs a failed, loss-making start",
+     "emotional_turn": "intrigue",
+     "visual_function": "a new still per fact",
+     "breathing_room": "none; a music bed only under this cold open (gap level -0.6 dB vs ~-59 after)",
+     "evidence": "[O] 00:00-00:19 sheet-001; av windows"
+    },
+    {
+     "start_s": 19,
+     "end_s": 118,
+     "question": "Who invented it and how?",
+     "new_value": "Pemberton: wounded veteran, morphine dependence, patent-medicine era, French wine-coca tonic, alcohol ban forces a non-alcoholic recipe, the bookkeeper names it and writes the script logo still used",
+     "emotional_turn": "curiosity, amusement at the accidents",
+     "visual_function": "Pemberton in a series of settings (apothecary, war, field hospital, lab), a gavel shadow for the ban, the script being written by hand, a timeline gallery '130 years'",
+     "breathing_room": "none",
+     "evidence": "[O] 00:20-01:58 sheet-001/002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 12,
+   "shots_n": 197,
+   "inspect_candidates_n": 17,
+   "summary": {
+    "narration": {
+     "words": 1749,
+     "speech_rate_wpm": 173.0,
+     "pitch_range_st": {
+      "median": 9.18
+     },
+     "gap_level_rel_speech_db": {
+      "median": -59.4
+     },
+     "rate_across_windows_wpm": {
+      "p10": 153.0,
+      "median": 174.0,
+      "p90": 198.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.9,
+      "pauses_0_8s_plus_per_min": 0.09,
+      "silence_share": 0.156
+     }
+    },
+    "picture": {
+     "cuts_per_min": 17.8,
+     "shot_length_s": {
+      "median": 3.5
+     },
+     "moving_time_share": 0.001
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "keep"
+    },
+    {
+     "kind": "holiday",
+     "action": "exclude"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "bridged",
+    "note": "without the holiday beat, the Woodruff chapter still has the arm's-reach rule, six-packs, coolers and the wartime promise; the founder's motive is told as a war injury and a search for a remedy, with no drug imagery"
+   }
+  },
+  "shot_sheets": 6
+ },
+ {
+  "id": "V005",
+  "relative_path": "CEOzoned_The_ENTIRE_History_of_SpaceX_in_9_Minutes_TZIOfwN7bVI.mp4",
+  "duration_s": 531.992,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V005",
+   "niches": [
+    "business history",
+    "company origin stories",
+    "space and technology"
+   ],
+   "story_form": "underdog company history: rejection, near-ruin through repeated failure, a last-chance success, then escalating wins and a full-circle callback",
+   "language": "en",
+   "editorial_summary": "[I] Really about cost as the real barrier to space: the founder's insight is that 'the problem wasn't physics, it was price', and every later turn (reusability, landing boosters, in-house building, failing fast) serves that one idea. Wrapped in an underdog arc of rejection and near-bankruptcy.",
+   "title_promise": "[O] file title 'The ENTIRE History of SpaceX in 9 Minutes'; no thumbnail in the folder. [I] completeness in a fixed, short time; the same series promise as V004.",
+   "visual_medium": "AI-style illustrated stills (detailed sets, round meme-face characters, labelled signs and banners), no motion, hard cuts every ~3 s",
+   "narrator_character": "[I] an irreverent, fan-ish internet storyteller: slang and asides ('Normal stuff.', 'Nerd points. Infinite.', 'bro', 'Peak billionaire energy'), direct address ('Imagine...', 'Remember...?'), a friend telling a great story with jokes; admiring of the founder with one light jab at the end.",
+   "length_family": "midform-8-to-12-min (measured 532.0 s = 8.9 min)",
+   "hook": {
+    "promise": "A man laughed at by rocket sellers builds his own, and it works: how?"
+   },
+   "delight": [
+    {
+     "what": "the narrator's comic asides after big statements ('Normal stuff.', 'Nerd points. Infinite.', 'Rough week at the office')"
+    },
+    {
+     "what": "absurd true details: a corroded nut, a drone ship named 'Of Course I Still Love You', a car with a mannequin in space, a rocket caught by 'chopsticks'"
+    },
+    {
+     "what": "the full-circle payoff: laughed at by Russia, then America stops paying Russia to fly astronauts"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 64,
+     "question": "Why would a rich man build rockets?",
+     "new_value": "PayPal fortune; Mars greenhouse idea; Russians want millions and treat him like a tourist; a spreadsheet on the flight home: materials cost a fraction of the price",
+     "emotional_turn": "amused curiosity",
+     "visual_function": "a still per clause: yacht, watch, thought bubble of planets, Mars dome, plane window, 'MILLIONS' price tag on a missile, laptop glow, a magnifying glass over a pile of parts",
+     "breathing_room": "none: first minute ~203 wpm",
+     "evidence": "[O] 00:14-01:04 sheet-001/002"
+    },
+    {
+     "start_s": 64,
+     "end_s": 108,
+     "question": "What exactly is he building?",
+     "new_value": "SpaceX founded 2002, $100M of his own money, a garage engine-builder; reusable rockets explained by a 747 thrown in the ocean after one flight",
+     "emotional_turn": "the idea clicks",
+     "visual_function": "'PHYSICS ✓ / PRICE' boards, a sack of '100 MILLION DOLLARS', a used rocket in a bin 'USE ONCE', an airliner crashing into the sea",
+     "breathing_room": "none",
+     "evidence": "[O] 01:00-01:48 sheet-002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 9,
+   "shots_n": 161,
+   "inspect_candidates_n": 3,
+   "summary": {
+    "narration": {
+     "words": 1418,
+     "speech_rate_wpm": 175.0,
+     "pitch_range_st": {
+      "median": 10.03
+     },
+     "gap_level_rel_speech_db": {
+      "median": -54.0
+     },
+     "rate_across_windows_wpm": {
+      "p10": 150.0,
+      "median": 168.0,
+      "p90": 212.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.98,
+      "pauses_0_8s_plus_per_min": 0.23,
+      "silence_share": 0.201
+     }
+    },
+    "picture": {
+     "cuts_per_min": 18.05,
+     "shot_length_s": {
+      "median": 3.0
+     },
+     "moving_time_share": 0.0
+    }
+   }
+  },
+  "content": {
+   "segments": [],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing excluded or restricted"
+   }
+  },
+  "shot_sheets": 5
+ },
+ {
+  "id": "V010",
+  "relative_path": "GoDocs_How_a_Country_With_Zero_Rivers_Drinks_Water_(Saudi_Arabia)_fRQL6LEjwFg.mp4",
+  "duration_s": 572.906,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V010",
+   "niches": [
+    "geography and infrastructure explainers",
+    "water and resources"
+   ],
+   "story_form": "paradox-led explainer: a country with no rivers, told as a chain of solutions that each create the next problem",
+   "language": "en",
+   "editorial_summary": "[I] Water as the hidden price of oil wealth: fossil groundwater mined for wheat until it ran out, then desalination that burns oil, pumps water uphill, and poisons the coast; the nation lives on a 'life support machine'. Ends on open questions about whether money can beat nature.",
+   "title_promise": "[O] title 'How a Country With Zero Rivers Drinks Water (Saudi Arabia)'; [O] thumbnail: a sweating man in a ghutra pushing a huge pipe from the sea uphill to a city skyline while a camel in sunglasses watches. [I] promises a paradox solved with comic struggle; the video's tone after the first minute is grander and darker than the thumbnail's.",
+   "visual_medium": "AI-animated illustration clips (short image-to-video moves, a few cartoon characters in the opening, then painterly industrial scenes), many dissolve transitions",
+   "narrator_character": "[I] a dramatic documentary storyteller with a showman's vocabulary ('gargantuan', 'titanic', 'industrial beasts') and an ironic eye; distant third person, a direct question only at the end",
+   "length_family": "midform-8-to-10-min (measured 9:33)",
+   "hook": {
+    "promise": "oil money everywhere, but 'you cannot drink crude oil' and there is not a single permanent river; so what do people drink?"
+   },
+   "delight": [
+    {
+     "what": "the central irony: drinking oil, pumping a river uphill, a lifeline that poisons the sea"
+    },
+    {
+     "what": "moving, richly lit pictures (clips rather than stills), with scale shots of plants and pipelines"
+    },
+    {
+     "what": "a hook joke that sets a light tone"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 40,
+     "question": "how can a rich desert country drink with no rivers?",
+     "new_value": "the paradox (oil, cash, skyscrapers; zero rivers)",
+     "emotional_turn": "amused curiosity",
+     "visual_function": "cartoon characters: a man with binoculars at a sprouting skyline, a fountain of money",
+     "breathing_room": "a beat after 'Zero. Absolutely none.' (00:21-00:23)",
+     "evidence": "[O] sheet-001, shot sheet 001"
+    },
+    {
+     "start_s": 40,
+     "end_s": 115,
+     "question": "where did water come from at all?",
+     "new_value": "ice-age rain stored in limestone; oil drillers struck it; 1970s money; pumps imported",
+     "emotional_turn": "wonder, then foreboding ('Nobody worried about tomorrow')",
+     "visual_function": "storm over green savanna, a dark cave lake, rigs at sunset",
+     "breathing_room": "slow 01:05-01:20 (128 wpm)",
+     "evidence": "[O] 00:40-01:55, sheets 001-002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 10,
+   "shots_n": 150,
+   "inspect_candidates_n": 72,
+   "summary": {
+    "narration": {
+     "words": 1257,
+     "speech_rate_wpm": 145.0,
+     "pitch_range_st": {
+      "median": 12.69
+     },
+     "gap_level_rel_speech_db": {
+      "median": -14.1
+     },
+     "rate_across_windows_wpm": {
+      "p10": 128.0,
+      "median": 144.0,
+      "p90": 162.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 1.0,
+      "pauses_0_8s_plus_per_min": 0.21,
+      "silence_share": 0.117
+     }
+    },
+    "picture": {
+     "cuts_per_min": 15.6,
+     "shot_length_s": {
+      "median": 2.8
+     },
+     "moving_time_share": 0.328
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing is excluded; the dependence of millions can be shown by a tap, a city, a glass of water"
+   }
+  },
+  "shot_sheets": 5
+ },
+ {
+  "id": "V013",
+  "relative_path": "GRENY_How_Ancient_Egyptians_Survived_50°C_Heat_Without_Air_Conditioning_lC4HeSA5bwU.mp4",
+  "duration_s": 551.753,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V013",
+   "niches": [
+    "ancient history",
+    "everyday science",
+    "architecture and engineering"
+   ],
+   "story_form": "problem-solution chain explainer: one impossible-seeming survival puzzle solved layer by layer, each fix creating the next problem",
+   "language": "en",
+   "editorial_summary": "[I] Really about passive cooling as a system: a house as a machine made of mud, shade, air and water, where each design choice answers a weakness of the previous one. Egypt is the setting; the payoff is the viewer understanding thermal lag and stack ventilation well enough to feel the cleverness.",
+   "title_promise": "[O] title 'How Ancient Egyptians Survived 50°C Heat Without Air Conditioning' (file name; no thumbnail in the folder): a concrete, slightly incredulous how-question with a modern comparison (air conditioning) the viewer already owns.",
+   "visual_medium": "AI-style illustrated cartoon stills (flat comic colouring, cutaway house diagrams with heat and air arrows), no motion, hard cuts every ~3 s",
+   "narrator_character": "[I] An assured, slightly dramatic guide: second-person scene-setter in the cold open, then a teacher who voices the viewer's doubts ('Problem solved, right?') and answers them. No humour, no first person, no personal asides.",
+   "length_family": "longform-7-to-13-min (measured 551.8 s = 9.2 min)",
+   "hook": {
+    "promise": "You are in lethal heat with no technology; yet some homes stay cool. How?"
+   },
+   "delight": [
+    {
+     "what": "the counterintuitive idea that the wall wins by being slow: the noon heat arrives after dark"
+    },
+    {
+     "what": "harvesting the night's cold and banking it, said of the courtyard"
+    },
+    {
+     "what": "the cutaway diagrams with arrows: the house as a legible machine"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 34,
+     "question": "Can anyone survive this?",
+     "new_value": "the heat as an enemy, in concrete sensations (stone, metal, sand shimmer)",
+     "emotional_turn": "unease, mild alarm",
+     "visual_function": "a figure in the desert per sentence, sweat drops, heat squiggles, a hot pan",
+     "breathing_room": "none: longest pause 0.4-0.6 s",
+     "evidence": "[O] 00:00-00:33, sheet-001; 194 wpm in the first window"
+    },
+    {
+     "start_s": 34,
+     "end_s": 66,
+     "question": "How are these people comfortable?",
+     "new_value": "the impossible contrast: cool walls in 50 degrees",
+     "emotional_turn": "curiosity",
+     "visual_function": "interiors in shade, a hand on a cool wall (00:52), children in a shaded courtyard (00:57)",
+     "breathing_room": "the one-word 'How?' at 01:05.9",
+     "evidence": "[O] 00:34-01:06"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 10,
+   "shots_n": 156,
+   "inspect_candidates_n": 0,
+   "summary": {
+    "narration": {
+     "words": 1531,
+     "speech_rate_wpm": 178.0,
+     "pitch_range_st": {
+      "median": 9.77
+     },
+     "gap_level_rel_speech_db": {
+      "median": -29.1
+     },
+     "rate_across_windows_wpm": {
+      "p10": 159.0,
+      "median": 182.0,
+      "p90": 198.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.66,
+      "pauses_0_8s_plus_per_min": 0.0,
+      "silence_share": 0.121
+     }
+    },
+    "picture": {
+     "cuts_per_min": 16.86,
+     "shot_length_s": {
+      "median": 3.0
+     },
+     "moving_time_share": 0.0
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing is excluded; the cold open's danger is told without a collapsing figure and the people are pictured dressed"
+   }
+  },
+  "shot_sheets": 5
+ },
+ {
+  "id": "V020",
+  "relative_path": "inkly_Why_Desert_People_Wear_More_Clothes_in_Extreme_Heat_4vAlEh9RN5Y.mp4",
+  "duration_s": 611.219,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V020",
+   "niches": [
+    "everyday science",
+    "culture and survival",
+    "human body"
+   ],
+   "story_form": "paradox explainer: a counterintuitive habit ('wear more in the heat') justified step by step from physics, with a second paradox (black robes) as the late reveal",
+   "language": "en",
+   "editorial_summary": "[I] Really about trusting accumulated practical knowledge over gut instinct: the robe is a wearable cooling system, and the viewer's own intuition is the thing being corrected.",
+   "title_promise": "[O] title 'Why Desert People Wear More Clothes in Extreme Heat'; thumbnail: 'MORE CLOTHES?!', a sweating stick figure in a vest and shorts with his tongue out next to a calm robed figure sipping a drink, a thermometer at 50°C between them. [I] promises a paradox resolved, and the smug comfort of the robed figure.",
+   "visual_medium": "whiteboard doodles on white backgrounds (diagram layers, arrows, simple figures in robes), a recurring big-eyed stick-figure 'host' on a green field, occasional desert scenes; no motion",
+   "narrator_character": "[I] An eager science explainer who speaks to 'you', amazed on the viewer's behalf ('genius', 'brilliant', 'masterpiece'); a recurring big-eyed stick figure on a green field acts as his on-screen stand-in, reacting at section hinges.",
+   "length_family": "longform-7-to-13-min (measured 611.2 s = 10.2 min)",
+   "hook": {
+    "promise": "Something that makes no sense: in the hottest places people cover up. Why, and could it save your life?"
+   },
+   "delight": [
+    {
+     "what": "the black-robe paradox and its null-result experiment"
+    },
+    {
+     "what": "'That air is no longer cooling you. It's cooking you.'"
+    },
+    {
+     "what": "the smug-robed-figure vs sweating-tourist image (thumbnail, 09:57)"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 79,
+     "question": "Why would anyone wear more in 50 degrees?",
+     "new_value": "the paradox, the peoples who do it, and the instinct that rejects it",
+     "emotional_turn": "disbelief, curiosity",
+     "visual_function": "a stick figure pushing up a giant sun, robed figures, a map of North Africa and Arabia, a crossed-out figure in underwear",
+     "breathing_room": "none: longest pause 0.54 s in the whole video",
+     "evidence": "[O] 00:00-01:19, sheet-001/002"
+    },
+    {
+     "start_s": 79,
+     "end_s": 186,
+     "question": "Where does desert heat come from?",
+     "new_value": "two enemies: direct sun, and air hotter than the body that heats rather than cools",
+     "emotional_turn": "a first surprise ('It's cooking you')",
+     "visual_function": "angry suns, arrows into skin, a thermometer pair 120/98",
+     "breathing_room": "'Think about that carefully' at 02:06",
+     "evidence": "[O] 01:19-03:05, sheets 002-003"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 11,
+   "shots_n": 272,
+   "inspect_candidates_n": 10,
+   "summary": {
+    "narration": {
+     "words": 2081,
+     "speech_rate_wpm": 213.0,
+     "pitch_range_st": {
+      "median": 8.96
+     },
+     "gap_level_rel_speech_db": {
+      "median": -22.1
+     },
+     "rate_across_windows_wpm": {
+      "p10": 194.0,
+      "median": 210.0,
+      "p90": 233.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.54,
+      "pauses_0_8s_plus_per_min": 0.0,
+      "silence_share": 0.072
+     }
+    },
+    "picture": {
+     "cuts_per_min": 26.6,
+     "shot_length_s": {
+      "median": 2.0
+     },
+     "moving_time_share": 0.0
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing is excluded; the dehydration stake is told plainly without a dead figure, and the bare-versus-covered contrast uses a person in a T-shirt and shorts"
+   }
+  },
+  "shot_sheets": 8
+ },
+ {
+  "id": "V024",
+  "relative_path": "Mr._Well_What_20_Push-Ups_a_Day_Does_to_Your_Body_V9DpYps0g2w.mp4",
+  "duration_s": 465.467,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V024",
+   "niches": [
+    "fitness science",
+    "bodyweight training",
+    "exercise physiology explainer"
+   ],
+   "story_form": "evidence-led timeline explainer: what a small daily habit does to the body, told in order from the first rep to ten years, each stage built on a named study and an honest caveat",
+   "language": "en",
+   "editorial_summary": "[I] A research-checked answer to a gym myth: small, frequent, hard sets change the body in a predictable order (wiring before size, size around week eight, and only while the sets stay hard), and the famous firefighter statistic is more modest than it sounds. Its personality is the honest correction of hype.",
+   "title_promise": "[O] title 'What 20 Push-Ups a Day Does to Your Body'; thumbnail 'PUSH-UPS EVERY DAY?' with a straining thin figure next to a huge mascot whose chest glows orange. [I] Promise: a visible transformation from a tiny habit; the question mark hints at an honest answer.",
+   "visual_medium": "flat 2D cartoon on black: one recurring white, muscular, bare-chested mascot in dark joggers with orange highlights on the working muscles; bold condensed captions in white and orange for every beat; simple bar charts; red full-frame cartoons for what happens inside the body (fibres, heart); gentle motion on most stills",
+   "narrator_character": "[I] a dry, careful science explainer who sounds like a well-read gym friend: first person ('As far as I can find', 'I'd rather tell you that than pretend'), wry asides ('your chest has opinions', 'the laziest good news in exercise science'), and repeated honesty about the limits of each study.",
+   "length_family": "midform-7-to-8-min (measured 465 s, 7:45)",
+   "hook": {
+    "promise": "what really happens inside a body doing 20 push-ups a day, in an order you would not guess, from the first rep to ten years"
+   },
+   "delight": [
+    {
+     "what": "personified biology: lazy small fibres, a repair crew in hard hats, an armoured muscle, a heart drinking tea"
+    },
+    {
+     "what": "dry jokes in the middle of the science ('your chest has opinions', 'selling something', the legs 'waiting patiently')"
+    },
+    {
+     "what": "being told the truth about a famous statistic"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 41,
+     "question": "does 100 a day work? what does 20 do?",
+     "new_value": "100 is untested; small daily amounts were tested; a timeline is promised",
+     "emotional_turn": "intrigue, slight relief (less work)",
+     "visual_function": "mascot, '100 PUSH-UPS A DAY', a clipboard and stopwatch, a mascot with a coffee cup on its back, a mirror",
+     "breathing_room": "none: 210 wpm",
+     "evidence": "[O] 00:00-00:41, sheet-001"
+    },
+    {
+     "start_s": 41,
+     "end_s": 110,
+     "question": "what happens in one push-up?",
+     "new_value": "you lift about two-thirds of your weight; the core works like a moving plank; small fibres first, big fibres only at the shaky end",
+     "emotional_turn": "surprise at the hidden work",
+     "visual_function": "a mascot on a scale, a folding lawn chair, orange highlights on chest, abs; sleepy small fibres vs big fibres with a headband marching in",
+     "breathing_room": "none",
+     "evidence": "[O] 00:41-01:50, sheets 001-002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 8,
+   "shots_n": 70,
+   "inspect_candidates_n": 38,
+   "summary": {
+    "narration": {
+     "words": 1630,
+     "speech_rate_wpm": 223.0,
+     "pitch_range_st": {
+      "median": 11.23
+     },
+     "gap_level_rel_speech_db": {
+      "median": -16.8
+     },
+     "rate_across_windows_wpm": {
+      "p10": 208.0,
+      "median": 221.0,
+      "p90": 240.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.72,
+      "pauses_0_8s_plus_per_min": 0.0,
+      "silence_share": 0.096
+     }
+    },
+    "picture": {
+     "cuts_per_min": 8.89,
+     "shot_length_s": {
+      "median": 6.0
+     },
+     "moving_time_share": 0.277
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing is excluded; the restrictions change how the mascot and three moments are drawn, not what is said"
+   }
+  },
+  "shot_sheets": 2
+ },
+ {
+  "id": "V030",
+  "relative_path": "Retiree_Math_Renting_Vs_Buying_a_Home_After_60_—_The_Real_Math_Da32w7-F9LY.mp4",
+  "duration_s": 912.01,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V030",
+   "niches": [
+    "personal finance",
+    "retirement planning",
+    "housing"
+   ],
+   "story_form": "two-character head-to-head simulation: identical twins of circumstance make opposite choices and are checked at milestones over 20 years, then the result is stress-tested",
+   "language": "en",
+   "editorial_summary": "[I] Really about behaviour more than housing: the house was never the decision; what each person does every month for 20 years after it decides the outcome. A retiree-specific framing (fixed income, aging in place, flexibility as health) makes a familiar rent-vs-buy question feel new.",
+   "title_promise": "[O] title 'Renting Vs Buying a Home After 60 — The Real Math'; thumbnail: 'BUY OR RENT AFTER 60!?' with a puzzled old man and the two characters before a SOLD house and a FOR RENT house. [I] promises a decisive, numbers-first answer for a specific audience (retirees), and delivers a qualified one.",
+   "visual_medium": "clean flat cartoon illustrations on white (three recurring characters: a host in a green sweater vest, 'Bill' and 'Margaret'), big bold headline text on most frames, word-by-word highlighted captions burned in at the bottom, slow push-ins on every still",
+   "narrator_character": "[I] a friendly, plain-spoken numbers guide for older viewers: patient, a little wry ('arguing with a squirrel', 'stepping over the tub has started to feel like an Olympic event'), fair to both sides, protective of the viewer ('not financial advice'). Speaks to 'you' at the decision points.",
+   "length_family": "longform-13-to-18-min (measured 912.0 s = 15.2 min)",
+   "hook": {
+    "promise": "Two retirees with identical $400,000 make opposite choices. Who is ahead at 82? 'Not what most people expect.'"
+   },
+   "delight": [
+    {
+     "what": "small character comedy inside a numbers video (the piano surcharge, roofers 'while I'm up here', arguing with a squirrel, friends at the hardware store who don't want to hear it)"
+    },
+    {
+     "what": "the race frame with a running score and a tie at the midpoint"
+    },
+    {
+     "what": "the twist that the winner flips on behaviour"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 93,
+     "question": "Who comes out ahead?",
+     "new_value": "two people made identical, then split by one choice",
+     "emotional_turn": "amused recognition, curiosity",
+     "visual_function": "the two characters side by side in every frame; a podium with a question mark",
+     "breathing_room": "none",
+     "evidence": "[O] 00:00-01:33 sheet-001/002"
+    },
+    {
+     "start_s": 93,
+     "end_s": 106,
+     "question": "-",
+     "new_value": "subscribe ask before the content",
+     "emotional_turn": "interruption",
+     "visual_function": "the host waving by a SUBSCRIBE button",
+     "breathing_room": "-",
+     "evidence": "[O] 01:34-01:45 sheet-002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 16,
+   "shots_n": 150,
+   "inspect_candidates_n": 12,
+   "summary": {
+    "narration": {
+     "words": 2597,
+     "speech_rate_wpm": 182.0,
+     "pitch_range_st": {
+      "median": 9.09
+     },
+     "gap_level_rel_speech_db": {
+      "median": -58.3
+     },
+     "rate_across_windows_wpm": {
+      "p10": 141.0,
+      "median": 187.0,
+      "p90": 216.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 1.74,
+      "pauses_0_8s_plus_per_min": 0.33,
+      "silence_share": 0.126
+     }
+    },
+    "picture": {
+     "cuts_per_min": 9.8,
+     "shot_length_s": {
+      "median": 5.5
+     },
+     "moving_time_share": 0.873
+    }
+   }
+  },
+  "content": {
+   "segments": [],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing excluded or restricted"
+   }
+  },
+  "shot_sheets": 5
+ },
+ {
+  "id": "V035",
+  "relative_path": "The_Thought_Vortex_How_Humans_Accidentally_Created_Dogs_UHmfCIZCPjk.mp4",
+  "duration_s": 455.506,
+  "has_audio": true,
+  "card": {
+   "reference_id": "V035",
+   "niches": [
+    "prehistory and human origins",
+    "animals and evolution",
+    "human-animal relationships"
+   ],
+   "story_form": "accidental-origin explainer: an unlikely partnership (feared predator to best friend) traced step by step through a mechanism, proved by an experiment, and closed on an emotional payoff",
+   "language": "en",
+   "editorial_summary": "[I] Really about how a relationship can form without anyone deciding it: wolves selected themselves by temperament around human scraps, then both species changed each other, ending in attachment. The dog on the viewer's sofa is the payoff.",
+   "title_promise": "[O] title 'How Humans Accidentally Created Dogs'; thumbnail: the title in large type with 'ACCIDENTALLY' in orange over a wolf, a caveman by a fire saying 'PSPSPSPS...' and a happy dog with a heart, linked by arrows. [I] promises a funny, gentle origin story with a twist (nobody planned it).",
+   "visual_medium": "flat hand-drawn doodle illustrations on cream and pastel backgrounds (stick figures, cute wolves, foxes and dogs), labelled diagrams, timelines, maps and one-word text cards; no motion",
+   "narrator_character": "[I] A warm, slightly playful storyteller and dog lover: dramatic at the start (monsters, darkness), jokey in the middle (birthday hats, free calories, 'This sounds fake'), tender at the end; speaks to 'you' at the start and the close.",
+   "length_family": "longform-7-to-13-min (measured 455.5 s = 7.6 min)",
+   "hook": {
+    "promise": "Wolves were monsters; yet they became our closest companions, and nobody planned it. Wolves may have domesticated themselves."
+   },
+   "delight": [
+    {
+     "what": "the fox experiment: tameness alone brings floppy ears and patchy fur"
+    },
+    {
+     "what": "'a moving pile of free calories' and the messy caveman"
+    },
+    {
+     "what": "the near/tolerate/work with/joined ladder"
+    },
+    {
+     "what": "the cute, consistent doodle style (wolves, foxes, dogs with expressive faces)"
+    }
+   ],
+   "viewer_experience": [
+    {
+     "start_s": 0,
+     "end_s": 55,
+     "question": "How did a monster become a best friend?",
+     "new_value": "dogs were an accident; wolves may have domesticated themselves",
+     "emotional_turn": "amusement, curiosity",
+     "visual_function": "a giant wolf, glowing eyes at night, crossed-out animals, '900,000,000', a dog in a birthday hat, 'UNPLANNED' clipboard",
+     "breathing_room": "punchy fragments, no pause over 0.58 s",
+     "evidence": "[O] 00:00-00:55, sheet-001"
+    },
+    {
+     "start_s": 55,
+     "end_s": 81,
+     "question": "What was the world like?",
+     "new_value": "Ice Age hunter-gatherer bands; hard life; wolves waiting just outside the firelight",
+     "emotional_turn": "tension",
+     "visual_function": "a line of walkers, 'LIFE WAS BRUTAL.', a failed spear throw, wolves' eyes beyond a lit camp",
+     "breathing_room": "none",
+     "evidence": "[O] 00:55-01:21, sheets 001-002"
+    }
+   ]
+  },
+  "av": {
+   "sheets_n": 8,
+   "shots_n": 132,
+   "inspect_candidates_n": 13,
+   "summary": {
+    "narration": {
+     "words": 1278,
+     "speech_rate_wpm": 178.0,
+     "pitch_range_st": {
+      "median": 10.67
+     },
+     "gap_level_rel_speech_db": {
+      "median": -35.0
+     },
+     "rate_across_windows_wpm": {
+      "p10": 164.0,
+      "median": 177.0,
+      "p90": 200.0
+     },
+     "pause_profile": {
+      "longest_pause_s": 0.58,
+      "pauses_0_8s_plus_per_min": 0.0,
+      "silence_share": 0.119
+     }
+    },
+    "picture": {
+     "cuts_per_min": 17.26,
+     "shot_length_s": {
+      "median": 3.0
+     },
+     "moving_time_share": 0.0
+    }
+   }
+  },
+  "content": {
+   "segments": [
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    },
+    {
+     "kind": "safety",
+     "action": "restrict_visuals"
+    }
+   ],
+   "story_without_exclusions": {
+    "status": "coherent",
+    "note": "nothing is excluded; the payoff keeps the find (a dog nursed through illness) told plainly, shown through the care and recovery rather than the burial"
+   }
+  },
+  "shot_sheets": 4
+ }
+]

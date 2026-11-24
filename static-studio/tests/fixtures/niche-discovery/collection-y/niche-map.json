@@ -1,0 +1,381 @@
+{
+ "niches": [
+  {
+   "id": "N1",
+   "name": "Surviving a disaster that stops ordinary life",
+   "identity": "how an ordinary 'you' would stay alive through one disaster that shuts down modern life (the grid going down for good, a city frozen at -100 C, a year of rain and flood): the practical physics and priorities of water, heat, power, food and safety, followed through time from the first hour to the end of the ordeal. The 'How to survive when...' scenario lived as 'you' is itself part of what brings this audience back.",
+   "boundary": "stops being this niche when nothing threatens survival: a chosen off-grid life measured in money and comfort, a war or a past era lived as history, or cold, flood or power physics explained with no one in danger",
+   "viewer_reward": "[I] 'would I make it?': survival facts that are useful or surprising, each arriving at the moment of danger; a clock of hours, days or priorities that shows how far into the ordeal you are; and a small human thread (a neighbour, strangers who cooperate) under the hardship",
+   "members": [
+    {
+     "ref": "V008",
+     "role": "core",
+     "why": "a practical guide to the first hours and weeks after the grid goes down for good (diagnose, power, water, sanitation, food, medicine, the long term), ranked by urgency; its card's subject is emergency preparedness and survival how-to"
+    },
+    {
+     "ref": "V015",
+     "role": "core",
+     "why": "100 hours survived in an apartment of a city frozen at -100 C; cold physics (diesel to wax, an ice plug in the chimney, dry-ice snow, CO2 in the metro) are the obstacles and an old tile stove keeps 'you' alive"
+    },
+    {
+     "ref": "V023",
+     "role": "core",
+     "why": "a year of rain survived day by day in a flooded tower: power, water, food and rescue lost one after another, answered by neighbours and patience; its card's subject is survival scenario fiction and disaster response"
+    }
+   ],
+   "formats": [
+    {
+     "form": "survival walkthrough ordered by urgency: a practical how-to with numbered 'boring mistakes' and callbacks",
+     "refs": [
+      "V008"
+     ]
+    },
+    {
+     "form": "hour-by-hour survival short story with physics as the obstacles and a neighbour mystery as its spine",
+     "refs": [
+      "V015"
+     ]
+    },
+    {
+     "form": "survival chronicle on a day counter across a year, one setback after another",
+     "refs": [
+      "V023"
+     ]
+    }
+   ],
+   "comparable_cohorts": [
+    {
+     "id": "survival-story-14-17min",
+     "refs": [
+      "V015",
+      "V023"
+     ],
+     "why_comparable": "both are second-person survival stories told on a visible clock (hour and temperature overlays; DAY N cards), one ordeal followed from its first hour to its release, with neighbours as the human thread; 822.6-1010.3 s (13.7-16.8 min), one long-form runtime family"
+    }
+   ],
+   "evidence": [
+    {
+     "ref": "V008",
+     "at": "00:00-00:26",
+     "observed": "the outage told through exact sensory detail ('2:14 in the afternoon', no slow groan of a fridge, a man staring at his stalled truck, 'wrong quiet'): the scenario is felt before any advice"
+    },
+    {
+     "ref": "V008",
+     "at": "13:05-13:10",
+     "observed": "the stomach bug is traced to 'the water mistake we talked about 10 minutes ago': earlier sections become causes of later ones, so the list reads as one system"
+    },
+    {
+     "ref": "V015",
+     "at": "08:02-08:20",
+     "observed": "'Your first instinct is to throw a pot of water on the fire. Don't.' then the steam card: each physics lesson arrives as a near miss"
+    },
+    {
+     "ref": "V015",
+     "at": "11:26-11:40",
+     "observed": "a candle on a string lowered down the stairwell burns, shrinks and goes out: an invisible danger made visible with a homely object"
+    },
+    {
+     "ref": "V023",
+     "at": "01:45-01:48",
+     "observed": "'By Day 7, you turn on the kitchen tap. Nothing comes out.' over an empty glass: a household action makes the failure personal"
+    },
+    {
+     "ref": "V023",
+     "at": "03:45-04:20",
+     "observed": "the boat sees the flashlight and the orange cloth and slows, then 'Fifty floors above the street, you cannot simply climb aboard' and it retreats: hope granted and withdrawn"
+    },
+    {
+     "ref": "V023",
+     "at": "06:27-06:50",
+     "observed": "a tower with food but no water trades with yours that has water but no food, signalled by an orange flag: cooperation as the human thread"
+    }
+   ]
+  },
+  {
+   "id": "N2",
+   "name": "Money and the self-made life",
+   "identity": "an ordinary 'you' and money: building a living or a fortune from almost nothing (a self-built off-grid cabin, ten backyard chickens, a $300 car flip) or holding an impossible sum, with every step priced so the viewer can check the dream against real numbers and see what money does and does not buy. Living a whole money path from the inside ('Your life at every level...', 'You started with...', 'POV: you have...') is itself part of what brings this audience back.",
+   "boundary": "stops being this niche when money is no longer what the viewer tracks: an ordeal whose stake is staying alive, a soldier's war or a past era, or a lifestyle shown without its costs; a fortune that only decorates an adventure is outside",
+   "viewer_reward": "[I] 'could I do this?': a dream checked against exact prices, margins and scoreboards, insider reveals of how the money really works, a cost or a temptation at each stage, and an ending that says what the money was really for",
+   "members": [
+    {
+     "ref": "V006",
+     "role": "core",
+     "why": "what trading a salary for a self-built off-grid cabin costs and gives back, priced at every level ($38,000 land, $2,800 trailer, $280 a month, a $900 repair against $1,100 in the account); its card's subject is off-grid living, life change and personal finance"
+    },
+    {
+     "ref": "V016",
+     "role": "core",
+     "why": "a laid-off 'you' turns ten $47 chickens into a billion-dollar company over 15 years; the money path is the frame and freedom from the dread of unemployment the payoff"
+    },
+    {
+     "ref": "V022",
+     "role": "core",
+     "why": "a car-flipping side hustle grows from a $300 Corolla to a dealership over twenty years; insider trade margins ($30 sensor, $9 gasket worth $1,000) and the temptation to hide a flaw"
+    },
+    {
+     "ref": "V025",
+     "role": "core",
+     "why": "a trillion dollars that cannot be spent in seven days: each attempt (food security, a country, the stock market) hits a real economic wall; wealth and its limits are the subject (money thought experiments, economics and markets)"
+    }
+   ],
+   "formats": [
+    {
+     "form": "life simulation climbing numbered levels or ranks over ten to twenty years, black title card per stage",
+     "refs": [
+      "V006",
+      "V022"
+     ]
+    },
+    {
+     "form": "rags-to-riches life story over fifteen years, told as 'you'",
+     "refs": [
+      "V016"
+     ]
+    },
+    {
+     "form": "thought experiment with rules, a deadline and a scoreboard at each day's end",
+     "refs": [
+      "V025"
+     ]
+    }
+   ],
+   "comparable_cohorts": [
+    {
+     "id": "life-ladder-16-23min",
+     "refs": [
+      "V006",
+      "V022"
+     ],
+     "why_comparable": "both live one invented life up a ladder of numbered levels or ranks with black title cards, over ten to twenty years, told by a reflective older self; 955.5-1359.8 s (15.9-22.7 min)"
+    },
+    {
+     "id": "money-premise-9-11min",
+     "refs": [
+      "V016",
+      "V025"
+     ],
+     "why_comparable": "both run one money premise stated in the title (a billion reached from ten chickens, a trillion to spend in seven days) as one continuous second-person story along a clock, escalating in scale to a closing reframe of what money is for; 532.4-634.9 s (8.9-10.6 min)"
+    }
+   ],
+   "evidence": [
+    {
+     "ref": "V006",
+     "at": "02:31-02:50",
+     "observed": "the mother goes quiet, then asks only whether the land is near a hospital and has a real road: the risk is named by someone who loves him, without an argument"
+    },
+    {
+     "ref": "V006",
+     "at": "16:42-16:57",
+     "observed": "a tree falls on the solar array; a $900 repair with $1,100 in the account, invoice and statement side by side: a close margin felt in two numbers"
+    },
+    {
+     "ref": "V016",
+     "at": "00:00-00:41",
+     "observed": "'You almost don't buy them.' then 'Ten birds, $47': a near miss makes a tiny purchase fateful, since the title already gave the ending"
+    },
+    {
+     "ref": "V016",
+     "at": "07:10-07:50",
+     "observed": "'the moment you knew' is not a contract or the first million but a quiet evening on the truck's tailgate when the dread had gone: the billion reframed as self-respect"
+    },
+    {
+     "ref": "V022",
+     "at": "00:55-01:05",
+     "observed": "the Corolla starts on the second try: 'You hear a number.' Seeing value others miss arrives as a sensation, not a lecture"
+    },
+    {
+     "ref": "V022",
+     "at": "05:50-06:15",
+     "observed": "the first red number in the notebook; 'The patch is cheap. The lie is cheaper.': the cost is named before the honest choice"
+    },
+    {
+     "ref": "V025",
+     "at": "02:21-02:32",
+     "observed": "'End of day two, $25 billion spent, $975 billion remaining' over a bar chart where 'spent' is a sliver: the fantasy turns into a problem"
+    },
+    {
+     "ref": "V025",
+     "at": "04:20-05:33",
+     "observed": "buying the grain traders to end world hunger fails because the food cannot be moved: 'None of that has a price tag.' Each failure teaches a real mechanism"
+    }
+   ]
+  },
+  {
+   "id": "N3",
+   "name": "What life in the past was really like",
+   "identity": "what it was actually like to live in a past era (an ordinary soldier's war, a rifleman's single day in Normandy, a day in an Ice Age camp): the work, waiting, hardship and small human details that movies and textbooks skip, lived as 'you' and set against the common picture of that time. Being dropped into the past as 'you' ('POV: you are...', 'What if you woke up...') is itself part of what brings this audience back.",
+   "boundary": "stops being this niche when the past is only a costume for an invented adventure with nothing true about how people lived, or when history is told from above (dates, battles, leaders) with no ordinary life inside it; present-day and future scenarios are outside",
+   "viewer_reward": "[I] being there: the sensory, unglamorous detail of an ordinary day or life in another time, the movie or 'primitive' picture corrected, and people and objects the viewer comes to care about",
+   "members": [
+    {
+     "ref": "V018",
+     "role": "core",
+     "why": "one invented American soldier's whole war, from the draft letter through D-Day to old age, carried by keepsakes inside real events; its card's subject is military history, World War Two and a soldier's life"
+    },
+    {
+     "ref": "V019",
+     "role": "core",
+     "why": "one ordinary July day of a rifleman in Normandy, hour by hour: the digging, rations, latrines, feet, patrols and mail that the movies skip; its card's subject is daily life history of World War Two"
+    },
+    {
+     "ref": "V033",
+     "role": "core",
+     "why": "one ordinary day in an Ice Age camp 20,000 years ago, from waking to sleep, with archaeology turned into a lived day and the 'primitive' picture corrected; its card's subject is prehistory and daily life in the past"
+    }
+   ],
+   "formats": [
+    {
+     "form": "historical fiction: one invented soldier's whole war, from draft letter to old age, carried by keepsakes and a promise",
+     "refs": [
+      "V018"
+     ]
+    },
+    {
+     "form": "'one day in the life' reconstruction, clocked from waking to sleep, that corrects the common picture",
+     "refs": [
+      "V019",
+      "V033"
+     ]
+    }
+   ],
+   "comparable_cohorts": [
+    {
+     "id": "ww2-soldier-pov-18-21min",
+     "refs": [
+      "V018",
+      "V019"
+     ],
+     "why_comparable": "both put 'you' inside one American rifleman in Normandy, 1944, in second-person present tense (a whole war, one day), each with a line planted early and paid off late; 1066.7-1230.9 s (17.8-20.5 min)"
+    }
+   ],
+   "evidence": [
+    {
+     "ref": "V018",
+     "at": "01:13-01:23",
+     "observed": "the photograph goes into the jacket and the narrator says it will stay there 'onto a beach where almost everything else you carry will be lost': an object the viewer watches for twenty minutes"
+    },
+    {
+     "ref": "V018",
+     "at": "16:40-17:31",
+     "observed": "the leaves turn and fall; he comes home 'after the leaves have changed three times': the planted line becomes the war's clock"
+    },
+    {
+     "ref": "V019",
+     "at": "00:57-01:07",
+     "observed": "IN THE MOVIES 'charging machine guns' crossed out against IN REALITY digging, cleaning, carrying, waiting: the corrected picture as the engine"
+    },
+    {
+     "ref": "V019",
+     "at": "12:32-12:50",
+     "observed": "a receipt of the day prints line by line and ends 'GROUND GAINED 0 YDS': an infographic that is a joke and an argument"
+    },
+    {
+     "ref": "V033",
+     "at": "02:05-02:14",
+     "observed": "'To you, the landscape looks almost empty. To them, it is filled with information.' over the outsider and the hunters looking at the same view"
+    },
+    {
+     "ref": "V033",
+     "at": "05:39-06:05",
+     "observed": "a 26.5 s slowly moving shot of a child copying an adult knapper while the narration lays out 'watch, try, fail, adjust, try again': a long hold for a warm beat"
+    }
+   ]
+  }
+ ],
+ "outliers": [],
+ "shared_across_niches": [
+  {
+   "dimension": "format",
+   "what": "second-person telling: 'you' are the protagonist of the scenario, the life or the day",
+   "refs": [
+    "V006",
+    "V008",
+    "V015",
+    "V016",
+    "V018",
+    "V019",
+    "V022",
+    "V023",
+    "V025",
+    "V033"
+   ],
+   "note": "the way the whole set speaks, in every niche; not a niche by itself"
+  },
+  {
+   "dimension": "visual_style",
+   "what": "illustrated stills with one recurring simple stand-in for 'you' (bald everyman, stick figure, round-headed cartoon) in a consistent drawn or painted world, with diagram or infographic cards for mechanisms",
+   "refs": [
+    "V006",
+    "V008",
+    "V015",
+    "V016",
+    "V018",
+    "V019",
+    "V022",
+    "V023",
+    "V025",
+    "V033"
+   ],
+   "note": "a look every niche uses; the measured pace of the picture differs widely (10.11-24.27 cuts/min) and only V019 (0.522) and V033 (0.391) move much"
+  },
+  {
+   "dimension": "narration",
+   "what": "a fast, steady second-person voice (166-208 wpm while speaking) with few or no pauses of 0.8 s or more",
+   "refs": [
+    "V006",
+    "V008",
+    "V015",
+    "V016",
+    "V018",
+    "V019",
+    "V022",
+    "V023",
+    "V025",
+    "V033"
+   ],
+   "note": "shared by all three niches; only V015 (1.68/min), V016 (4.86/min) and V018 (1.66/min) place deliberate pauses, and V023 is the slowest at 166 wpm"
+  },
+  {
+   "dimension": "format",
+   "what": "a clock as the chapter spine: hour, day, year or level cards that say how far along 'you' are",
+   "refs": [
+    "V006",
+    "V015",
+    "V019",
+    "V022",
+    "V023",
+    "V025",
+    "V033"
+   ],
+   "note": "used in all three niches (levels with ages, hour and temperature overlays, clock cards, DAY N cards, a daily scoreboard, a day from waking to sleep)"
+  },
+  {
+   "dimension": "viewer_reward",
+   "what": "a common picture corrected: the movie, the myth or the stereotype replaced by how it really works",
+   "refs": [
+    "V008",
+    "V019",
+    "V025",
+    "V033"
+   ],
+   "note": "paid in all three niches: the EMP myth and 'not monsters' (V008), movies vs reality (V019), each failed purchase teaching a real mechanism (V025), the 'primitive' people as the experts (V033)"
+  },
+  {
+   "dimension": "format",
+   "what": "plant and payoff: an object, a person or a line set up early and returned at the end",
+   "refs": [
+    "V006",
+    "V008",
+    "V015",
+    "V016",
+    "V018",
+    "V019",
+    "V022",
+    "V025"
+   ],
+   "note": "the main structural device across the niches: Dale, the can, the tile stove, 'ten birds, $47', the photograph and the case, 'the most dangerous sentence', the notebook, the interest"
+  }
+ ],
+ "notes": "Every reference is long-form English, second-person and drawn, so the niches are drawn by subject only; the shared telling, look and voice are recorded above. V006 sits on N1's edge (frozen pipe, drained batteries, firewood) but its viewer tracks prices and the life choice, not staying alive, so it is a member of N2 only. V008 is the same length as V015 (16.9 vs 16.8 min) but a practical guide rather than a story, and its pace differs from V023's by more than 20% (200 vs 166 wpm), so it is in no cohort; a survival how-to would take the user's own length. V019 and V033 share the 'one day in the life' telling, but at 17.8 and 11.3 min they are different runtime families, so V033 is in no cohort; a history video of about 11 min would take the user's own length. Cohorts were set from the measured durations and story forms; the cohort labels written on the cards were not used. Batches carry no meaning and were not consulted."
+}

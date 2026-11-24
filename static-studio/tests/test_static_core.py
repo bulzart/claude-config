@@ -6193,6 +6193,13 @@ class NicheDiscoveryTests(unittest.TestCase):
                       cli('niche-check', '--run', self.run, expected=2)['issues'])
         self.assertIn('needs_a_name', ' '.join(self.check_map({'niches': [{**good['niches'][0], 'name': ''}]
                                                                 + good['niches'][1:]}, expected=2)['issues']))
+        # a cohort that cannot give a Standard length is said plainly (a warning, never a refusal of the map)
+        short = self.three_niches()
+        short['niches'][1]['comparable_cohorts'] = [{'id': 'quick-and-long', 'refs': ['V004', 'V007'],
+                                                    'why_comparable': 'both teach one bread at home, start to finish'}]
+        res = self.check_map(short)
+        self.assertTrue(any('quick-and-long' in w and 'gives no Standard' in w and 'long-form floor' in w
+                            for w in res['warnings']), res['warnings'])
 
     def test_a_niche_that_is_one_batch_is_reported(self):
         out = self.plan('--all', '--agents', 2)
@@ -6271,6 +6278,77 @@ class NicheDiscoveryTests(unittest.TestCase):
         self.assertTrue((clone/'20-analysis/niche-map.json').is_file())
         self.assertTrue((clone/'20-analysis/agents/plan-r1.json').is_file())
         self.assertFalse((clone/'20-analysis/niche-lock.json').exists())
+
+
+class NichePathTests(unittest.TestCase):
+    """Real niche discoveries replayed (2026-11-24): two mixed collections of the 38-reference run's real analyses, each
+    mapped by a fresh agent from niche-evidence and the cards alone (tests/fixtures/niche-discovery). The structure
+    each one found stands whatever the split of the analysis work, and the pick carries through lock and length."""
+    FIX = ROOT/'tests'/'fixtures'/'niche-discovery'
+
+    def build(self, name):
+        fx = self.FIX/name
+        if not (fx/'niche-map.json').is_file():
+            self.skipTest(f'no recorded discovery {name}')
+        tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
+        home = Path(tmp.name); (home/'refs').mkdir()
+        run = Path(cli('init', '--references', home/'refs', '--workspace', home/'runs', '--slug', 'replay')['run'])
+        refs = json.loads((fx/'references.json').read_text(encoding='utf-8'))
+        save(run/'00-inventory/references.json', {'items': [
+            {'id': r['id'], 'relative_path': r['relative_path'], 'kind': 'video', 'duration_s': r['duration_s'],
+             'has_audio': r['has_audio'], 'fingerprint': r['id'] + '-replay'} for r in refs]})
+        for r in refs:
+            v, av = r['id'], dict(r['av'])
+            save(run/'20-analysis/cards'/f'{v}.json', r['card'])
+            save(run/'20-analysis/av'/f'{v}.json', {'sheets': [f'sheet-{k:03d}.jpg' for k in range(av['sheets_n'])],
+                                                   'shots': [{} for _ in range(av['shots_n'])],
+                                                   'inspect_candidates': [{} for _ in range(av['inspect_candidates_n'])],
+                                                   'summary': av['summary']})
+            save(run/'20-analysis/content'/f'{v}.json', {'reference_id': v, **r['content']})
+            save(run/'20-analysis/content'/f'{v}-shots'/'index.json', {'reference_id': v, 'sheets': r['shot_sheets']})
+            (run/'20-analysis'/f'{v}-notes.md').write_text('notes', encoding='utf-8')
+        return run, fx, refs, json.loads((fx/'expected.json').read_text(encoding='utf-8'))
+
+    def replay(self, name):
+        run, fx, refs, exp = self.build(name)
+        ids = sorted(r['id'] for r in refs)
+        cli('niche-evidence', '--run', run)
+        ev = (run/'20-analysis/niche-evidence.json').read_bytes()
+        shutil.copyfile(fx/'niche-map.json', run/'20-analysis/niche-map.json')
+        first = cli('niche-check', '--run', run)
+        for n in (2, 3, 4):
+            out = cli('analysis-plan', '--run', run, '--all', '--agents', n)
+            self.assertEqual(len(out['batches']), n)
+            self.assertEqual(sorted(r for b in out['batches'] for r in b['refs']), ids)
+            cli('niche-evidence', '--run', run)
+            self.assertEqual(ev, (run/'20-analysis/niche-evidence.json').read_bytes())   # the split changes nothing
+            res = cli('niche-check', '--run', run)
+            self.assertEqual((res['facts']['niches'], res['facts']['members'], res['facts']['outliers']),
+                             (exp['niches'], exp['members'], exp['outliers']))
+        self.assertEqual(first['facts']['members'], exp['members'])
+        cli('niche-lock', '--run', run, '--niche', exp['lock_niche'], '--user-words', 'the replayed pick')
+        lock = cli('length', '--run', run, '--video', 1, '--mode', 'standard', '--cohort-id', exp['cohort'],
+                   '--refs', ','.join(exp['cohort_refs']), '--pace-wpm', 180, '--pace-why',
+                   'the replay carries no transcripts, so the pace is given')
+        self.assertEqual(lock['locked_target_s'], exp['standard_s'])
+        return exp
+
+    def test_collection_x(self):
+        self.replay('collection-x')
+
+    def test_collection_y(self):
+        self.replay('collection-y')
+
+    def test_different_collections_give_different_niche_structures(self):
+        maps = {}
+        for name in ('collection-x', 'collection-y'):
+            fx = self.FIX/name
+            if not (fx/'niche-map.json').is_file():
+                self.skipTest(f'no recorded discovery {name}')
+            maps[name] = json.loads((fx/'niche-map.json').read_text(encoding='utf-8'))
+        names = {k: {n['name'] for n in m['niches']} for k, m in maps.items()}
+        self.assertFalse(names['collection-x'] & names['collection-y'])
+        self.assertNotEqual(len(maps['collection-x']['niches']), len(maps['collection-y']['niches']))
 
 if __name__=='__main__':
     unittest.main()
