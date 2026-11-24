@@ -39,7 +39,7 @@
 - [Fix = original + new prompt](fix-regeneration-original-plus-recrafted-prompt.md) — user 2026-10-20: a regeneration sends the ORIGINAL sample + a rewritten prompt, never the flawed take
 - [Never push to glare-factory](glare-factory-never-push.md) — user 2026-10-20: no push/PR to harperdogpound/ai-video-pipelines unless asked at that moment
 - [Run 19oct: can realism regen](atp-run-19oct-can-realism-regen.md) — cans of videos 01-04, 07, 08 regenerated photoreal; 05, 06, 09-20 still old (ask first)
-- [GitHub accounts](github-accounts.md) — new repos go under bulzart (private), not bulzartaliu50-lang; gh holds both, active = bulzartaliu50-lang
+- [GitHub accounts](github-accounts.md) — new repos under bulzart; claude-config is PUBLIC by the user's choice (2026-11-24: "keep it public... just push"); plain git push via Credential Manager
 - [No Genjutsu, Wan 3.0 Prime](no-genjutsu-use-wan-prime.md) — user 2026-10-21 (Celsius run): wan 3.0 prime, no Genjutsu; NOT a standing default
 - [Always full paths](always-full-paths.md) — user 2026-10-21: every file named to the user as a full path from the drive letter
 - [AWL original-only reference](awl-original-only-reference.md) — user 2026-10-28: no placement marker; the silent original is the only video reference
@@ -134,3 +134,4 @@
 - [create-video: older directions advisory](create-video-older-directions-advisory.md) — user 2026-11-24: rules added later are advisory for directions approved before (planning_rules stamp); safety/money/assets/release strict
 - [create-video: next = supervised new production](create-video-next-supervised-production.md) — user 2026-11-24: remediation closed (tag static-studio-remediation-3); no speculative improvements; next a supervised production in a new niche
 - [create-video: check commands write](create-video-check-commands-write.md) — 2026-11-24 incident: plan-check wrote into finished Garbo (undone); on a finished run call the facts functions by import
+- [klein-comfyui repo](klein-comfyui-repo.md) — private standalone FLUX Klein worker = Static Studio worker + 4 adaptations; re-sync on the user's say; standalone image test still owed
