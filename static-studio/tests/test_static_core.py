@@ -836,6 +836,46 @@ class StaticStudioTests(unittest.TestCase):
         issues=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
         self.assertFalse([x for x in issues if 'recurs_with_a_structure_cause' in x], issues)
 
+    def test_a_length_change_needs_the_users_own_words(self):
+        """Case G (runtime mismatch): the lock never moves silently; a revision needs a reason and the user's own words,
+        and the old lock stays on record."""
+        vd=self.write_plan()
+        own=['length','--run',self.run,'--video',1,'--mode','own','--minutes',8,'--niche','military history',
+             '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145,
+             '--pace-why','the test narrator reads at this pace']
+        self.assertIn('--revise',json.dumps(cli(*own,expected=2)))
+        self.assertIn('approval',cli(*own,'--revise','the honest script is shorter than the lock',expected=2)['error'])
+        cli(*own,'--revise','short',expected=2)                                    # a reason, not a word
+        res=cli(*own,'--revise','the honest script is shorter than the lock','--user-approved','yes, eight minutes')
+        lock=json.loads((vd/'length-lock.json').read_text(encoding='utf-8'))
+        self.assertEqual((res['locked_target_s'],lock['target_length_s']),(480,480))
+        self.assertEqual(lock['approved_by_user'],'yes, eight minutes')
+        self.assertEqual(lock['history'][0]['target_length_s'],600)                # the old lock, kept whole
+        self.assertNotIn('history',lock['history'][0])
+        fresh=['length','--run',self.run,'--video',2,'--mode','own','--minutes',8,'--refs','V001,V002',
+               '--revise','nothing is locked for this one yet','--user-approved','yes please']
+        self.assertIn('Nothing to revise',cli(*fresh,expected=2)['error'])
+
+    def test_the_decision_weighs_its_telling_against_the_length(self):
+        """Case H (format mismatch) and G at the treatment stage: the decision says how its telling compares with the
+        references the length came from; movements that do not add up to the length are questioned, never refused."""
+        vd=self.write_plan()
+        core=self.load_core()
+        d=json.loads((vd/'direction.json').read_text(encoding='utf-8'))
+        facts=core.direction_facts(self.run,1)
+        self.assertFalse([x for x in facts['issues'] if 'length_fit' in x or 'movements' in x],facts['issues'])
+        self.assertEqual(facts['length_cohort']['target_length_s'],600)
+        self.assertEqual(facts['promise_timing']['T1']['minutes_before'],3.0)
+        d['decision'].pop('length_fit')
+        d['treatments'][1]['movements']=[{'what':'one long telling of everything in a single sweep','minutes':30},
+                                         {'what':'and the ending that pays the promise off at last','minutes':10,
+                                          'promise':True}]
+        save(vd/'direction.json',d)
+        facts=core.direction_facts(self.run,1)
+        self.assertIn('decision_missing_length_fit',facts['issues'])
+        self.assertTrue(any('add up to 40 min for a 10.0-min video' in w for w in facts['warnings']),facts['warnings'])
+        self.assertFalse([x for x in facts['issues'] if 'T2' in x and 'movements' in x])
+
     def test_review_read_runs_the_reader_restricted_in_its_own_folder(self):
         vd=self.write_plan(review_script=False)
         packet=cli('review-packet','--run',self.run,'--video',1,'--kind','script')
@@ -6444,6 +6484,18 @@ class StorytellingTests(unittest.TestCase):
         self.assertEqual(raw['findings'][0]['problem'], 'a long wait')
         self.assertEqual({n['where'] for n in notes},
                          {'findings.F1.lines', 'developments.1.lines', 'promise.waiting.1.lines'})
+        # a line id with the reader's own comment after it (the round-3 read of 2026-11-25): the id is the answer
+        said = {'promise': {'promised': 'to read the letters', 'waiting': [],
+                            'first_delivered': "L019 (the letters' own words begin; the teasers come earlier)"}}
+        note = c.normalize_reader_format('script', said, self.order, {})
+        self.assertEqual(said['promise']['first_delivered'], 'L019')
+        self.assertEqual(said['promise']['first_delivered_as_written'],
+                         "L019 (the letters' own words begin; the teasers come earlier)")
+        self.assertEqual(note[0]['where'], 'promise.first_delivered')
+        self.assertEqual(c.promise_problems(said['promise'], self.order), [])
+        vague = {'promise': {'promised': 'x', 'waiting': [], 'first_delivered': 'around the middle, maybe L019'}}
+        self.assertEqual(c.normalize_reader_format('script', vague, self.order, {}), [])   # not a slip: refused
+        self.assertTrue(c.promise_problems(vague['promise'], self.order))
         tr = {'findings': [{'id': 'F7', 'treatment': 'B, C', 'problem': 'omens could slip in'},
                            {'id': 'F8', 'treatment': 'B, Z', 'problem': 'an unknown label'}]}
         c.normalize_reader_format('treatment', tr, [], {'A': 'T1', 'B': 'T2', 'C': 'T3'})

@@ -1374,9 +1374,20 @@ def cmd_length(args):
     rd, st = run_folder(args)
     outdir = video_dir(rd, args.video)
     lockfile = outdir / 'length-lock.json'
-    if lockfile.exists():
+    prev_lock = read_json(lockfile) if lockfile.exists() else None
+    revise, approved = (getattr(args, 'revise', '') or '').strip(), (getattr(args, 'user_approved', '') or '').strip()
+    if prev_lock and not revise:
         error('Length already locked. Do not silently revise runtime.', {'file': str(lockfile),
-              'action': 'Use a new video ID or explicitly edit a documented revision with user approval.'})
+              'action': 'A new length is the user\'s decision: once they have approved it, length --revise "why" '
+                        '--user-approved "<their own words>" with the new --mode and its options (the old lock is '
+                        'kept in the new one\'s history); or a new video ID.'})
+    if prev_lock:
+        if n_words(revise) < MIN_NOTE_WORDS:
+            error('Say why the length changes (--revise "...", five words or more).')
+        if n_words(approved) < 2:
+            error('A length revision needs the user\'s own approval, in their words (--user-approved "...").')
+    elif revise or approved:
+        error('Nothing to revise: no length is locked for this video yet.')
     vids, cards, issues = card_set(rd)
     if issues:
         error('Analyze all reference videos before choosing length', issues)
@@ -1532,6 +1543,11 @@ def cmd_length(args):
         lock['story_forms'] = sorted({str(cards[i].get('story_form') or '').strip().lower() for i in refs} - {''})
         if forms_why:
             lock['forms_why'] = forms_why
+    if prev_lock:
+        # the earlier lock stays on record, whole; the beat map, script and every later gate follow the new one
+        lock.update({'revised_because': revise, 'approved_by_user': approved,
+                     'history': (prev_lock.get('history') or []) + [{k: v for k, v in prev_lock.items()
+                                                                     if k != 'history'}]})
     write_json(lockfile, lock)
     st['selected_niche'] = effective_niche
     st['video_count'] = max(st.get('video_count', 0), int(args.video))
@@ -12420,6 +12436,16 @@ def normalize_reader_format(kind, raw, order, labels):
         for k, w in enumerate(p.get('waiting') or [], 1):
             if isinstance(w, dict):
                 fix_lines(w, f'promise.waiting.{k}.lines')
+        # a line id followed by the reader's own comment ("L019 (the letters begin)"): the id is the answer, the
+        # whole text stays beside it as written
+        fd = str(p.get('first_delivered') or '').strip()
+        if fd and fd.lower() != 'never' and expand_lines(_line_specs(fd), order) is None:
+            m = re.match(r'(L\d+(?:\s*-\s*L\d+)?)(?![\w-])(.+)$', fd)
+            spec = re.sub(r'\s+', '', m.group(1)) if m else ''
+            if spec and m.group(2).strip() and expand_lines(spec, order) is not None:
+                p['first_delivered'] = spec
+                p['first_delivered_as_written'] = fd
+                notes.append({'where': 'promise.first_delivered', 'was': fd, 'now': spec})
     elif kind == 'treatment' and labels:
         out = []
         for f in raw.get('findings') or []:
@@ -13303,7 +13329,10 @@ def main():
     p.add_argument('--pace-why', default='', help='Why an explicit --pace-wpm fits this narrator, niche and treatment')
     p.add_argument('--refs', default='')
     p.add_argument('--minutes', type=float); p.add_argument('--language', default='en');
-    p.add_argument('--pace-wpm', type=float, default=None); p.set_defaults(func=cmd_length)
+    p.add_argument('--pace-wpm', type=float, default=None)
+    p.add_argument('--revise', default='', help='Replace a locked length: why (only after the user approved it)')
+    p.add_argument('--user-approved', default='', help='With --revise: the user\'s own words approving the new length')
+    p.set_defaults(func=cmd_length)
     p = sub.add_parser('plan-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--keep', default='', help='Beats changed since the last check whose lines still fit: why')
     p.set_defaults(func=cmd_plan_check)

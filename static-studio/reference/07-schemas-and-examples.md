@@ -37,6 +37,8 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" -
   --mode standard --cohort-id "engineering-investigations-12min" --refs V001,V002 --language en
 # Own length: --mode own --minutes 18 (its references from the locked niche). A run made before niche discovery
 # (no niche_discovery in state.json) still matches labels: --niche "..." --story-form "..." or --cohort-id.
+# A locked length changes only on the user's approval: the same command with --revise "why" --user-approved
+# "<their own words>" (the old lock is kept in the new one's history; 03).
 # Creative direction FIRST (10): 40-plans/video-01/direction.json (evidence, two or more approaches, strategy,
 # two to four treatments with sample moments), a blind read of the treatments, the decision, the lock.
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind treatment
