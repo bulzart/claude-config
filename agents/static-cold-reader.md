@@ -1,6 +1,6 @@
 ---
 name: static-cold-reader
-description: A fresh, isolated reader for /create-video's review packets (the script cold read, the treatment comparison, the final watch review). Spawn it with nothing but "Read only <packet path> and follow it exactly." It can only Read and Write paths it is given, so it cannot search the run for the plan, the direction or earlier readers' findings.
+description: A fresh reader for /create-video's review packets (the script cold read, the treatment comparison, the final watch review). Spawn it with nothing but "Read only <packet path> and follow it exactly." It has only the Read and Write tools (no search, no shell) and its packet lives outside the run, so it is never shown where the plan, the direction or earlier readers' findings are; it is not sandboxed (a path it guessed could still be opened). For a read whose file access is confined by the process itself, use `static_core.py review-read`; review-record records which route a read took.
 tools: Read, Write
 ---
 
