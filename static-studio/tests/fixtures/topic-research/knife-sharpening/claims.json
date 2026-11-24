@@ -1,0 +1,204 @@
+{
+  "claims": [
+    {
+      "id": "C01",
+      "claim": "A knife's edge is the line (the apex) where its two bevels meet; sharpening removes a little steel from the bevels to form a new edge.",
+      "sources": ["S1", "S3", "S4"],
+      "confidence": "confirmed",
+      "note": "S1's cross-sections define the burr against the 'sharpening triangle' of the two bevels. The maker (S3) says sharpening 'takes a small amount of steel off the blade, creating a new edge'. S4 works on the bevel and on where the stone meets the edge throughout. That is three independent kinds of source: a microscopist, a maker and a retailer.",
+      "line_refs": []
+    },
+    {
+      "id": "C02",
+      "claim": "An edge goes dull when its apex is blunted (flattened or rounded), bent over (rolled) or broken away; in S2's experience a rolled apex rarely straightens again, because the damaged steel breaks away instead.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "One author's micrographs, a few specimens, on utility blades and one S30V knife rather than kitchen knives. The images did not render in the read, so this rests on the text and captions. S2 gives no frequencies, so the film does not say which kind of dulling is most common.",
+      "line_refs": []
+    },
+    {
+      "id": "C03",
+      "claim": "Knife-sharpness research measures sharpness as the force a knife needs to make a cut: a duller edge needs more force for the same cut.",
+      "sources": ["S5", "S10"],
+      "confidence": "likely",
+      "note": "S5's abstract (read) records cutting force measured before and after use in production, and lists a 'Sharpness Analyser' among its keywords; the abstract gives no numbers. S10 (2003, a study of cutting moments, grip forces and knife sharpness) was seen only as a citation. Said plainly, without numbers.",
+      "line_refs": []
+    },
+    {
+      "id": "C04",
+      "claim": "Dull knives cause more kitchen injuries than sharp ones.",
+      "sources": ["S11"],
+      "confidence": "legend",
+      "note": "A widely repeated saying. The search found no injury counts, only anecdote, a reader poll and a plausible mechanism (more force, more slipping). It is never said as fact. The film leaves the saying out, and nothing about cuts or injuries is said or shown.",
+      "line_refs": []
+    },
+    {
+      "id": "C05",
+      "claim": "A water stone is soaked before use (S4: until bubbles stop rising, about 5 to 10 minutes; S3: about ten minutes), kept stable on a damp towel or a slip-resistant surface, and kept wet while sharpening; a splash-and-go stone needs only water on its surface. The stone maker's advice decides which.",
+      "sources": ["S3", "S4"],
+      "confidence": "confirmed",
+      "note": "Both read sources agree on soaking a water stone and keeping it wet and steady. The splash-and-go exception is S4's alone.",
+      "line_refs": []
+    },
+    {
+      "id": "C06",
+      "claim": "A knife that is dull from normal use, but not chipped, starts on about 1000 grit; 200 to 400 grit is for chips, rolled edges or very dull blades; 3000 to 6000 grit finishes the edge.",
+      "sources": ["S4", "S12"],
+      "confidence": "likely",
+      "note": "Read in S4. The same 1000 and 200-400 figures appear in the popular guides seen only as a search summary (S12), which adds agreement but not a second read source.",
+      "line_refs": []
+    },
+    {
+      "id": "C07",
+      "claim": "WÜSTHOF gives a 14-degree angle for its standard (Western) knives and 10 degrees for its Asian-style knives (santoku, nakiri), on each side of the edge.",
+      "sources": ["S3", "S6"],
+      "confidence": "confirmed",
+      "note": "This is the maker's own record, read in S3: 14 degrees for the steel and the whetstone, and 10 degrees for Asian-style knives in its honing section. S3 does not say 'per side'; its steps (hold 14 degrees, then repeat on the other side) imply it, and the FAQ (S6, snippet) says it outright. Some product pages give 14.5. The film says 'about 14' and names it as WÜSTHOF's figure, not a universal one.",
+      "line_refs": []
+    },
+    {
+      "id": "C08",
+      "claim": "Japanese-style kitchen knives are sharpened at a narrower angle than Western ones.",
+      "sources": ["S3", "S4"],
+      "confidence": "confirmed",
+      "note": "The two read sources agree on the direction but not on the numbers: S3 gives 10 against 14 degrees, S4 gives 15-17 against 20-25 degrees per side.",
+      "line_refs": []
+    },
+    {
+      "id": "C09",
+      "claim": "A Western kitchen knife should be sharpened at about 14 to 15 degrees per side.",
+      "sources": ["S3", "S4", "S7"],
+      "confidence": "disputed",
+      "note": "S3 gives 14 degrees (and S7, snippet only, about 15 for ZWILLING's European blades), while S4 gives 20-25 degrees per side for Western knives. Both may be right for different knives, since makers have thinned modern Western edges, but the sources disagree. The film gives no universal number: it says to use the knife maker's figure or to match the bevel the knife already has.",
+      "line_refs": []
+    },
+    {
+      "id": "C10",
+      "claim": "Colouring the bevel with a permanent marker shows where the stone is touching: after a few strokes the ink is gone wherever the stone meets the steel, so the angle can be matched to the bevel the knife already has.",
+      "sources": ["S4", "S12"],
+      "confidence": "likely",
+      "note": "Read in S4. Several popular guides describe the same trick (S12, snippet only).",
+      "line_refs": []
+    },
+    {
+      "id": "C11",
+      "claim": "On a whetstone, consistency of angle, pressure and path matters more than any single method: guide the blade with fingertips on its flat face, not on the spine, push in a smooth arc, and ease the pressure on the return.",
+      "sources": ["S4"],
+      "confidence": "likely",
+      "note": "A practitioner's guidance from one read source. It is a handling instruction, so the pictures show fingertips on the flat of the blade, away from the edge.",
+      "line_refs": []
+    },
+    {
+      "id": "C12",
+      "claim": "A sharpening burr forms as the grinding reaches the apex: the last few microns of the edge bend away from the abrasive instead of being ground off, and the burr is the metal left outside the two bevels' triangle.",
+      "sources": ["S1", "S14"],
+      "confidence": "confirmed",
+      "note": "A primary record, read: S1's own SEM images and focused-ion-beam cross-sections ('The burr forms from incomplete grinding of the bevel near the apex'). It is self-published and not peer-reviewed. The same author (S14, snippet) calls the conditions of burr formation poorly understood, so the film states the mechanism plainly and no more precisely than this.",
+      "line_refs": []
+    },
+    {
+      "id": "C13",
+      "claim": "Raising a burr that can be felt along the whole length of the edge is the practical sign that the first side's bevel has reached the apex and it is time to switch sides.",
+      "sources": ["S1", "S4"],
+      "confidence": "confirmed",
+      "note": "S4 gives the method: raise the burr along the full length, then flip. S1 shows how the burr forms at the apex and treats detecting it as the sign that the bevel is set; its documented failure is on the second side (C15), not the first. The two are independent: a microscopist and a retailer.",
+      "line_refs": []
+    },
+    {
+      "id": "C14",
+      "claim": "Feel for the burr by drawing a fingertip lightly from the spine side out across the edge, at right angles to it, on the side away from the stone, and never along the edge.",
+      "sources": ["S4"],
+      "confidence": "likely",
+      "note": "A handling instruction from one read source. In the pictures the path is an arrow, and the fingertip is never shown on the edge itself.",
+      "line_refs": []
+    },
+    {
+      "id": "C15",
+      "claim": "On the second side, a burr that can be felt may be only the first burr bent across, with that side's bevel still short of the apex: in S1's Victorinox example the burr was felt within about 25 strokes while the second side's grind lines were still about 50 microns from the apex, with more than 10 microns of steel still to remove.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "One documented example by one author. The general statement is S1's own 'does not necessarily indicate the bevel setting step is complete', kept as 'can', never 'always'. 50 microns is a twentieth of a millimetre (arithmetic, no extra source).",
+      "line_refs": []
+    },
+    {
+      "id": "C16",
+      "claim": "After both sides are worked, S4's method alternates single strokes from side to side in shrinking counts (10, 8, 6, 4, 2, then 1 per side), and warns that skipping this leaves a large one-sided burr.",
+      "sources": ["S4"],
+      "confidence": "likely",
+      "note": "One practitioner's method, read. The film shows the pattern (strokes shrinking side to side) rather than insisting on these exact counts.",
+      "line_refs": []
+    },
+    {
+      "id": "C17",
+      "claim": "Light alternating stone strokes and stropping usually refine and align a burr rather than remove it, and a burr aligned this way often cannot be felt, so not feeling a burr does not prove it is gone.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "From S1's cross-sections: after 20 light edge-leading strokes on a fine plate no burr could be felt, but one remained; after 10 strop laps on 1-micron diamond there was 'a highly refined and aligned burr' about 10 microns long and 3 thick. One author, a few examples.",
+      "line_refs": []
+    },
+    {
+      "id": "C18",
+      "claim": "The burr must be removed, or the edge will not cut cleanly and will fail quickly.",
+      "sources": ["S1", "S12"],
+      "confidence": "disputed",
+      "note": "Popular guides say so (S12, seen only as a summary), and S1 lists it among common beliefs it calls only 'sometimes' true. S1 found a thin, undamaged burr 'surprisingly strong', while a large foil burr rolls once pushed sideways. The film does not say the burr must vanish. It says what the finishing strokes do, and that a big, floppy burr is the one to avoid.",
+      "line_refs": []
+    },
+    {
+      "id": "C19",
+      "claim": "The edge is finished with lighter pressure on each finer stone, then a few light edge-trailing strokes on a leather strop (S4: about 5 to 10 per side).",
+      "sources": ["S4", "S1"],
+      "confidence": "confirmed",
+      "note": "S4 gives the practice. S1's micrographs show stropping smoothing and aligning what is left at the apex, though not removing a large burr from a coarse plate, which is why the lighter stone strokes come first.",
+      "line_refs": []
+    },
+    {
+      "id": "C20",
+      "claim": "A sharp edge slices a sheet of printer paper held by one corner cleanly with little resistance, and cuts the skin of a ripe tomato under the blade's own weight.",
+      "sources": ["S4", "S12"],
+      "confidence": "likely",
+      "note": "Read in S4; the same tests appear in popular guides (S12, snippet). S4's third test, resting the blade on a thumbnail, is left out of the film (see notes.md).",
+      "line_refs": []
+    },
+    {
+      "id": "C21",
+      "claim": "A few light passes on a honing steel or rod bring the cut back between sharpenings.",
+      "sources": ["S2", "S3"],
+      "confidence": "confirmed",
+      "note": "S3 recommends honing for regular maintenance; S2 finds that steeling 'improves keenness'. They disagree on how it works (C23), not on the effect. S2's blades were not kitchen knives.",
+      "line_refs": []
+    },
+    {
+      "id": "C22",
+      "claim": "WÜSTHOF's honing method: hold the edge at 14 degrees to the steel (10 for Asian-style knives) and draw it heel to tip, 6 to 8 passes alternating sides.",
+      "sources": ["S3"],
+      "confidence": "confirmed",
+      "note": "The maker's own method, read. S3 also advises hand-washing the knife afterwards 'to remove excess steel'. Whose steel that means is unclear, so it is not used as evidence for C23.",
+      "line_refs": []
+    },
+    {
+      "id": "C23",
+      "claim": "A honing steel straightens (realigns) a bent edge rather than removing metal from it.",
+      "sources": ["S3", "S2", "S8"],
+      "confidence": "disputed",
+      "note": "The maker (S3) says honing 'realigns the microscopic teeth on the edge of the blade'. S2's cross-sections show that steeling 'primarily produces a micro-bevel' by removing metal, with only 'some subtle redistribution/burnishing'; realigning a rolled apex 'rarely occurs' in that author's experience. S2's sample is small, and only one rod was tried on a rolled edge. S8 (snippet) says a smooth steel burnishes without removing metal. The film says this as an open argument.",
+      "line_refs": []
+    },
+    {
+      "id": "C24",
+      "claim": "In a study of 12 professional meat cutters at two companies, each using three knives in normal production, the cutters' skill at keeping the edge sharp had 'a much larger effect on knife sharpness during work than the knife steel differences'.",
+      "sources": ["S5"],
+      "confidence": "confirmed",
+      "note": "A primary, peer-reviewed record; only the abstract was read (through Europe PMC), not the full text. The study is quasi-experimental with a small sample, and its subjects were professionals in industrial plants, not home cooks. The film names who was studied, and carrying the lesson to home kitchens is said as an inference (M20).",
+      "line_refs": []
+    },
+    {
+      "id": "C25",
+      "claim": "WÜSTHOF's hand-held sharpeners have pre-set angles, and the maker advises using their coarse slot once or twice a year.",
+      "sources": ["S3"],
+      "confidence": "confirmed",
+      "note": "The maker's own guidance, read. It is used only for the T3 alternative, which was not chosen.",
+      "line_refs": []
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "blueprint": {
+    "reward_shape": "The value builds as competence. Each beat hands the viewer one thing they can check on their own knife: the shape of the edge, where the marker wears off, the burr, the second side's trap, the finish. Understanding accumulates step by step rather than waiting for one reveal. The opening's dented tomato returns sliced as the proof (B07), and the steel and the meat-cutter study close on keeping the skill rather than buying a better knife."
+  },
+  "beats": [
+    {
+      "id": "B01",
+      "experience": "Recognition and a small itch: the viewer has met this knife, and the film promises they will fix it and know when it is fixed.",
+      "visual_intent": "Open on the failure rather than on tools: the dented tomato, then the edge under a loupe, so the question of what is wrong with it is seen before it is spoken.",
+      "carries": []
+    },
+    {
+      "id": "B02",
+      "experience": "The 'oh' of seeing that sharp is a shape, and dull is three readable shapes, not a mystery.",
+      "visual_intent": "Drawn cross-sections at micron scale do the explaining: the clean wedge first, then three damaged tips side by side while the voice names them. No frequencies are implied: the three tips get equal weight.",
+      "carries": ["R1"]
+    },
+    {
+      "id": "B03",
+      "experience": "Calm preparation, and the relief of not needing a magic number: the knife shows its own angle.",
+      "visual_intent": "A tidy overhead setup, then the hands at the angle with the marker ink wearing off in one even strip. The ink is the proof that the angle matches, and the angle number goes on as a drawn annotation, never inside the picture.",
+      "carries": ["R2", "R3"]
+    },
+    {
+      "id": "B04",
+      "experience": "The click of a skill: the edge answers, and the viewer learns to read the answer safely.",
+      "visual_intent": "Cut from the hands to the magnified tip as the lip forms, then to the fingertip check with a clear drawn arrow across the edge, never along it. The fingertip is never shown on the edge itself.",
+      "carries": ["R4"],
+      "key_moment": "the burr: the edge tells you the first side is done",
+      "significance": {
+        "matters_because": "It answers the question every beginner on a stone is left with, when to switch sides, with a sign they can feel on their own knife. The strokes stop being guesses, and the B02 picture of two faces meeting becomes something they can detect.",
+        "reward": "a skill: the first moment the viewer can read their own edge",
+        "certainty": "established",
+        "depends_on": [
+          {"what": "the edge as two faces meeting at an apex, so a lip on the far side reads as the near face arriving", "from": "B02"},
+          {"what": "a steady, matched angle, so the grinding reaches the edge in one place", "from": "B03"}
+        ]
+      }
+    },
+    {
+      "id": "B05",
+      "experience": "A small surprise that makes the viewer smarter than the instructions: the second side's burr can fool you.",
+      "visual_intent": "The same magnified tip, now with the lip flipped while the second face visibly stops short of the point: the gap is the point of the shot. Then a sparse diagram of strokes alternating side to side and shrinking.",
+      "carries": ["R5"],
+      "hedges": {"R5": "That's one close look under a microscope, not a law, but it's reason enough not to stop at the first thing you feel on this side."}
+    },
+    {
+      "id": "B06",
+      "experience": "Lightness after effort: finishing is gentle, and what it does is subtler than most guides say.",
+      "visual_intent": "Hands on leather with the edge trailing, then two magnified tips, the long lip beside a tiny upright remnant. The picture keeps the hedge honest: the burr is shrunk, not erased.",
+      "carries": ["R6"],
+      "hedges": {"R6": "Most guides call this removing the burr. Under an electron microscope, one researcher found these strokes mostly shrink it and stand it up straight instead. Either way, it's the same few light strokes."}
+    },
+    {
+      "id": "B07",
+      "experience": "Proof and relief: it works, and the viewer can check it themselves.",
+      "visual_intent": "Paper parting cleanly, then the opening's tomato composition repeated with the slice falling away: the same frame answering the first. The cut surfaces are clean, with no juice pooling.",
+      "carries": ["R7"],
+      "key_moment": "the paper parts, and the opening's tomato gives way under the blade's own weight",
+      "significance": {
+        "matters_because": "It pays off the opening: the tomato that the dull knife only dented now parts under the blade's own weight. The viewer also gets a test that tells them whether their own session worked.",
+        "reward": "proof and relief: the method works, and they can check it themselves",
+        "certainty": "established",
+        "depends_on": [
+          {"what": "the dented tomato and the promise that it would be fixed", "from": "B01"},
+          {"what": "the finished, refined edge", "from": "B06"}
+        ]
+      }
+    },
+    {
+      "id": "B08",
+      "experience": "Practical reassurance with an honest open question: how to keep the edge, and a frank 'nobody quite agrees how this works'.",
+      "visual_intent": "A steel used gently and safely, then two magnified tips given equal weight, so the picture does not settle what the evidence has not.",
+      "carries": ["R8"],
+      "hedges": {"R8": "Knife makers say a steel straightens the edge; under a microscope it seems mostly to grind a tiny new one. Nobody needs to settle that to use one well."}
+    },
+    {
+      "id": "B09",
+      "experience": "A quiet turn: the skill sits in the viewer's hands, not in the price of the knife.",
+      "visual_intent": "The study shown as objects (twelve aprons, three knives and a two-bar chart) with no meat, carcass or people, then the viewer's own counter at rest, the knife back in its place.",
+      "carries": ["R9"],
+      "hedges": {"R9": "That was twelve professionals in meat plants, not home cooks, so it's a pointer rather than proof, but it points one way: the hands matter more than the steel."}
+    }
+  ],
+  "shots": [
+    {"id": "S1", "beat_id": "B01", "new_thing": "the problem itself: a knife that dents a ripe tomato instead of cutting it",
+     "frame_prompt": "Warm gouache illustration, close view of a wooden cutting board by a kitchen window, a ripe red tomato with a plain chef's knife resting across its top, the blade pressing a shallow dent into the unbroken skin, an adult hand loosely on the handle, soft morning light, no juice, no brand marks, no text."},
+    {"id": "S2", "beat_id": "B01", "new_thing": "the question made visible: the same edge under a loupe, rounded where it should be a crisp line",
+     "frame_prompt": "Warm gouache illustration of the same chef's knife lying flat on the board, a large round magnifying-loupe circle over the very edge showing it as a soft, slightly rounded line instead of a crisp one, plain empty space around the circle, no text."},
+    {"id": "S3", "beat_id": "B02", "new_thing": "what sharp is: the blade end-on as a wedge whose two flat faces meet in one fine point",
+     "frame_prompt": "Clean ink-and-wash technical diagram on cream paper: cross-section of a kitchen knife blade seen end-on as a tall narrow wedge, its two flat bevel faces meeting in a single fine point at the bottom, steel in cool grey, generous empty margins, no labels, no text."},
+    {"id": "S4", "beat_id": "B02", "new_thing": "what dull is: three magnified tips, blunted, bent over and chipped",
+     "frame_prompt": "Ink-and-wash diagram on cream paper, three magnified cross-sections of a knife's very tip side by side and evenly spaced: the first rounded and flattened, the second bent over to one side like a folded lip, the third with tiny pieces broken out of the point; same cool grey steel, no labels, no text."},
+    {"id": "S5", "beat_id": "B03", "new_thing": "the setup: a wet stone held steady on a damp towel, water to hand",
+     "frame_prompt": "Warm gouache illustration, overhead view of a rectangular whetstone darkened with water, sitting on a folded damp towel on a wooden counter, a small bowl of water and a chef's knife lying beside it, calm daylight, no brand marks, no text."},
+    {"id": "S6", "beat_id": "B03", "new_thing": "the angle checked: hands holding the blade low on the stone, the marker ink worn off in a bright strip along the very edge",
+     "frame_prompt": "Warm gouache illustration, close side view of adult hands holding a chef's knife at a low, steady angle on a wet whetstone, the guiding hand's fingertips on the flat of the blade well back from the edge, the bevel coloured with dark marker ink that is worn away in a bright, even strip along the very edge, no text."},
+    {"id": "S7", "beat_id": "B04", "new_thing": "the burr: a hair-thin lip of steel bent over to the far side as the near face reaches the point",
+     "frame_prompt": "Ink-and-wash technical diagram on cream paper, magnified cross-section of a knife tip: the near bevel face now runs all the way down to the point, and a hair-thin lip of steel curls over toward the far side at the apex, the lip picked out in a slightly warmer grey, generous margins, no labels, no text.",
+     "carries_significance": "Shows the edge answering: the near face now runs all the way to the point and a thin lip curls over to the far side, so the viewer sees what their fingertip is about to feel and why it means this side is done."},
+    {"id": "S8", "beat_id": "B04", "new_thing": "the safe check: a fingertip drawn from the spine side out across the edge, never along it",
+     "frame_prompt": "Warm gouache illustration, a chef's knife lying flat on a folded towel with its edge facing away, one adult fingertip resting lightly on the flat of the blade near the spine, well back from the edge, clean empty space between the finger and the edge for a drawn arrow, calm light, no text.",
+     "carries_significance": "Turns the diagram into a skill the viewer can use safely: the drawn arrow runs across the edge from the spine side, so the burr is found by touch without the finger ever travelling along the edge."},
+    {"id": "S9", "beat_id": "B05", "new_thing": "the trap: the lip flipped to the other side while the second face still stops short of the point",
+     "frame_prompt": "Ink-and-wash technical diagram on cream paper, magnified cross-section of a knife tip: the thin lip of steel now curls toward the opposite side, while the second bevel face visibly stops short of the very point, leaving a small unground shoulder just above the apex, no labels, no text."},
+    {"id": "S10", "beat_id": "B05", "new_thing": "the fix: strokes that alternate side to side and shrink in number",
+     "frame_prompt": "Simple ink diagram on cream paper: a knife edge drawn as a horizontal line across the middle, short stroke marks above and below it arranged as two descending staircases that alternate sides, from many marks down to a single one, clean and sparse, no numbers, no text."},
+    {"id": "S11", "beat_id": "B06", "new_thing": "lightness: the blade drawn spine-first along leather, edge trailing",
+     "frame_prompt": "Warm gouache illustration, adult hands drawing a chef's knife spine-first along a strip of leather glued to a wooden block, the edge trailing behind the motion, a finer pale whetstone set aside on the towel, soft light, no brand marks, no text."},
+    {"id": "S12", "beat_id": "B06", "new_thing": "what finishing really does: the long lip shrunk to a tiny upright remnant, not erased",
+     "frame_prompt": "Ink-and-wash technical diagram on cream paper, two magnified cross-sections of a knife tip side by side: on the left a long thin lip of steel bent over at the apex, on the right the same tip with only a tiny straight remnant standing upright on the point, no labels, no text."},
+    {"id": "S13", "beat_id": "B07", "new_thing": "the first proof: a sheet of paper parting cleanly under the blade",
+     "frame_prompt": "Warm gouache illustration, an adult hand holding a sheet of white printer paper by one top corner, a chef's knife slicing down through it and leaving a smooth, straight cut edge, a thin strip curling away, plain kitchen background, no text.",
+     "carries_significance": "The first verdict the viewer can run themselves: paper held by one corner parts in a clean, straight cut with no tearing, the opposite of the dented tomato."},
+    {"id": "S14", "beat_id": "B07", "new_thing": "the opening answered: the same tomato, now with a clean slice falling away",
+     "frame_prompt": "Warm gouache illustration matching the opening composition: the same wooden board by the window, the same ripe tomato, the chef's knife now resting deep in a clean cut with one thin, even slice leaning away, neat cut surfaces, no juice pooling, the adult hand barely touching the handle, soft morning light, no text.",
+     "carries_significance": "Repeats the opening composition so the payoff is seen, not told: the same board, tomato and knife, but the blade now rests deep in a clean cut and a thin slice leans away under nothing but the blade's own weight."},
+    {"id": "S15", "beat_id": "B08", "new_thing": "upkeep: a few light passes down a steel at about the sharpening angle",
+     "frame_prompt": "Warm gouache illustration, adult hands holding a honing steel upright with its tip resting on a folded towel, a chef's knife drawn lightly down it heel to tip at a shallow angle, the edge pointing away from the body, calm kitchen light, no brand marks, no text."},
+    {"id": "S16", "beat_id": "B08", "new_thing": "the open argument: a tip nudged straight beside a tip with a tiny new facet, neither marked the winner",
+     "frame_prompt": "Ink-and-wash technical diagram on cream paper, two magnified cross-sections of a knife tip side by side and given equal weight: on the left a slightly bent tip being nudged back upright, on the right the same tip with a tiny second facet ground at the very point, no labels, no text."},
+    {"id": "S17", "beat_id": "B09", "new_thing": "the study as objects: twelve cutters' aprons, three kinds of knife, and a chart where skill towers over steel",
+     "frame_prompt": "Ink-and-wash illustration, twelve clean white work aprons hanging on a row of hooks above a stainless bench on which three different plain kitchen knives lie side by side, a simple hand-drawn chart of two bars beside them with one bar much taller than the other, no meat, no people, no labels, no text."},
+    {"id": "S18", "beat_id": "B09", "new_thing": "the close: the viewer's own counter at rest, the knife back in its place",
+     "frame_prompt": "Warm gouache illustration, a quiet kitchen counter in evening lamp light, a chef's knife on a wooden board beside a whetstone drying on a folded towel and a whole ripe tomato, calm and uncluttered, no people, no text."}
+  ]
+}

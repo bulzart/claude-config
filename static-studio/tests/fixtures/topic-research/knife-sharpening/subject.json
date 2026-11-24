@@ -1,0 +1,144 @@
+{
+  "subject": {
+    "scope": {
+      "kind": "topic",
+      "user_words": "how to sharpen a kitchen knife",
+      "niche": "how-to",
+      "understood_as": "A practical tutorial: an ordinary home cook whose kitchen knife has gone dull from use learns to put a new working edge on it themselves, step by step, and to tell at each step whether it is working.",
+      "boundary": "It stops being this topic if it becomes a guide to buying knives or sharpeners, a knife-care or honing video that never teaches the sharpening itself, a video about other blades (pocket knives, axes, tools, scissors), or a video about cutting technique."
+    },
+    "audience_value": "How-to viewers come to have a problem solved. They want to finish able to do the job themselves, with checks that tell them each step worked and what went wrong when it didn't. The research shows where the usual instructions leave them guessing ('sharpen until it's sharp', one fixed angle for every knife, 'remove the burr'). So the value here is a method with signals they can see and feel, the reason behind each step so they can repeat it without the video, and honest corrections where a common tip misleads. The reward builds step by step rather than arriving once. Padding, product pushing and invented danger cost this audience's trust.",
+    "from_references": [],
+    "candidates": [
+      {
+        "id": "T1",
+        "subject": "sharpening a kitchen knife on a whetstone by reading the edge's own signals",
+        "angle": "a whetstone tutorial built on the signals the edge gives at each step (where the marker wears off, a burr along the whole edge, paper that parts cleanly), plus the two places where the microscope shows those signals can mislead",
+        "value_form": "a skill learned through a mechanism understood",
+        "factual": true,
+        "what_happens": "The viewer sees what an edge is at the scale of microns: two flat faces meeting in a line, and the ways that line fails. Then they sharpen along with the film. They set up the stone, match the knife's own angle with a marker, and grind one side until a burr runs the whole length. They learn why the burr felt on the second side can fool them, finish with lighter strokes and leather, prove the edge on paper and on the tomato from the opening, and keep it with a steel.",
+        "why_it_matters": "Most instructions say to sharpen 'until it is sharp', which leaves a beginner guessing when to switch sides or stop. Signals they can see and feel turn that guess into a method. Knowing what is happening at the apex is also what lets them rescue a session that goes wrong when the video is not in front of them.",
+        "reward": "the competence of a method that works on their own knife, plus two microscope findings that make them better at it than the usual instructions would",
+        "strongest_material": [
+          {"id": "M1", "what": "An edge is the line where the two bevels meet, the apex; sharpening grinds a little steel off the bevels until they meet in a new line.", "certainty": "established", "claims": ["C01"]},
+          {"id": "M2", "what": "An edge goes dull when the apex is blunted, bent over or broken away; under the electron microscope these look like distinct shapes.", "certainty": "established", "claims": ["C02"]},
+          {"id": "M3", "what": "In knife research sharpness is measured as the force a cut takes: a duller edge needs more force for the same cut.", "certainty": "established", "claims": ["C03"]},
+          {"id": "M4", "what": "The stone: soak a water stone (or splash a splash-and-go one, as its maker says), keep it steady and wet, and start a merely dull knife on about 1000 grit, keeping 200-400 for chips or a badly damaged edge.", "certainty": "established", "claims": ["C05", "C06"]},
+          {"id": "M5", "what": "Makers publish their own angles: WÜSTHOF gives 14 degrees for its standard knives and 10 for its Asian-style ones, and Japanese-style edges are narrower in every source read.", "certainty": "established", "claims": ["C07", "C08"]},
+          {"id": "M6", "what": "There is no agreed number for a Western knife: the maker read gives 14 degrees, a specialist sharpening retailer 20-25 per side.", "certainty": "contested", "claims": ["C09"], "hedge": "Makers and sharpening guides don't agree on one number for Western knives, so use your knife maker's figure, or simply match the bevel that's already there."},
+          {"id": "M7", "what": "The marker trick shows the bevel the knife already has: colour it, make a few strokes, and the ink comes off wherever the stone touches; a steady angle, pressure and path matter more than any single method, with fingertips on the flat of the blade.", "certainty": "established", "claims": ["C10", "C11"]},
+          {"id": "M8", "what": "A burr forms as the grinding reaches the apex: the last few microns of the edge bend away from the stone instead of being ground off.", "certainty": "established", "claims": ["C12"]},
+          {"id": "M9", "what": "A burr felt along the whole length of the edge is the practical sign that the first side's bevel has reached the apex and it is time to switch sides.", "certainty": "established", "claims": ["C13"]},
+          {"id": "M10", "what": "Feel for the burr with a fingertip drawn lightly from the spine side out across the edge, at right angles to it, never along it.", "certainty": "established", "claims": ["C14"]},
+          {"id": "M11", "what": "On the second side the burr can flip back across long before that face reaches the edge: in one microscope check it was felt within about 25 strokes while the second face was still about 50 microns (a twentieth of a millimetre) short of the apex.", "certainty": "established", "claims": ["C15"]},
+          {"id": "M12", "what": "A specialist's method then alternates single strokes from side to side in shrinking counts, warning that skipping it leaves a large one-sided burr.", "certainty": "established", "claims": ["C16"]},
+          {"id": "M13", "what": "So the second side needs its full share of grinding, not just the few strokes it takes for the burr to flip, before the shrinking alternation evens both sides.", "certainty": "reasoned", "from": ["M1", "M11", "M12"], "reasoning": "An edge needs both bevels to reach the apex (M1). M11 shows the felt burr on side two can arrive while that bevel is still a twentieth of a millimetre short, with more than 10 microns of steel left to remove. Stopping at the first feel therefore leaves side two unfinished. The alternation (M12) balances the sides once both have been worked; it does not replace that work."},
+          {"id": "M14", "what": "What finishing does to the burr is argued: light alternating strokes and a strop mostly shrink and straighten it rather than remove it (an aligned burr often can't be felt), while popular guides say it must be removed; a thin undamaged burr can be strong, a large floppy one rolls.", "certainty": "contested", "claims": ["C17", "C18"], "hedge": "Most guides call this removing the burr; under an electron microscope, one researcher found these strokes mostly shrink it and stand it up straight instead, and either way it's the same few light strokes."},
+          {"id": "M15", "what": "The finishing moves: lighter pressure on each finer stone, then about 5 to 10 light edge-trailing strokes per side on leather.", "certainty": "established", "claims": ["C19"]},
+          {"id": "M16", "what": "The tests: a sharp edge slices printer paper held by one corner cleanly, with little resistance, and parts ripe tomato skin under the blade's own weight.", "certainty": "established", "claims": ["C20"]},
+          {"id": "M17", "what": "Between sharpenings, a few light alternating passes on a steel (WÜSTHOF: 14 degrees, heel to tip, 6-8 passes) bring the cut back for a while.", "certainty": "established", "claims": ["C21", "C22"]},
+          {"id": "M18", "what": "How a steel works is argued: the maker says it realigns the edge's microscopic teeth; electron-microscope cross-sections show steeling mostly grinding a tiny new bevel, and a rolled apex rarely straightening.", "certainty": "contested", "claims": ["C23"], "hedge": "Knife makers say a steel straightens the edge; under a microscope it seems mostly to grind a tiny new one, and nobody needs to settle that to use one well."},
+          {"id": "M19", "what": "In a study of 12 professional meat cutters, each cutter's skill at keeping the edge mattered much more to how sharp the knife stayed than the steel it was made of.", "certainty": "established", "claims": ["C24"]},
+          {"id": "M20", "what": "For a home cook the same lesson points to practice with the knife they own over buying a better one.", "certainty": "reasoned", "from": ["M19"], "reasoning": "If differences in steel mattered far less than the cutter's upkeep even in industrial meat cutting, where edges are used and dulled all day, it is unlikely that the steel outweighs the owner's upkeep in a home kitchen. It is an inference from professionals to home cooks, not a finding about home cooks, and it is said as one."}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "why a sharp edge matters and what it is: two flat faces meeting in a line, and the ways that line fails", "material": ["M1", "M2", "M3"]},
+            {"adds": "the stone, its water and its grit, chosen for a knife that is only dull from use", "material": ["M4"]},
+            {"adds": "the knife's own angle, taken from its maker or read off the bevel with a marker, then held steady", "material": ["M5", "M6", "M7"]},
+            {"adds": "the burr: what forms when the first side reaches the edge, and how to feel it without risk", "material": ["M8", "M9", "M10"]},
+            {"adds": "the second side's trap, a burr that flips before that face arrives, and the alternation that evens both sides", "material": ["M11", "M12", "M13"]},
+            {"adds": "finishing with lighter strokes and leather, and what those strokes really do to the burr", "material": ["M14", "M15"]},
+            {"adds": "the proof on paper and on the tomato from the opening", "material": ["M16"]},
+            {"adds": "keeping the edge between sharpenings with a steel, and the open argument over how a steel works", "material": ["M17", "M18"]},
+            {"adds": "the closing turn: in a study of professional meat cutters, upkeep mattered far more than the steel", "material": ["M19", "M20"]}
+          ],
+          "verdict": "sustains",
+          "why": "Each step hands the viewer something new to do or check, and each depends on the one before. The burr means nothing until the apex has been drawn, the second-side trap needs the burr, and the test needs the finish. Nine developments fill about ten minutes at a tutorial's pace, with room to show every signal. The two microscope findings and the steel argument add understanding, not length.",
+          "material_minutes": 10
+        },
+        "feasibility": "Strong for illustrated stills. The apex, the burr and the micro-bevel exist only at a scale the viewer can never film, so drawn cross-sections are the clearest way to show them. Hands, stone and knife are simple drawn scenes, and arrows give the stroke direction. Risk: generated images often get knife geometry wrong (bevel on the wrong side, fingers on the edge), so every still is checked against the method. Labels and angle numbers go on as drawn annotations, never inside a generated picture. Voice and a quiet bed carry the rest. No footage is needed."
+      },
+      {
+        "id": "T2",
+        "subject": "what a honing steel really does to an edge, and when a knife needs the stone instead",
+        "angle": "test the kitchen truism that a steel only straightens a bent edge against electron-microscope cross-sections, then build an upkeep routine on what they show",
+        "value_form": "a common belief tested, then a routine",
+        "factual": true,
+        "what_happens": "The viewer hears the familiar account that a steel straightens a bent edge without removing metal. Then they see cross-sections in which steeling grinds a tiny new bevel instead, and a bent apex rarely comes back straight. They leave with a routine: a few light passes between sharpenings, and the stone once the steel stops helping.",
+        "why_it_matters": "Many home cooks own a steel and use it believing it sharpens, or that it never takes metal off. What it really does changes how hard, how often and at what angle they use it, and it tells them when the steel has done all it can.",
+        "reward": "the pleasure of a kitchen truism examined under a microscope, and a cheaper habit that keeps a knife cutting for longer",
+        "strongest_material": [
+          {"id": "M21", "what": "Cross-sections show steeling mostly forming a tiny new bevel by removing metal, with a rolled apex rarely realigned; the maker says honing realigns the edge.", "certainty": "contested", "claims": ["C23"], "hedge": "One microscopist's images against the makers' account: said as an open argument, never as the settled truth."},
+          {"id": "M22", "what": "A few light, alternating passes at about the sharpening angle bring the cut back between sharpenings (WÜSTHOF: 14 degrees, 6-8 passes).", "certainty": "established", "claims": ["C21", "C22"]},
+          {"id": "M23", "what": "Upkeep skill outweighed steel quality for sharpness during work in a study of 12 professional meat cutters.", "certainty": "established", "claims": ["C24"]},
+          {"id": "M24", "what": "An encyclopedia account says a smooth steel burnishes the edge without removing metal, and that studies favour abrasives for daily upkeep.", "certainty": "contested", "sources": ["S8"], "hedge": "Seen only in a search summary of an encyclopedia entry whose sources were not checked, so it is said only as another account."}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "the truism as a maker states it: a steel straightens the edge's microscopic teeth", "material": ["M22"]},
+            {"adds": "what the cross-sections show instead: a tiny new bevel, and a bent apex that breaks away rather than straightening", "material": ["M21"]},
+            {"adds": "the other account, that a smooth steel burnishes without removing metal, and why the question stays open", "material": ["M24"]},
+            {"adds": "the routine that works whichever account is right, and the moment to give up and reach for a stone", "material": ["M22"]},
+            {"adds": "why upkeep is worth the habit: skill at keeping an edge outweighed the steel in a study of meat cutters", "material": ["M23"]}
+          ],
+          "verdict": "short",
+          "why": "The honing material gives one real turn (does a steel realign the edge or grind it?) and a short routine: about four or five minutes of genuine development. Ten minutes would need the sharpening method itself, which turns the film into T1 told from its last chapter, or the dispute repeated until it fills the time.",
+          "shortfall": "The honing evidence develops no further than the dispute and the routine. The remaining minutes would have to come from teaching sharpening on a stone, which is outside this angle, or from repetition.",
+          "material_minutes": 5
+        },
+        "feasibility": "The bent edge, the micro-bevel and the steel at its angle all draw well as cross-sections and hand scenes. The weakness is evidential, not visual: the central picture would redraw one author's micrographs as if they settled the question."
+      },
+      {
+        "id": "T3",
+        "subject": "which sharpener to use for a kitchen knife: whetstone, pull-through, electric or rod",
+        "angle": "a method guide that compares the common tools by the edge each leaves and the skill each asks for",
+        "value_form": "a decision made with evidence",
+        "factual": true,
+        "what_happens": "The viewer sees each common sharpener at work and what it does to the steel at the apex. They weigh control, cost, skill and how much blade each takes off, then pick the one that suits their knife and their patience.",
+        "why_it_matters": "Most people sharpen with whatever device came with the knife block. A carbide pull-through can tear off far more steel than a stone needs to and, on some steels, crack the edge, so the choice decides how long a knife lasts and how well it cuts.",
+        "reward": "a confident buying decision and fewer edges ruined by the wrong device",
+        "strongest_material": [
+          {"id": "M25", "what": "In one microscope study a carbide pull-through took nearly 200 microns off an S110V blade and left cracks among the carbides.", "certainty": "contested", "sources": ["S9"], "hedge": "Seen only as a search summary of one study on a high-carbide pocket-knife steel; whether ordinary kitchen steels fare the same is open."},
+          {"id": "M26", "what": "A maker's hand-held sharpeners have pre-set angles, with the coarse slot advised only once or twice a year.", "certainty": "established", "claims": ["C25"]},
+          {"id": "M27", "what": "On a whetstone the user holds the angle, pressure and path, which takes practice; that control is the stone's cost and its advantage.", "certainty": "established", "claims": ["C11"], "sources": ["S13"]}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "the tools side by side and what each one asks of the person using it", "material": ["M26", "M27"]},
+            {"adds": "what a carbide pull-through did to one steel's edge under the microscope", "material": ["M25"]},
+            {"adds": "the trade-off: pre-set convenience against control of the angle and the burr", "material": ["M26", "M27"]}
+          ],
+          "verdict": "uncertain",
+          "why": "The heart of the comparison, what each tool does to a kitchen edge, rests on one microscope study of a powder steel few kitchen knives use, and it was seen only as a search summary. Electric sharpeners, and pull-throughs on ordinary kitchen steels, have no read evidence here, so ten minutes would be carried by product opinion.",
+          "shortfall": "Missing: read evidence on what pull-through, electric and guided sharpeners do to ordinary kitchen steels, and independent tests rather than retailer or magazine opinion.",
+          "material_minutes": 4
+        },
+        "feasibility": "Generic tools draw easily, but a fair comparison wants real products, which must show their own markings and never invented logos. Damage at micro scale draws well."
+      }
+    ],
+    "selection": {
+      "candidate": "T1",
+      "why": "The user asked how, and the hardest part of the how on a stone is knowing when a step is finished. This angle answers it with checks the viewer runs on their own knife: where the marker wears off, a burr along the whole edge, paper that parts without tearing. The burr signal stands on two independent sources that were both read: microscope cross-sections of how a burr forms at the apex (S1), and a sharpening specialist's method that switches sides on it (S4). The same microscope work adds two honest corrections that make the method smarter without making it longer: the flipped burr on the second side, and finishing strokes that shrink a burr rather than erase it. The apex at micron scale is something only drawing can show, which suits illustrated stills. Each step opens the next, so the material fills ten minutes without padding.",
+      "decisive_material": ["M8", "M9"],
+      "over_alternatives": [
+        {"candidate": "T2", "why_not": "Its one turn, that a steel mostly grinds a tiny new bevel instead of straightening a bent edge, rests on one microscopist's cross-sections against the makers' own account. So the film's central reveal could only ever be said as an open argument. A steel also keeps an edge rather than making one, so the user's question would arrive only in the last minutes. It was close on surprise alone, and that finding lives on as T1's steel chapter (R8)."},
+        {"candidate": "T3", "why_not": "Its verdict would lean on a single microscope test of a carbide pull-through on S110V, a powder steel rare in kitchen knives that was seen only as a search summary, plus product opinion that dates with every model. Its reward is a purchase, while the user asked to learn the job. Not close."}
+      ],
+      "how_scope_kept": "Every beat is a step or a check in sharpening an ordinary kitchen knife on a stone, in the order a beginner does it. The steel appears only as upkeep between sharpenings. Buying sharpeners or knives, other blades and cutting technique stay out. All three candidates were angles on the same exact topic, and none replaces it.",
+      "keeps_user_scope": true
+    },
+    "value_to_carry": [
+      {"id": "R1", "what": "A sharp edge is two flat faces (bevels) meeting in a fine line, the apex; a dull one has that line blunted, bent over or broken away; sharpening grinds a little steel off the faces until they meet in a new line.", "why_it_matters": "Every later step is a way of getting those two faces to meet again; without this picture, the angle and the burr are just rules to memorise.", "certainty": "established", "rests_on": ["M1", "M2"]},
+      {"id": "R2", "what": "Set up the stone: soak a water stone (or splash a splash-and-go one) as its maker says, keep it steady on a damp towel and wet throughout, and start a knife that is only dull on a medium stone, about 1000 grit, keeping coarse grit for chips.", "why_it_matters": "The wrong grit either wastes the session or takes off far more steel than the knife needs; the viewer starts where an ordinary dull knife really is.", "certainty": "established", "rests_on": ["M4"]},
+      {"id": "R3", "what": "Match the angle the knife already has: its maker's figure where one is published (WÜSTHOF, for one, gives 14 degrees for its standard knives and 10 for its Asian-style ones), checked by colouring the bevel with a marker and watching where the stone takes the ink off; then hold that angle the same on every stroke.", "why_it_matters": "It swaps a number the viewer cannot measure by hand for a check they can see, and a steady angle is what lets the grinding reach the edge in one place.", "certainty": "established", "rests_on": ["M5", "M7"]},
+      {"id": "R4", "what": "Grind the first side until a burr, a thin lip of steel bent over to the far side, can be felt along the whole length of the edge; it forms as the grinding reaches the apex, so it is the edge saying this side is done. Feel for it with a fingertip drawn lightly from the spine side out across the edge, never along it.", "why_it_matters": "It answers the question every beginner on a stone is left with, when to switch sides, with a sign they can feel, so the strokes stop being counted guesses.", "certainty": "established", "rests_on": ["M8", "M9", "M10"], "needs_first": ["R1", "R3"]},
+      {"id": "R5", "what": "On the second side the burr can flip back across long before that face has reached the edge (in one microscope check it was felt within about 25 strokes while the second face was still a twentieth of a millimetre short), so give the second side its full share of work, then even the two sides with alternating strokes that shrink in number.", "why_it_matters": "It explains how a careful first side can still end in a dull knife, and why the common 'until the burr moves back' rule can stop the work too early.", "certainty": "reasoned", "rests_on": ["M11", "M12", "M13"], "needs_first": ["R4"]},
+      {"id": "R6", "what": "Finish with lighter and lighter strokes, a finer stone if there is one, and a few light strokes on leather with the edge trailing; most guides call this removing the burr, while microscope cross-sections show these strokes mostly shrink it and stand it up straight.", "why_it_matters": "Knowing that the strokes refine rather than erase stops the viewer grinding on, hunting for a burr that an aligned edge no longer lets them feel.", "certainty": "contested", "hedge": "Most guides call this removing the burr; under an electron microscope, one researcher found these strokes mostly shrink it and stand it up straight instead, and either way it's the same few light strokes.", "rests_on": ["M14", "M15"], "needs_first": ["R4"]},
+      {"id": "R7", "what": "Test the edge: a sharp one slices a sheet of printer paper held by one corner cleanly and with little resistance, and parts ripe tomato skin under the blade's own weight.", "why_it_matters": "It gives the viewer a verdict on their own knife, and it answers the opening, where the same tomato only dented.", "certainty": "established", "rests_on": ["M16"], "needs_first": ["R6"]},
+      {"id": "R8", "what": "Between sharpenings, a few light alternating passes on a steel at about the sharpening angle bring the cut back for a while; how a steel works is argued (the maker says it realigns the edge, microscope cross-sections show it mostly grinding a tiny new bevel), and once it stops helping, the stone is next.", "why_it_matters": "It keeps the new edge working longer between stone sessions and tells the viewer when the stone is due, without pretending the steel's mechanism is settled.", "certainty": "contested", "hedge": "Knife makers say a steel straightens the edge; under a microscope it seems mostly to grind a tiny new one, and nobody needs to settle that to use one well.", "rests_on": ["M17", "M18"], "needs_first": ["R1"]},
+      {"id": "R9", "what": "Upkeep matters more than the steel: in a study of twelve professional meat cutters, each cutter's skill at keeping the edge mattered much more to how sharp the knife stayed than the steel it was made of; for a home cook, that points to practice with the knife they own over buying a better one.", "why_it_matters": "It turns the tutorial into a reason to keep doing it, and it recasts the opening's dull knife as a habit to fix rather than a knife to replace.", "certainty": "reasoned", "rests_on": ["M19", "M20"], "needs_first": ["R7"]}
+    ],
+    "dropped": []
+  }
+}

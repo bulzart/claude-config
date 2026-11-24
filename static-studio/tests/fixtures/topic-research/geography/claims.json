@@ -1,0 +1,164 @@
+{
+  "claims": [
+    {
+      "id": "C01",
+      "claim": "Almost none of the water that enters the Okavango Delta leaves it: less than 1% leaves at the southern outlet over 37 years of records (S3), about 2% leaves as surface flow (S1); nearly all the rest returns to the air by evaporation and transpiration.",
+      "sources": ["S1", "S3", "S5"],
+      "confidence": "confirmed",
+      "note": "Two independent read sources (Wits group; Okavango Research Institute and Princeton) agree on the order; their figures are different measures. Narration says 'one or two percent' or 'almost none', never one exact figure without its source. S5 (98-99% lost to evapotranspiration) is a snippet and adds nothing on its own.",
+      "line_refs": []
+    },
+    {
+      "id": "C02",
+      "claim": "The annual flood moves very slowly across a very low-gradient basin and reaches the delta in the dry season, three to four months after the rains end; it usually reaches the delta's lower end around July.",
+      "sources": ["S3", "S4"],
+      "confidence": "confirmed",
+      "note": "S3: 'arrives during the dry season, long after the end of rains (3 to 4 months)', 'low gradient system'. S4: rains over Angola October to March 'don't usually reach the bottom of the Okavango Delta until July', 'extremely shallow gradient'. Timing varies by year: 2012 came early (S4).",
+      "line_refs": []
+    },
+    {
+      "id": "C03",
+      "claim": "Despite losing nearly all its water to the air, the delta's surface water is fresh.",
+      "sources": ["S1", "S3"],
+      "confidence": "confirmed",
+      "note": "S1: 'Notwithstanding the high water loss, surface water in the Delta remains fresh.' S3: 'a tropical freshwater wetland complex'. Say 'fresh', not 'drinkable': no source read says drinkable.",
+      "line_refs": []
+    },
+    {
+      "id": "C04",
+      "claim": "About 380,000 tonnes of dissolved solutes enter the delta each year, and only about 23,000 tonnes leave with the surface outflow.",
+      "sources": ["S1", "S5"],
+      "confidence": "likely",
+      "note": "One read source (S1, citing McCarthy 2006). The per-year unit is implied by the sentences either side of it in S1. S5's '94% retained' (snippet) matches 23,000 out of 380,000 but may rest on the same measurements. Round in narration ('hundreds of thousands of tonnes a year').",
+      "line_refs": []
+    },
+    {
+      "id": "C05",
+      "claim": "About 260,000 tonnes of minerals settle out inside the delta each year, mainly calcium and magnesium carbonate and amorphous silica.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "S1 says 'estimated'; keep 'about' and 'estimated'.",
+      "line_refs": []
+    },
+    {
+      "id": "C06",
+      "claim": "Salt crusts, mainly the sodium carbonate mineral trona, form on the delta's islands, and the groundwater beneath the islands is saline and alkaline.",
+      "sources": ["S1", "S2"],
+      "confidence": "confirmed",
+      "note": "Two independent groups that disagree on how the salt forms (C12) agree that it is there and is essentially trona. S1 calls the brine 'sodium bicarbonate'; S2 calls the salt 'essentially trona'.",
+      "line_refs": []
+    },
+    {
+      "id": "C07",
+      "claim": "Groundwater salinity rises about a thousandfold, from about 40 mg/L near the channels to several thousand mg/L beneath island centres; island centres are generally barren because the sodium bicarbonate becomes toxic to plants, and island vegetation is zoned in rings by salt tolerance.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "S1: 'varies continuously by about three orders of magnitude'; 'island centers are generally barren of vegetation'. One read source; the barren centres are consistent with S2's salt deposits.",
+      "line_refs": []
+    },
+    {
+      "id": "C08",
+      "claim": "Transpiration by trees on the islands lowers the water table beneath them, so groundwater flows continuously toward the islands and leaves its dissolved salts there. The model comes from field work on 18 islands with about 200 auger holes and about a thousand soil samples.",
+      "sources": ["S1", "S3", "S5"],
+      "confidence": "likely",
+      "note": "S1 read, with water-table measurements at Xaxaba island over 1991-92 (its figure 1c, which I could not view). S3 is consistent but conditional. S5 is a snippet. S1 says independent groups tested the model, but I did not read them. The chemistry of what forms is disputed (C12); that trees draw the water in is not.",
+      "line_refs": []
+    },
+    {
+      "id": "C09",
+      "claim": "As sodium bicarbonate builds up, the groundwater beneath the islands becomes dense enough to sink into an inferred deeper saline reservoir, which keeps saline water from reaching the surface; one sinking plume has been imaged with geophysical methods.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "One read source, citing Bauer et al. 2006 for the imaged plume (not read). Keep S1's word 'inferred' for the deeper reservoir.",
+      "line_refs": []
+    },
+    {
+      "id": "C10",
+      "claim": "Many islands begin as termite mounds: termites build with a mortar of fine clay, silica and calcite, and clusters of mounds grow into larger islands. Termites cannot build on seasonal floodplains, so they colonise ground that has dried out.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "S1, citing McCarthy, Ellery and Dangerfield 1998. Say 'many islands', not 'all': a search summary of a McCarthy and Ellery poster (not read, not in the ledger) also names channel inversion as an origin.",
+      "line_refs": []
+    },
+    {
+      "id": "C11",
+      "claim": "Calcite and silica settling out of the groundwater beneath islands make up as much as 30-40% of an island's volume and give the delta its gently rolling surface.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "S1, citing McCarthy et al. 2012: 'contributing up to 30%-40% of the total volume of islands'.",
+      "line_refs": []
+    },
+    {
+      "id": "C12",
+      "claim": "How the island groundwater's chemistry forms is disputed. Jolivet et al. (2023) proposed two disconnected aquifers. Challier et al. (2026) report that the composition could not come from simple evapotranspiration of surface water, and add (bio)geochemical processes. McCarthy and Humphries (2024) reply that the data are too few to revise the evapotranspiration model.",
+      "sources": ["S1", "S2", "S6"],
+      "confidence": "disputed",
+      "note": "Credible groups disagree. S2 is an unreviewed 2026 abstract; S6 is known only indirectly. The film gives both sides and picks no winner. That the salt is there (C06) and that trees draw water in (C08) are not what is argued.",
+      "line_refs": []
+    },
+    {
+      "id": "C13",
+      "claim": "Parts of the delta can stay dry for decades before the water returns.",
+      "sources": ["S1", "S4"],
+      "confidence": "confirmed",
+      "note": "S1: large regions of floodplain 'may revert to dry land and remain so for decades'. S4: 'some of these depressions only fill with water after decades of dryness'. Two independent reads agree.",
+      "line_refs": []
+    },
+    {
+      "id": "C14",
+      "claim": "The water's distribution across the delta keeps changing because distributary channels upstream block and fail.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "S1, citing McCarthy et al. 1992. Only the cause rests on one source; the decades-long drying itself is C13.",
+      "line_refs": []
+    },
+    {
+      "id": "C15",
+      "claim": "The delta's water is rain that falls on the Angolan Highlands, mostly from October to March, and travels about 450 km by river to reach the delta.",
+      "sources": ["S4", "S7"],
+      "confidence": "likely",
+      "note": "One read source (S4). S7 (over 95% of the inflow from Angolan Highlands rain) is a snippet and agrees.",
+      "line_refs": []
+    },
+    {
+      "id": "C16",
+      "claim": "The delta's flooded area ranges from about 12,000 km2 in average years to about 15,000 km2 in very wet years.",
+      "sources": ["S3"],
+      "confidence": "likely",
+      "note": "One read source. S5's 13,500 km2 (snippet) falls inside this range.",
+      "line_refs": []
+    },
+    {
+      "id": "C17",
+      "claim": "The Makgadikgadi salt pans lie next to the delta, and their evaporites are mostly halite (common salt), unlike the trona of the delta's islands.",
+      "sources": ["S1", "S2"],
+      "confidence": "likely",
+      "note": "S1 calls them the 'adjacent Makgadikgadi playa lakes'; only S2 makes the halite-versus-trona comparison. Shown as an example of what evaporation leaves in water with nowhere to go, never as the delta's past or future.",
+      "line_refs": []
+    },
+    {
+      "id": "C18",
+      "claim": "The Casiquiare branches off the upper Orinoco and carries about a quarter of its water to the Rio Negro, a major tributary of the Amazon.",
+      "sources": ["S9", "S8"],
+      "confidence": "likely",
+      "note": "One read popular source (S9). The study itself (S8) was seen only as a search summary.",
+      "line_refs": []
+    },
+    {
+      "id": "C19",
+      "claim": "A 2018 study projects that the Casiquiare's flow will keep increasing until, in the distant future, it carries all of the upper Orinoco's water, which would add up to about 40,000 km2 to the Amazon basin. No timescale is given.",
+      "sources": ["S9", "S8"],
+      "confidence": "likely",
+      "note": "'Likely' that the study says this; the projection itself is a forecast, said as one (T2's M2 is contested).",
+      "line_refs": []
+    },
+    {
+      "id": "C20",
+      "claim": "There are signs that several west-bank tributaries of the Amazon were originally captured from the Orinoco basin.",
+      "sources": ["S9"],
+      "confidence": "likely",
+      "note": "One read popular source; 'signs' is its word.",
+      "line_refs": []
+    }
+  ]
+}

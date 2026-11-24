@@ -1,0 +1,158 @@
+{
+  "scope": {"kind": "niche", "user_words": "geography", "niche": "geography"},
+  "audience_value": "A general geography audience comes for the click of understanding how a place works: a strange fact about a landscape, explained by a mechanism they could not have guessed and can then see on the map or from the air. They reward a real question answered in steps, pictures that explain rather than decorate, and honesty about what is still unknown. There were no processed references for this exercise, so this rests on the niche and on what the research offered, not on reference evidence.",
+  "from_references": [],
+  "candidates": [
+    {
+      "id": "T1",
+      "subject": "why the Okavango Delta, a river that ends in the Kalahari and loses almost all its water to the sky, stays fresh",
+      "angle": "follow the salt, not the water: the delta's islands are where it hides what evaporation leaves behind",
+      "value_form": "a natural phenomenon explained, a paradox resolved step by step",
+      "factual": true,
+      "what_happens": "Rain from the Angolan Highlands runs about 450 km south and spreads across a nearly flat basin in the Kalahari, arriving in the dry season months after the rain. Almost none of it leaves: one or two percent flows out and the rest goes back into the air. Water that evaporates leaves its salts behind, so the delta should be turning to brine, yet it is fresh. The salt turns up in the islands. Trees draw groundwater toward them, the salts gather beneath and crust their barren centres, and the heavy brine sinks. Many of those islands began as termite mounds, and geochemists are still arguing over exactly how the salt forms.",
+      "why_it_matters": "It turns a famous wetland into a machine the viewer can read from above. The scattered islands, easy to take for scenery, are what keeps a desert delta fresh. The reasoning behind it (no outlet plus evaporation means salt, so where is it?) is one the viewer can carry to any desert lake.",
+      "reward": "two puzzles solved in turn, the dry-season flood and the missing salt, then the opening aerial view read again with new eyes, ending on an open question that is real",
+      "strongest_material": [
+        {"id": "M1", "what": "Its water is rain that falls on the Angolan Highlands, mostly from October to March, and travels about 450 km by river to the delta", "certainty": "established", "claims": ["C15"]},
+        {"id": "M2", "what": "The flood crawls across an extremely flat basin and arrives in the dry season, three to four months after the rains end, usually reaching the delta's lower end around July", "certainty": "established", "claims": ["C02"]},
+        {"id": "M3", "what": "Almost none of the water leaves: under 1% at the southern outlet over 37 years of records, about 2% as surface outflow; nearly all the rest returns to the air", "certainty": "established", "claims": ["C01"]},
+        {"id": "M4", "what": "The river brings in about 380,000 tonnes of dissolved solutes a year; only about 23,000 tonnes leave with the outflow, and about 260,000 tonnes of minerals settle out inside the delta", "certainty": "established", "claims": ["C04", "C05"]},
+        {"id": "M5", "what": "Even so, the delta's surface water is fresh", "certainty": "established", "claims": ["C03"]},
+        {"id": "M6", "what": "The delta should be turning salty: the salt must be piling up somewhere other than the surface water", "certainty": "reasoned", "from": ["M3", "M4", "M5"],
+         "reasoning": "Evaporation and transpiration take away water, not dissolved salts. With nearly all the water leaving that way (M3) and only about a sixteenth of the incoming solutes leaving with the outflow (M4), the salt in the system can only grow. Since the surface water stays fresh (M5), the salt has to be stored somewhere else."},
+        {"id": "M7", "what": "The salt is in the islands: crusts of trona form on them, and the groundwater beneath them is saline and alkaline", "certainty": "established", "claims": ["C06"]},
+        {"id": "M8", "what": "Island trees transpire enough to lower the water table beneath each island, drawing groundwater in from the swamp around it and leaving its salts behind; the model comes from field work on 18 islands", "certainty": "established", "claims": ["C08"]},
+        {"id": "M9", "what": "As the salt builds up, the brine becomes dense enough to sink into deeper groundwater, so it does not reach the surface water; one sinking plume has been imaged with geophysics", "certainty": "established", "claims": ["C09"]},
+        {"id": "M10", "what": "Exactly how the island salt's chemistry forms is argued over: a 2026 team says simple evaporation cannot produce it and adds biological and chemical processes; the model's authors say the newer data are too few to overturn it", "certainty": "contested", "claims": ["C12"],
+         "hedge": "Said as a live argument between named research groups, each side given its claim, with no winner picked; the film says plainly that the salt's presence under the islands and the trees' pull on the water are not what is argued."},
+        {"id": "M11", "what": "Many islands began as termite mounds built with a mortar of fine clay, silica and calcite; minerals settling out beneath islands make up as much as 30-40% of their volume", "certainty": "established", "claims": ["C10", "C11"]},
+        {"id": "M12", "what": "The water's paths keep moving: channels block and fail, and parts of the delta stay dry for decades before the water returns, long enough for termites to build", "certainty": "established", "claims": ["C13", "C14"]},
+        {"id": "M13", "what": "Next to the delta lie the Makgadikgadi salt pans, whose salt is mostly halite, unlike the trona of the islands", "certainty": "established", "claims": ["C17"]},
+        {"id": "M14", "what": "The flooded area swells from about 12,000 km2 in an average year to about 15,000 km2 in a very wet one", "certainty": "established", "claims": ["C16"]},
+        {"id": "M15", "what": "Beneath an island the groundwater grows about a thousand times saltier from the channel edge (about 40 mg/L) to the centre (several thousand mg/L); the centres are barren, and the plants grow in rings by salt tolerance", "certainty": "established", "claims": ["C07"]}
+      ],
+      "runtime": {
+        "progression": [
+          {"adds": "the opening oddity: a river from Angola's rainy highlands that runs into the Kalahari, spreads over thousands of square kilometres and never reaches the sea", "material": ["M1", "M14"]},
+          {"adds": "the first answer: why its flood arrives in the dry season, months after the rain, crawling across an almost flat basin", "material": ["M2"]},
+          {"adds": "where the water goes: one or two percent flows out and the rest rises back into the air", "material": ["M3"]},
+          {"adds": "the real question: salt comes in with the river and evaporation leaves it behind, so the delta should look like the salt pans next door, yet its water is fresh", "material": ["M4", "M5", "M6", "M13"]},
+          {"adds": "the salt found: trona crusts on barren island centres and groundwater growing a thousand times saltier toward them", "material": ["M7", "M15"]},
+          {"adds": "how the islands take it: trees lower the water table, groundwater flows in and leaves its salt, and the heavy brine sinks out of reach", "material": ["M8", "M9"]},
+          {"adds": "where islands come from: termite mounds, cemented by the minerals the trees leave behind, on ground the shifting channels leave dry for decades", "material": ["M11", "M12"]},
+          {"adds": "what is still argued over: whether simple evaporation can explain the salt's chemistry, and the opening view read again", "material": ["M10"]}
+        ],
+        "verdict": "sustains",
+        "why": "Each step answers the question the last one raised: where the flood comes from, where the water goes, where the salt goes, how the islands take it, where islands come from, and what is still unknown. So the film moves forward without repeating itself. Each step also has its own picture: a route map, a water-budget diagram, a salt pan, an island cut-away, a termite mound. For a geography audience that wants a mechanism understood, this density fills about ten minutes without padding.",
+        "material_minutes": 10
+      },
+      "feasibility": "Made for stills: painted aerial views of channels and white-centred islands, hand-drawn maps of the route from the Angolan Highlands, cut-away diagrams of the water table and the sinking brine, and close-ups of a termite mound and a trona crust. No footage or people are needed. Nothing in it touches the content limits, and no predators or hunting appear in any picture."
+    },
+    {
+      "id": "T2",
+      "subject": "the Casiquiare, a river that links the Orinoco to the Amazon and is slowly handing one to the other",
+      "angle": "a watershed caught moving: the line on the map between two great basins is being redrawn by erosion",
+      "value_form": "a landscape process caught in the act",
+      "factual": true,
+      "what_happens": "A branch of the upper Orinoco, the Casiquiare, carries about a quarter of that river's water south into the Rio Negro and so into the Amazon. A 2018 study argues that the split is unstable. A fast-eroding Amazon tributary cuts back into the divide while sediment builds up in the Orinoco below the fork. The Casiquiare takes more and more, and may one day take the whole upper Orinoco.",
+      "why_it_matters": "It shows that the borders between river basins drawn on maps are not fixed. Rivers steal from each other, one such theft is under way here, and there are signs the Amazon has done it before on its western side.",
+      "reward": "the surprise that a continental watershed can move, with one place where it is happening now",
+      "strongest_material": [
+        {"id": "M1", "what": "The Casiquiare branches off the upper Orinoco and carries about a quarter of its water to the Rio Negro, a major Amazon tributary", "certainty": "established", "claims": ["C18"]},
+        {"id": "M2", "what": "A 2018 study projects that the Casiquiare will keep growing until it takes all of the upper Orinoco, adding up to about 40,000 km2 to the Amazon basin", "certainty": "contested", "claims": ["C19"],
+         "hedge": "Said as the researchers' projection from the channel's growth, with no timescale; never said as certain or dated."},
+        {"id": "M3", "what": "The mechanism: headward erosion by a fast-eroding Rio Negro tributary, sediment building up in the Orinoco below the fork, and seasonal flooding over a low divide, each feeding the others", "certainty": "established", "sources": ["S8"],
+         "note": "From search summaries of the paper's abstract only (S8 is a snippet): a lead, not verified."},
+        {"id": "M4", "what": "Humboldt and Bonpland travelled the Casiquiare in May 1800 and settled a long dispute over whether the two river systems were connected; Buache's maps had imagined a mountain range between them", "certainty": "established", "sources": ["S10", "S11"],
+         "note": "Search summaries only (S10 and S11 are snippets): a lead, not verified."},
+        {"id": "M5", "what": "Several west-bank tributaries of the Amazon show signs of having been captured from the Orinoco basin before", "certainty": "established", "claims": ["C20"]}
+      ],
+      "runtime": {
+        "progression": [
+          {"adds": "a river that flows out of one great basin into another, and why that looks impossible on a map", "material": ["M1"]},
+          {"adds": "the eighteenth-century doubt and Humboldt's 1800 voyage that settled it", "material": ["M4"]},
+          {"adds": "why the link is not stable: erosion upstream, sediment downstream, floods over a low divide", "material": ["M3"]},
+          {"adds": "the forecast: the whole upper Orinoco handed to the Amazon, some day", "material": ["M2"]},
+          {"adds": "it has happened before: older captures on the Amazon's western side", "material": ["M5"]}
+        ],
+        "verdict": "uncertain",
+        "why": "Five developments exist, but two rest only on search summaries, and the middle of the film, the mechanism, is a single idea told once. Without the paper itself the film would lean on Humboldt's voyage, which makes it a different film, an explorer's story.",
+        "shortfall": "A read of the 2018 paper itself (how fast the channel is widening, and on what evidence), a second present-day development beyond the undated forecast, and pictures beyond the one junction.",
+        "material_minutes": 6
+      },
+      "feasibility": "Maps and drawn diagrams carry it well (the fork, the low divide, the two basins), and a painted canoe on a forest river can show 1800. But most pictures would return to the same junction, and the forecast has no image of its own."
+    },
+    {
+      "id": "T3",
+      "subject": "Saharan dust that crosses the Atlantic and helps keep the Amazon fertile",
+      "angle": "a rainforest's nutrients delivered by a desert wind",
+      "value_form": "a connection across continents",
+      "factual": true,
+      "what_happens": "Each year winds lift dust from the Sahara, much of it from the Bodélé Depression, a dried lake bed in Chad, and carry it across the Atlantic. Satellite lidar suggests about 28 million tonnes settle over the Amazon basin every year. That dust brings roughly 22,000 tonnes of phosphorus, about what the basin loses to rain and floods.",
+      "why_it_matters": "It links two places that look like opposites, and suggests that the forest's fertility over centuries depends partly on a far-off desert staying dry and windy.",
+      "reward": "the strangeness of a desert feeding a jungle, made concrete by a satellite measurement",
+      "strongest_material": [
+        {"id": "M1", "what": "About 28 million tonnes of dust (range 8-48) settle over the Amazon basin each year, from seven years of CALIPSO lidar data (2007-2013)", "certainty": "established", "sources": ["S12", "S13"],
+         "note": "Search summaries of the paper and its press release only (S12 and S13 are snippets): a lead, not verified."},
+        {"id": "M2", "what": "The dust brings about 22,000 tonnes of phosphorus a year (range 6,000-37,000), which the authors call comparable to what the basin loses through rain and floods", "certainty": "contested", "sources": ["S12"],
+         "hedge": "An estimate with wide error bars: said as the study's estimate and range, never as 'the Sahara feeds the Amazon'."},
+        {"id": "M3", "what": "Much of the dust comes from the Bodélé Depression, an ancient lake bed rich in the phosphorus-laden remains of microorganisms", "certainty": "established", "sources": ["S13"],
+         "note": "A university press release seen only as a search summary: a lead, not verified."}
+      ],
+      "runtime": {
+        "progression": [
+          {"adds": "dust plumes leaving Africa and crossing an ocean every year", "material": ["M1"]},
+          {"adds": "where the dust comes from: a dried lake bed in Chad", "material": ["M3"]},
+          {"adds": "what it carries: phosphorus roughly matching the forest's losses, with wide error bars", "material": ["M2"]}
+        ],
+        "verdict": "short",
+        "why": "The material is one connection and one budget. After the crossing, the source and the phosphorus number, the film would repeat itself or drift into dust and climate in general. The honest finding, a rough balance with wide error bars, is smaller than the popular telling, so ten minutes would invite exaggeration.",
+        "shortfall": "A second line of development, not researched here: how the wind lifts the Bodélé's dust, how Amazon soils lose phosphorus, or how the supply changed in the past.",
+        "material_minutes": 4
+      },
+      "feasibility": "Easy to picture (a plume map across the Atlantic, a painted dry lake bed, a canopy under haze), but the pictures would repeat the same crossing, and the satellite measurement itself is hard to show as a still."
+    }
+  ],
+  "selection": {
+    "candidate": "T1",
+    "why": "T1 is a paradox the viewer can state in one breath, and its material answers it in steps the viewer can see: a river that ends in a desert, loses almost all its water to the air and still stays fresh, because its islands store the salt. Each answer opens the next question, and the last one is still argued over by geochemists, so the film can end on an open question that is real rather than on a recap. Each decisive fact rests on two read sources from different research teams, and those teams agree on the facts even where they disagree on the chemistry. And it is told almost entirely in maps and cut-away diagrams, which suits illustrated stills.",
+    "decisive_material": ["M3", "M5", "M6", "M7"],
+    "over_alternatives": [
+      {"candidate": "T2", "why_not": "It was the closest call. But its strongest material is a single junction and a single process: one river splitting, then slowly being taken over. Its forecast has no date, its mechanism is known here only from summaries of one paper, and its richest chapter, the 1800 voyage, would turn it into an explorer's story. It could make a later episode once the paper itself is read."},
+      {"candidate": "T3", "why_not": "It has one strong number and one connection: about 28 million tonnes of dust a year, carrying phosphorus roughly equal to what the forest loses. Beyond that, ten minutes would repeat itself or drift into a general dust film. The 2015 NASA and university releases already told it widely, usually as 'the Sahara feeds the Amazon', while the study gives wide error bars. And everything here on it comes from search summaries."}
+    ]
+  },
+  "value_to_carry": [
+    {"id": "R1", "what": "The delta's water is Angolan rain that crawls across a nearly flat basin and arrives in the dry season, months after the rain stopped",
+     "why_it_matters": "the first oddity shows the delta as a system driven from far away and slowed by its own flatness, the frame everything after it builds on",
+     "certainty": "established", "rests_on": ["M1", "M2"]},
+    {"id": "R2", "what": "Almost none of the water leaves: one or two percent flows out, and the rest returns to the air",
+     "why_it_matters": "it makes the delta a dead end, which is the premise of the salt question",
+     "certainty": "established", "rests_on": ["M3"]},
+    {"id": "R3", "what": "So the delta should be turning salty, like the salt pans next door, yet its water is fresh",
+     "why_it_matters": "this is the question the film carries: a contradiction the viewer can hold and test for themselves",
+     "certainty": "reasoned", "rests_on": ["M4", "M5", "M6", "M13"], "needs_first": ["R2"]},
+    {"id": "R4", "what": "The salt is in the islands: trona crusts on barren centres, with groundwater growing about a thousand times saltier toward them",
+     "why_it_matters": "the contradiction resolves into something visible, and it was already in the opening picture",
+     "certainty": "established", "rests_on": ["M7", "M15"], "needs_first": ["R3"]},
+    {"id": "R5", "what": "Island trees drink the groundwater, so water flows in toward them and leaves its salt behind; the heavy brine sinks out of reach of the surface",
+     "why_it_matters": "it explains how the islands collect the salt, turning an observation into a mechanism the viewer understands",
+     "certainty": "established", "rests_on": ["M8", "M9"], "needs_first": ["R4"]},
+    {"id": "R6", "what": "Many islands began as termite mounds, cemented by the minerals the trees leave behind, on ground the shifting channels leave dry for decades",
+     "why_it_matters": "it closes the loop: the salt machinery builds the very islands that run it",
+     "certainty": "established", "rests_on": ["M11", "M12"], "needs_first": ["R5"]},
+    {"id": "R7", "what": "How the salt's chemistry forms is still argued over: a 2026 team says simple evaporation cannot explain it, and the model's authors say the data are too few to overturn it",
+     "why_it_matters": "it keeps the film honest and leaves the viewer with a question that is still live, not a tidy textbook ending",
+     "certainty": "contested", "hedge": "The narration names it as an open argument between research groups, gives each side's claim, and picks no winner, while saying what is not in dispute.",
+     "rests_on": ["M10"], "needs_first": ["R5"]},
+    {"id": "R8", "what": "The islands that look like scenery are where the delta keeps its freshness: its salt store",
+     "why_it_matters": "it re-reads the opening picture, so the ending pays off the beginning",
+     "certainty": "established", "rests_on": ["M7", "M8", "M9"], "needs_first": ["R4", "R5"]}
+  ],
+  "dropped": [
+    {"id": "R9", "what": "the delta lies in a fault-bounded basin at the tail end of a rift",
+     "why": "Only a search summary of a NASA photo caption mentions a fault-bounded margin. No source read says it, so the film does not say it until one is read; the flat basin (C02) does the narrative work instead."},
+    {"id": "R10", "what": "about 150,000 islands, built up over 100,000 to 400,000 years",
+     "why": "These come only from a search summary of Ramberg and Wolski's abstract (S5); the publisher page would not open. They are to be read before any line uses them."}
+  ]
+}

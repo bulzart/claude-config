@@ -1,0 +1,192 @@
+{
+  "blueprint": {
+    "ending_payoff": "Return to the opening aerial view of the delta: the scattered islands with white centres, which looked like scenery, are now read as the delta's salt store. The film closes on what is known (the salt is there, and the trees put it there) and on what is still argued (how exactly its chemistry forms)."
+  },
+  "beats": [
+    {
+      "id": "B01",
+      "experience": "Puzzled curiosity: water is rising in the dry season, under a cloudless sky, in one of the driest corners of southern Africa",
+      "visual_intent": "Open on the wrong-season flood, then lift to the whole delta from above, letting the white-centred islands pass by unexplained so the ending can return to them",
+      "carries": []
+    },
+    {
+      "id": "B02",
+      "experience": "The first small click: the flood is old rain from far away, slowed by the land's flatness",
+      "visual_intent": "A hand-drawn route map from the Angolan Highlands to the delta, then the fan drawn month by month as the water's edge creeps south; the map explains the delay before the narration finishes",
+      "carries": ["R1"]
+    },
+    {
+      "id": "B03",
+      "experience": "Mild astonishment at a budget that barely balances: nearly everything rises into the air",
+      "visual_intent": "A drawn water budget: broad arrows in, wide pale arrows up, one thin thread out; the picture's proportions do the arithmetic",
+      "carries": ["R2"]
+    },
+    {
+      "id": "B04",
+      "experience": "The real question lands: this place should be a salt pan, and it is not",
+      "visual_intent": "The salt pans next door, white to the horizon, with the green delta at the edge of the frame; then a clear channel up close: the two halves of the contradiction",
+      "carries": ["R3"],
+      "key_moment": "the paradox: a dead-end basin that should be salt is fresh",
+      "significance": {
+        "matters_because": "the viewer now holds a real contradiction built from facts they were just given: the water leaves only as vapour, the salt cannot leave that way, and yet the water is fresh; the rest of the film answers it",
+        "reward": "the jolt of a contradiction the viewer can state for themselves",
+        "certainty": "reasoned",
+        "depends_on": [{"what": "almost all the water leaves as vapour", "from": "B03"}]
+      },
+      "depends_on": [{"what": "almost all the water leaves as vapour", "from": "B03"}],
+      "hedges": {
+        "R3": "If the water leaves and the salt can't, the salt should be piling up somewhere, and by rights this delta should be turning into a salt pan like its neighbours. It isn't."
+      }
+    },
+    {
+      "id": "B05",
+      "experience": "The 'oh' of finding the answer in a picture already seen",
+      "visual_intent": "Return closer to an island from the opening view: the ring of trees and the bare white centre; then a drawn cross-section with the saltiness shaded from clear to dense toward the centre",
+      "carries": ["R4"],
+      "key_moment": "the salt found in the islands' white centres",
+      "significance": {
+        "matters_because": "the contradiction from B04 resolves into something the viewer can see, and it was already in the opening picture, so the film's first image turns out to hold its answer",
+        "reward": "the oh of recognising the white centres",
+        "certainty": "established",
+        "depends_on": [{"what": "the paradox: the salt must be somewhere", "from": "B04"},
+                       {"what": "the opening aerial view with white-centred islands", "from": "B01"}]
+      },
+      "depends_on": [{"what": "the paradox: the salt must be somewhere", "from": "B04"},
+                     {"what": "the opening aerial view with white-centred islands", "from": "B01"}]
+    },
+    {
+      "id": "B06",
+      "experience": "Satisfying understanding: a machine with moving parts, with trees as the pumps",
+      "visual_intent": "Cut-away diagrams: the water table dipping under an island as the trees transpire, groundwater flowing in from both sides; then the dense brine sinking beneath it while the fresh water above stays untouched",
+      "carries": ["R5"]
+    },
+    {
+      "id": "B07",
+      "experience": "Delight at an unlikely builder: an island that started as a termite mound",
+      "visual_intent": "A termite mound on dry floodplain, then one continuous landscape where a mound, a cluster of mounds with shrubs and a wooded island stand side by side as stages of the same growth",
+      "carries": ["R6"]
+    },
+    {
+      "id": "B08",
+      "experience": "Respect for an honest unknown: the experts still disagree about the last step",
+      "visual_intent": "A close look at the trona crust both sides are studying, the object at the centre of the argument, with a geologist's hand lens resting beside it",
+      "carries": ["R7"],
+      "hedges": {
+        "R7": "Not everyone agrees on that last step. A team from Paris, Rennes and the delta's own research institute says this salt is too strange to come from evaporation alone; the scientists who built the model reply that the new data are too few to overturn decades of measurements. For now, it is an open argument."
+      }
+    },
+    {
+      "id": "B09",
+      "experience": "Quiet satisfaction and a changed view: the same aerial picture now reads as a working system",
+      "visual_intent": "The opening aerial view again, slightly wider and in evening light, held long enough for the viewer to read the islands' white centres as the delta's salt store",
+      "carries": ["R8"],
+      "key_moment": "the opening view read again: every island a salt store",
+      "significance": {
+        "matters_because": "the ending pays off the opening: the islands the viewer took for scenery are the reason the water around them is fresh, so the first image means something new",
+        "reward": "the pleasure of seeing a familiar picture with new eyes",
+        "certainty": "established",
+        "depends_on": [{"what": "the salt found in the islands", "from": "B05"},
+                       {"what": "how the trees and the sinking brine keep it there", "from": "B06"}]
+      },
+      "depends_on": [{"what": "the salt found in the islands", "from": "B05"},
+                     {"what": "how the trees and the sinking brine keep it there", "from": "B06"}]
+    }
+  ],
+  "shots": [
+    {
+      "id": "S1",
+      "beat_id": "B01",
+      "new_thing": "the wrong-season flood: clear water spreading over dry grass under a cloudless sky",
+      "frame_prompt": "Gouache painting at ground level: a thin sheet of clear water spreading over dry golden grass and cracked pale earth, reflecting a cloudless pale-blue winter sky; a lone fan palm in the far distance; warm, dry light; no animals, no people, no text or labels."
+    },
+    {
+      "id": "S2",
+      "beat_id": "B01",
+      "new_thing": "the place from above: a green maze of channels and islands set in pale Kalahari scrub, some islands with bare white centres",
+      "frame_prompt": "Gouache painting, high aerial view: a vast wetland of winding blue-green channels and papyrus spread across pale, dry savanna under a clear winter sky; many small round islands ringed with trees, several with bare white centres; soft morning light; no people, no text or labels."
+    },
+    {
+      "id": "S3",
+      "beat_id": "B02",
+      "new_thing": "where the water comes from: rain over distant highlands and one long river running south into a desert basin",
+      "frame_prompt": "Hand-drawn map of south-central Africa in muted earth tones: green highlands at the upper left under small drawn rain clouds, one blue river line running a long way south-east into a pale sandy basin where it fans out into a delta shape; a dotted arrow along the river; no place names, no lettering, no numbers."
+    },
+    {
+      "id": "S4",
+      "beat_id": "B02",
+      "new_thing": "the flood's slow crawl: the water's edge drawn again and again, creeping across the fan",
+      "frame_prompt": "Clean drawn diagram of a delta's fan shape seen from above: the water's leading edge shown as successive blue contour lines spreading from the top of the fan toward its lower margin, each line paler than the last; small sun symbols beside the later lines for the dry season; no text, no numbers."
+    },
+    {
+      "id": "S5",
+      "beat_id": "B03",
+      "new_thing": "the water budget as a picture: nearly everything rising into the air, a trickle leaving",
+      "frame_prompt": "Flat illustrated cut-away of a shallow basin of water and reeds: broad blue arrows entering from a river at one side and from rain clouds above, wide pale wavy arrows rising from the water and from trees into the sky, and one very thin blue thread leaving at the far edge; calm colours; no text, no numbers."
+    },
+    {
+      "id": "S6",
+      "beat_id": "B04",
+      "new_thing": "what evaporation leaves behind: a white salt pan to the horizon, with green wetland just at its edge",
+      "frame_prompt": "Gouache painting, low aerial view: a vast flat white salt pan with a cracked crust stretching to the horizon, faint pale lines of dry riverbeds leading into it, and a thin strip of green wetland visible at the far edge of the same landscape; harsh midday light; no people, no text.",
+      "carries_significance": "the pan shows what the delta, by the logic just given, ought to look like, and the green strip at its edge sets the fresh delta against it, so the contradiction is visible in one frame"
+    },
+    {
+      "id": "S7",
+      "beat_id": "B04",
+      "new_thing": "the other half of the paradox: a channel so clear the sandy bottom shows",
+      "frame_prompt": "Gouache painting, close view: a slow, glass-clear channel between tall papyrus stems, the pale sandy bottom visible through still water, one water lily on the surface; cool shade; no animals, no people, no text.",
+      "carries_significance": "after the salt pan, the clear water states that the delta is fresh before the narration asks why, so the viewer feels the contradiction rather than being told it"
+    },
+    {
+      "id": "S8",
+      "beat_id": "B05",
+      "new_thing": "an island from the opening, up close: a ring of trees and palms around a bare white crusted centre",
+      "frame_prompt": "Gouache painting, low aerial view of a single round island in the swamp, framed like the opening view but much closer: tall trees and fan palms around its edge, grass inside, and a bare white crusted centre where nothing grows; papyrus channels around it; no people, no text.",
+      "carries_significance": "it matches the opening shot's framing so the viewer recognises the white centres they passed over: the answer was in the first picture"
+    },
+    {
+      "id": "S9",
+      "beat_id": "B05",
+      "new_thing": "the saltiness under an island, rising from channel to centre",
+      "frame_prompt": "Clean drawn cross-section of a small island and the swamp beside it: groundwater shaded from clear blue under the channel to dense, white-flecked grey beneath the island centre; plants drawn in rings, reeds at the edge, then palms, then bare ground at the centre; no numbers, no text.",
+      "carries_significance": "the colour ramp makes the roughly thousandfold rise in saltiness readable without a number, tying the white centre to what lies beneath it"
+    },
+    {
+      "id": "S10",
+      "beat_id": "B06",
+      "new_thing": "trees as pumps: the water table dipping under the island as groundwater flows in from both sides",
+      "frame_prompt": "Clean drawn cut-away diagram: island trees with roots reaching the groundwater, small upward wisps of vapour from their crowns, the blue water-table line dipping into a shallow bowl beneath the island, and arrows of groundwater flowing in from the swamp on both sides; educational illustration style; no text."
+    },
+    {
+      "id": "S11",
+      "beat_id": "B06",
+      "new_thing": "the heavy brine sinking out of reach, the fresh water above untouched",
+      "frame_prompt": "Clean drawn cross-section reaching deeper below an island: a darker, denser plume of brine descending from beneath the island centre into deep ground, while the swamp's fresh surface water above stays clear; muted blues and greys; no text."
+    },
+    {
+      "id": "S12",
+      "beat_id": "B07",
+      "new_thing": "an island's beginning: a tall termite mound on dry floodplain with a young tree growing from it",
+      "frame_prompt": "Gouache painting: a tall earthen termite mound rising from a dry grassy floodplain, a young tree growing from its side, the swamp's reeds far behind; late golden light; termites only as tiny details at the base; no people, no text."
+    },
+    {
+      "id": "S13",
+      "beat_id": "B07",
+      "new_thing": "how a mound becomes an island, shown as stages standing in one landscape",
+      "frame_prompt": "Soft watercolour of one continuous floodplain, no panels or divisions: in the foreground a lone termite mound, further back a cluster of mounds with shrubs, and in the distance a low wooded island with a pale centre, all under the same sky; no people, no text."
+    },
+    {
+      "id": "S14",
+      "beat_id": "B08",
+      "new_thing": "the object at the centre of the argument: the white trona crust, close up",
+      "frame_prompt": "Detailed painted close-up of a white crystalline salt crust on dark island soil, the crystals catching soft light, with a brass hand lens and a closed field notebook resting beside it; no hands, no faces, no writing visible."
+    },
+    {
+      "id": "S15",
+      "beat_id": "B09",
+      "new_thing": "the opening view again, wider and in evening light: every white centre now readable as stored salt",
+      "frame_prompt": "Gouache painting repeating the opening high aerial view of the wetland, slightly wider and in warm evening light: winding blue-green channels, papyrus, and many tree-ringed islands with white centres, the dry savanna all around; no people, no text or labels.",
+      "carries_significance": "the same picture as the opening, now understood: the white centres the viewer took for scenery are the reason the water around them is fresh"
+    }
+  ]
+}
