@@ -21,6 +21,8 @@ proportionate to what changed, on isolated test assets (never a finished product
 build+open+preview+export WITH captions (deep export check ready); ElevenLabs v4 live test on the user's yes (cap 205
 credits): one 205-character part, 82 credits billed
 (character-cost header), all 34 words heard, no tag read aloud.
+Evidence of the 2026-11-24 passes (copied out of the scratchpad, README + MANIFEST):
+C:\Users\Bulzart\Documents\create-video-dev\verification\2026-11-24-create-video-remediation
 Report each change in a matrix: verified by real execution / automated tests only / static inspection / not verified.
 Never call a mock a live integration, never weaken a check to pass a test, never substitute a model or provider.
 

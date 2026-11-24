@@ -13,6 +13,11 @@ requirements are shown to it as advisories, never forcing unrelated re-planning.
 Implemented 2026-11-24: direction-lock stamps `planning_rules: 2`; a lock without the stamp (e.g. the Garbo run
 20261121-160057-youtube) gets the rules of 2026-11-24 as "advisory (...)" warnings (static_core NEW_PLANNING_RULES).
 Never advisory, for every run: safety/content, money (paid ledger), asset integrity, export/release validation.
+User 2026-11-24 (final pass): when such an older direction is SUBSTANTIVELY revised (`direction-lock --revise` that sends
+artifacts back to work), the current rules apply where the revision reaches, recorded in the lock as
+`planning_migration` {to, sections, artifacts, history}: the parts it revised (one treatment, candidate or value at a time;
+a new choice of treatment or subject compares them all again) and the artifacts it re-makes. Everything else stays
+advisory; a harmless revision (evidence, reasons) migrates nothing; the lock keeps no `planning_rules` stamp.
 
 **Why:** the user, 2026-11-24: "Do not force older completed or partially completed productions to undergo unrelated
 creative re-planning merely because new fields were introduced."

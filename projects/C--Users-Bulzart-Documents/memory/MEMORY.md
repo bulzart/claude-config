@@ -132,3 +132,4 @@
 - [create-video: verify on real paths](create-video-verify-real-paths.md) — user 2026-11-24: done = real FLUX run, CapCut GUI open+export, ElevenLabs paid only on a yes; matrix real/automated/static/not verified
 - [create-video: signals, not verdicts](create-video-signals-not-verdicts.md) — user 2026-11-24: style = identity not wording; people by looking + accepted captions; re-reads by what a revision touches; pace vs natural variation; grouped comprehension; no blanket exclusions
 - [create-video: older directions advisory](create-video-older-directions-advisory.md) — user 2026-11-24: rules added later are advisory for directions approved before (planning_rules stamp); safety/money/assets/release strict
+- [create-video: next = supervised new production](create-video-next-supervised-production.md) — user 2026-11-24: remediation closed (tag static-studio-remediation-3); no speculative improvements; next a supervised production in a new niche
