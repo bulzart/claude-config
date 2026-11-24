@@ -135,3 +135,4 @@
 - [create-video: next = supervised new production](create-video-next-supervised-production.md) — user 2026-11-24: remediation closed (tag static-studio-remediation-3); no speculative improvements; next a supervised production in a new niche
 - [create-video: check commands write](create-video-check-commands-write.md) — 2026-11-24 incident: plan-check wrote into finished Garbo (undone); on a finished run call the facts functions by import
 - [klein-comfyui repo](klein-comfyui-repo.md) — private standalone FLUX Klein worker = Static Studio worker + 4 adaptations; re-sync on the user's say; standalone image test still owed
+- [create-video: niche discovery](create-video-niche-discovery.md) — user 2026-11-24: analysis-plan splits by reading work only; niches from finished cards (niche-evidence, niche-map, niche-check); niche-lock before length; batches never imply niches
