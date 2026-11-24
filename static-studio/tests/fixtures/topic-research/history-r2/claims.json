@@ -1,0 +1,284 @@
+{
+  "claims": [
+    {
+      "id": "C01",
+      "claim": "The 1858 Atlantic cable worked: in August 1858 it carried messages across the ocean, including an exchange between Queen Victoria and President James Buchanan.",
+      "sources": ["S2", "S3", "S4"],
+      "confidence": "confirmed",
+      "note": "Three independent read sources agree. The dates differ in detail, each from one source: S3 has the cable completed on 5 August, and S2 has test messages by 10 August and the official opening on 16 August.",
+      "line_refs": []
+    },
+    {
+      "id": "C02",
+      "claim": "732 messages were sent through the 1858 cable before it failed.",
+      "sources": ["S2", "S4"],
+      "confidence": "confirmed",
+      "note": "S2 and S4 give the same figure.",
+      "line_refs": []
+    },
+    {
+      "id": "C03",
+      "claim": "The 1858 cable stopped working within a few weeks and was never restored.",
+      "sources": ["S2", "S3", "S4"],
+      "confidence": "confirmed",
+      "note": "S4 counts 23 days of operation. S3 gives completion on 5 August and failure on 2 September, never restored. S2 says the line failed entirely 'within a few weeks'. The script says 'within weeks' or 'about three weeks'. A single exact date needs another source.",
+      "line_refs": []
+    },
+    {
+      "id": "C04",
+      "claim": "Queen Victoria's 98-word greeting to President Buchanan took almost 16 hours to send.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "Only one read source has it. The figure is widely repeated elsewhere, but I read none of those. Corroborate it from a contemporary record or Hunt (S8) before the opening is recorded: the hook rests on it.",
+      "line_refs": []
+    },
+    {
+      "id": "C05",
+      "claim": "Wildman Whitehouse, the Atlantic Telegraph Company's electrician, was a surgeon by training (S3: a member of the Royal College of Surgeons with a medical practice) who turned to designing cable telegraph apparatus.",
+      "sources": ["S2", "S3"],
+      "confidence": "confirmed",
+      "note": "S2: trained as a medical doctor and ran a surgical practice. S3: surgeon and member of the Royal College of Surgeons.",
+      "line_refs": []
+    },
+    {
+      "id": "C06",
+      "claim": "The company's electrician stayed ashore, citing illness: in 1857 Thomson went with the expedition when the electrician fell ill (S4), and in 1858 Whitehouse was on neither ship, while Bright and Thomson did the work at sea (S3).",
+      "sources": ["S3", "S4"],
+      "confidence": "likely",
+      "note": "Each year rests on one source.",
+      "line_refs": []
+    },
+    {
+      "id": "C07",
+      "claim": "At Valentia, Whitehouse sent signals with a five-foot induction coil, which may have put about 2,000 volts on the cable.",
+      "sources": ["S2", "S3", "S4"],
+      "confidence": "confirmed",
+      "note": "S3: 'a 5-foot induction coil', 'perhaps 2000 volts'. S2: 'at times used up to 2,000 volts'. S4: 'several thousand volts'. The voltage is an estimate, so the script keeps 'perhaps' or 'up to'.",
+      "line_refs": []
+    },
+    {
+      "id": "C08",
+      "claim": "An official inquiry that reported in 1861 concluded that Whitehouse's high voltages (his induction coil) caused the cable's failure.",
+      "sources": ["S2", "S3"],
+      "confidence": "confirmed",
+      "note": "S2 calls it a commission and S3 a board of inquiry. Its formal name is not in what I read, so the script says 'an official inquiry'.",
+      "line_refs": []
+    },
+    {
+      "id": "C09",
+      "claim": "Whitehouse was dismissed, allegedly for insubordination.",
+      "sources": ["S3"],
+      "confidence": "likely",
+      "note": "One source, and the date is not given in what I read. S3's author also thinks the 1861 charges against him may have gone too far.",
+      "line_refs": []
+    },
+    {
+      "id": "C10",
+      "claim": "In 1858 Whitehouse insisted on using (or claimed to use) his own receiving instrument rather than Thomson's.",
+      "sources": ["S3", "S4"],
+      "confidence": "confirmed",
+      "note": "S4: the electrician 'insisted on using his own instrument instead of Thomson's'. S3: he 'claimed to use his own instrument as the receiver'.",
+      "line_refs": []
+    },
+    {
+      "id": "C11",
+      "claim": "Whitehouse secretly used Thomson's galvanometer to detect the incoming signals at Valentia.",
+      "sources": ["S3"],
+      "confidence": "likely",
+      "note": "One read source. The script says it as 'by one account' unless Hunt (S8) or the inquiry's evidence corroborates it.",
+      "line_refs": []
+    },
+    {
+      "id": "C12",
+      "claim": "Thomson's 'law of squares': the retardation of signals in a submarine cable grows with the square of the cable's length, so a cable twice as long is four times slower to signal.",
+      "sources": ["S2", "S4"],
+      "confidence": "confirmed",
+      "note": "S4: the retardation 'was, he calculated, proportional to the square of the length of the cable'. S2 names the same law but words it as 'inversely proportional', which fits the signalling speed, not the delay. I take that as a slip. 'Four times' is just the arithmetic of the square. The primary record is S9 (Thomson to Stokes), which I did not read.",
+      "line_refs": []
+    },
+    {
+      "id": "C13",
+      "claim": "A single impulse sent through thousands of miles of cable might take ten seconds or more to reach its full strength at the far end.",
+      "sources": ["S4"],
+      "confidence": "likely",
+      "note": "One source. Say 'seconds', or corroborate the 'ten seconds or more' before it is spoken.",
+      "line_refs": []
+    },
+    {
+      "id": "C14",
+      "claim": "The 1857-58 cable was not built to Thomson's advice: he argued for a larger, purer copper core, which the company did not adopt (S2), and the cable contracts were signed before any scientific advice was sought (S4).",
+      "sources": ["S2", "S4"],
+      "confidence": "confirmed",
+      "note": "Two independent sources support the general statement from different sides. Each detail rests on one of them (see C15 and C16).",
+      "line_refs": []
+    },
+    {
+      "id": "C15",
+      "claim": "The cable contracts were signed before the company's directors were appointed and before scientific advice was sought.",
+      "sources": ["S4"],
+      "confidence": "likely",
+      "note": "One source.",
+      "line_refs": []
+    },
+    {
+      "id": "C16",
+      "claim": "Thomson found experimentally that even small impurities in the copper could reduce its conductivity by 30 to 40 per cent.",
+      "sources": ["S4"],
+      "confidence": "likely",
+      "note": "One source.",
+      "line_refs": []
+    },
+    {
+      "id": "C17",
+      "claim": "Thomson's mirror galvanometer could detect very weak currents: it turned the faintest signal into a visible motion.",
+      "sources": ["S2", "S3", "S4"],
+      "confidence": "confirmed",
+      "note": "S3: it 'could amplify the faintest signal into a visible motion'. S4: it 'worked on as small a current as possible'. S2: an instrument for detecting current in a long cable. How it works (a beam of light thrown by a tiny mirror onto a scale) is not described in what I read. Check a museum record before its still is made.",
+      "line_refs": []
+    },
+    {
+      "id": "C18",
+      "claim": "President Buchanan's reply, read with Thomson's galvanometer, arrived quickly in Britain.",
+      "sources": ["S3"],
+      "confidence": "likely",
+      "note": "This is vague ('quickly') and rests on one source. Do not set it against the 16 hours (C04) until both times are sourced.",
+      "line_refs": []
+    },
+    {
+      "id": "C19",
+      "claim": "Whether Whitehouse killed the cable is disputed. The 1861 inquiry blamed his voltages (C08). De Cogan's 1985 analysis, as S2 reports it, found the copper core off-centre in its insulation and in places close to the sheathing, deteriorating gutta-percha, and poor storage over the 1857-58 winter, and concluded that failure was likely inevitable. Critics say the cable was 'shoddily made, improperly stored' and that Whitehouse was 'the scapegoat' for the makers and the company (S3).",
+      "sources": ["S2", "S3", "S4", "S7"],
+      "confidence": "disputed",
+      "note": "On the inquiry's side: S4 (1977) and the verdict as S2 and S3 report it. On the other side: de Cogan (through S2 only) and the critics S3 reports. S3's author answers 'We don't know', and he doubts Whitehouse would have succeeded anyway. Read de Cogan or Hunt before the key moment is recorded.",
+      "line_refs": []
+    },
+    {
+      "id": "C20",
+      "claim": "De Cogan suggested that blaming Whitehouse may have helped transoceanic telegraphy, since an unexplained failure would have made investors more hesitant.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "An interpretation by one researcher, reported by one source. The script says it as one researcher's view.",
+      "line_refs": []
+    },
+    {
+      "id": "C21",
+      "claim": "In 1866, on the fourth attempt, the Great Eastern laid a lasting transatlantic cable. Thomson oversaw the electrical work with his mirror galvanometer, and Whitehouse was no longer involved.",
+      "sources": ["S2", "S3", "S4"],
+      "confidence": "confirmed",
+      "note": "S2: a permanent cable in 1866. S4: 'At the fourth attempt, in 1866, the cable was successful', with a Great Eastern caption. S3: Thomson 'oversaw all things electrical' and Whitehouse 'was nowhere to be seen'. What I read does not give the 1866 cable's design or its signalling speed.",
+      "line_refs": []
+    },
+    {
+      "id": "C22",
+      "claim": "The 1857 attempt failed when the cable parted at sea.",
+      "sources": ["S2", "S4"],
+      "confidence": "confirmed",
+      "note": "S4: it parted after 330 miles. S2: it broke on 11 August 1857 and was lost at depth.",
+      "line_refs": []
+    },
+    {
+      "id": "C23",
+      "claim": "In 1858 New York celebrated with a parade and fireworks that accidentally set the dome of City Hall on fire. The company's shares more than doubled, and Charles Bright was knighted.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "One source. S2 also mentions a church service. That is left out under the content rules, and the fireworks are the only celebration detail used.",
+      "line_refs": []
+    },
+    {
+      "id": "C24",
+      "claim": "By the end of 1858, rumours said the cable had been a hoax or a stock fraud.",
+      "sources": ["S2"],
+      "confidence": "likely",
+      "note": "One source.",
+      "line_refs": []
+    },
+    {
+      "id": "C25",
+      "claim": "Some fifty of the original signals of the 1858 cable are preserved in the Kelvin Papers at Glasgow.",
+      "sources": ["S4"],
+      "confidence": "likely",
+      "note": "One source, and the sketch does not use it. It could become a closing detail only if corroborated, and not as a return to the opening.",
+      "line_refs": []
+    },
+    {
+      "id": "C26",
+      "claim": "Endurance was beset in the Weddell Sea pack ice on 18 January 1915 and abandoned on 27 October 1915, when the rudder, sternpost and part of the keel were torn off. She sank on 21 November 1915.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "One read source (the study, citing the expedition's records).",
+      "line_refs": []
+    },
+    {
+      "id": "C27",
+      "claim": "The Endurance22 expedition found the wreck on 5 March 2022, at 3,008 m in the Weddell Sea.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "One read source.",
+      "line_refs": []
+    },
+    {
+      "id": "C28",
+      "claim": "Tuhkuri finds that Endurance was not designed for compression in Antarctic pack ice. She was built as Polaris for polar tourism and Arctic ice-edge work, had no diagonal beams, had the longest engine room without strengthening beams (8.4 m) of the early Antarctic ships compared, and had deck beams and frames weaker than most of them. In the same comparison Fram and Gauss came out strongest.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "One study. By the author's own account it is a simple dimensional analysis that assumes similar timber properties.",
+      "line_refs": []
+    },
+    {
+      "id": "C29",
+      "claim": "What sank Endurance is disputed. Tuhkuri concludes she was crushed in compression and 'would have sunk even if it did not have a rudder at all'. Bound (2022) gives the rudder as the sole cause, an explanation that goes back to Shackleton's South (1920).",
+      "sources": ["S1"],
+      "confidence": "disputed",
+      "note": "I know Bound's view only as S1 cites it. Outside reactions (S12) are unread.",
+      "line_refs": []
+    },
+    {
+      "id": "C30",
+      "claim": "Shackleton wrote to his wife from Buenos Aires that 'this ship is not as strong as the Nimrod constructionally'. In 1911 he had advised Filchner to strengthen Deutschland with diagonal beams for the Weddell Sea ice.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "The letters are quoted in the study. I did not see them.",
+      "line_refs": []
+    },
+    {
+      "id": "C31",
+      "claim": "Why Shackleton chose Endurance despite her weaknesses is not known.",
+      "sources": ["S1"],
+      "confidence": "likely",
+      "note": "Tuhkuri: 'We do not know'. He suggests Shackleton may have accepted the risk.",
+      "line_refs": []
+    },
+    {
+      "id": "C32",
+      "claim": "Very few bankruptcies can be attributed to the tulip trade of the 1630s.",
+      "sources": ["S5"],
+      "confidence": "likely",
+      "note": "This is Goldgar's archival finding as a review reports it. The book itself was not read.",
+      "line_refs": []
+    },
+    {
+      "id": "C33",
+      "claim": "The standard story of ruin derives from one or two clearly polemical contemporary pamphlets, reused by later writers.",
+      "sources": ["S5"],
+      "confidence": "likely",
+      "note": "One source, a review.",
+      "line_refs": []
+    },
+    {
+      "id": "C34",
+      "claim": "Tulip traders came mainly from the middling groups (merchants, brewers, craftsmen-traders), concentrated in Haarlem and Amsterdam. After prices collapsed in early 1637, buyers refused to pay, appeals to the town and provincial authorities achieved little, and buyers and sellers settled among themselves.",
+      "sources": ["S5"],
+      "confidence": "likely",
+      "note": "One source, a review.",
+      "line_refs": []
+    },
+    {
+      "id": "C35",
+      "claim": "Goldgar concludes that the crisis was a breakdown of trust among a small group of people who knew each other, and less serious and less widespread than assumed.",
+      "sources": ["S5"],
+      "confidence": "likely",
+      "note": "Her conclusion as the review reports it. A disagreement among historians is hinted at only in a search summary (S6, unread).",
+      "line_refs": []
+    }
+  ]
+}

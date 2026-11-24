@@ -4567,7 +4567,7 @@ class TopicPathTests(unittest.TestCase):
         rep['plan_check_issues'] = pc['issues']
         self.assertTrue(pc['ready'], (name, pc['issues']))
         # the shot plan from the sketch: each beat's lines shared among its shots
-        shots, comps = [], ['wide', 'close', 'detail', 'medium']
+        shots, comps, notes = [], ['wide', 'close', 'detail', 'medium'], {}
         for b in beats:
             mine = [s for s in sketch['shots'] if str(s.get('beat_id')) == b['id']] or [{}]
             span = list(range(b['line_start'], b['line_end'] + 1))
@@ -4580,8 +4580,21 @@ class TopicPathTests(unittest.TestCase):
                               'composition': comps[len(shots) % 4], 'new_thing': s.get('new_thing') or 'what this beat adds',
                               'frame_prompt': s.get('frame_prompt') or f'an illustrated still for {b["id"]}, one clear subject',
                               **({'carries_significance': s['carries_significance']} if s.get('carries_significance') else {})})
+                notes[sid] = s.get('content_note')
         save(run / '60-visuals/video-01/shot-plan.json', {'video': 1, 'shots': shots})
         sc = cli('shot-check', '--run', run, '--video', 1, expected=None)
+        flagged = sorted({x.split('_prompt_content_flag_unanswered')[0][len('shot_'):] for x in sc['issues']
+                          if '_prompt_content_flag_unanswered:' in x})
+        if flagged:
+            # the house content gate fired on a picture prompt: it stays refused until the director answers it, and
+            # the answer is recorded with the sketch (content_note), never invented here
+            rep['content_gate_fired'] = {f: next(x for x in sc['issues'] if x.startswith(f'shot_{f}_')) for f in flagged}
+            self.assertTrue(all(notes.get(f) for f in flagged), (name, 'unanswered content flags', flagged))
+            for x in shots:
+                if notes.get(x['id']):
+                    x['content_note'] = notes[x['id']]
+            save(run / '60-visuals/video-01/shot-plan.json', {'video': 1, 'shots': shots})
+            sc = cli('shot-check', '--run', run, '--video', 1, expected=None)
         rep['shot_check_issues'] = sc['issues']
         self.assertTrue(sc['ready'], (name, sc['issues']))
         # what the image and music workers would be given
@@ -4645,6 +4658,11 @@ class TopicPathTests(unittest.TestCase):
 
     def test_moon_vanishes(self):
         self.run_path('moon-vanishes')
+
+    def test_history_after_the_fixes(self):
+        # the same history brief, run again once the manual asked for a wide survey first, read finalists, an ending
+        # from the subject's own material and single-source key moments attributed or corroborated
+        self.run_path('history-r2')
 
 if __name__=='__main__':
     unittest.main()

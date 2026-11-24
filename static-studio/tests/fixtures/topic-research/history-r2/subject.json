@@ -1,0 +1,180 @@
+{
+  "subject": {
+    "scope": {"kind": "niche", "user_words": "history", "niche": "history"},
+    "audience_value": "A general history audience comes to understand, from the inside, why something turned out as it did: what the people involved knew, what they chose and what it cost them. It rewards a film that lets it see the mechanism and weigh the evidence, rather than one that hands it a villain or a date. My survey searches found popular history packaged as 'decisions that changed history' and 'mysteries solved by new evidence'. Those are search leads, not analytics, so this is an inference about the appetite, not a measurement. With no processed references, the value is taken from the niche and from what each candidate's sources can actually support: a consequential decision whose logic is visible, told with its uncertainty intact.",
+    "from_references": [],
+    "candidates": [
+      {
+        "id": "T1",
+        "subject": "the first transatlantic telegraph cable, 1858",
+        "angle": "why a cable that worked could barely talk, and whether the man blamed for killing it really did",
+        "value_form": "a consequential technical decision understood through its mechanism, with a contested verdict",
+        "factual": true,
+        "what_happens": "In August 1858 a cable laid across the Atlantic carries 732 messages and then goes dead within weeks. The Queen's 98-word greeting has taken almost sixteen hours. The company's electrician, a surgeon by training, drove the cable from Ireland with a five-foot induction coil at perhaps 2,000 volts, and an official inquiry in 1861 blames him. The viewer then sees why a long cable smears every pulse (Thomson's law of squares), why a bigger push cannot fix that while a more sensitive receiver works around it, and why later analysis of the cable's own faults reopens the verdict. In 1866 a fourth attempt succeeds, with Thomson running the electrical side.",
+        "why_it_matters": "It is a consequential decision whose logic a viewer can follow and judge. The cure chosen could not touch the problem the physics described, the cable had been bought before anyone heeded that physics, and the blame was assigned in a way that may have suited the company. The Atlantic had no working cable until 1866, and the man blamed was dismissed and named in a verdict that is still argued over.",
+        "reward": "The click of understanding when a drawn pulse arrives as a slow swell. Then the harder pleasure of weighing two documented answers to who killed the cable, instead of being handed a villain.",
+        "strongest_material": [
+          {"id": "M1", "what": "The 1858 cable worked: it carried 732 messages in August 1858, including the Queen's exchange with President Buchanan. Then it went dead within weeks and was never restored.",
+           "certainty": "established", "claims": ["C01", "C02", "C03"]},
+          {"id": "M2", "what": "Working meant crawling: the Queen's 98-word greeting took almost sixteen hours to send.",
+           "certainty": "established", "claims": ["C04"]},
+          {"id": "M3", "what": "The accepted answer: the company's electrician, a surgeon by training, drove the cable from Valentia with a five-foot induction coil at perhaps 2,000 volts. An official inquiry that reported in 1861 concluded that this killed it.",
+           "certainty": "established", "claims": ["C05", "C07", "C08"]},
+          {"id": "M4", "what": "The verdict is disputed. Later analysis found the copper core off-centre in its insulation, the gutta-percha deteriorating and the cable badly stored over the 1857-58 winter, and judged failure likely whatever the coil did. Critics call Whitehouse a scapegoat for the makers and the company.",
+           "certainty": "contested", "claims": ["C19"],
+           "hedge": "No one can now say whether the coil killed a sound cable or finished off one that was already failing."},
+          {"id": "M5", "what": "Thomson's law of squares: the retardation of signals grows with the square of the cable's length, so a cable twice as long is four times slower.",
+           "certainty": "established", "claims": ["C12"]},
+          {"id": "M6", "what": "Across thousands of miles, a single impulse might take ten seconds or more to reach its full strength at the far end.",
+           "certainty": "established", "claims": ["C13"]},
+          {"id": "M7", "what": "Thomson's mirror galvanometer could read the faintest current as a visible motion, and Whitehouse insisted on his own instrument instead.",
+           "certainty": "established", "claims": ["C17", "C10"]},
+          {"id": "M8", "what": "Whitehouse's conduct, each point on one account: he stayed ashore citing illness while Thomson and Bright worked at sea, quietly read the signals with Thomson's galvanometer, and was dismissed, allegedly for insubordination.",
+           "certainty": "established", "claims": ["C06", "C11", "C09"]},
+          {"id": "M9", "what": "The cable was bought before anyone heeded the physics. Thomson's larger, purer copper core was not adopted, the contracts were signed before scientific advice was sought, and small impurities could cut copper's conductivity by 30 to 40 per cent.",
+           "certainty": "established", "claims": ["C14", "C15", "C16"]},
+          {"id": "M10", "what": "In 1866, on the fourth attempt (the first, in 1857, had parted at sea), the Great Eastern laid a lasting cable. Thomson ran the electrical work with his galvanometer, and Whitehouse was gone.",
+           "certainty": "established", "claims": ["C21", "C22"]},
+          {"id": "M11", "what": "A bigger push makes the smeared pulse taller, never shorter, so it cannot speed the cable up. A receiver that reads the faintest current can work with a gentle push instead.",
+           "certainty": "reasoned", "from": ["M5", "M7", "M3"],
+           "reasoning": "Thomson's law (M5) makes the delay depend on the cable's length and construction, not on the voltage at the sending end. Raising the voltage scales the arriving pulse up without changing its shape, which helps only a receiver too insensitive to notice a small pulse. A receiver that reads the faintest current (M7) can notice the pulse's small early rise when it is sent gently. That spares the insulation the high voltage the inquiry blamed (M3). This is linear-circuit reasoning from the sources, not a measurement anyone recorded in 1858."},
+          {"id": "M12", "what": "Why the verdict suited people. One later study suggests that blaming Whitehouse helped the industry by giving investors a fixable cause instead of an unexplained failure. Critics say it protected the makers and the company.",
+           "certainty": "contested", "claims": ["C20", "C19"],
+           "hedge": "That is one researcher's reading of why the verdict stuck, not something the inquiry said."},
+          {"id": "M13", "what": "The public side: New York's fireworks set City Hall's dome alight and the company's shares more than doubled. By the end of 1858, rumours called the cable a hoax or a stock fraud.",
+           "certainty": "established", "claims": ["C23", "C24"]}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "a cable that works and still crawls: the Queen's 98 words take almost sixteen hours", "material": ["M2"]},
+            {"adds": "the triumph in numbers and fireworks, then a line that goes dead within weeks, and talk that it was a hoax", "material": ["M1", "M13"]},
+            {"adds": "the accepted answer: the surgeon-electrician ashore with a five-foot coil, and the 1861 verdict against him", "material": ["M3", "M8"]},
+            {"adds": "why the cable crawled at all: every pulse smeared by the square of the length, seconds per impulse across the ocean", "material": ["M5", "M6"]},
+            {"adds": "why a bigger push could never fix that, and the sensitive receiver that Whitehouse refused", "material": ["M11", "M7"]},
+            {"adds": "the cable itself, bought before anyone heeded the physics", "material": ["M9"]},
+            {"adds": "the cable's own faults reopening the verdict: a core off-centre, insulation decaying, a winter of bad storage", "material": ["M4"]},
+            {"adds": "why a named culprit suited people, as one researcher reads it", "material": ["M12"]},
+            {"adds": "the line that stayed in 1866, with Thomson's receiver aboard and Whitehouse gone", "material": ["M10"]}
+          ],
+          "verdict": "sustains",
+          "why": "There are nine steps, and each changes what the viewer understands rather than adding events: the crawl, the triumph and the silence, the accepted culprit, the physics that explains the crawl, the physics that judges the cure, the purchase, the counter-evidence, the convenience of the verdict, the line that stayed. Steps four and five need unhurried screen time for drawn diagrams, which a general audience needs if the mechanism is to land. Nothing has to repeat. The thin spots are named: I have not read the 1866 cable's design or its speed, so the ending stays with what is sourced.",
+          "material_minutes": 10
+        },
+        "feasibility": "Illustrated stills carry it: the ships and the cable at sea, plain telegraph rooms, the people from period engravings and outline maps of the ocean. Drawn diagrams can show a pulse smearing, two cable lengths compared and the cable's cross-section with its core off-centre. The coil survives in the Science Museum (S10), a reference to check before its still. No footage is needed, and nothing graphic: no one dies in this story. The diagrams want a narrator who can step back while they explain. Whitehouse is treated fairly, never mocked."
+      },
+      {
+        "id": "T2",
+        "subject": "why Shackleton's Endurance sank",
+        "angle": "the legend of the strongest wooden ship against a 2025 structural analysis and Shackleton's own letter",
+        "value_form": "a legend tested against new evidence, with a decision whose motive is unknown",
+        "factual": true,
+        "what_happens": "Endurance is beset in the Weddell Sea in January 1915, crushed through the following months, abandoned on 27 October and sunk on 21 November. Legend calls her the strongest wooden ship ever built. A 2025 structural comparison finds she was built as Polaris for tourist cruising at the Arctic ice edge, with no diagonal beams and the longest unbraced engine room of the early Antarctic ships. It quotes Shackleton writing that she was 'not as strong as the Nimrod constructionally'.",
+        "why_it_matters": "It tests a national legend against the ship's own drawings. It also asks why an explorer who had told Filchner how to brace a ship for the Weddell Sea took an unbraced one there himself.",
+        "reward": "Seeing how pack ice squeezes a hull, and why the round-hulled Fram and Gauss came out strongest. Then an honest unknown: the paper itself says nobody knows why Shackleton chose her.",
+        "strongest_material": [
+          {"id": "M1", "what": "The ship's course: beset on 18 January 1915, abandoned on 27 October, sunk on 21 November. The wreck was found in 2022 at 3,008 m.",
+           "certainty": "established", "claims": ["C26", "C27"]},
+          {"id": "M2", "what": "What she was built for and how she was built: as Polaris, for polar tourism at the Arctic ice edge, with no diagonal beams and the longest unbraced engine room of the early Antarctic ships. In the same comparison Fram and Gauss came out strongest.",
+           "certainty": "established", "claims": ["C28"]},
+          {"id": "M3", "what": "The cause is disputed. Tuhkuri finds she was crushed in compression and doomed with or without a rudder. Bound (2022), following Shackleton's South, makes the rudder the sole cause.",
+           "certainty": "contested", "claims": ["C29"],
+           "hedge": "One engineer's analysis says the rudder did not matter; Bound's 2022 account still makes it the only cause."},
+          {"id": "M4", "what": "Shackleton knew: in a letter he called her weaker than the Nimrod, and in 1911 he had advised Filchner to brace Deutschland with diagonal beams.",
+           "certainty": "established", "claims": ["C30"]},
+          {"id": "M5", "what": "Why he chose her anyway is not known.",
+           "certainty": "established", "claims": ["C31"]}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "the legend of the strongest wooden ship and her course from beset to sunk, so the viewer knows what is being tested", "material": ["M1"]},
+            {"adds": "what she really was: Polaris, built for tourists at the ice edge, and how her framing compares with Fram's", "material": ["M2"]},
+            {"adds": "the disputed cause: crushed in compression with or without a rudder, against the rudder account that goes back to South", "material": ["M3"]},
+            {"adds": "Shackleton's own letter and his advice to Filchner, which turn a design question into a decision", "material": ["M4"]},
+            {"adds": "the honest unknown of why he chose her, and what the wreck at 3,008 m cannot show", "material": ["M5", "M1"]}
+          ],
+          "verdict": "sustains",
+          "why": "Each step changes the question: legend, design, cause, decision, motive. The mechanics of ice pressing on a hull can be drawn at length, so ten minutes hold without padding. What weakens the candidate is not length but certainty: the turn rests on one study, and the cause it argues is disputed.",
+          "material_minutes": 9
+        },
+        "feasibility": "Paintings of the ship in pack ice, drawn cross-sections of the hull framing beside Fram's rounded hull, an outline map of the drift and the wreck on the seabed would carry it. The survival story would have to stay out of frame beyond a line or two. The dogs' fate and the frostbite injuries are left out under the content rules."
+      },
+      {
+        "id": "T3",
+        "subject": "the Dutch tulip crash of 1637",
+        "angle": "what the archives say actually broke when tulip prices collapsed: trust, not fortunes",
+        "value_form": "a famous cautionary tale taken apart by records",
+        "factual": true,
+        "what_happens": "In the 1630s merchants, brewers and craftsmen in Haarlem and Amsterdam trade tulip bulbs at rising prices. In early 1637 the prices collapse and buyers refuse to pay. The famous ruin, though, comes from one or two polemical pamphlets. In the archives very few bankruptcies can be traced to the trade, the authorities would not enforce the contracts, and buyers and sellers settled among themselves.",
+        "why_it_matters": "The crash is the founding parable of every financial bubble, so finding its ruin largely invented changes what the parable teaches. What broke was trust inside a small network of people who knew one another.",
+        "reward": "A well-worn cautionary tale taken apart by the records, and a sharper sense of what a market panic actually damages.",
+        "strongest_material": [
+          {"id": "M1", "what": "Very few bankruptcies can be traced to the tulip trade.",
+           "certainty": "established", "claims": ["C32"]},
+          {"id": "M2", "what": "The ruin story comes from one or two polemical pamphlets, reused by later writers.",
+           "certainty": "established", "claims": ["C33"]},
+          {"id": "M3", "what": "Who traded, and what happened after the collapse: middling merchants, brewers and craftsmen traded; buyers refused to pay; the authorities did little; the parties settled privately.",
+           "certainty": "established", "claims": ["C34"]},
+          {"id": "M4", "what": "What broke was trust within a small network, not the economy.",
+           "certainty": "contested", "claims": ["C35"],
+           "hedge": "That is how one historian reads the records, and hers is not the only reading."}
+        ],
+        "runtime": {
+          "progression": [
+            {"adds": "the famous story of ruin and where it came from: one or two polemical pamphlets", "material": ["M2"]},
+            {"adds": "who actually traded, and what they did when prices collapsed in 1637", "material": ["M3"]},
+            {"adds": "the archive's answer: very few bankruptcies traced to the trade", "material": ["M1"]},
+            {"adds": "what broke instead, as one historian reads it: trust among people who knew one another", "material": ["M4"]}
+          ],
+          "verdict": "uncertain",
+          "why": "The progression is clear, but every step rests on a review's summary rather than on the archive's own cases, and its reward is an absence: the ruin that did not happen. Without named traders, contracts and settlements, ten minutes would lean on retelling the legend in order to deny it.",
+          "shortfall": "Named traders, prices, contracts and the settlement records from Goldgar's book (unread), and a dissenting historian's or economist's case to make the dispute real.",
+          "material_minutes": 6
+        },
+        "feasibility": "Flower still-lifes, rooms of traders, drawn price comparisons without numbers, and pamphlets shown as pages of soft grey stripes could carry it. Trading scenes in inns would have to avoid drink, and the legend's darker tales of ruin stay out of both picture and narration."
+      }
+    ],
+    "selection": {
+      "candidate": "T1",
+      "why": "It is the only candidate whose central question has two documented answers that the viewer can weigh with their own eyes. The 1861 inquiry blamed Whitehouse's induction coil, while later analysis found the cable's core off-centre and its insulation decaying after a winter of bad storage. Between those answers sits a mechanism the pictures can show rather than decorate: a pulse smeared by the square of the distance, which no push can sharpen and a sensitive receiver can read. Its own material supplies the ending: the line that stayed, in 1866, was run electrically by the man with that receiver. Its decisive facts are confirmed by two independent historians and by Glasgow's Kelvin exhibition, so nothing turns on a single new study. It was close with T2.",
+      "decisive_material": ["M1", "M3", "M4", "M5"],
+      "over_alternatives": [
+        {"candidate": "T2", "why_not": "Its turn, that the hull was weak and Shackleton knew it, rests on a single 2025 comparison of dimensions, which its author calls a simple structural analysis, while Bound (2022) still makes the rudder the sole cause. The secure facts (the 1915 dates, the wreck at 3,008 m, the Nimrod letter) cannot settle that, and the paper says outright that nobody knows why Shackleton chose the ship. So the payoff would be one engineer's reading against another's, inside a survival epic that pulls the viewer elsewhere. It was close: the paper is open access, I read it in full, and it is rich in comparisons that can be drawn (the bracing, Fram's hull)."},
+        {"candidate": "T3", "why_not": "Its reward is an absence. The archive finding I could read (Price's review of Goldgar) is that very few bankruptcies can be traced to the trade and that buyers and sellers were left to settle privately. After the collapse of early 1637 the film would have refusals and quiet settlements to show, while its most vivid material is the pamphlet legend it would have to retell in order to deny it. The comparison was uneven: Goldgar's own article was blocked and her book unread, and its case records might supply the scenes the review does not."}
+      ]
+    },
+    "value_to_carry": [
+      {"id": "R1", "what": "The 1858 cable really worked: 732 messages in a few weeks and a public triumph, then silence for good and talk of a hoax.",
+       "why_it_matters": "It makes the puzzle a success that could not last rather than a plain failure, which is what makes the later verdict worth weighing.",
+       "certainty": "established", "rests_on": ["M1", "M13"]},
+      {"id": "R2", "what": "Working meant crawling: the Queen's 98-word greeting took almost sixteen hours.",
+       "why_it_matters": "It is the contradiction the whole film answers: a cable that works but can barely talk.",
+       "certainty": "established", "rests_on": ["M2"]},
+      {"id": "R3", "what": "The accepted answer: the company's electrician, a surgeon by training working ashore, drove the cable with a five-foot induction coil at perhaps 2,000 volts, and the 1861 inquiry said that killed it.",
+       "why_it_matters": "It hands the viewer the accepted answer to hold, so the physics can test it and the later evidence can reopen it.",
+       "certainty": "established", "rests_on": ["M3", "M8"]},
+      {"id": "R4", "what": "Why it crawled: a long cable smears every pulse, and the smear grows with the square of its length, so one impulse across the ocean takes seconds to arrive in full.",
+       "why_it_matters": "It explains the crawl with a cause no operator could fix, and it sets up the question of whether pushing harder could ever help.",
+       "certainty": "established", "rests_on": ["M5", "M6"], "needs_first": ["R2"]},
+      {"id": "R5", "what": "Pushing harder makes the smear taller, never shorter. What works is a listener sensitive enough to read a faint swell, which Thomson had built and Whitehouse insisted he did not need (and, by one account, quietly used).",
+       "why_it_matters": "It shows the coil as a cure aimed at the wrong problem and names the alternative, so the viewer judges Whitehouse on the physics, not only on the verdict.",
+       "certainty": "reasoned", "rests_on": ["M11", "M7", "M8"], "needs_first": ["R3", "R4"]},
+      {"id": "R6", "what": "The cable was bought before anyone heeded the physics: Thomson's larger, purer core was not adopted, and the contracts were signed before any scientist was asked.",
+       "why_it_matters": "It spreads the responsibility: the people who bought the cable ignored the same physics as the electrician.",
+       "certainty": "established", "rests_on": ["M9"], "needs_first": ["R4"]},
+      {"id": "R7", "what": "The verdict reopened: later analysis found the copper core off-centre, the insulation decaying and the cable badly stored over the winter, and judged failure likely whatever the coil did.",
+       "why_it_matters": "It turns a closed case into a real question with two documented answers, the film's central uncertainty.",
+       "certainty": "contested",
+       "hedge": "No one can now say whether the coil killed a sound cable or finished off one that was already failing.",
+       "rests_on": ["M4"], "needs_first": ["R3", "R6"]},
+      {"id": "R8", "what": "Why the verdict stuck: one later study suggests a named culprit reassured investors, and critics say it protected the makers and the company.",
+       "why_it_matters": "It shows how a doubtful verdict can still be welcome: a named cause can be fixed, an unexplained failure cannot.",
+       "certainty": "contested",
+       "hedge": "That is one researcher's reading of why the verdict stuck, not something the inquiry said.",
+       "rests_on": ["M12"], "needs_first": ["R7"]},
+      {"id": "R9", "what": "The cable that stayed: in 1866, on the fourth attempt, the Great Eastern laid a line that worked for good, with Thomson and his sensitive galvanometer running the electrical side and Whitehouse gone.",
+       "why_it_matters": "It answers the opening's crawl with the line that stayed, run with the sensitive receiver, and leaves the 1858 verdict as open as the evidence does.",
+       "certainty": "established", "rests_on": ["M10"], "needs_first": ["R5"]}
+    ],
+    "dropped": []
+  }
+}

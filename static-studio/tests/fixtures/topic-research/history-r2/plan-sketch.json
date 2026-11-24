@@ -1,0 +1,245 @@
+{
+  "blueprint": {
+    "ending_payoff": "The ending is the line that stayed, not a return to the opening. In 1866, on the fourth attempt, the Great Eastern lays a cable that works for good, with Thomson's sensitive receiver on the electrical side and Whitehouse gone. That answers the opening's crawl with the remedy the physics in B05 pointed to: listen better rather than push harder, said as reasoning, not as a proven cause of the success. The 1858 verdict is left as open as the evidence leaves it: the coil, or a cable already failing that was bought before anyone heeded the physics. The film says so in one plain sentence over the cable sinking out of sight, instead of naming a villain."
+  },
+  "beats": [
+    {
+      "id": "B01",
+      "experience": "Intrigued by a contradiction: the wire across the ocean really worked, yet a short royal greeting still took most of a day to pass.",
+      "visual_intent": "The waiting as time and distance. One lamplit operator and a slowly lengthening paper strip, then the whole ocean with a single thin line across it, so the size of the gap is felt before anything is explained.",
+      "carries": [
+        "R2"
+      ]
+    },
+    {
+      "id": "B02",
+      "experience": "The lift of a public triumph, then the drop of a line that simply stops, and a first doubt about whether it was ever real.",
+      "visual_intent": "Fireworks over a crowd against the same desk later, empty, with its strip hanging slack. The picture gives the silence that the words only state.",
+      "carries": [
+        "R1"
+      ]
+    },
+    {
+      "id": "B03",
+      "experience": "A clear suspect and a clear verdict, almost too neat. The man is presented fairly, as someone working by the methods he trusted.",
+      "visual_intent": "A face and a scale for the accepted answer: the electrician ashore beside a coil about five feet long, the sea cable leaving the room through the wall behind him.",
+      "carries": [
+        "R3"
+      ]
+    },
+    {
+      "id": "B04",
+      "experience": "The 'oh' of seeing that the slowness was built into the cable: a sharp click comes out as a slow swell, and twice the distance makes it four times as wide.",
+      "visual_intent": "Drawn diagrams do the explaining while the voice steps back: a pulse entering sharp and leaving smeared, then two cables, one twice as long as the other, with their swells stacked for comparison.",
+      "carries": [
+        "R4"
+      ],
+      "key_moment": "the crawl explained",
+      "significance": {
+        "matters_because": "It answers the question the opening raised (why a cable that worked took sixteen hours for 98 words) with a cause no operator could have fixed. It also changes what the viewer will judge next: whether pushing harder could ever have helped.",
+        "reward": "The 'oh' of seeing the crawl drawn: a sharp click arriving as a slow, wide swell, four times wider for twice the distance.",
+        "certainty": "established",
+        "depends_on": [
+          {
+            "what": "the Queen's 98 words taking almost sixteen hours",
+            "from": "B01"
+          }
+        ]
+      },
+      "depends_on": [
+        {
+          "what": "the Queen's 98 words taking almost sixteen hours",
+          "from": "B01"
+        }
+      ]
+    },
+    {
+      "id": "B05",
+      "experience": "The case against the coil firms up: louder was the wrong cure, and the quiet alternative was already on the bench.",
+      "visual_intent": "Two swells of the same width and different heights, then a dark room where a spot of light slides along a pale scale: the sensitive ear the words name.",
+      "carries": [
+        "R5"
+      ],
+      "hedges": {
+        "R5": "That follows from the physics; it is not something anyone measured at Valentia, and the story that Whitehouse quietly used Thomson's instrument comes from one account."
+      }
+    },
+    {
+      "id": "B06",
+      "experience": "The verdict wobbles: the cable itself may have been failing, and it was bought before anyone heeded the physics.",
+      "visual_intent": "First what the physics asked for set beside what was bought, then the evidence for the other answer from inside the cable: a cross-section with the copper core pushed against one side.",
+      "carries": [
+        "R6",
+        "R7"
+      ],
+      "key_moment": "the verdict reopened",
+      "significance": {
+        "matters_because": "The verdict the viewer accepted in B03 may be wrong. The coil may have struck a cable that was already failing, built thin and impure by people who had not asked a scientist, so the man the inquiry blamed may only have finished off a fault others put there.",
+        "reward": "The viewer gets to weigh two documented answers instead of being handed a culprit.",
+        "certainty": "contested",
+        "hedge": "No one can now say whether the coil killed a sound cable or finished off one that was already failing.",
+        "depends_on": [
+          {
+            "what": "the coil, its voltage and the inquiry's verdict",
+            "from": "B03"
+          },
+          {
+            "what": "the crawl as a property of the cable itself, set by its length and build",
+            "from": "B04"
+          }
+        ]
+      },
+      "depends_on": [
+        {
+          "what": "the coil, its voltage and the inquiry's verdict",
+          "from": "B03"
+        },
+        {
+          "what": "the crawl as a property of the cable itself, set by its length and build",
+          "from": "B04"
+        }
+      ],
+      "hedges": {
+        "R7": "No one can now say whether the coil killed a sound cable or finished off one that was already failing."
+      }
+    },
+    {
+      "id": "B07",
+      "experience": "A wry recognition that a named culprit was useful to more than one party.",
+      "visual_intent": "The people the verdict had to reassure before anyone would pay for another cable: a hall of shareholders facing a short sample of cable.",
+      "carries": [
+        "R8"
+      ],
+      "hedges": {
+        "R8": "That is one researcher's reading of why the verdict stuck, not something the inquiry said."
+      }
+    },
+    {
+      "id": "B08",
+      "experience": "Resolution with honesty: the Atlantic finally talks for good, and who killed the first cable is left as open as the evidence leaves it.",
+      "visual_intent": "The scale of the fourth attempt: the Great Eastern paying out cable at dusk beside a small escort. Then the cable running down into dark water, held while the open verdict is spoken.",
+      "carries": [
+        "R9"
+      ],
+      "key_moment": "the line that stayed",
+      "significance": {
+        "matters_because": "It closes the thread the opening started. The Atlantic finally talks for good, the electrical side is run Thomson's way with the sensitive receiver B05 showed could work around the smear, and the man the inquiry blamed is gone. The film does not claim the instrument alone made the difference, and it leaves the 1858 verdict where B06 left it.",
+        "reward": "Resolution: a line that stays, and an honest open question to carry away instead of a convenient villain.",
+        "certainty": "established",
+        "depends_on": [
+          {
+            "what": "the sensitive receiver as the alternative to a bigger push",
+            "from": "B05"
+          },
+          {
+            "what": "the open question of whether the coil or the cable killed the 1858 line",
+            "from": "B06"
+          }
+        ]
+      },
+      "depends_on": [
+        {
+          "what": "the sensitive receiver as the alternative to a bigger push",
+          "from": "B05"
+        },
+        {
+          "what": "the open question of whether the coil or the cable killed the 1858 line",
+          "from": "B06"
+        }
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "id": "S1",
+      "beat_id": "B01",
+      "new_thing": "What sixteen hours of sending looks like: one man, one lamp, a paper strip lengthening very slowly through the night.",
+      "frame_prompt": "A painted interior of a small telegraph room at night in 1858. A clean-shaven clerk in his thirties, in a dark waistcoat and white shirtsleeves, sits at a plain wooden desk with one hand resting on a brass sending key. He watches a narrow strip of paper feed out of a small brass instrument and curl onto the desk in a short loose coil; the strip carries a single faint wavy pencil line. An oil lamp throws warm light across the desk, and the small window behind him is deep night blue. On the whitewashed wall hangs a round clock with dots in place of numerals, its hour hand pointing down and to the left toward the eight o'clock dot. There is no writing, lettering or numbers anywhere in the picture."
+    },
+    {
+      "id": "S2",
+      "beat_id": "B01",
+      "new_thing": "The distance the words had to cross: an empty ocean with one thread across it.",
+      "frame_prompt": "A hand-drawn map in brown ink and pale watercolour on cream paper, showing the North Atlantic as a simple outline: the ragged western coast of Ireland at the right edge, the coast of Newfoundland at the left edge, and between them a wide stretch of pale blue-grey ocean with faint wave strokes. A single thin dark line crosses the whole ocean from coast to coast, sagging gently in the middle like a thread laid on the sea floor. There is no writing, lettering or numbers anywhere in the picture."
+    },
+    {
+      "id": "S3",
+      "beat_id": "B02",
+      "new_thing": "The scale of the public joy, out of all proportion to what the line could actually do.",
+      "frame_prompt": "A painted night scene: a crowd of adult men and women in 1850s coats, hats and bonnets, seen from behind at a distance, fills a wide square in front of a pale domed civic building with tall columns. Above the dome, bursts of gold and white fireworks open against a dark blue sky, lighting the front of the building and the backs of the crowd. There is no writing, lettering or numbers anywhere in the picture."
+    },
+    {
+      "id": "S4",
+      "beat_id": "B02",
+      "new_thing": "The silence: the same desk by day, the strip hanging slack and blank, the chair pushed back.",
+      "frame_prompt": "The same small telegraph room as the night scene, now in flat grey daylight. The wooden desk is empty and the brass instrument stands still; the paper strip hangs slack over the edge of the desk, plain and blank. The chair is pushed back from the desk and the oil lamp is cold. The whitewashed wall and the round clock with dots in place of numerals are as before, the hour hand pointing straight up at the twelve o'clock dot. There is no writing, lettering or numbers anywhere in the picture."
+    },
+    {
+      "id": "S5",
+      "beat_id": "B03",
+      "new_thing": "The accepted answer given a face and a scale: the electrician ashore with a coil about as long as a man is tall.",
+      "frame_prompt": "A painted interior of a plain stone-walled instrument room beside a grey sea, lit from one tall window. A man in his early forties, in a dark 1850s frock coat and waistcoat, stands at a sturdy workbench with one hand resting on a large induction coil: a thick cylinder wound with dark wire, about five feet long, on a heavy wooden stand. Thick wires run from the coil along the bench to a heavy dark cable that leaves the room through an opening low in the wall, toward the sea outside the window. There is no writing, lettering or numbers anywhere in the picture.",
+      "content_note": "director's answer to the content gate: 'wound' here means coiled with wire, an induction coil; nobody is hurt and nothing injured is shown"
+    },
+    {
+      "id": "S6",
+      "beat_id": "B04",
+      "new_thing": "The crawl itself as a shape: a sharp click going in, a slow wide swell coming out.",
+      "frame_prompt": "A clean drawn diagram in dark ink on cream paper. A long horizontal cable, drawn as a thick dark band, crosses the middle of the page. At its left end, above the cable, stands a single tall, narrow, sharp spike drawn in red ink. At its right end, above the cable, lies a low, wide, gentle hump in the same red ink, several times wider than the spike and much lower. Small faint arrows along the cable point from left to right. There is no writing, lettering or numbers anywhere in the picture.",
+      "carries_significance": "The viewer sees the sixteen hours as a shape: a click sent sharp arrives smeared, so each next click must wait for the swell to pass."
+    },
+    {
+      "id": "S7",
+      "beat_id": "B04",
+      "new_thing": "The square law as something to measure by eye: double the cable, four times the smear.",
+      "frame_prompt": "A drawn diagram in dark ink on cream paper with two horizontal cables, one above the other, both starting at the same left edge. The upper cable is short, reaching a third of the way across; the lower cable is exactly twice as long. At the right end of each sits a red ink hump: the upper hump is moderately wide, and the lower hump is four times as wide and lower. Thin dotted vertical guide lines mark the edges of each hump so their widths can be compared. There is no writing, lettering or numbers anywhere in the picture.",
+      "carries_significance": "The lower hump is four times the width of the upper one for twice the length, which shows why the longest cable yet laid was also by far the slowest."
+    },
+    {
+      "id": "S8",
+      "beat_id": "B05",
+      "new_thing": "A bigger push only makes the swell taller: the same width, the same wait.",
+      "frame_prompt": "A drawn diagram in dark ink on cream paper: two red ink humps side by side on a shared horizontal baseline, both exactly the same width. The left hump is low and the right hump is three times taller. Thin dotted vertical guide lines at the edges of both humps line up exactly, showing that their widths are equal. There is no writing, lettering or numbers anywhere in the picture."
+    },
+    {
+      "id": "S9",
+      "beat_id": "B05",
+      "new_thing": "The quiet alternative: an instrument that shows the faintest current as a moving spot of light.",
+      "frame_prompt": "A painted dark room lit only by a small oil lamp on a wooden bench. Beside the lamp, a small brass instrument on a stand holds a tiny round mirror. A narrow beam of lamplight bounces off the mirror and lands as a single bright spot on a long pale scale fixed across the far wall, a strip marked with evenly spaced small dots. A man in his mid-thirties in a dark 1850s coat leans forward on a stool, watching the spot of light. There is no writing, lettering or numbers anywhere in the picture."
+    },
+    {
+      "id": "S10",
+      "beat_id": "B06",
+      "new_thing": "What the physics asked for beside what was bought: a thick core of bright copper next to a thin, duller one.",
+      "frame_prompt": "A drawn diagram in ink and watercolour on cream paper showing two cable cross-sections side by side, like two cut ends seen face on. Each has a ring of twisted grey iron wires around a dark brown layer of insulation. In the left one, the copper core at the centre is thick and bright, a wide disc of gleaming copper strands. In the right one, the copper core is thin and dull, a small cluster of darker strands. Fine hatching shows the cut faces. There is no writing, lettering or numbers anywhere in the picture.",
+      "carries_significance": "Setting the core Thomson argued for beside the one the company bought shows that the cable's own build was part of the problem before any coil touched it."
+    },
+    {
+      "id": "S11",
+      "beat_id": "B06",
+      "new_thing": "The other answer from inside the cable: the copper core pushed to one side, nearly touching the armour.",
+      "frame_prompt": "A drawn cross-section of a single cable in ink and watercolour on cream paper, filling the frame like a cut log. An outer ring of tightly twisted grey iron wires surrounds a thick dark brown layer of insulation. Within that, a small bundle of copper wires sits off-centre, pressed close to the iron ring on the right, while a wide band of insulation fills the left. Fine hatching shows the cut faces. There is no writing, lettering or numbers anywhere in the picture.",
+      "carries_significance": "The core lying almost against its armour makes the later analysis visible: a cable that could fail on its own, so the viewer can weigh it against the coil."
+    },
+    {
+      "id": "S12",
+      "beat_id": "B07",
+      "new_thing": "The people the verdict had to reassure before anyone would pay for another cable.",
+      "frame_prompt": "A painted meeting hall in the early 1860s, lit by tall windows. Rows of men in dark frock coats sit facing a raised table, attentive. On the table lies a short coiled length of thick dark cable beside a closed report bound in plain grey cloth, and a speaker in a dark coat stands beside it with one hand on the report. There is no writing, lettering or numbers anywhere in the picture."
+    },
+    {
+      "id": "S13",
+      "beat_id": "B08",
+      "new_thing": "The scale of the fourth attempt: a ship that dwarfs her escort, laying cable steadily over her stern.",
+      "frame_prompt": "A painted seascape at dusk. A vast iron steamship with several tall funnels and masts moves slowly across a calm grey-green ocean, a thick dark cable running from a large wheel at her stern down into the water behind her. A much smaller paddle steamer keeps station off her side, dwarfed by her length. Streaks of orange and violet lie low over the horizon. There is no writing, lettering or numbers anywhere in the picture.",
+      "carries_significance": "The giant ship and the cable running steadily off her stern present the fourth attempt as the one that stays, the answer the film has been heading toward."
+    },
+    {
+      "id": "S14",
+      "beat_id": "B08",
+      "new_thing": "The cable going down to stay, while the question of the first one is left open.",
+      "frame_prompt": "A close painted view of the stern of a great iron ship at dusk. A thick dark cable runs over a large iron wheel and down in a smooth curve into dark green water, fading from sight below the surface. Wet ropes and a rail frame the edge of the deck; the low light is warm on the wheel and cold on the water. There is no writing, lettering or numbers anywhere in the picture.",
+      "carries_significance": "Holding on the cable as it sinks out of sight gives the open verdict on 1858 a quiet place to land: the line that worked goes down, and the question of the one that failed stays with the viewer."
+    }
+  ]
+}
