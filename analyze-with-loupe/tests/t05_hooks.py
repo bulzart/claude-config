@@ -86,10 +86,10 @@ r = hook("atp_flag_watch.py", {"hook_event_name": "PostToolUse", "tool_name": "m
 note = (r.get("hookSpecificOutput") or {}).get("additionalContext", "")
 check("awl.py caught-flag add --run " + run.name in note and "moderation" in note, f"a flagged answer is captured and the reminder names caught-flag add for this run: {note[:100]}")
 
-# --- 4. the resume note names this library's run and the skill to re-invoke
-r = hook("atp_resume_note.py", {"hook_event_name": "SessionStart", "source": "compact"})
+# --- 4. the resume note names this library's run (by its folder) and the skill to re-invoke; only this library's runs folder is searched
+r = hook("atp_resume_note.py", {"hook_event_name": "SessionStart", "source": "compact"}, env={"RESUME_NOTE_ROOTS": str(home / "runs")})
 note = (r.get("hookSpecificOutput") or {}).get("additionalContext", "")
-check("/analyze-with-loupe run `" + run.name in note and "awl-analyze-produce" in note and "video 02" in note, f"the resume note names the run, the video and next_skill: {note[:110]}")
+check("`" + str(run) + "`" in note and "awl-analyze-produce" in note and "video 02" in note, f"the resume note names the run, the video and next_skill: {note[:110]}")
 
 # --- 5. the read guard: a whole-file Read of awl.py is refused, an offset read passes
 p = str(HOME / "analyze-with-loupe" / "scripts" / "awl.py")
