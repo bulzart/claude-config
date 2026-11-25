@@ -4050,8 +4050,7 @@ def stale_files(rd, video, names=TRACKED_FILES):
         if isinstance(req.get('parts'), dict):
             # a change scoped to some parts (a researched value: the beats that carry it, their lines, their shots):
             # only those parts left exactly as they were are waiting; the rest of the file is free
-            now_parts = artifact_parts(rd, video, name) if cur is not None else {}
-            waiting = [p for p, sha in req['parts'].items() if now_parts.get(p) == sha]
+            waiting = parts_still_waiting(rd, video, name, req['parts']) if cur is not None else []
             ra = reapproved_for(lock, name)
             if waiting and not (ra and ra.get('sha256') == cur):
                 out[name] = f"{name.replace('-', '_')}_made_for_an_earlier_direction:" + ','.join(waiting)
@@ -4066,23 +4065,68 @@ def stale_files(rd, video, names=TRACKED_FILES):
 
 
 PART_TIMING_KEYS = ('start_s', 'end_s', 'duration_s')
+# Where a part sits, not what it is: a line added early renumbers every later line and shifts every later beat's line
+# span without changing them (2026-11-25).
+PART_PLACE_KEYS = ('id', 'line_start', 'line_end')
 
 
 def part_sha(obj):
-    """One beat, line or shot as content: its timing (retime-shots rewrites it) is not what a revision asks about."""
+    """One beat, line or shot as content: its timing (retime-shots rewrites it) and its place (its number, the lines a
+    beat spans) are not what a revision asks about. A beat's own words are compared through its lines."""
+    return canonical_sha({k: v for k, v in (obj or {}).items() if k not in PART_TIMING_KEYS
+                          and k not in PART_PLACE_KEYS and not str(k).startswith('planned_')})
+
+
+def part_sha_v1(obj):
+    """part_sha as records made before 2026-11-25 stored it (its place included): such a record is still compared as it
+    was made, never read as a change."""
     return canonical_sha({k: v for k, v in (obj or {}).items()
                           if k not in PART_TIMING_KEYS and not str(k).startswith('planned_')})
 
 
-def artifact_parts(rd, video, name):
-    """A plan file part by part ({id: sha}): the beats of the beat map, the lines of the script, the shots of the shot
+def part_unchanged(stored, obj, now_sha=None):
+    """A part recorded earlier is exactly as it was: its stored hash is the current part's, in either form."""
+    return bool(stored) and stored in ((now_sha or part_sha(obj)), part_sha_v1(obj))
+
+
+def beat_lines_text(b, lines):
+    """The words of one beat's lines, in order: the beat's own content wherever its lines now sit."""
+    try:
+        return [str((l or {}).get('text') or '') for l in lines[int(b['line_start']) - 1:int(b['line_end'])]]
+    except (KeyError, TypeError, ValueError):
+        return []
+
+
+def beat_content_sha(b, lines):
+    """A beat as its shots were planned for: its direction and its words, not the numbers of its lines."""
+    return canonical_sha({'beat': part_sha(b), 'lines': beat_lines_text(b, lines)})
+
+
+def artifact_part_rows(rd, video, name):
+    """A plan file part by part ({id: part}): the beats of the beat map, the lines of the script, the shots of the shot
     plan."""
     data = read_json(artifact_path(rd, video, name))
     if name == 'script':
-        return {str(r.get('id') or f'L{i + 1:03d}'): part_sha(r) for i, r in enumerate(data.get('lines') or [])
+        return {str(r.get('id') or f'L{i + 1:03d}'): r for i, r in enumerate(data.get('lines') or [])
                 if isinstance(r, dict)}
     key = {'beat-map': 'beats', 'shot-plan': 'shots'}.get(name)
-    return {str(r.get('id')): part_sha(r) for r in data.get(key) or [] if isinstance(r, dict)} if key else {}
+    return {str(r.get('id')): r for r in data.get(key) or [] if isinstance(r, dict)} if key else {}
+
+
+def artifact_parts(rd, video, name):
+    """A plan file part by part ({id: sha})."""
+    return {k: part_sha(r) for k, r in artifact_part_rows(rd, video, name).items()}
+
+
+def parts_still_waiting(rd, video, name, stored):
+    """Which recorded parts ({part: sha}) are still exactly as they were: a script line by its words wherever it now
+    sits (a line added above it renumbers it, it does not revise it); a beat or a shot under its own id, its place
+    left out. [part ids]"""
+    rows = artifact_part_rows(rd, video, name)
+    if name == 'script':
+        anywhere = {part_sha(r) for r in rows.values()}
+        return [p for p, sha in stored.items() if sha in anywhere or (p in rows and part_sha_v1(rows[p]) == sha)]
+    return [p for p, sha in stored.items() if p in rows and part_unchanged(sha, rows[p])]
 
 
 def value_change_scope(rd, video, vids):
@@ -5478,6 +5522,63 @@ def script_revised_share(old, new):
     return round(1.0 - same / max(len(a), len(b)), 4)
 
 
+LINE_MATCHING = 2      # 2026-11-25: a script read's lines are matched to later versions by their words (a record made
+                       # before keeps the number-by-number reading its answers were written under)
+
+
+def align_script_lines(old, new, by=None):
+    """How one version of a script became the next ({line id: text} each, in script order), its lines matched by their
+    words as well as by their numbers: a line added or removed renumbers every later line without rewriting it
+    (2026-11-25: a comparison by number alone made every later line look rewritten, so drafts were edited in place to
+    keep the numbers). Two readings are made, line by line under the same numbers and line by line by their words;
+    the one that explains the edit with fewer changed lines is kept (on a tie, the numbers, as before; by='id' asks
+    for the numbers alone). A kept line with new words is 'reworded'; one whose exact words left one place and came
+    back in another is 'moved' (the order is part of what a reader understood); a new one 'added'. {'by': 'id' or
+    'words', 'map': {old id: new id} for every line kept, 'changed': {new id: how}, 'removed': [old ids]}."""
+    import difflib
+    old, new = dict(old or {}), dict(new or {})
+    by_id = {'by': 'id', 'map': {k: k for k in old if k in new},
+             'changed': {k: ('reworded' if k in old else 'added') for k in new if old.get(k) != new[k]},
+             'removed': [k for k in old if k not in new]}
+    if by == 'id':
+        return by_id
+    oi, ni = list(old), list(new)
+    ot, nt = [' '.join(str(old[k] or '').split()) for k in oi], [' '.join(str(new[k] or '').split()) for k in ni]
+    wmap, changed, gone, added = {}, {}, [], []
+
+    def similar(a, b):
+        return difflib.SequenceMatcher(None, a.lower().split(), b.lower().split(), autojunk=False).ratio()
+
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, ot, nt, autojunk=False).get_opcodes():
+        if tag == 'equal':
+            wmap.update({oi[i]: ni[j] for i, j in zip(range(i1, i2), range(j1, j2))})
+            continue
+        olds, news = list(range(i1, i2)), list(range(j1, j2))
+        if tag == 'replace' and len(olds) == len(news):
+            for i, j in zip(olds, news):                      # rewritten line for line
+                wmap[oi[i]], changed[ni[j]] = ni[j], 'reworded'
+            continue
+        if tag == 'replace':                                  # rewritten and resized: each line to its closest successor
+            last = j1 - 1
+            for i in olds:
+                score, j = max(((similar(ot[i], nt[j]), j) for j in news if j > last), default=(0.0, None))
+                if j is not None and score >= 0.5:
+                    wmap[oi[i]], changed[ni[j]], last = ni[j], 'reworded', j
+        gone += [i for i in olds if oi[i] not in wmap]
+        added += [j for j in news if ni[j] not in changed]
+    for i in list(gone):                                      # the same words, another place: moved, not rewritten
+        j = next((j for j in added if nt[j] == ot[i]), None)
+        if j is not None:
+            wmap[oi[i]], changed[ni[j]] = ni[j], 'moved'
+            gone.remove(i)
+            added.remove(j)
+    changed.update({ni[j]: 'added' for j in added})
+    by_words = {'by': 'words', 'map': wmap, 'changed': {k: changed[k] for k in ni if k in changed},
+                'removed': [oi[i] for i in sorted(gone)]}
+    cost = lambda r: len(r['changed']) + len(r['removed'])
+    return by_words if cost(by_words) < cost(by_id) else by_id
+
+
 def holds_changed(seen, now_holds):
     """Realised pauses changed since the last script read, counted against what that reader was shown, so a run of
     small edits adds up instead of each passing on its own: (lines added, removed, realised another way or moved by
@@ -5535,6 +5636,10 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
                 st['warnings'].append('the last script read was made before holds were shown to readers: it did not '
                                       'see the held silences')
         else:
+            if snapshot is not None:
+                # each hold follows its line wherever the line now sits; a hold on a removed line is a hold removed
+                al = align_script_lines(recs[-1][0].get('subject_snapshot') or {}, snapshot)
+                seen = {al['map'].get(k, f'{k}(removed)'): v for k, v in seen.items()}
             ch, moved = holds_changed(seen, holds)
             lim_lines, lim_s, lim_share = HOLDS_SMALL_CHANGE
             target = read_json(vd / 'length-lock.json').get('target_length_s') or 0
@@ -5567,6 +5672,23 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
         # a line's planned silence is part of what was read: changing it (a finding about a silence) is a revision
         held_then = rec.get('holds_snapshot') or {}
         held_later = (recs[i + 1][0].get('holds_snapshot') if i + 1 < len(recs) else holds) or {}
+        # a round read before lines were matched by their words keeps the number-by-number reading it was answered under
+        al = (align_script_lines(old, later, by=None if int(rec.get('line_matching') or 1) >= LINE_MATCHING else 'id')
+              if kind == 'script' and later is not None else None)
+        back = {v: k for k, v in al['map'].items()} if al else {}
+
+        def same_line(x):
+            """A line a revised answer names is still as it was, its words and its hold, read both by its number in the
+            revised script and by the number it had when read (an answer may use either): unchanged only when every
+            reading finds it so."""
+            views = []
+            if x in later:
+                views.append(x not in al['changed'] and back.get(x) is not None
+                             and held_then.get(back[x]) == held_later.get(x))
+            if x in old:
+                nx = al['map'].get(x)
+                views.append(nx is not None and nx not in al['changed'] and held_then.get(x) == held_later.get(nx))
+            return bool(views) and all(views)
         open_ids = []
         for f in fs:
             fid = str(f.get('id'))
@@ -5578,7 +5700,7 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
                 ls = expand_lines(a.get('lines'), list(dict.fromkeys(list(old) + list(later))))
                 if not ls:
                     open_ids.append(fid)
-                elif all(old.get(x) == later.get(x) and held_then.get(x) == held_later.get(x) for x in ls):
+                elif all(same_line(x) for x in ls):
                     st['issues'].append(f'{kind}_review_r{rnd}_revised_but_unchanged:{fid}')
         if open_ids:
             st['issues'].append(f'{kind}_review_r{rnd}_unanswered:' + ','.join(open_ids))
@@ -5616,46 +5738,57 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
     if rec.get('subject_sha256') != current_sha:
         if kind == 'script' and snapshot is not None:
             old = rec.get('subject_snapshot') or {}
-            changed = [k for k in dict.fromkeys(list(old) + list(snapshot)) if old.get(k) != snapshot.get(k)]
+            # The lines as they changed, matched by their words: a line added above another renumbers it, it does not
+            # rewrite it (2026-11-25). A changed line goes by its current number, a removed one by the number it had.
+            al = align_script_lines(old, snapshot)
+            changed, removed = list(al['changed']), list(al['removed'])
             # A fresh read follows a revision that touches what the reader's verdict rested on, however few its
             # words; many words reworded elsewhere do not force one (the user, 2026-11-24). A line's revision note in
             # the answers file (revision_notes: {"L012": "why its meaning is unchanged"}) says the change is wording.
             notes = {k for k, v in (rec.get('_revision_notes') or {}).items() if n_words(v) >= MIN_NOTE_WORDS}
             deps = script_dependencies(vd)
             order_old = list(old)
-            for k in changed:
-                if k in old and k not in snapshot and not deps.get(k):     # a removed line: what its neighbours carry
-                    i = order_old.index(k)
-                    near = [x for x in order_old[max(0, i - 1):i + 2] if x != k and deps.get(x)]
-                    if near:
-                        deps[k] = [f'removed_beside:{near[0]}({deps[near[0]][0]})']
-            weighty = [k for k in changed if deps.get(k) and k not in notes]
+            gone = {}                                       # a removed line: what its kept neighbours carry now
+            for k in removed:
+                i = order_old.index(k)
+                near = [al['map'][x] for x in order_old[max(0, i - 1):i + 2] if x != k and deps.get(al['map'].get(x))]
+                if near:
+                    gone[k] = f'removed_beside:{near[0]}({deps[near[0]][0]})'
+            weighty = ([f'{k}({deps[k][0]})' for k in changed if deps.get(k) and k not in notes]
+                       + [f'{k}({gone[k]})' for k in removed if gone.get(k) and k not in notes])
             if weighty:
                 st['issues'].append('script_revised_where_it_matters_since_its_last_read:'
-                                    + ','.join(f'{k}({deps[k][0]})' for k in weighty[:8])
-                                    + ('...' if len(weighty) > 8 else '')
+                                    + ','.join(weighty[:8]) + ('...' if len(weighty) > 8 else '')
                                     + ':a_fresh_read_follows,_or_a_revision_note_per_line_says_its_meaning_is_unchanged')
-            if changed:
+            if changed or removed:
                 share = script_revised_share(old, snapshot)
-                carried = [k for k in changed if deps.get(k)]
+                carried = [k for k in changed if deps.get(k)] + [k for k in removed if gone.get(k)]
+                kinds = [how for how in al['changed'].values() if how != 'reworded'] + ['removed'] * len(removed)
                 st['warnings'].append(f'script revised since its last read: {round(100 * share)}% of its words on '
-                                      f'{len(changed)} line(s); ' + (f'{len(carried)} of them carry what the reader\'s '
-                                                                     'verdict rested on' if carried else
-                                                                     'none carries a key moment, its setup or hedge, a '
-                                                                     'value, a claim or a comprehension gap'))
+                                      f'{len(changed) + len(removed)} line(s)'
+                                      + (' (matched by their words: ' + ', '.join(f'{kinds.count(x)} {x}' for x in
+                                                                                  ('added', 'removed', 'moved')
+                                                                                  if x in kinds) + ')'
+                                         if al['by'] == 'words' else '') + '; '
+                                      + (f'{len(carried)} of them carry what the reader\'s verdict rested on' if carried
+                                         else 'none carries a key moment, its setup or hedge, a value, a claim or a '
+                                              'comprehension gap'))
             asked = set()
             for a in ans.values():
                 if isinstance(a, dict) and str(a.get('action')).strip().lower() == 'revised':
-                    asked |= set(expand_lines(a.get('lines'), list(dict.fromkeys(list(old) + list(snapshot)))) or [])
-            loose = [k for k in changed if k not in asked and k not in notes]
+                    named = expand_lines(a.get('lines'), list(dict.fromkeys(list(old) + list(snapshot)))) or []
+                    # by the revised script's numbers or by the ones the reader saw
+                    asked |= set(named) | {al['map'][x] for x in named if x in al['map']}
+            loose = ([(k, snapshot.get(k)) for k in changed if k not in asked and k not in notes]
+                     + [(k, old.get(k)) for k in removed if k not in asked and k not in notes])
             if loose:
                 total = sum(n_words(strip_tags(t)) for t in snapshot.values()) or 1
-                moved = sum(n_words(strip_tags(snapshot.get(k) or old.get(k) or '')) for k in loose)
+                moved = sum(n_words(strip_tags(t or '')) for _, t in loose)
                 if len(loose) <= SMALL_EDIT_LINES and moved <= SMALL_EDIT_SHARE * total:
                     st['warnings'].append(f'script edited after its last read on {len(loose)} line(s) no finding '
-                                          'asked about (small enough to pass): ' + ','.join(loose))
+                                          'asked about (small enough to pass): ' + ','.join(k for k, _ in loose))
                 else:
-                    st['issues'].append('script_changed_after_review:' + ','.join(loose[:15])
+                    st['issues'].append('script_changed_after_review:' + ','.join(k for k, _ in loose[:15])
                                         + ('...' if len(loose) > 15 else ''))
         else:
             # a new file gets its own read, whatever the round (command step F): after the round cap only majors are
@@ -5891,11 +6024,14 @@ def shot_facts(rd, video, keep=''):
     snap = read_json(shot_check_path(rd, n))
     out['changed_beats'] = {}
     if isinstance(snap.get('beats'), dict):
-        now_b = {str(b.get('id')): part_sha(b) for b in beat_rows if isinstance(b, dict)}
+        # a beat is its direction and its words: a line added in an earlier beat shifts this one's line numbers
+        # without changing it (2026-11-25); a check recorded before that is compared as it was made
+        script_rows = read_json(video_dir(rd, n) / 'script.json').get('lines') or []
+        now_b = {str(b.get('id')): b for b in beat_rows if isinstance(b, dict)}
         for bid, sha in snap['beats'].items():
-            if bid in now_b and now_b[bid] != sha:
+            if bid in now_b and not part_unchanged(sha, now_b[bid], beat_content_sha(now_b[bid], script_rows)):
                 left = [str(s.get('id')) for s in shots if str(s.get('beat_id')) == bid
-                        and (snap.get('shots') or {}).get(str(s.get('id'))) == part_sha(s)]
+                        and part_unchanged((snap.get('shots') or {}).get(str(s.get('id'))), s)]
                 if left:
                     out['changed_beats'][bid] = left
         for bid, left in out['changed_beats'].items():
@@ -6406,19 +6542,16 @@ def plan_check_path(rd, video):
     return video_dir(rd, video) / 'plan-check.json'
 
 
-def beat_line_state(vd):
-    """Per beat: its direction's hash and its lines' text hash."""
+def beat_line_state(vd, with_rows=False):
+    """Per beat: its direction's hash (its line numbers left out: a line added earlier shifts them) and its lines' text
+    hash. with_rows: the beat itself too, under 'row' (never stored)."""
     lines = read_json(vd / 'script.json').get('lines') or []
     out = {}
     for b in read_json(vd / 'beat-map.json').get('beats') or []:
         if not isinstance(b, dict):
             continue
-        try:
-            txt = [str(l.get('text') or '') for l in lines[int(b['line_start']) - 1:int(b['line_end'])]]
-        except (KeyError, TypeError, ValueError):
-            txt = []
-        out[str(b.get('id'))] = {'sha': part_sha(b), 'lines_sha': canonical_sha(txt),
-                                 'lines': [b.get('line_start'), b.get('line_end')]}
+        out[str(b.get('id'))] = {'sha': part_sha(b), 'lines_sha': canonical_sha(beat_lines_text(b, lines)),
+                                 'lines': [b.get('line_start'), b.get('line_end')], **({'row': b} if with_rows else {})}
     return out
 
 
@@ -6435,9 +6568,10 @@ def beat_line_issues(rd, video, keep=''):
     if ra and str(ra.get('at') or '') > str(rec_all.get('checked_at') or ''):
         return []
     out = []
-    for bid, now_ in beat_line_state(video_dir(rd, video)).items():
+    for bid, now_ in beat_line_state(video_dir(rd, video), with_rows=True).items():
         was = rec.get(bid)
-        if was and was.get('sha') != now_['sha'] and was.get('lines_sha') == now_['lines_sha']:
+        if was and not part_unchanged(was.get('sha'), now_['row'], now_['sha']) \
+                and was.get('lines_sha') == now_['lines_sha']:
             out.append(f'beat_{bid}_changed_since_its_lines_were_checked:L{now_["lines"][0]}-L{now_["lines"][1]}:'
                        'revise_them_or_plan-check_--keep_"why_they_still_fit"')
     return out
@@ -11721,8 +11855,8 @@ def cmd_direction_lock(args):
                 else:
                     parts = dict(scope[a])
                     if a in waiting and isinstance(old_req.get('parts'), dict):
-                        now_parts = artifact_parts(rd, n, a)
-                        parts = {**{p: sha for p, sha in old_req['parts'].items() if now_parts.get(p) == sha}, **parts}
+                        still = set(parts_still_waiting(rd, n, a, old_req['parts']))
+                        parts = {**{p: sha for p, sha in old_req['parts'].items() if p in still}, **parts}
                     required[a] = {'rev': rev + 1, 'parts': parts}
             lock.update({'production_rev': rev + 1, 'required': required,
                          'reapproved': {k: v for k, v in (prev.get('reapproved') or {}).items() if k not in hit}})
@@ -12900,6 +13034,7 @@ def cmd_review_record(args):
            'reader_route': reader_route, 'reader_confined': bool(route), 'answer_rules': ANSWER_RULES,
            'developments': devs if three_ways else None, 'derived_findings': [f['id'] for f in derived],
            'recorded_at': now(),
+           **({'line_matching': LINE_MATCHING} if kind == 'script' else {}),
            **({'promise': raw.get('promise')} if kind == 'script' and brief_v >= 5 else {}),
            **({'format_normalized': fmt_notes, 'findings_as_written': str(as_written)} if fmt_notes else {}),
            **({'recurrence_candidates': recur} if recur else {})}
@@ -12960,10 +13095,11 @@ def cmd_shot_check(args):
         prev = read_json(shot_check_path(rd, n))
         hist = (prev.get('history') or []) + ([{'at': now(), 'kept': keep, 'beats': res.get('changed_beats')}]
                                               if keep and res.get('changed_beats') else [])
+        script_rows = read_json(video_dir(rd, n) / 'script.json').get('lines') or []
         write_json(shot_check_path(rd, n), {
             'checked_at': now(),
-            'beats': {str(b.get('id')): part_sha(b) for b in read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or []
-                      if isinstance(b, dict)},
+            'beats': {str(b.get('id')): beat_content_sha(b, script_rows)
+                      for b in read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or [] if isinstance(b, dict)},
             'shots': {str(s.get('id')): part_sha(s) for s in read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []
                       if isinstance(s, dict)},
             'history': hist})

@@ -598,6 +598,15 @@ reader's verdict rested on (`script_revised_where_it_matters_since_its_last_read
 moment's lines and what they depend on, a hedge, a value's beat, a claim's line, a comprehension gap), however few its
 words; the share of words changed is only a warning. `revision_notes` says, per line and in five words or more, that
 a change is wording only: that line then forces no fresh read, and it leaves the count of lines edited after review.
+The read's lines are matched to the current script by their words as well as their numbers (`align_script_lines`:
+the reading with fewer changed lines wins, the numbers on a tie), so a line added or removed renumbers the lines after
+it without counting them as revised; a line moved counts (the order is what a reader followed), and a removed line
+counts beside what its neighbours carry. Name lines in `revision_notes` by their numbers in the script as it now
+stands; a `revised` answer may name them that way or by the numbers the reader saw, and a cut line by the number the
+reader saw. A beat's or shot's line numbers are its place, not its content (`part_sha`), so later beats, their shots
+and a waiting re-check stay as they were; a record made before 2026-11-25 is compared as it was made. A claim's
+`line_refs` still name lines by number: renumbered lines need them updated (plan-check names one left pointing
+elsewhere).
 
 ## Measured evidence (`av-profile`, `narration-measure`)
 

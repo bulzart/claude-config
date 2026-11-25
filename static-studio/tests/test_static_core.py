@@ -1168,6 +1168,65 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('baseline',lock['required']['beat-map'])
         self.assertNotIn('stills',lock['required'])
 
+    def test_a_scoped_recheck_follows_its_lines_when_they_are_renumbered(self):
+        # 2026-11-25: a researched value's re-check waits on its beat and lines by their content: a line added above
+        # them renumbers them without clearing the re-check; rewriting them does.
+        vd=self.write_plan(review_script=False)
+        sc=json.loads((vd/'script.json').read_text(encoding='utf-8'))
+        for i,l in enumerate(sc['lines'],1):
+            l['text']=l['text'][:-1]+f' at step {i}.'
+        save(vd/'script.json',sc)
+        self.review_script()
+        self.shots_for_plan()
+        d=json.loads((vd/'direction.json').read_text())
+        d['subject']['value_to_carry'][0]['what']='the supply decision, not the battle plan, decided the campaign'
+        save(vd/'direction.json',d)
+        cli('direction-lock','--run',self.run,'--video',1,'--revise','R1 said more exactly')
+        sc['lines'].insert(4,{'id':'X','text':'A line added in the opening, about the order and the bridge.','pause_after_s':0})
+        for i,r in enumerate(sc['lines'],1): r['id']=f'L{i:03}'
+        save(vd/'script.json',sc)
+        bm=json.loads((vd/'beat-map.json').read_text(encoding='utf-8'))
+        for b in bm['beats']:
+            b['line_start']+=0 if b['id']=='B01' else 1
+            b['line_end']+=1
+        save(vd/'beat-map.json',bm)
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=2)['issues']
+        self.assertIn('beat_map_made_for_an_earlier_direction:B05',iss)
+        self.assertTrue(any(x.startswith('script_made_for_an_earlier_direction:L041') for x in iss),iss)
+        for l in sc['lines'][41:53]:
+            l['text']=l['text'].replace('changed at step','decided by the supply order at step')
+        save(vd/'script.json',sc)
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in iss if x.startswith('script_made_for_an_earlier_direction')],iss)
+
+    def test_a_line_added_early_leaves_the_later_beats_and_their_shots_alone(self):
+        # 2026-11-25: a beat is its direction and its words, not the numbers of its lines
+        vd=self.write_plan()
+        self.shots_for_plan()
+        self.assertTrue(cli('shot-check','--run',self.run,'--video',1)['ready'])
+        first=cli('plan-check','--run',self.run,'--video',1,expected=None)
+        if not first['ready']:
+            self.skipTest('the fixture plan does not pass plan-check here: '+','.join(first['issues'][:3]))
+        sc=json.loads((vd/'script.json').read_text(encoding='utf-8'))
+        sc['lines'].insert(4,{'id':'X','text':'A line added in the opening, about the order and the bridge.','pause_after_s':0})
+        for i,r in enumerate(sc['lines'],1): r['id']=f'L{i:03}'
+        save(vd/'script.json',sc)
+        bm=json.loads((vd/'beat-map.json').read_text(encoding='utf-8'))
+        for b in bm['beats']:
+            b['line_start']+=0 if b['id']=='B01' else 1
+            b['line_end']+=1
+        save(vd/'beat-map.json',bm)
+        sf=cli('shot-check','--run',self.run,'--video',1,expected=2)
+        self.assertEqual([x for x in sf['issues'] if '_changed_since_its_shots_were_checked' in x],
+                         ['beat_B01_changed_since_its_shots_were_checked:S1:update_them_or_shot-check_--keep_why_they_still_fit'])
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertFalse([x for x in iss if 'changed_since_its_lines_were_checked' in x],iss)
+        # a beat whose direction changed while its lines did not is still named, wherever its lines now sit
+        bm['beats'][2]['experience']='the viewer now feels the cost before the order, a different beat'
+        save(vd/'beat-map.json',bm)
+        iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
+        self.assertTrue(any(x.startswith('beat_B03_changed_since_its_lines_were_checked') for x in iss),iss)
+
     def test_a_corrected_source_is_rechecked_not_rebuilt(self):
         vd=self.write_plan()
         src=self.run/'30-research/video-01/sources.md'
@@ -2220,6 +2279,56 @@ class StaticStudioTests(unittest.TestCase):
         self.answer_file(rec['answers_file'],{'revision_notes':{'L045':'a clearer word order, the same ending and meaning'}})
         iss=cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']
         self.assertFalse([x for x in iss if x.startswith('script_revised_where_it_matters')],iss)
+
+    def test_a_line_added_renumbers_the_lines_after_it_without_rewriting_them(self):
+        # 2026-11-25: the read's lines are matched to the revised script by their words, so a line added early flags
+        # only itself (drafts were edited in place to keep the numbers); a key moment's line moved, reworded or removed
+        # beside still asks for a fresh read, and each held silence follows its line.
+        vd=self.write_plan(review_script=False)
+        sc=json.loads((vd/'script.json').read_text(encoding='utf-8'))
+        for i,l in enumerate(sc['lines'],1):
+            l['text']=l['text'][:-1]+f' at step {i}.'
+        sc['lines'][29].pop('pause_after_s'); sc['lines'][29].update({'pause_total_s':2.0,'pause_via':'edit',**HELD})
+        save(vd/'script.json',sc)
+        self.review_script()
+        rows=sc['lines']
+        def renumber():
+            for i,r in enumerate(rows,1): r['id']=f'L{i:03}'
+            save(vd/'script.json',sc)
+        def spans(*pairs):
+            bm=json.loads((vd/'beat-map.json').read_text(encoding='utf-8'))
+            for b,(lo,hi) in zip(bm['beats'],pairs): b['line_start'],b['line_end']=lo,hi
+            save(vd/'beat-map.json',bm)
+        def issues(prefixes=('script_revised_where_it_matters','script_changed_after_review','holds_changed')):
+            pc=cli('plan-check','--run',self.run,'--video',1,expected=None)
+            return [x for x in pc['issues'] if x.startswith(prefixes)],pc['warnings']
+        rows.insert(4,{'id':'X','text':'A line added in the opening, about the order and the bridge.','pause_after_s':0})
+        renumber(); spans((1,11),(12,21),(22,31),(32,41),(42,53))
+        iss,warn=issues()
+        self.assertEqual(iss,[])
+        self.assertTrue(any(w.startswith('script edited after its last read on 1 line(s)') and w.endswith('L005') for w in warn),warn)
+        self.assertTrue(any('(matched by their words: 1 added)' in w for w in warn),warn)
+        # the key moment's last line moved to its start: the order its reader followed has changed
+        rows.insert(41,rows.pop(52)); renumber()
+        iss,warn=issues()
+        self.assertTrue(any(x.startswith('script_revised_where_it_matters_since_its_last_read:L042(key_moment:B05)') for x in iss),iss)
+        self.assertTrue(any('1 added, 1 moved' in w for w in warn),warn)
+        rows.insert(52,rows.pop(41)); renumber()
+        self.assertEqual(issues()[0],[])
+        # its first line reworded: a fresh read follows, or a note says the meaning is unchanged (by its number now)
+        first=rows[41]['text']
+        rows[41]['text']='And in the end the order saved nobody, because the depots burned before the march came.'
+        renumber()
+        self.assertTrue(any(x.startswith('script_revised_where_it_matters_since_its_last_read:L042(key_moment:B05)')
+                            for x in issues()[0]))
+        answers=sorted((vd/'reviews').glob('script-r*-answers.json'))[-1]
+        self.answer_file(answers,{'revision_notes':{'L042':'a clearer word order, the same ending and meaning'}})
+        self.assertEqual([x for x in issues()[0] if x.startswith('script_revised_where_it_matters')],[])
+        self.answer_file(answers,{'revision_notes':{}})
+        rows[41]['text']=first
+        # the line just before the key moment removed: what the moment carries is named beside it
+        rows.pop(40); renumber(); spans((1,11),(12,21),(22,31),(32,40),(41,52))
+        self.assertTrue(any('L040(removed_beside:L041(key_moment:B05))' in x for x in issues()[0]),issues()[0])
 
     def test_uncertain_research_reaches_the_picture_and_the_music_its_direction(self):
         core=self.load_core()
@@ -6638,3 +6747,37 @@ class StorytellingTests(unittest.TestCase):
         beats = [{'id': 'B05', 'line_start': 30, 'line_end': 40, 'key_moment': 'the energy click',
                   'depends_on': [{'what': 'what the membrane does', 'from': 'B02'}]}]
         self.assertTrue(c.key_moment_dependency_issues(sig, '- L033: intentional_mystery: kept\n', beats, self.order))
+
+    def test_lines_are_matched_by_their_words_not_their_numbers(self):
+        # 2026-11-25: a line added, removed or moved; a line reworded in place; identical lines, where the numbers decide
+        c = self.core
+        A = lambda xs: {f'L{i + 1:03}': t for i, t in enumerate(xs)}
+        old = A(['the find', 'the legend', 'the first letter', 'the second letter', 'the turn'])
+        al = c.align_script_lines(old, A(['the find', 'a new line', 'the legend', 'the first letter', 'the second letter',
+                                          'the turn']))
+        self.assertEqual((al['by'], al['changed'], al['removed'], al['map']['L005']), ('words', {'L002': 'added'}, [], 'L006'))
+        al = c.align_script_lines(old, A(['the find', 'the first letter', 'the second letter', 'the turn']))
+        self.assertEqual((al['changed'], al['removed'], al['map']['L003']), ({}, ['L002'], 'L002'))
+        al = c.align_script_lines(old, A(['the find', 'the first letter', 'the second letter', 'the legend', 'the turn']))
+        self.assertEqual((al['changed'], al['map']['L002']), ({'L004': 'moved'}, 'L004'))
+        al = c.align_script_lines(old, A(['the find', 'the legend retold', 'the first letter', 'the second letter',
+                                          'the turn']))
+        self.assertEqual((al['by'], al['changed']), ('id', {'L002': 'reworded'}))
+        al = c.align_script_lines(A(['a line'] * 6), A(['another'] * 3 + ['a line'] * 3))
+        self.assertEqual((al['by'], sorted(al['changed'])), ('id', ['L001', 'L002', 'L003']))
+        self.assertEqual(c.align_script_lines(old, A(['x'] + list(old.values())), by='id')['by'], 'id')
+
+    def test_a_part_is_its_content_not_its_place(self):
+        # 2026-11-25: a beat shifted by a line added before it is the same beat; a record made before is read as made
+        c = self.core
+        b = {'id': 'B06', 'line_start': 51, 'line_end': 60, 'experience': 'the cost lands', 'start_s': 10}
+        shifted = dict(b, line_start=52, line_end=61, start_s=12)
+        self.assertEqual(c.part_sha(b), c.part_sha(shifted))
+        self.assertNotEqual(c.part_sha_v1(b), c.part_sha_v1(shifted))
+        self.assertTrue(c.part_unchanged(c.part_sha_v1(b), b))
+        self.assertFalse(c.part_unchanged(c.part_sha_v1(b), shifted))
+        self.assertTrue(c.part_unchanged(c.part_sha(b), shifted))
+        self.assertFalse(c.part_unchanged(c.part_sha(b), dict(shifted, experience='another beat')))
+        lines = [{'id': f'L{i:03}', 'text': f'line {i}'} for i in range(1, 70)]
+        self.assertEqual(c.beat_content_sha(b, lines), c.beat_content_sha(shifted, [{'id': 'L000', 'text': 'new'}] + lines))
+        self.assertNotEqual(c.beat_content_sha(b, lines), c.beat_content_sha(shifted, lines))
