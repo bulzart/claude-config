@@ -1,5 +1,5 @@
-"""The SessionStart resume-note hook (hooks/atp_resume_note.py) names a /create-static run that is in progress, with its skill and video, and prints the to-do's `Next:` line.
-Temporary folders only: every library's run folder is pointed at an empty temporary one (environment overrides), so no real run is read.  python tests/t03_resume_hook.py"""
+"""The SessionStart resume-note hook (hooks/atp_resume_note.py) names a run of this command that is in progress (by its folder), with its skill and video, and prints the to-do's `Next:` line.
+Temporary folders only: RESUME_NOTE_ROOTS points the hook at one temporary runs folder, so no real run is read.  python tests/t03_resume_hook.py"""
 import json
 import os
 import subprocess
@@ -8,7 +8,6 @@ import tempfile
 from pathlib import Path
 
 HOOK = Path(__file__).resolve().parents[2] / "hooks" / "atp_resume_note.py"
-OTHERS = ("ATP_HOME", "ATG_HOME", "AWL_HOME", "CC_RUNS_ROOT")        # the other libraries' roots: pointed at empty folders so that nothing real is read
 FAILS, N = [], [0]
 
 
@@ -36,8 +35,7 @@ def make(home, name, state, todo=None):
 with tempfile.TemporaryDirectory(prefix="cs-resume-hook-") as tmp:
     tmp = Path(tmp)
     home = tmp / "cs"
-    env = {k: str(tmp / ("none-" + k)) for k in OTHERS}
-    env["CS_HOME"] = str(home)
+    env = {"RESUME_NOTE_ROOTS": str(home / "runs")}
 
     check(run_hook(env) == "", "no run: the hook prints nothing")
     make(home, "20261114-000001-static-done", {"stage": "done", "next_skill": "", "mode": "analyze"})
@@ -45,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix="cs-resume-hook-") as tmp:
     todo = "# Run to-do: 20261114-000002-static-x (kept by the main session; one writer)\nNext: S3 stills for video 02, stretch 2\nUpdated: 2026-11-14\n[x] S2 narration\n"
     make(home, "20261114-000002-static-x", {"stage": "producing", "next_skill": "cs-produce", "mode": "analyze", "video": "02"}, todo=todo)
     note = run_hook(env)
-    check("/create-static run `20261114-000002-static-x`" in note and "cs-produce" in note and "video 02" in note, f"a run in progress is named with its skill and video: {note[:120]}")
+    check("`" + str(home / "runs" / "20261114-000002-static-x") + "`" in note and "cs-produce" in note and "video 02" in note, f"a run in progress is named with its skill and video: {note[:120]}")
     check("Next: S3 stills for video 02, stretch 2" in note and "todo.md" in note, "the note points at the run's to-do and prints its Next line")
 
 print("ALL PASSED" if not FAILS else f"FAILED: {len(FAILS)}")
