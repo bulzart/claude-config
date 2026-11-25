@@ -40,6 +40,17 @@
         ]
       }
     ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Bulzart/.claude/hooks/compact_instructions.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Read",
