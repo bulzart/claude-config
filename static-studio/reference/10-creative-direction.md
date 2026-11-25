@@ -343,7 +343,7 @@ These are craft principles. Each one says when it applies.
 - **Delivery comes from the writing and its cues.** In TTS the voice and its settings set the character; the text
   sets the performance: punctuation, sentence length, line breaks, a question, direct address, and a delivery or
   pause cue wherever it gets a moment directly (05's catalogue; its scope stated, 05). Plan each important moment
-  as a performance: how the line lands, the silence and what it holds, how the next line starts again. After the calibration part, `narration-measure` writes
+  as a performance: how the line lands, the silence and what it holds, how the next line starts again. After the first real parts, `narration-measure` writes
   `delivery.json`: pitch range and movement, loudness contrast and rate per beat, next to what each beat asked for and
   to the references' numbers. A beat asked to lift that measures flat gets rewritten in the parts not yet recorded:
   shorter sentences, a turn of phrase, a question, a tag. The audio is never edited to fake it.
@@ -377,9 +377,9 @@ These are craft principles. Each one says when it applies.
    took from it, `same`, `different_but_valid` or `gap`; a gap counts as a major finding. A major
    finding gets a fresh round-2 read of the revised script, by a new agent. After round 2 you decide, and the reasons
    stay on record for the release sheet.
-3. **The narrator, then the calibration part.** `voice-pick` for this treatment (05). When the voice, its stability, the
+3. **The narrator, then a representative calibration.** The shortlist goes to the user with its listening files, and `voice-pick` records their listening choice for this treatment (05). The first paid recording shows the whole performance the script asks for (an explanation and an expressive passage, the hardest names, the tags, a transition into a silence): part 1 when it holds that, else a short representative `narration-trial` first. When the voice, its stability, the
    tags or a name are in doubt, a short `narration-trial` (approved and priced first) compares them one change at a
-   time and gives the user clips to hear. Then the calibration part: pace for the length (05), every line heard, and
+   time and gives the user clips to hear. Then the first real parts: the pace (a forecast tested on them, never a target; a conflict with the length goes to the user, 05), every line heard, and
    `delivery.json` for the performance.
 4. **The final watch review.** `av-profile --video NN --file export.mp4` makes the export's watch sheets;
    `review-packet --kind final --file` gives a fresh reviewer the sheets, the parts by time only and the held

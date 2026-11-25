@@ -3830,6 +3830,25 @@ def direction_facts(rd, video):
         if n_words(dec.get(k)) < MIN_FIELD_WORDS:
             iss.append(f'decision_missing_{k}')
     iss += pacing_decision_issues(rd, video, dec, ll)
+    # What the pacing comparison leaves out, as facts beside the decision (advisory, the user 2026-11-25): a measured
+    # narrator of the niche it never names, and a relevant one its range cannot include for want of a measurement.
+    if isinstance(dec.get('pacing'), dict) and dec['pacing']:
+        left = pacing_left_out(rd, dec)
+        out['pacing_left_out'] = {'not_weighed': [{k: x.get(k) for k in ('ref', 'story_form', 'narrator', 'language',
+                                                                          'active_wpm', 'overall_wpm')}
+                                                  for x in left['not_weighed']],
+                                  'relevant_unmeasured': left['relevant_unmeasured']}
+        if left['not_weighed']:
+            warn.append('pacing: measured narrators of the locked niche that decision.pacing does not mention: '
+                        + '; '.join(f"{x['ref']} ({str(x.get('story_form') or 'no story form on its card')[:70]}; "
+                                    f"{x.get('active_wpm')} wpm while speaking, {x.get('overall_wpm')} overall"
+                                    + (f"; {x['language']}" if x.get('language') else '') + ')'
+                                    for x in left['not_weighed'])
+                        + '. Weigh any that genuinely matches this narration (narrator and delivery, format, density, '
+                          'pauses) with its reason; advisory, no count is asked for')
+        if left['relevant_unmeasured']:
+            warn.append('pacing: named relevant but with no measured narration (no transcript), so the range leaves '
+                        'them out: ' + ','.join(left['relevant_unmeasured']))
     older_plan_advisory(rd, video, iss, warn)
     return out
 
@@ -3863,9 +3882,7 @@ def pacing_decision_issues(rd, video, dec, length_lock):
         out.append(f'decision_pacing_rests_on_one_reference_without_its_uncertainty:{relevant[0]}')
     if n_words(pac.get('range')) < MIN_FIELD_WORDS:
         out.append('decision_pacing_missing_range:where_in_the_relevant_narrators_range_this_narration_belongs_and_why')
-    nl = read_json(niche_lock_path(rd))
-    pool = [str(m.get('ref')) for m in nl.get('members') or [] if isinstance(m, dict)] if nl else list(known)
-    measured = [v for v in pool if (rd / '10-media' / v / 'transcript.json').is_file()]
+    measured = pacing_pool(rd, known)
     if len(measured) >= 2 and len(set(named) & set(known)) < 2:
         out.append('decision_pacing_weighs_one_reference_of_several:weigh_the_other_measured_narrators_too')
     locked = [str(x).upper() for x in (length_lock or {}).get('reference_ids') or []]
@@ -6288,6 +6305,34 @@ def inventory_videos(rd):
             and x.get('kind') == 'video' and not x.get('duplicate_of')}
 
 
+def pacing_pool(rd, known):
+    """The measured narrators a pacing decision is weighed against: the locked niche's members (the run's references
+    when no niche is locked) that have a transcript, in the niche lock's order."""
+    nl = read_json(niche_lock_path(rd))
+    pool = [str(m.get('ref')) for m in nl.get('members') or [] if isinstance(m, dict)] if nl else list(known)
+    return [v for v in pool if (rd / '10-media' / v / 'transcript.json').is_file()]
+
+
+def pacing_left_out(rd, dec, known=None):
+    """What a pacing decision leaves out of its comparison, as facts (the user, 2026-11-25): the locked niche's measured
+    narrators it never names (`not_weighed`, each as measured, so a genuinely relevant one is not silently skipped),
+    and the narrators it calls relevant that have no measured narration, which its range therefore cannot include
+    (`relevant_unmeasured`). Advisory: no count is asked for and nothing is scored; whether one of them matches this
+    narration is the director's judgement, written in decision.pacing with its reason."""
+    known = inventory_videos(rd) if known is None else known
+    pac = dec.get('pacing') if isinstance((dec or {}).get('pacing'), dict) else {}
+    rows = [r for r in pac.get('references') or [] if isinstance(r, dict)]
+    named = {str(r.get('ref') or '').strip().upper() for r in rows}
+    not_weighed = [reference_pace_profile(rd, v, (known.get(v) or {}).get('duration_s'))
+                   for v in pacing_pool(rd, known) if v in known and v not in named]
+    unmeasured = []
+    for r in rows:
+        v = str(r.get('ref') or '').strip().upper()
+        if r.get('relevant') is True and v in known and not ref_pace_stats(rd, v).get('active_wpm'):
+            unmeasured.append(v)
+    return {'not_weighed': not_weighed, 'relevant_unmeasured': unmeasured}
+
+
 def text_density(text, language='en'):
     """What a listener has to catch by ear, from plain words: numbers and proper names per 100 words, and sentence
     length. Names are counted only where capitals mark them (PACING_NAME_LANGUAGES); numbers as digits, and as number
@@ -6328,6 +6373,8 @@ def reference_pace_profile(rd, vid, duration_s=None):
     card = read_json(rd / '20-analysis' / 'cards' / f'{vid}.json')
     return {'ref': vid, 'story_form': card.get('story_form'),
             'narrator': str(card.get('narrator_character') or '')[:300] or None,
+            # a pace is comparable within one language: another language's words a minute are another yardstick
+            'language': t.get('language') or None,
             'active_wpm': stats.get('active_wpm'), 'overall_wpm': stats.get('overall_wpm'),
             'pause_share': stats.get('pause_share'), 'swing_wpm': av.get('rate_across_windows_wpm'),
             'pauses_0_8s_plus_per_min': pauses.get('pauses_0_8s_plus_per_min'),
@@ -6341,7 +6388,10 @@ def pacing_facts(rd, video, lines, words, overhead_s, target, band, planning_wpm
     """The references direction.json decision.pacing weighs, as measured; the relevant ones' range (active and overall
     pace, and how far they swing); the script's own density beside theirs; and how the forecast moves across the range
     (the forecast's own arithmetic: the words at a pace, plus the per-line gap, the tags and the holds in overhead_s).
-    With the export band: the voice pace this script needs to land the locked length. Nothing here chooses a pace."""
+    With the export band: the voice pace that would land the locked length, a forecast and never a target for the
+    delivery. Beside them, what the comparison leaves out (pacing_left_out): the niche's measured narrators it never
+    names, each as measured with the forecast at its pace, and any relevant one without a measurement. Nothing here
+    chooses a pace."""
     d = read_json(video_dir(rd, video) / 'direction.json')
     dec = d.get('decision') if isinstance(d.get('decision'), dict) else {}
     pac = dec.get('pacing') if isinstance(dec.get('pacing'), dict) else {}
@@ -6359,6 +6409,10 @@ def pacing_facts(rd, video, lines, words, overhead_s, target, band, planning_wpm
     def at(p):
         s = round(words * 60 / p + overhead_s, 1)
         return {'wpm': p, 'forecast_s': s, 'minutes': f'{int(s) // 60}:{int(s) % 60:02d}'}
+    left = pacing_left_out(rd, dec, known)
+    out['not_weighed'] = [{**x, **({'forecast_at_its_pace': at(x['active_wpm'])} if words and x.get('active_wpm') else {})}
+                          for x in left['not_weighed']]
+    out['relevant_unmeasured'] = left['relevant_unmeasured']
     rel = [p for p in profiles if p['relevant'] and p.get('active_wpm')]
     if rel:
         act = [p['active_wpm'] for p in rel]
@@ -6677,10 +6731,11 @@ def plan_facts(rd, video):
         rf = rng['forecast']
         warnings.append(f"pacing: at the relevant narrators' pace ({rng['active_wpm'][0]}-{rng['active_wpm'][1]} wpm while "
                         f"speaking) this script would run {rf['at_fastest']['minutes']}-{rf['at_slowest']['minutes']}; "
-                        f"the locked length "
-                        f"needs a voice at about {fit[0]:g}-{fit[1]:g} wpm (with a {DEFAULT_LINE_OVERHEAD_S:g} s gap a line). "
-                        "Choose the narrator on quality: its measured pace on real parts decides, and a real mismatch is "
-                        "diagnosed (voice, density, delivery or length) and taken to the user")
+                        f"the locked length fits a voice at about {fit[0]:g}-{fit[1]:g} wpm while speaking (with a "
+                        f"{DEFAULT_LINE_OVERHEAD_S:g} s gap a line). A forecast, never a target for the delivery: choose "
+                        "the narrator on quality, judge its pace on representative real recordings, and take a real "
+                        "conflict with the length to the user with its evidence (voice, density, delivery or length); "
+                        "the voice is never forced to fit")
     voice_pace = measured.get('forecast_wpm') or measured.get('wpm')
     if voice_pace and script.get('pace_wpm') and abs(float(script['pace_wpm']) - float(voice_pace)) > 3:
         warnings.append(f"script pace_wpm {script['pace_wpm']} differs from the voice's measured {voice_pace} "
@@ -6771,9 +6826,11 @@ def cmd_plan_check(args):
         prev = read_json(plan_check_path(rd, args.video))
         write_json(plan_check_path(rd, args.video), {
             'checked_at': now(), 'beats': beat_line_state(video_dir(rd, args.video)),
-            # the pacing evidence this passing check saw: the range, the sensitivity and the voice pace that fits
-            'pacing': {k: (result.get('pacing') or {}).get(k) for k in ('range', 'sensitivity', 'planning_wpm',
-                                                                       'voice_pace_that_fits_the_lock_wpm')},
+            # the pacing evidence this passing check saw: each weighed narrator as measured, the script's density, the
+            # range, the sensitivity, the voice pace that fits, and what the comparison left out
+            'pacing': {k: (result.get('pacing') or {}).get(k) for k in (
+                'references', 'script_density', 'range', 'sensitivity', 'planning_wpm',
+                'voice_pace_that_fits_the_lock_wpm', 'not_weighed', 'relevant_unmeasured')},
             'history': (prev.get('history') or []) + ([{'at': now(), 'kept': keep}] if keep else [])})
         advance_stage(rd, 'script_checked')
     emit({'video': int(args.video), **result}, 0 if result['ready'] else 2)
@@ -8056,11 +8113,12 @@ def trial_listening_set(outdir, plan, questions, report, passages, variants, joi
     lst.mkdir(parents=True, exist_ok=True)
     key, guide = [], [
         f'# Blind listening: {plan["id"]}', '',
-        'Each question below has two (or more) takes. In each pair at most one thing differs (some questions send the very same request twice, to hear how much one set-up varies by itself). The file '
-        'names say nothing about which is which; the answer key is one folder up (answer-key.md): open it only after '
-        'you have written your notes.', '',
+        'Each question below has two (or more) takes. In each question one thing differs: a setting, or the passage '
+        'itself (one narrator on two moments of the story; some questions send the very same request twice, to hear '
+        'how much one set-up varies by itself). The file names say nothing about which set-up is which; the answer key '
+        'is one folder up (answer-key.md): open it only after you have written your notes.', '',
         'How to listen: headphones or good speakers, at the volume you would watch a video. Play A then B, then B then A. '
-        'Judge the take, not the words (the words are the same).', '',
+        'Judge the take, not the words (where the words are the same).', '',
         'For each line of the sheet put A, B or "same", and a word or two when you can. What matters most: does it sound '
         'like a person telling you this story, and would you keep listening for twenty minutes?', '']
     done_q = []
@@ -8070,8 +8128,15 @@ def trial_listening_set(outdir, plan, questions, report, passages, variants, joi
             continue
         p = passages[runs_[0][0]]
         same_p = all(r[0] == runs_[0][0] for r in runs_)
-        guide += [f'## {q["id"]}: {p.get("moment") or ""}' + (f' ({p.get("lines_label")})' if p.get('lines_label') else ''),
-                  '', f'Meant to feel: {p.get("intended_delivery")}', '']
+        if same_p:
+            guide += [f'## {q["id"]}: {p.get("moment") or ""}' + (f' ({p.get("lines_label")})' if p.get('lines_label') else ''),
+                      '', f'Meant to feel: {p.get("intended_delivery")}', '']
+        else:
+            # one narrator on several moments (a representative calibration): nothing about the set-up is hidden, so
+            # each take says which moment it is, what it is meant to feel like and its words
+            guide += [f'## {q["id"]}: one narrator, ' + ' / '.join(str(passages[r[0]].get('moment') or r[0]) for r in runs_),
+                      '', 'The same voice and set-up on different moments of the story (the words differ): listen to '
+                      'how it moves between them.', '']
         guide += [f'Listen for: {q.get("listen_for") or "which take sounds more like a person telling this story"}', '']
         if same_p:
             guide += ['The words: "' + ' '.join(strip_tags(x) for x in p['text'].split('\n')) + '"', '']
@@ -8083,6 +8148,12 @@ def trial_listening_set(outdir, plan, questions, report, passages, variants, joi
             shutil.copyfile(src, dst)
             labels.append(lab)
             key.append({'question': q['id'], 'label': lab, 'file': str(dst), 'run': f'{r[0]}-{r[1]}', 'source': str(src)})
+            if not same_p:
+                pp = passages[r[0]]
+                guide += [f'{lab}: {pp.get("moment") or r[0]}' + (f' ({pp.get("lines_label")})' if pp.get('lines_label')
+                                                                   else '')
+                          + f', meant to feel: {pp.get("intended_delivery")}. The words: "'
+                          + ' '.join(strip_tags(x) for x in pp['text'].split('\n')) + '"', '']
         guide += ['Files: ' + ', '.join(f'{x}.mp3' for x in labels), '',
                   '| | ' + ' | '.join(x.split('-')[-1] for x in labels) + ' | same | note |',
                   '|---|' + '---|' * len(labels) + '---|---|']
@@ -10416,8 +10487,9 @@ PACE_SPREAD_MAX = 1.2       # references further apart than this in pace are not
 
 
 def pace_context(rd, video):
-    """What a narration's pace is examined against besides itself: the locked target, the references' paces while
-    speaking (length lock per_ref_wpm) and the narrator's measured norm (the voice lock), when known."""
+    """What a narration's pace is examined against besides itself: the locked planning pace (`target_wpm`: the length
+    lock's pace_wpm, a forecast and never a target the delivery is held to), the references' paces while speaking
+    (length lock per_ref_wpm) and the narrator's measured norm (the voice lock), when known."""
     vd = video_dir(rd, int(video))
     ll = read_json(vd / 'length-lock.json')
     vl = read_json(vd / 'voice-lock.json') or read_json(rd / 'voice-lock.json')
@@ -10451,7 +10523,7 @@ def pace_signals(beat_rows, beats, line_rows=None, context=None):
     variation, one that asked to be faster and runs slower by as much, one of the densest beats in numbers running fast
     by as much (unless it asked for speed), and a whole narration outside the pace of every reference. Each carries
     what the examination needs: the beat's rate and what it asked, the narration's median and variation, its density,
-    the locked target pace, the narrator's measured norm and the references' paces. A beat that asked for speed and
+    the locked planning pace, the narrator's measured norm and the references' paces. A beat that asked for speed and
     has it is never a signal: intentional variation stays."""
     ctx = context or {}
     rates = [r['wpm_inside_lines'] for r in beat_rows if r.get('wpm_inside_lines')]

@@ -6957,3 +6957,88 @@ class PacingTests(unittest.TestCase):
             self.assertNotIn('range', f)
             issues = c.pacing_decision_issues(rd, 1, self.pacing(('V001', True, self.WHY), ('V002', True, self.WHY)), {})
             self.assertTrue(any(x.startswith('decision_pacing_reference_not_analysed:V001') for x in issues), issues)
+
+    def test_what_the_comparison_leaves_out_is_shown_never_required(self):
+        # The niche's measured narrators the decision never names are listed as measured, with the forecast at their
+        # pace; a relevant one without a measurement is named, since the range cannot include it. Neither is an issue,
+        # and nothing outside the niche or without a transcript is listed (the user, 2026-11-25: advisory, evidence,
+        # no count and no score).
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            rd = self.run_with(Path(td), {'V001': (self.DOC, 160, 0, 0), 'V002': (self.DOC, 195, 3, 3.0),
+                                          'V003': (self.STORY, 205, 0, 0), 'V004': (self.DOC, 170, 0, 0)},
+                               members=['V001', 'V002', 'V003', 'V005'])    # V004 is outside the niche
+            inv = json.loads((rd / '00-inventory' / 'references.json').read_text(encoding='utf-8'))
+            inv['items'].append({'id': 'V005', 'kind': 'video', 'duration_s': 600})   # in the niche, never transcribed
+            save(rd / '00-inventory' / 'references.json', inv)
+            dec = self.pacing(('V001', True, self.WHY), ('V005', True, self.WHY))
+            left = c.pacing_left_out(rd, dec)
+            self.assertEqual([x['ref'] for x in left['not_weighed']], ['V002', 'V003'])
+            self.assertTrue(all(x.get('active_wpm') and x.get('language') == 'en' for x in left['not_weighed']), left)
+            self.assertEqual(left['relevant_unmeasured'], ['V005'])
+            lines = [{'id': f'L{i:03}', 'text': self.DOC[i % 4]} for i in range(1, 41)]
+            words = sum(c.count_words(l['text']) for l in lines)
+            save(rd / '40-plans' / 'video-01' / 'direction.json', {'decision': dec})
+            f = c.pacing_facts(rd, 1, lines, words, 20.0, 600, 15, 160)
+            self.assertEqual([x['ref'] for x in f['not_weighed']], ['V002', 'V003'])
+            slow, fast = (next(x for x in f['not_weighed'] if x['ref'] == v)['forecast_at_its_pace']['forecast_s']
+                          for v in ('V002', 'V003'))
+            self.assertGreater(slow, fast)                                  # the forecast at each one's own pace
+            self.assertEqual(f['relevant_unmeasured'], ['V005'])
+            self.assertEqual(f['range']['relevant'], ['V001'])             # an unmeasured narrator is not in the range
+            self.assertFalse([x for x in c.pacing_decision_issues(rd, 1, dec, {}) if 'V002' in x or 'V003' in x])
+            # the direction shows the same, as warnings beside the decision
+            df = c.direction_facts(rd, 1)
+            self.assertEqual([x['ref'] for x in df['pacing_left_out']['not_weighed']], ['V002', 'V003'])
+            w = [x for x in df['warnings'] if x.startswith('pacing: measured narrators')]
+            self.assertTrue(w and 'V002 (a story; ' in w[0] and 'no count is asked for' in w[0], df['warnings'])
+            self.assertTrue(any(x.startswith('pacing: named relevant but with no measured narration') and 'V005' in x
+                                for x in df['warnings']), df['warnings'])
+            # every measured narrator of the niche weighed: nothing left out, nothing said
+            full = self.pacing(('V001', True, self.WHY), ('V002', True, self.WHY),
+                               ('V003', False, 'second person and light words, read fast for a companion'))
+            self.assertEqual(c.pacing_left_out(rd, full), {'not_weighed': [], 'relevant_unmeasured': []})
+            save(rd / '40-plans' / 'video-01' / 'direction.json', {'decision': full})
+            self.assertFalse([x for x in c.direction_facts(rd, 1)['warnings'] if x.startswith('pacing:')])
+            # a direction without a pacing decision gets its issue, not a list of every narrator
+            save(rd / '40-plans' / 'video-01' / 'direction.json', {'decision': {'treatment': 'T1'}})
+            self.assertFalse([x for x in c.direction_facts(rd, 1)['warnings'] if x.startswith('pacing:')])
+
+    def test_a_representative_calibration_is_one_narrator_on_several_moments(self):
+        # The first recording of a new narrator shows its whole performance (the user, 2026-11-25): the voice lock as
+        # the one set-up, passages of the script that differ, each question comparing two of them; the listening guide
+        # then says which moment each take is, since nothing about the set-up is hidden.
+        c = self.core
+        lines = [{'id': f'L{i:03d}', 'text': t} for i, t in enumerate([
+            'In 278 BC the Qin army took the city of Ying, and the clerk Xi wrote it down.',
+            'Three days late meant a reprimand; ten days, a shield.',
+            '[warmly] Mother, send the summer clothes, and six hundred coins if you can.',
+            'Tell Jing I am well.'], 1)]
+        vf = {'voice_id': 'VOICE1', 'model_id': 'eleven_v4', 'settings': {'stability': 0.5, 'similarity_boost': 0.8},
+              'lock': {'voice_id': 'VOICE1'}}
+        plan = {'id': 'calib-01', 'budget': {'id': 'calib-2026-11', 'max_credits': 400},
+                'passages': [{'id': 'P1', 'moment': 'explanation', 'lines': 'L001-L002',
+                              'intended_delivery': 'dry and level, the entries read as entries'},
+                             {'id': 'P2', 'moment': 'letter', 'lines': 'L003-L004',
+                              'intended_delivery': 'warmer, a son writing home'}],
+                'variants': [{'id': 'A', 'context': 'neighbours'}],
+                'runs': [['P1', 'A'], ['P2', 'A']],
+                'questions': [{'id': 'Q1', 'asks': 'does the narrator keep the entries dry and warm on the letter',
+                               'compare': [['P1', 'A'], ['P2', 'A']]}]}
+        issues, passages, variants, runs, questions, joins = c.trial_plan_facts(plan, vf, lines, {'terms': []})
+        self.assertEqual(issues, [])
+        self.assertEqual(questions[0]['varies'], ['passage'])
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td)
+            report = {'runs': {}}
+            for pk in ('P1', 'P2'):
+                f = out / f'{pk}.mp3'
+                f.write_bytes(b'ID3')
+                report['runs'][f'{pk}|A'] = {'file': str(f), 'measured': True, 'active_wpm': 170}
+            res = c.trial_listening_set(out, plan, questions, report, passages, variants)
+            guide = (out / 'listening' / 'listening-guide.md').read_text(encoding='utf-8')
+            self.assertIn('## Q1: one narrator, explanation / letter', guide)
+            self.assertIn('meant to feel: warmer, a son writing home', guide)
+            self.assertIn('Mother, send the summer clothes', guide)
+            self.assertNotIn('[warmly]', guide)
+            self.assertEqual(res['questions_ready'], ['Q1'])

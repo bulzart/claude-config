@@ -73,8 +73,9 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" narration-trial --ru
   --plan "RUN/60-voice/video-01/trials/trial-01/plan.json" --execute [--takes P1-A,P1-B]
 # Dry run NEVER charges money. Voice, model and settings come from the video's voice lock.
 python "$HOME/.claude/static-studio/scripts/static_core.py" tts --run "RUN" --video 1
-# Only after the user has approved the voice and the credit cost: the FIRST real part is the
-# calibration (paid once, kept). The tool refuses more parts before this voice is measured.
+# Only after the user has approved the voice and the credit cost: the first paid recording is a
+# representative calibration (05, step 3): part 1 when it shows the whole performance (paid once, kept),
+# else a short narration-trial of chosen passages first. The tool refuses more parts before the voice is measured.
 #   tts ... --max-parts 1 --execute
 python "$HOME/.claude/static-studio/scripts/static_core.py" narration-measure --run "RUN" --video 1
 python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RUN" --video 1   # real_forecast_s
@@ -334,7 +335,7 @@ Minimal `40-plans/video-01/blueprint.json`:
 ```
 
 A passing `plan-check` writes `40-plans/video-01/plan-check.json`: `{"checked_at", "beats": {"B02": {"sha", "lines_sha",
-"lines"}}, "history": [{"at", "kept"}]}`, each beat's direction hash and its lines' text hash. A beat whose direction
+"lines"}}, "pacing": {...}, "history": [{"at", "kept"}]}`, each beat's direction hash and its lines' text hash; `pacing` keeps the pacing evidence that check saw (each weighed narrator as measured, the script's density, the relevant range, the forecast across it, the voice pace that fits the lock as a forecast, never a target, and what the comparison left out: `not_weighed`, the niche's measured narrators decision.pacing never names, and `relevant_unmeasured`; advisory facts). A beat whose direction
 changed since, while its lines did not, is flagged (`beat_B02_changed_since_its_lines_were_checked`) until its lines are
 revised or `plan-check --keep "why they still fit"` is recorded in `history`.
 
@@ -405,7 +406,7 @@ Under `50-audio/video-01/`, the TTS tool creates `manifest.json`: voice/model/la
    {"id": "Q3", "asks": "does the narrator stay the same person at the turn", "compare": [["P1", "A"], ["P2", "A"]]}]}
 ```
 
-A variant left blank takes the voice lock's voice, model and settings; `tags` is `as_written` or `none`, `pronunciation` true or false, `context` `none` or `neighbours`. Passage and variant ids have no dashes (a take is named `P1-A`). `listen_for` is the neutral prompt the blind guide shows for that question (it never says which take is which). A plan may carry its own `pronunciation` list (`{"terms": [...]}`, the form of 05) to hear a form before the episode adopts it. Everything a trial makes goes to `60-voice/video-01/trials/<id>/`: the takes (`P1-A.mp3` and their transcripts), `report.json` (each take's exact request, fingerprint, cost and measurements; `sessions` lists each call that worked on it), `listening/` (`Q1-A.mp3` ... and `listening-guide.md`, blind), `answer-key.md` / `answer-key.json` (which label is which take; a take used by two questions is listed under `same_recording`).
+A variant left blank takes the voice lock's voice, model and settings; `tags` is `as_written` or `none`, `pronunciation` true or false, `context` `none` or `neighbours`. Passage and variant ids have no dashes (a take is named `P1-A`). `listen_for` is the neutral prompt the blind guide shows for that question (it never says which take is which). A plan may carry its own `pronunciation` list (`{"terms": [...]}`, the form of 05) to hear a form before the episode adopts it. Everything a trial makes goes to `60-voice/video-01/trials/<id>/`: the takes (`P1-A.mp3` and their transcripts), `report.json` (each take's exact request, fingerprint, cost and measurements; `sessions` lists each call that worked on it), `listening/` (`Q1-A.mp3` ... and `listening-guide.md`, blind), `answer-key.md` / `answer-key.json` (which label is which take; a take used by two questions is listed under `same_recording`). A representative calibration of one narrator (05) is the same plan with a single variant, `{"id": "A", "context": "neighbours"}`, and questions that compare its passages (only the passage varies); its guide names the moment of each take.
 
 ## Line times and edit plan (written by `narration-measure` and `retime-shots`)
 
