@@ -1787,9 +1787,12 @@ def _capcut_build_plan(rd: Path, n: int, a) -> tuple:
                                         "(2026-11-22, a video clip); a level baked into the file (bed-levels --bake) plays as made")
                     rec = music.get(_pkey(f))
                     if key == "beds":
+                        # only music needs its record: an ambience or plain bed is traced by its name in sounds.json
+                        # (timeline-check asks for provenance on music tracks only)
                         if rec is None:
-                            warnings.append(f"{label}: {f.name} has no music-provenance record (timeline-check needs one, or the music "
-                                            "reapproved on record)")
+                            if kind == "music":
+                                warnings.append(f"{label}: {f.name} has no music-provenance record (timeline-check needs one, or the "
+                                                "music reapproved on record)")
                         elif sorted(rec.get("beats") or []) != sorted(beats):
                             warnings.append(f"{label}: its record names beats {','.join(rec.get('beats') or [])}; timeline-write takes "
                                             "a recorded bed's beats from there")

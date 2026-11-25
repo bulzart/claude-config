@@ -311,6 +311,21 @@ class BuildPlanTests(unittest.TestCase):
         edit_json(self.edit / 'sound-placements.json', lambda d: d['beds'][0].update({'at': 4.0}))
         self.refused('after the last picture')
 
+    def test_only_a_music_bed_asks_for_its_music_record(self):
+        room = self.rd / '50-audio' / 'sfx' / 'video-01' / 'room.wav'
+        write_wav(room, 1.0)
+        edit_json(self.edit / 'sound-placements.json', lambda d: d['beds'].append(
+            {'id': 'room', 'file': str(room), 'at': 0.0, 'beats': ['B01'], 'kind': 'ambience'}))
+        code, res, r = self.dry()
+        self.assertEqual(code, 0, (res, r.stderr[-400:]))
+        joined = ' | '.join(json.loads(self.plan_file.read_text(encoding='utf-8'))['warnings'])
+        self.assertNotIn('has no music-provenance record', joined)      # traced by its name in sounds.json
+        edit_json(self.edit / 'sound-placements.json', lambda d: d['beds'][-1].update({'kind': 'music'}))
+        code, res, r = self.dry()
+        self.assertEqual(code, 0, (res, r.stderr[-400:]))
+        joined = ' | '.join(json.loads(self.plan_file.read_text(encoding='utf-8'))['warnings'])
+        self.assertIn('room.wav has no music-provenance record', joined)
+
     def test_two_sound_files_with_one_name_refuse(self):
         other = self.rd / '50-audio' / 'sfx' / 'other' / 'tick.wav'
         write_wav(other, 0.4)
