@@ -160,7 +160,9 @@ stamped `planning_rules: 4`, kept through `--revise` (3, the storytelling rules 
 movements with its promise marked, the decision's `promise_and_delivery` and `length_fit`, and a key moment's
 dependency never called a mystery unless it is withheld, 03; 4, the pacing rules of 2026-11-25: the decision's
 `pacing`). A lock stamped 2 or 3 keeps its plan the same way: the rules added after it reach it as advisories
-except where a revision of its decision reaches. A lock without the stamp was approved before 2026-11-24, and it
+except where a substantive revision reaches (one that changes what production must do, recorded in
+`planning_migration`; the pacing rules when that revision also changes the decision). A revision of reasons alone
+brings no newer rule. A lock without the stamp was approved before 2026-11-24, and it
 keeps its plan: the planning rules added that day reach it only as warnings that start "advisory (this direction was
 approved before the planning rules of 2026-11-24, which it need not follow): ..." in plan-check, shot-check,
 audio-check, media-check (both workers) and release-check's final review. They are: evidence from outside the locked
