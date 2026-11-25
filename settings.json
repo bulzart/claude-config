@@ -117,7 +117,7 @@
     },
     "claude-sonnet-5-5": {
       "effortLevel": "medium",
-      "autoCompactWindow": 850000
+      "autoCompactWindow": 550000
     },
     "claude-haiku-5-5": {
       "effortLevel": "high"
@@ -126,7 +126,7 @@
       "effortLevel": "xhigh"
     }
   },
-  "autoCompactWindow": 850000,
+  "autoCompactWindow": 550000,
   "askUserQuestionTimeout": "never",
   "pluginConfigs": {
     "cc-plugin-agents-md@builtin": {
