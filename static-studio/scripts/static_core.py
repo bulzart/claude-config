@@ -4976,7 +4976,15 @@ def run_image_engine(rd):
 CAPTION_PEOPLE = re.compile(r"\b(man|men|woman|women|person|persons|people|crowd|crowds|soldier|soldiers|human|humans|"
                             r"someone|somebody|adult|adults|worker|workers|farmer|farmers|traveler|travelers|traveller|"
                             r"travellers|villager|villagers|pedestrian|pedestrians|passerby|passersby|onlooker|onlookers|"
-                            r"spectator|spectators|merchant|merchants|sailor|sailors)\b", re.I)
+                            r"spectator|spectators|merchant|merchants|sailor|sailors|"
+                            # role nouns: a prompt naming riders or guards asks for people (S094, 2026-11-25);
+                            # words that are often adjectives or name someone absent ("official seal", "the
+                            # king's seal", "Mother's letter") are left out
+                            r"rider|riders|horseman|horsemen|guard|guards|guardsman|guardsmen|officials|officer|"
+                            r"officers|scribe|scribes|clerk|clerks|labourer|labourers|laborer|laborers|townspeople|"
+                            r"townsfolk|conscript|conscripts|convict|convicts|recruit|recruits|warrior|warriors|"
+                            r"archer|archers|spearman|spearmen|peasant|peasants|servant|servants|messenger|"
+                            r"messengers|porter|porters|monk|monks|priest|priests)\b", re.I)
 # Words that name a person in one of their senses only. A real FLUX caption (2026-11-24) of a scene "with no people"
 # described "weathered plank faces" and hills as "overlapping blue-green silhouettes": not people. Near a person cue
 # ("a lone figure standing", "her face") they are; without one they are noted for the look every still gets when it lands.

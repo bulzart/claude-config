@@ -1834,6 +1834,20 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(json.loads((self.run/'60-visuals/video-01/stills-provenance.json').read_text())['images'][k]['made_at'],made)
 
     # ---------------------------------------------------------------- remediation 2026-11-24: FLUX Klein's caption
+    def test_role_nouns_name_the_people_a_prompt_asks_for(self):
+        core=self.load_core()
+        req=('An imperial procession seen far off crossing a wide flat plain: a long line of horse-drawn carriages '
+             'with canopies, riders and walking guards, tall dark banners, all tiny in the distance.')
+        r=core.caption_review_with((),req,req+' Tiny figures and dark silhouettes move along the raised road.')
+        self.assertEqual((r['issues'],r['people_hints']),([],[]))     # the figures are the riders and guards
+        self.assertIsNone(core.people_question(req,r))
+        # the same nouns still stop a caption that adds people to a picture that has none
+        empty='a wide flat plain under a high pale sky, a raised road crossing it'
+        self.assertEqual(core.caption_issues_with((),empty,empty+'. Two guards walk along the road.'),
+                         ['caption_adds_people_the_prompt_does_not_have:guards'])
+        self.assertTrue(core.people_excluded('an empty office, no clerks or scribes at the desks'))
+        self.assertFalse(core.people_excluded('an official seal of red clay on a desk'))
+
     def test_the_upsampler_caption_is_checked_for_what_it_adds(self):
         core=self.load_core()
         req='A wooden desk by a window at dusk, an open notebook and a fountain pen, no people, painted in gouache.'
