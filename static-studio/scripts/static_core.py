@@ -8814,8 +8814,10 @@ def cmd_tts(args):
               'parts_dir': str(narrdir),
               'next': 'Listen to the new part(s), then narration-measure (real pace, natural gap per line, what '
                       'each tag cost, every line heard) and plan-check (real_forecast_s against the export window). '
-                      'Adjust the lines of the parts not yet recorded if needed, then re-run the same tts command (no '
-                      '--max-parts) for the rest -- finished parts are kept, never re-billed.'})
+                      'The planning pace is a forecast, never a target: a real conflict with the locked length is '
+                      'diagnosed (voice, density, delivery or length) and taken to the user, never forced (05, step '
+                      '3). Then re-run the same tts command (no --max-parts) for the rest -- finished parts are kept, '
+                      'never re-billed.'})
         return
     concat = narrdir / 'parts.txt'
     concat.write_text(''.join("file '" + str((narrdir / x['file']).resolve()).replace('\\', '/').replace("'", "'\\''") + "'\n"
