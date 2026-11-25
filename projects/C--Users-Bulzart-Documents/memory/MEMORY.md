@@ -139,3 +139,4 @@
 - [create-video: storytelling rules](create-video-storytelling.md) — user 2026-11-24: promise vs delivery; recurring majors need their root cause; never pad or silently move the length lock
 - [create-video: lines matched by words](create-video-line-matching.md) — user 2026-11-25: versions compared by words, not numbers; revise freely, notes by current numbers
 - [create-video: pace from matching narrators](create-video-pacing-from-narrators.md) — user 2026-11-25: decision.pacing weighs every matching reference (planning rules 4), never one or an average; narrator on quality; length never forced
+- [create-video: listening choice + representative calibration](create-video-listening-and-calibration.md) — user 2026-11-25: narrator locked on the user's ears, never previews/pitch/WPM; first paid recording the smallest representative one; planning pace never a target; length conflict to the user
