@@ -6792,3 +6792,154 @@ class StorytellingTests(unittest.TestCase):
         lines = [{'id': f'L{i:03}', 'text': f'line {i}'} for i in range(1, 70)]
         self.assertEqual(c.beat_content_sha(b, lines), c.beat_content_sha(shifted, [{'id': 'L000', 'text': 'new'}] + lines))
         self.assertNotEqual(c.beat_content_sha(b, lines), c.beat_content_sha(shifted, lines))
+
+
+class PacingTests(unittest.TestCase):
+    """The narrators a narration follows (the user, 2026-11-25): weighed with reasons, several where several match, one
+    alone only with its uncertainty, never an average or a score; their range and the forecast across it as facts; the
+    same logic in every niche, and no niche word in the code."""
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location('static_core_pacing', TOOL)
+        cls.core = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.core)
+
+    DOC = ['The clerk Xi kept the list for forty years in Anlu.', 'In 278 BC the Qin army took the city of Ying.',
+           'Three days late meant a reprimand, ten days a shield.', 'Hei Fu asked his mother for six hundred coins.']
+    STORY = ['You wake before dawn.', 'The rain has not stopped.', 'Your boots are wet again.', 'Nobody speaks.']
+    WHY = 'its narrator, format, density and pauses match this film, as its measured profile shows'
+
+    def narrator(self, rd, vid, sentences, wpm, pause_every=0, pause_s=0.0, repeat=12, form='a story',
+                 narrator='a narrator'):
+        """A reference narrator speaking these sentences at `wpm` while speaking, with a held silence of `pause_s` after
+        every `pause_every` sentences and 0.3 s between the others. Returns its duration in seconds."""
+        segs, raw, t = [], [], 0.0
+        for i, sent in enumerate(sentences * repeat):
+            words = sent.split()
+            dur = len(words) * 60 / wpm
+            segs.append({'start_s': round(t, 3), 'end_s': round(t + dur, 3), 'text': sent,
+                         'words': [{'start_s': round(t + j * dur / len(words), 3),
+                                    'end_s': round(t + (j + 1) * dur / len(words), 3), 'text': ' ' + w}
+                                   for j, w in enumerate(words)]})
+            raw.append(f'[{t:.2f}-{t + dur:.2f}] {sent}')
+            t += dur + (pause_s if pause_every and (i + 1) % pause_every == 0 else 0.3)
+        media = rd / '10-media' / vid
+        media.mkdir(parents=True, exist_ok=True)
+        save(media / 'transcript.json', {'language': 'en', 'segments': segs})
+        (media / 'transcript.txt').write_text('\n'.join(raw), encoding='utf-8')
+        save(rd / '20-analysis' / 'cards' / f'{vid}.json', {'reference_id': vid, 'story_form': form,
+                                                            'narrator_character': narrator})
+        return round(t, 1)
+
+    def run_with(self, rd, narrators, members=None, lock=None):
+        """A run holding these narrators (id -> (sentences, wpm, pause_every, pause_s)), its niche and its lock."""
+        items = []
+        for vid, (sents, wpm, every, pause) in narrators.items():
+            items.append({'id': vid, 'kind': 'video', 'duration_s': self.narrator(rd, vid, sents, wpm, every, pause)})
+        save(rd / '00-inventory' / 'references.json', {'items': items})
+        save(rd / '20-analysis' / 'niche-lock.json', {'members': [{'ref': v} for v in (members or narrators)]})
+        save(rd / '40-plans' / 'video-01' / 'length-lock.json', lock or {'target_length_s': 600, 'pace_wpm': 160})
+        return rd
+
+    @staticmethod
+    def pacing(*refs, rng='this narration sits at the measured end, slower for the most personal passages',
+               uncertainty=''):
+        return {'pacing': {'references': [{'ref': r, 'relevant': rel, 'why': why} for r, rel, why in refs],
+                           'range': rng, 'uncertainty': uncertainty}}
+
+    def test_the_pace_is_weighed_from_the_narrators_who_match_never_one_by_default(self):
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            rd = self.run_with(Path(td), {'V001': (self.DOC, 160, 0, 0), 'V002': (self.DOC, 195, 3, 3.0),
+                                          'V003': (self.STORY, 205, 0, 0)})
+
+            def issues(dec, lock=None):
+                return c.pacing_decision_issues(rd, 1, dec, lock or {})
+            self.assertTrue(issues({})[0].startswith('decision_missing_pacing'))
+            # one convenient reference of three measured narrators, said as certain: the others go unweighed
+            one = issues(self.pacing(('V001', True, self.WHY)))
+            self.assertIn('decision_pacing_rests_on_one_reference_without_its_uncertainty:V001', one)
+            self.assertIn('decision_pacing_weighs_one_reference_of_several:weigh_the_other_measured_narrators_too', one)
+            # the others weighed (one relevant, one not, each with its reason) and the uncertainty said: nothing to add
+            ok = self.pacing(('V001', True, self.WHY),
+                             ('V003', False, 'second person and light words, read fast; its pace suits short familiar '
+                                             'sentences, not this'),
+                             uncertainty='only one narrator matches this narrator and density, so the voice decides more')
+            self.assertEqual(issues(ok), [])
+            self.assertEqual(issues(self.pacing(('V001', True, self.WHY), ('V002', True, self.WHY))), [])
+            # every reason given, every reference analysed, the range said
+            thin = self.pacing(('V001', True, self.WHY), ('V003', False, 'too fast'))
+            self.assertTrue(any(x.startswith('decision_pacing_reference_needs_why:V003') for x in issues(thin)))
+            self.assertIn('decision_pacing_reference_not_analysed:V009',
+                          issues(self.pacing(('V001', True, self.WHY), ('V009', True, self.WHY))))
+            self.assertTrue(any(x.startswith('decision_pacing_missing_range') for x in
+                                issues(self.pacing(('V001', True, self.WHY), ('V002', True, self.WHY), rng=''))))
+            # the references the locked pace came from are weighed too
+            lock = {'reference_ids': ['V003'], 'pace_wpm_source': 'computed_from_refs'}
+            self.assertIn('decision_pacing_does_not_weigh_the_locked_pace_references:V003',
+                          issues(self.pacing(('V001', True, self.WHY), ('V002', True, self.WHY)), lock))
+            self.assertEqual(issues(ok, lock), [])
+
+    def test_a_single_comparable_narrator_may_stand_alone_with_its_uncertainty(self):
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            rd = self.run_with(Path(td), {'V001': (self.DOC, 160, 0, 0), 'V002': (self.STORY, 205, 0, 0)},
+                               members=['V001'])          # the niche has one measured narrator: no second is invented
+            dec = self.pacing(('V001', True, self.WHY))
+            self.assertEqual(c.pacing_decision_issues(rd, 1, dec, {}),
+                             ['decision_pacing_rests_on_one_reference_without_its_uncertainty:V001'])
+            dec['pacing']['uncertainty'] = 'the only narrator of this kind: how far a new voice strays from it is unknown'
+            self.assertEqual(c.pacing_decision_issues(rd, 1, dec, {}), [])
+
+    def test_the_range_and_its_sensitivity_are_facts_never_an_average(self):
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            rd = self.run_with(Path(td), {'V001': (self.DOC, 160, 0, 0), 'V002': (self.DOC, 195, 3, 3.0),
+                                          'V003': (self.STORY, 205, 0, 0)})
+            save(rd / '40-plans' / 'video-01' / 'direction.json',
+                 {'decision': self.pacing(('V001', True, self.WHY), ('V002', True, self.WHY),
+                                          ('V003', False, 'second person and light words, read fast for a companion'))})
+            lines = [{'id': f'L{i:03}', 'text': self.DOC[i % 4]} for i in range(1, 101)]
+            words = sum(c.count_words(l['text']) for l in lines)
+            f = c.pacing_facts(rd, 1, lines, words, 50.0, 600, 15, 160)
+            prof = {p['ref']: p for p in f['references']}
+            self.assertTrue(abs(prof['V001']['active_wpm'] - 160) <= 3 and abs(prof['V002']['active_wpm'] - 195) <= 3,
+                            prof)
+            # a narrator who speaks fast between held silences is slow overall: both are kept, neither replaces the other
+            self.assertLess(prof['V002']['overall_wpm'], prof['V002']['active_wpm'] - 20)
+            self.assertFalse(prof['V003']['relevant'])
+            self.assertEqual(f['range']['relevant'], ['V001', 'V002'])
+            lo, hi = f['range']['active_wpm']
+            self.assertTrue(abs(lo - 160) <= 3 and abs(hi - 195) <= 3, f['range'])
+            # the forecast across the range, one point per relevant narrator and the planning pace: slower reads longer
+            pts = [s['wpm'] for s in f['sensitivity']]
+            self.assertEqual(pts, sorted(pts))
+            self.assertEqual([s['forecast_s'] for s in f['sensitivity']],
+                             sorted((s['forecast_s'] for s in f['sensitivity']), reverse=True))
+            self.assertEqual(f['planning_wpm'], 160)                     # passed through as locked, never recomputed
+            self.assertNotIn('mean', json.dumps(f))
+            fit = f['voice_pace_that_fits_the_lock_wpm']
+            for pace, edge in ((fit[0], 615), (fit[1], 585)):            # the fitting band lands on the window's edges
+                self.assertAlmostEqual(words * 60 / pace + 50.0, edge, delta=1.0)
+            self.assertEqual(f['script_density']['sentence_words_median'], 10.5)
+
+    def test_the_same_pacing_logic_in_every_niche(self):
+        # Nothing here knows a niche: a cooking how-to, a science explainer and a quiet story are measured the same way,
+        # and the same rules decide what has to be weighed.
+        c = self.core
+        cooking = c.text_density('Add two cups of flour and 3 eggs. Whisk for five minutes. Bake at 180 degrees.')
+        science = c.text_density('Peter Mitchell proposed chemiosmosis. The Krebs cycle feeds the ATP synthase in '
+                                 'mitochondria, as Hans Krebs showed.')
+        story = c.text_density('She waited by the window. The letter never came. Nobody said a word.')
+        self.assertGreater(cooking['numbers_per_100_words'], science['numbers_per_100_words'])
+        self.assertGreater(science['names_per_100_words'], story['names_per_100_words'])
+        self.assertEqual((story['numbers_per_100_words'], story['names_per_100_words']), (0.0, 0.0))
+        self.assertIsNone(c.text_density('Der Brief kam nie an. Sie wartete am Fenster.', 'de')['names_per_100_words'])
+        with tempfile.TemporaryDirectory() as td:
+            rd = self.run_with(Path(td), {'V001': (['Add two cups of flour.', 'Whisk it now.'], 210, 0, 0),
+                                          'V002': (['Stir slowly.', 'Taste and season it.'], 180, 0, 0)})
+            # two measured narrators in a cooking niche: weighing one alone is refused here as anywhere else
+            self.assertIn('decision_pacing_weighs_one_reference_of_several:weigh_the_other_measured_narrators_too',
+                          c.pacing_decision_issues(rd, 1, self.pacing(('V001', True, self.WHY),
+                                                                      uncertainty='a quick kitchen voice only'), {}))
