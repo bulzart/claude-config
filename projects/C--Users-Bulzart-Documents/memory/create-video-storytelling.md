@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 3cb802e3-203e-41d6-98ff-b19f9a9a5679
-  modified: 2026-11-25T02:11:25.862Z
+  modified: 2026-11-25T02:35:32.453Z
 ---
 
 The user's brief "Workflow-Wide Storytelling Intelligence" (2026-11-24), built into static-studio on 2026-11-25
@@ -23,10 +23,13 @@ The user's brief "Workflow-Wide Storytelling Intelligence" (2026-11-24), built i
   words, never rescue them.
 - Runtime: a cohort shares the niche, not necessarily the format (decision.length_fit). Never inflate the script to
   fill the lock and never move the lock silently: a mismatch goes to the user with the evidence.
-- Pace follows the treatment's narrator, not the length cohort: the Qin run's 202 wpm came from fast second-person
-  WW2 narrators and forecast the script 20% short; the niche's calm documentary narrator (V007) measured 163, and the
-  real eleven_v4 voice of the earlier run 164 (line gaps ~0.6 s). On the user's authorisation (2026-11-25) the run was
-  re-locked as an own length, 16:30, from the strongest script at V007's pace (`length --revise --user-approved`).
+- Pace follows the narrators who match the treatment's narrator and the script's density, not the length cohort.
+  The Qin run's 202 wpm came from second-person, low-density WW2 narrators (V018/V019: 1-3 names and ~1 number per
+  100 words, 6-7-word sentences); its script (6.5 names, 2.8 numbers, 11-word sentences) sits with the third-person
+  documentary narrators, whose matches spanned 163 (V007) to 197 (V032) while speaking. Re-locked 2026-11-25 at 16:30
+  from V007 alone (`length --revise --user-approved`); the user then asked for that choice to be verified. A previous
+  production's measured voice is one voice: never a pace default or corroboration. The real pace comes from this
+  video's calibration part, and a miss goes back to the user.
 - Research to script: select what the viewer needs at that moment; scale and numbers only from read sources.
 
 **Why:** in the Qin letters run both script readers found the letters arriving ~40% in; draft 3 only trimmed, and the
