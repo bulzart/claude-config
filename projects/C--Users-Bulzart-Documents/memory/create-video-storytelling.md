@@ -24,12 +24,10 @@ The user's brief "Workflow-Wide Storytelling Intelligence" (2026-11-24), built i
 - Runtime: a cohort shares the niche, not necessarily the format (decision.length_fit). Never inflate the script to
   fill the lock and never move the lock silently: a mismatch goes to the user with the evidence.
 - Pace follows the narrators who match the treatment's narrator and the script's density, not the length cohort.
-  The Qin run's 202 wpm came from second-person, low-density WW2 narrators (V018/V019: 1-3 names and ~1 number per
-  100 words, 6-7-word sentences); its script (6.5 names, 2.8 numbers, 11-word sentences) sits with the third-person
-  documentary narrators, whose matches spanned 163 (V007) to 197 (V032) while speaking. Re-locked 2026-11-25 at 16:30
-  from V007 alone (`length --revise --user-approved`); the user then asked for that choice to be verified. A previous
-  production's measured voice is one voice: never a pace default or corroboration. The real pace comes from this
-  video's calibration part, and a miss goes back to the user.
+  The Qin run's 202 wpm came from second-person, low-density WW2 narrators (V018/V019); its script sits with the
+  third-person documentary narrators (V007 163, V026 178, V014 191, V032 197 while speaking). Re-locked 2026-11-25
+  at 16:30 (V007's 163 as the planning pace); the pacing evidence is now weighed in decision.pacing:
+  [[create-video-pacing-from-narrators]].
 - Research to script: select what the viewer needs at that moment; scale and numbers only from read sources.
 
 **Why:** in the Qin letters run both script readers found the letters arriving ~40% in; draft 3 only trimmed, and the
