@@ -5330,6 +5330,9 @@ class SignificanceTests(unittest.TestCase):
         self.assertEqual(c._choice('unclear', c.DEV_SIGNIFICANCE), 'unclear')        # "clear" inside "unclear" is not read
         self.assertEqual(c._choice('clear', c.DEV_SIGNIFICANCE), 'clear')
         self.assertIsNone(c._choice('mostly clear', c.DEV_SIGNIFICANCE))             # not a choice: the format is asked again
+        # two choices after a hedge word are still two choices (2026-11-25, a real read): the worse one
+        self.assertEqual(c._choice('partly before, partly only afterwards', c.DEV_WHEN), 'only afterwards')
+        self.assertIsNone(c._choice('mostly before', c.DEV_WHEN))
         order = [f'L{i:03}' for i in range(1, 13)]
         silent = self.dev()
         silent.pop('why_it_matters')

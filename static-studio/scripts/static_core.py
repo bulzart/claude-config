@@ -12764,10 +12764,12 @@ _WORST_FIRST = {DEV_EVENT: ('unclear', 'partly', 'clear'),
 def _choice(value, allowed):
     s = re.sub(r'\s+', ' ', str(value or '').strip().lower())
     first = next((a for a in allowed if s == a or s.startswith(a)), None)
-    if first is None or s == first:
+    if first is not None and s == first:
         return first
     named = [a for a in allowed if re.search(r'(?<![a-z])' + re.escape(a) + r'(?![a-z])', s)]
     order = _WORST_FIRST.get(tuple(allowed))
+    # two choices named, even after a hedge word ("partly before, partly only afterwards"): the worse one; a single
+    # choice after a hedge ("mostly clear") is not a choice, and the format is asked again
     return next((a for a in order if a in named), first) if order and len(named) > 1 else first
 
 
