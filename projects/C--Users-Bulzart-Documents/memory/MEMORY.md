@@ -137,3 +137,4 @@
 - [klein-comfyui repo](klein-comfyui-repo.md) — private standalone FLUX Klein worker = Static Studio worker + 4 adaptations; re-sync on the user's say; standalone image test still owed
 - [create-video: niche discovery](create-video-niche-discovery.md) — user 2026-11-24: batches by reading work only; niches from finished cards; niche-lock before length
 - [create-video: storytelling rules](create-video-storytelling.md) — user 2026-11-24: promise vs delivery; recurring majors need their root cause; never pad or silently move the length lock
+- [create-video: lines matched by words](create-video-line-matching.md) — user 2026-11-25: versions compared by words, not numbers; revise freely, notes by current numbers

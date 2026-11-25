@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 3cb802e3-203e-41d6-98ff-b19f9a9a5679
-  modified: 2026-11-24T23:20:36.864Z
+  modified: 2026-11-25T02:11:25.862Z
 ---
 
 The user's brief "Workflow-Wide Storytelling Intelligence" (2026-11-24), built into static-studio on 2026-11-25
@@ -23,6 +23,10 @@ The user's brief "Workflow-Wide Storytelling Intelligence" (2026-11-24), built i
   words, never rescue them.
 - Runtime: a cohort shares the niche, not necessarily the format (decision.length_fit). Never inflate the script to
   fill the lock and never move the lock silently: a mismatch goes to the user with the evidence.
+- Pace follows the treatment's narrator, not the length cohort: the Qin run's 202 wpm came from fast second-person
+  WW2 narrators and forecast the script 20% short; the niche's calm documentary narrator (V007) measured 163, and the
+  real eleven_v4 voice of the earlier run 164 (line gaps ~0.6 s). On the user's authorisation (2026-11-25) the run was
+  re-locked as an own length, 16:30, from the strongest script at V007's pace (`length --revise --user-approved`).
 - Research to script: select what the viewer needs at that moment; scale and numbers only from read sources.
 
 **Why:** in the Qin letters run both script readers found the letters arriving ~40% in; draft 3 only trimmed, and the
