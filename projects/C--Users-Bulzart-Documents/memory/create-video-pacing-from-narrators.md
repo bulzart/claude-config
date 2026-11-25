@@ -26,7 +26,7 @@ The user's brief "Correct Reference-Derived Narration Pacing" (2026-11-25), for 
 **Why:** the Qin run's 16:30 re-lock took its pace from V007 alone and cited the earlier production's George
 (164 wpm) as support; the user asked for that to be verified, then corrected workflow-wide.
 
-**How to apply:** code is PLANNING_RULES 4 (`pacing_decision_issues`; locks stamped earlier see it as advisories);
+**How to apply:** built 2026-11-25 (tag static-studio-pacing-1, local only; 309 tests pass). Code is PLANNING_RULES 4 (`pacing_decision_issues`; locks stamped earlier see it as advisories);
 plan-check reports `pacing` (each reference's measured profile, the script's own density, the relevant range, the
 forecast across it, `voice_pace_that_fits_the_lock_wpm`) and warns, never blocks. Manuals 03 ("The narrators this
 narration follows", "Narrator and length"), 05, 07, 10 §3. Related: [[create-video-storytelling]],
