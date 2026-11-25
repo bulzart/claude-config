@@ -6943,3 +6943,17 @@ class PacingTests(unittest.TestCase):
             self.assertIn('decision_pacing_weighs_one_reference_of_several:weigh_the_other_measured_narrators_too',
                           c.pacing_decision_issues(rd, 1, self.pacing(('V001', True, self.WHY),
                                                                       uncertainty='a quick kitchen voice only'), {}))
+
+    def test_a_run_without_an_inventory_still_gets_its_facts(self):
+        # the pacing facts and checks never stop a command: without the reference inventory (a check run on a bare
+        # folder) nothing counts as analysed, and the command that asked goes on
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            rd = Path(td)
+            save(rd / '40-plans' / 'video-01' / 'direction.json',
+                 {'decision': self.pacing(('V001', True, self.WHY), ('V002', True, self.WHY))})
+            f = c.pacing_facts(rd, 1, [{'id': 'L001', 'text': self.DOC[0]}], 11, 0.4, 600, 15, 160)
+            self.assertEqual(f['references'], [])
+            self.assertNotIn('range', f)
+            issues = c.pacing_decision_issues(rd, 1, self.pacing(('V001', True, self.WHY), ('V002', True, self.WHY)), {})
+            self.assertTrue(any(x.startswith('decision_pacing_reference_not_analysed:V001') for x in issues), issues)

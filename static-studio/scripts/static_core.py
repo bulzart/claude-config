@@ -3845,7 +3845,7 @@ def pacing_decision_issues(rd, video, dec, length_lock):
     pac = dec.get('pacing') if isinstance(dec.get('pacing'), dict) else None
     if not pac:
         return ['decision_missing_pacing:the_reference_narrators_this_narration_follows_each_with_its_relevance_and_why']
-    known = cards_inventory(rd)
+    known = inventory_videos(rd)
     rows = [r for r in pac.get('references') or [] if isinstance(r, dict)]
     named = [str(r.get('ref') or '').strip().upper() for r in rows]
     out = []
@@ -6280,6 +6280,14 @@ def ref_pause_profiles(rd, refs):
 PACING_NAME_LANGUAGES = ('en',)     # names are read from capitals inside a sentence: languages that capitalise names only
 
 
+def inventory_videos(rd):
+    """The run's reference videos ({id: row}) as cards_inventory reads them, or {} when the run has no inventory: the
+    pacing facts and checks are facts, and a missing inventory never stops the command that asked for them."""
+    inv = read_json(rd / '00-inventory/references.json')
+    return {x['id']: x for x in inv.get('items') or [] if isinstance(x, dict) and x.get('id')
+            and x.get('kind') == 'video' and not x.get('duplicate_of')}
+
+
 def text_density(text, language='en'):
     """What a listener has to catch by ear, from plain words: numbers and proper names per 100 words, and sentence
     length. Names are counted only where capitals mark them (PACING_NAME_LANGUAGES); numbers as digits, and as number
@@ -6337,7 +6345,7 @@ def pacing_facts(rd, video, lines, words, overhead_s, target, band, planning_wpm
     d = read_json(video_dir(rd, video) / 'direction.json')
     dec = d.get('decision') if isinstance(d.get('decision'), dict) else {}
     pac = dec.get('pacing') if isinstance(dec.get('pacing'), dict) else {}
-    known = cards_inventory(rd)
+    known = inventory_videos(rd)
     profiles = []
     for r in pac.get('references') or []:
         vid = str((r or {}).get('ref') or '').strip().upper() if isinstance(r, dict) else ''
