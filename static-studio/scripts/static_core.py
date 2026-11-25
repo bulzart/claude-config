@@ -3829,7 +3829,49 @@ def direction_facts(rd, video):
     for k in ('promise_and_delivery', 'length_fit'):
         if n_words(dec.get(k)) < MIN_FIELD_WORDS:
             iss.append(f'decision_missing_{k}')
+    iss += pacing_decision_issues(rd, video, dec, ll)
     older_plan_advisory(rd, video, iss, warn)
+    return out
+
+
+def pacing_decision_issues(rd, video, dec, length_lock):
+    """The narrators this narration follows, weighed (decision.pacing, PLANNING_RULES 4): each reference named with
+    whether it is relevant and why (its narration and delivery, format, density and terminology, sentences, emotional
+    course, natural variation, active against overall pace, pauses and comprehension); where in the relevant range this
+    narration belongs (range); and, when only one reference is relevant, what that leaves uncertain. Where the niche has
+    several measured narrators, more than one is weighed, and the references the locked pace came from are among them:
+    a single convenient reference is a conclusion, never a default. Presence and reasons only: which reference is
+    right is the director's judgement (the user, 2026-11-25)."""
+    pac = dec.get('pacing') if isinstance(dec.get('pacing'), dict) else None
+    if not pac:
+        return ['decision_missing_pacing:the_reference_narrators_this_narration_follows_each_with_its_relevance_and_why']
+    known = cards_inventory(rd)
+    rows = [r for r in pac.get('references') or [] if isinstance(r, dict)]
+    named = [str(r.get('ref') or '').strip().upper() for r in rows]
+    out = []
+    unknown = sorted({v for v in named if v not in known})
+    if unknown:
+        out.append('decision_pacing_reference_not_analysed:' + ','.join(unknown))
+    thin = [v for v, r in zip(named, rows) if n_words(r.get('why')) < MIN_FIELD_WORDS]
+    if thin:
+        out.append('decision_pacing_reference_needs_why:' + ','.join(thin) + ':narration_format_density_terminology_'
+                   'sentences_emotion_variation_active_and_overall_pace_pauses_comprehension')
+    relevant = [v for v, r in zip(named, rows) if r.get('relevant') is True and v in known]
+    if not relevant:
+        out.append('decision_pacing_names_no_relevant_reference')
+    elif len(relevant) == 1 and n_words(pac.get('uncertainty')) < MIN_FIELD_WORDS:
+        out.append(f'decision_pacing_rests_on_one_reference_without_its_uncertainty:{relevant[0]}')
+    if n_words(pac.get('range')) < MIN_FIELD_WORDS:
+        out.append('decision_pacing_missing_range:where_in_the_relevant_narrators_range_this_narration_belongs_and_why')
+    nl = read_json(niche_lock_path(rd))
+    pool = [str(m.get('ref')) for m in nl.get('members') or [] if isinstance(m, dict)] if nl else list(known)
+    measured = [v for v in pool if (rd / '10-media' / v / 'transcript.json').is_file()]
+    if len(measured) >= 2 and len(set(named) & set(known)) < 2:
+        out.append('decision_pacing_weighs_one_reference_of_several:weigh_the_other_measured_narrators_too')
+    locked = [str(x).upper() for x in (length_lock or {}).get('reference_ids') or []]
+    missing = [v for v in locked if v not in named]
+    if locked and (length_lock or {}).get('pace_wpm_source') == 'computed_from_refs' and missing:
+        out.append('decision_pacing_does_not_weigh_the_locked_pace_references:' + ','.join(missing))
     return out
 
 
@@ -5241,7 +5283,7 @@ RECURRENCE_SCOPES = ('wording', 'order', 'structure', 'treatment', 'material', '
 # them (its lock carries no planning_rules) keeps the plan it was approved with: these checks are shown to it as
 # advisories, never as re-planning (the user, 2026-11-24). Safety and content, money, asset integrity and release
 # validation are never in this list: they hold for every run.
-PLANNING_RULES = 3
+PLANNING_RULES = 4
 NEW_PLANNING_RULES = re.compile(
     r'(direction_evidence_\w+?_is_outside_the_locked_niche'
     r'|chosen_approach_missing_exploration'
@@ -5270,7 +5312,12 @@ PLANNING_RULES_V3 = re.compile(
     r'|treatment_\w+?_never_marks_where_its_promise_is_delivered'
     r'|decision_missing_(promise_and_delivery|length_fit)'
     r'|key_moment_dependency_called_a_mystery)')
-PLANNING_RULES_ADDED = ((2, NEW_PLANNING_RULES), (3, PLANNING_RULES_V3))
+# The pacing rules (PLANNING_RULES 4, 2026-11-25): the decision names the reference narrators this narration follows,
+# each weighed with its reason (narration and delivery, format, density, terminology, sentences, emotional course,
+# natural variation, active against overall pace, pauses and comprehension), says where in their range this narration
+# belongs, and states its uncertainty when only one reference matches. Older directions see them as advisories.
+PLANNING_RULES_V4 = re.compile(r'(decision_missing_pacing|decision_pacing_)')
+PLANNING_RULES_ADDED = ((2, NEW_PLANNING_RULES), (3, PLANNING_RULES_V3), (4, PLANNING_RULES_V4))
 
 
 def planning_rules_of(rd, video):
@@ -5300,6 +5347,9 @@ def migrated_rule(issue, migration, chosen_treatment=None, chosen_candidate=None
     def remade(*names):
         return bool(arts & set(names))
     new_subject = sec('subject.selection.candidate')
+    # the pacing rules (4) reach an older direction whose decision was revised after they existed
+    if PLANNING_RULES_V4.match(s):
+        return int((migration or {}).get('to') or 0) >= 4 and sec('decision.treatment', 'decision.reasons')
     # the storytelling rules (3) reach what a revision of an older direction touched
     if int((migration or {}).get('to') or 0) >= 3:
         m3 = re.match(r'treatment_(\w+?)_(?:needs_movements|never_marks_where_its_promise_is_delivered)', s)
@@ -6220,6 +6270,107 @@ def ref_pause_profiles(rd, refs):
     return out
 
 
+# ---------------------------------------------------------------- the narrators this narration follows (pacing)
+# 2026-11-25 (the user): the intended pace emerges from the reference narrators who match this film (its narrator and
+# delivery, its format, its density and terminology, its sentences, its emotional course, their natural variation,
+# active against overall pace, pauses and what the audience must catch), from the chosen voice and from comprehension,
+# never from one convenient reference, the length cohort or an earlier production. The director weighs them
+# (direction.json decision.pacing); the code gathers their measured profiles, the script's own density, their range
+# and how the forecast moves across it. It averages nothing and scores nothing.
+PACING_NAME_LANGUAGES = ('en',)     # names are read from capitals inside a sentence: languages that capitalise names only
+
+
+def text_density(text, language='en'):
+    """What a listener has to catch by ear, from plain words: numbers and proper names per 100 words, and sentence
+    length. Names are counted only where capitals mark them (PACING_NAME_LANGUAGES); numbers as digits, and as number
+    words in English."""
+    text = text or ''
+    lang = str(language or 'en').lower()[:2]
+    sents = [s for s in re.split(r'(?<=[.!?…])\s+', text) if re.search(r'[^\W_]', s)]
+    words = re.findall(r"[^\W_][\w'’-]*", text)
+    nums = len(NUMBER_WORDS.findall(text)) if lang == 'en' else len(re.findall(r'\d[\d,.]*', text))
+    names = None
+    if lang in PACING_NAME_LANGUAGES:
+        names = 0
+        for s in sents:
+            toks = re.findall(r"[A-Za-z][A-Za-z'’-]*", s)
+            names += sum(1 for t in toks[1:] if t[0].isupper() and t not in ('I', "I'm", "I'll", "I've", "I'd"))
+    lens = sorted(len(re.findall(r"[^\W_][\w'’]*", s)) for s in sents)
+    n = max(1, len(words))
+    return {'words': len(words), 'numbers_per_100_words': round(100 * nums / n, 2),
+            'names_per_100_words': round(100 * names / n, 2) if names is not None else None,
+            'sentence_words_median': statistics.median(lens) if lens else None,
+            'sentence_words_p90': lens[int(0.9 * (len(lens) - 1))] if lens else None}
+
+
+def reference_pace_profile(rd, vid, duration_s=None):
+    """One reference narrator as measured: pace while speaking and overall, how it swings across the film, its pauses,
+    its delivery and the density of its words, with its story form and narrator as the card describes them. Facts for
+    the director's judgement, never a verdict."""
+    stats = ref_pace_stats(rd, vid, duration_s) or {}
+    av = read_json(ref_av_path(rd, vid)).get('summary') or {}
+    av = av.get('narration') if isinstance(av.get('narration'), dict) else av
+
+    def median(k):
+        v = av.get(k)
+        return v.get('median') if isinstance(v, dict) else v
+    t = read_json(rd / '10-media' / vid / 'transcript.json')
+    text = ' '.join(str(s.get('text') or '').strip() for s in t.get('segments') or [])
+    pauses = pause_profile(transcript_words(t)) if t else {}
+    card = read_json(rd / '20-analysis' / 'cards' / f'{vid}.json')
+    return {'ref': vid, 'story_form': card.get('story_form'),
+            'narrator': str(card.get('narrator_character') or '')[:300] or None,
+            'active_wpm': stats.get('active_wpm'), 'overall_wpm': stats.get('overall_wpm'),
+            'pause_share': stats.get('pause_share'), 'swing_wpm': av.get('rate_across_windows_wpm'),
+            'pauses_0_8s_plus_per_min': pauses.get('pauses_0_8s_plus_per_min'),
+            'pauses_1_5s_plus_per_min': pauses.get('pauses_1_5s_plus_per_min'),
+            'longest_pause_s': pauses.get('longest_pause_s'), 'pitch_range_st': median('pitch_range_st'),
+            'pitch_movement_st': median('pitch_movement_st'), 'loudness_contrast_db': median('loudness_contrast_db'),
+            'density': text_density(text, t.get('language') or 'en') if text else None}
+
+
+def pacing_facts(rd, video, lines, words, overhead_s, target, band, planning_wpm, language='en'):
+    """The references direction.json decision.pacing weighs, as measured; the relevant ones' range (active and overall
+    pace, and how far they swing); the script's own density beside theirs; and how the forecast moves across the range
+    (the forecast's own arithmetic: the words at a pace, plus the per-line gap, the tags and the holds in overhead_s).
+    With the export band: the voice pace this script needs to land the locked length. Nothing here chooses a pace."""
+    d = read_json(video_dir(rd, video) / 'direction.json')
+    dec = d.get('decision') if isinstance(d.get('decision'), dict) else {}
+    pac = dec.get('pacing') if isinstance(dec.get('pacing'), dict) else {}
+    known = cards_inventory(rd)
+    profiles = []
+    for r in pac.get('references') or []:
+        vid = str((r or {}).get('ref') or '').strip().upper() if isinstance(r, dict) else ''
+        if vid in known:
+            profiles.append({**reference_pace_profile(rd, vid, known[vid].get('duration_s')),
+                             'relevant': r.get('relevant') is True})
+    out = {'references': profiles,
+           'script_density': text_density(' '.join(strip_tags(l.get('text') or '') for l in lines), language),
+           'planning_wpm': planning_wpm, 'line_gap_assumed_s': DEFAULT_LINE_OVERHEAD_S}
+
+    def at(p):
+        s = round(words * 60 / p + overhead_s, 1)
+        return {'wpm': p, 'forecast_s': s, 'minutes': f'{int(s) // 60}:{int(s) % 60:02d}'}
+    rel = [p for p in profiles if p['relevant'] and p.get('active_wpm')]
+    if rel:
+        act = [p['active_wpm'] for p in rel]
+        ovr = [p['overall_wpm'] for p in rel if p.get('overall_wpm')]
+        sw = [p['swing_wpm'] for p in rel if isinstance(p.get('swing_wpm'), dict)]
+        out['range'] = {'relevant': [p['ref'] for p in rel], 'active_wpm': [min(act), max(act)],
+                        'overall_wpm': [min(ovr), max(ovr)] if ovr else None,
+                        'swing_wpm': ([min(w['p10'] for w in sw if w.get('p10')), max(w['p90'] for w in sw if w.get('p90'))]
+                                      if any(w.get('p10') for w in sw) else None)}
+        if words:
+            pts = sorted({*act, *([planning_wpm] if planning_wpm else [])})
+            out['sensitivity'] = [{**at(p), 'from': ','.join(x['ref'] for x in rel if x['active_wpm'] == p)
+                                   or 'the locked planning pace'} for p in pts]
+            out['range']['forecast'] = {'at_fastest': at(max(act)), 'at_slowest': at(min(act))}
+    if words and target and target - band > overhead_s:
+        out['voice_pace_that_fits_the_lock_wpm'] = [round(words * 60 / (target + band - overhead_s), 1),
+                                                    round(words * 60 / (target - band - overhead_s), 1)]
+    return out
+
+
 def compute_ref_wpm(rd, refs, family):
     """Average WPM from the reference transcripts for the selected refs.
     Uses the sum of spoken-chunk durations (pure narration time) so the result
@@ -6501,6 +6652,27 @@ def plan_facts(rd, video):
         warnings.append('no beat is marked as a key moment: name the developments this video is built around, what each '
                         'means to its viewer and what it pays (beat map key_moment + significance), or, when its value '
                         'builds up instead, say how in the blueprint\'s reward_shape')
+    # The narrators this narration follows (decision.pacing): their measured range and how this script's forecast moves
+    # across it, beside the voice pace that would land the locked length. A narrator is chosen on quality; the voice's
+    # measured pace on real parts decides; a mismatch is diagnosed (the voice, the script's density, the delivery or the
+    # length) before any length change, which is the user's (2026-11-25). Facts and a warning, never a gate.
+    export_band = max(4, target * lock.get('tolerance_export_pct', .025)) if target else 0
+    pacing = pacing_facts(rd, video, lines, words, DEFAULT_LINE_OVERHEAD_S * len(lines) + tag_s + holds, target,
+                          export_band, pace or None, script.get('language') or lock.get('language') or 'en')
+    rng, fit = pacing.get('range'), pacing.get('voice_pace_that_fits_the_lock_wpm')
+    if rng and pace and not rng['active_wpm'][0] <= pace <= rng['active_wpm'][1]:
+        warnings.append(f"pacing: the locked length is planned at {pace:g} wpm, outside the narrators this narration "
+                        f"follows ({rng['active_wpm'][0]}-{rng['active_wpm'][1]} wpm while speaking, "
+                        f"{','.join(rng['relevant'])}): weigh the voice, the script's density, the delivery and the length "
+                        "before any change; a length change is the user's")
+    if rng and fit and rng.get('forecast') and (rng['active_wpm'][0] < fit[0] or rng['active_wpm'][1] > fit[1]):
+        rf = rng['forecast']
+        warnings.append(f"pacing: at the relevant narrators' pace ({rng['active_wpm'][0]}-{rng['active_wpm'][1]} wpm while "
+                        f"speaking) this script would run {rf['at_fastest']['minutes']}-{rf['at_slowest']['minutes']}; "
+                        f"the locked length "
+                        f"needs a voice at about {fit[0]:g}-{fit[1]:g} wpm (with a {DEFAULT_LINE_OVERHEAD_S:g} s gap a line). "
+                        "Choose the narrator on quality: its measured pace on real parts decides, and a real mismatch is "
+                        "diagnosed (voice, density, delivery or length) and taken to the user")
     voice_pace = measured.get('forecast_wpm') or measured.get('wpm')
     if voice_pace and script.get('pace_wpm') and abs(float(script['pace_wpm']) - float(voice_pace)) > 3:
         warnings.append(f"script pace_wpm {script['pace_wpm']} differs from the voice's measured {voice_pace} "
@@ -6516,7 +6688,7 @@ def plan_facts(rd, video):
                              'voice_overall_wpm': measured.get('overall_wpm'),
                              'voice_per_line_gap_s': round(measured['per_line_overhead_s'], 3) if measured else None},
             'audio_tags': tags, 'tag_time_s': tag_s, 'tag_time_range_s': [min(tag_low, tag_s), max(tag_high, tag_s)], 'tag_estimates': tag_bands, 'pause_plan': pause_plan, 'edit_holds_s': holds,
-            'holds': holds_info, 'density': density,
+            'holds': holds_info, 'density': density, 'pacing': pacing,
             'pronunciation': {'file': pron['file'], 'terms': [{k: t[k] for k in ('term', 'say', 'how', 'confidence')}
                                                               | {'lines': len(pron['uses'].get(t['term']) or [])}
                                                               for t in pron['terms']]},
@@ -6591,6 +6763,9 @@ def cmd_plan_check(args):
         prev = read_json(plan_check_path(rd, args.video))
         write_json(plan_check_path(rd, args.video), {
             'checked_at': now(), 'beats': beat_line_state(video_dir(rd, args.video)),
+            # the pacing evidence this passing check saw: the range, the sensitivity and the voice pace that fits
+            'pacing': {k: (result.get('pacing') or {}).get(k) for k in ('range', 'sensitivity', 'planning_wpm',
+                                                                       'voice_pace_that_fits_the_lock_wpm')},
             'history': (prev.get('history') or []) + ([{'at': now(), 'kept': keep}] if keep else [])})
         advance_stage(rd, 'script_checked')
     emit({'video': int(args.video), **result}, 0 if result['ready'] else 2)

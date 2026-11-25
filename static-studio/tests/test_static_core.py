@@ -263,7 +263,14 @@ class StaticStudioTests(unittest.TestCase):
                             'promise_and_delivery':say('the order the opening promises arrives in the second movement, '
                                                        'after a setup that already shows what the army lacks'),
                             'length_fit':say('the references the length came from tell one decision in the same '
-                                             'documentary register, at a similar density')}}
+                                             'documentary register, at a similar density'),
+                            # the narrators this narration follows (planning rules 4): each weighed, the range said
+                            'pacing':{'references':[{'ref':'V001','relevant':True,
+                                                     'why':say('the same documentary register and density as this narration')},
+                                                    {'ref':'V002','relevant':True,
+                                                     'why':say('a measured storyteller reading documents at a similar density')}],
+                                      'range':say('this narration sits where both references speak, slower for the most '
+                                                  'personal passages')}}}
 
     def clear_development(self, kind):
         """A reader for whom the whole video is clear and pays: the three judgements given, nothing to find."""
@@ -875,6 +882,10 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('decision_missing_length_fit',facts['issues'])
         self.assertTrue(any('add up to 40 min for a 10.0-min video' in w for w in facts['warnings']),facts['warnings'])
         self.assertFalse([x for x in facts['issues'] if 'T2' in x and 'movements' in x])
+        # the narrators this narration follows are weighed (planning rules 4): missing, it is asked for
+        self.assertFalse([x for x in facts['issues'] if 'pacing' in x],facts['issues'])
+        d['decision'].pop('pacing'); save(vd/'direction.json',d)
+        self.assertTrue(any(x.startswith('decision_missing_pacing') for x in core.direction_facts(self.run,1)['issues']))
 
     def test_review_read_runs_the_reader_restricted_in_its_own_folder(self):
         vd=self.write_plan(review_script=False)
@@ -2535,7 +2546,7 @@ class StaticStudioTests(unittest.TestCase):
         # sent back to re-plan: those checks become advisories. Its other checks stay as they are.
         vd=self.write_plan()
         lock=json.loads((vd/'direction-lock.json').read_text(encoding='utf-8'))
-        self.assertEqual(lock['planning_rules'],3)               # a new lock is stamped (3: the storytelling rules)
+        self.assertEqual(lock['planning_rules'],4)               # a new lock is stamped (4: the pacing rules)
         b=json.loads((vd/'blueprint.json').read_text(encoding='utf-8')); b.pop('audience_knows'); save(vd/'blueprint.json',b)
         self.assertTrue(any(x.startswith('blueprint_missing_audience_knows') for x in
                             cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']))

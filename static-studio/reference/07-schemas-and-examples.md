@@ -500,7 +500,11 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
   ],
   "decision": {"treatment": "T1", "why": "...", "taken_from_others": "...", "carries_payoff": "...",
                "promise_and_delivery": "where the chosen one delivers the opening's promise, what the viewer gets before it, what the reader said",
-               "length_fit": "how its telling compares with the format, density and narration of the length's references"}
+               "length_fit": "how its telling compares with the format, density and narration of the length's references",
+               "pacing": {"references": [{"ref": "V007", "relevant": true, "why": "narrator and delivery, format, density, terminology, sentences, emotional course, variation, active vs overall pace, pauses"},
+                                         {"ref": "V018", "relevant": false, "why": "what it shares and why its pace does not suit this film"}],
+                          "range": "where in the relevant narrators' range this narration belongs, and why",
+                          "uncertainty": "required when only one reference is relevant: what that leaves unknown"}}
 }
 ```
 
@@ -542,8 +546,9 @@ references' formula), with `chosen_approach.exploration`: what range of ways to 
 approaches cover it. Two to four treatments, each with `carries_values` (`[{value, how}]`: how it delivers every payoff
 value, in its own terms) and `movements` (`[{what, minutes, promise}]`: how the whole video unfolds, at least two,
 `promise: true` where it delivers what the opening promises; the blind reader sees them without those marks), and
-the `decision` with `carries_payoff` (how the chosen treatment makes the payoff land), `promise_and_delivery` and
-`length_fit` (10 §3); a change to the chosen treatment's `carries_values` marks the beat map and script, a change to
+the `decision` with `carries_payoff` (how the chosen treatment makes the payoff land), `promise_and_delivery`,
+`length_fit` and `pacing` (10 §3, 03: the reference narrators this narration follows, weighed, never averaged;
+plan-check reports their measured profiles, the range, the script's density and the forecast across the range); a change to the chosen treatment's `carries_values` marks the beat map and script, a change to
 its `movements` the beat map, script and shot plan. `direction_facts` reports each treatment's `promise_timing`
 (minutes before its first promise movement, what comes before it) and the length lock's cohort beside it: facts, never
 a verdict. Evidence that cites a reference

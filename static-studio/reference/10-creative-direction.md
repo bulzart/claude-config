@@ -148,13 +148,19 @@ No numbers decide this. Two things do:
    density and narration of the references the length and pace were taken from (`direction_facts` shows the length
    lock's cohort and why it was comparable). A cohort shares a niche with the video, not necessarily its format:
    when they differ, say why the runtime and the pace still fit, or ask the user for a length decision (03); the lock
-   is never changed silently.
+   is never changed silently. And `pacing`: the reference narrators this narration follows, each with `relevant`
+   and `why` (its narrator and delivery, format, density and terminology, sentences, emotional course, natural
+   variation, pace while speaking against overall, pauses and what the audience must catch), `range` (where in the
+   relevant narrators' range this narration belongs, and why) and, when only one is relevant, `uncertainty` (03:
+   several where several match, never an average, never one convenient reference). The narrator is chosen later
+   for quality, not to fit a pace (05).
 
 Then `direction-lock`. The script and the beat directions are written from the locked treatment. A new lock is
-stamped `planning_rules: 3`, kept through `--revise` (3, the storytelling rules of 2026-11-24: each treatment's
+stamped `planning_rules: 4`, kept through `--revise` (3, the storytelling rules of 2026-11-24: each treatment's
 movements with its promise marked, the decision's `promise_and_delivery` and `length_fit`, and a key moment's
-dependency never called a mystery unless it is withheld, 03). A lock stamped 2 keeps its plan the same way: those
-rules reach it as advisories except where a revision reaches. A lock without the stamp was approved before 2026-11-24, and it
+dependency never called a mystery unless it is withheld, 03; 4, the pacing rules of 2026-11-25: the decision's
+`pacing`). A lock stamped 2 or 3 keeps its plan the same way: the rules added after it reach it as advisories
+except where a revision of its decision reaches. A lock without the stamp was approved before 2026-11-24, and it
 keeps its plan: the planning rules added that day reach it only as warnings that start "advisory (this direction was
 approved before the planning rules of 2026-11-24, which it need not follow): ..." in plan-check, shot-check,
 audio-check, media-check (both workers) and release-check's final review. They are: evidence from outside the locked
