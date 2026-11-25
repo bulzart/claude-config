@@ -326,6 +326,16 @@ class BuildPlanTests(unittest.TestCase):
         joined = ' | '.join(json.loads(self.plan_file.read_text(encoding='utf-8'))['warnings'])
         self.assertIn('room.wav has no music-provenance record', joined)
 
+    def test_one_sound_placed_twice_keeps_each_placements_beats(self):
+        edit_json(self.edit / 'sound-placements.json', lambda d: d['sfx'].append(
+            {'id': 'tick-early', 'file': d['sfx'][0]['file'], 'at': 1.0, 'beats': ['B01'], 'purpose': 'a tick on the house'}))
+        code, res, r = self.dry()
+        self.assertEqual(code, 0, (res, r.stderr[-400:]))
+        tick = json.loads((self.edit / 'capcut' / 'sounds.json').read_text(encoding='utf-8'))['tick.wav']
+        self.assertEqual(tick['beats'], ['B02', 'B01'])
+        self.assertEqual(sorted((p['start_s'], p['end_s'], p['beats'], p['purpose']) for p in tick['placements']),
+                         [(1.0, 1.5, ['B01'], 'a tick on the house'), (4.3, 4.8, ['B02'], 'a tick on the turn')])
+
     def test_two_sound_files_with_one_name_refuse(self):
         other = self.rd / '50-audio' / 'sfx' / 'other' / 'tick.wav'
         write_wav(other, 0.4)

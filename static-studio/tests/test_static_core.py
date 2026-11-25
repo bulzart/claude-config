@@ -4603,6 +4603,46 @@ class TimelineWriteTests(unittest.TestCase):
             self.assertTrue(any('stray.wav' in p for p in out['problems']), out['problems'])
 
 
+class SoundPlacementTracingTests(unittest.TestCase):
+    """One sound file placed at several moments (2026-11-25): each clip is traced to its own placement by its start."""
+
+    def test_each_clip_of_a_reused_sound_is_its_own_placement(self):
+        with tempfile.TemporaryDirectory() as td:
+            rd = Path(td)/'run'
+            vis = rd/'60-visuals/video-01'
+            (vis/'stills').mkdir(parents=True)
+            (vis/'stills'/'S001.png').write_bytes(b'png')
+            save(rd/'state.json', {'schema': 'static-youtube-longform-v1', 'run': 'r'})
+            save(vis/'shot-plan.json', {'shots': [{'id': 'S001', 'beat_id': 'B01', 'new_thing': 'the house'}]})
+            narr = rd/'50-audio/video-01/narration-edit.wav'; narr.parent.mkdir(parents=True); narr.write_bytes(b'wav')
+            tick = rd/'50-audio/sfx/tick.wav'; tick.parent.mkdir(parents=True); tick.write_bytes(b'wav')
+            save(rd/'70-edit/video-01/edit-plan.json', {'narration_for_edit': {'file': str(narr)},
+                 'shots': [{'id': 'S001', 'beat_id': 'B01', 'start_s': 0.0, 'end_s': 12.0}]})
+            us = lambda a, b: {'start': int(a * 1e6), 'duration': int((b - a) * 1e6)}
+            draft = Path(td)/'draft'
+            save(draft/'draft_content.json', {'canvas_config': {'width': 1920, 'height': 1080}, 'fps': 30,
+                 'materials': {'videos': [{'id': 'v1', 'path': str(vis/'stills/S001.png')}],
+                               'audios': [{'id': 'a1', 'path': str(narr)}, {'id': 'a2', 'path': str(tick)}]},
+                 'tracks': [{'type': 'video', 'segments': [
+                                {'id': 's1', 'material_id': 'v1', 'target_timerange': us(0, 12), 'source_timerange': us(0, 12)}]},
+                            {'type': 'audio', 'segments': [
+                                {'id': 'n', 'material_id': 'a1', 'target_timerange': us(0, 12), 'source_timerange': us(0, 12)},
+                                {'id': 't1', 'material_id': 'a2', 'target_timerange': us(2.01, 2.5), 'source_timerange': us(0, 0.49)},
+                                {'id': 't2', 'material_id': 'a2', 'target_timerange': us(9, 9.5), 'source_timerange': us(0, 0.5)},
+                                {'id': 't3', 'material_id': 'a2', 'target_timerange': us(6, 6.5), 'source_timerange': us(0, 0.5)}]}]})
+            sounds = Path(td)/'sounds.json'
+            save(sounds, {'tick.wav': {'kind': 'sfx', 'beats': ['B01', 'B02'], 'purpose': 'the first tick', 'placements': [
+                {'start_s': 2.0, 'end_s': 2.5, 'kind': 'sfx', 'beats': ['B01'], 'purpose': 'the first tick'},
+                {'start_s': 9.0, 'end_s': 9.5, 'kind': 'sfx', 'beats': ['B02'], 'purpose': 'the tick comes back'}]}})
+            out = cli('timeline-write', '--run', rd, '--video', 1, '--draft', draft, '--sounds', sounds, expected=2)
+            tl = json.loads((rd/'70-edit/video-01/timeline.json').read_text(encoding='utf-8'))
+            ticks = [(a['start_s'], a['beats'], a['purpose']) for a in tl['audio_tracks'] if a['kind'] == 'sfx']
+            # the clip CapCut snapped to 2.01 s is still the first placement (within one frame)
+            self.assertEqual(ticks, [(2.01, ['B01'], 'the first tick'), (9.0, ['B02'], 'the tick comes back')])
+            # a clip of the file where no placement starts is reported, never given another placement's beats
+            self.assertTrue(any('at 6.0 s matches none of the placements' in p for p in out['problems']), out['problems'])
+
+
 class ExportBindingTests(unittest.TestCase):
     """An export is held to the CapCut project it was made from (remediation 2026-11-24): timeline-check records what
     the saved project shows; export-check holds the export to it and records the file by its full sha256; release-check

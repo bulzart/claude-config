@@ -9559,8 +9559,9 @@ def capcut_project_timeline(rd, video, draft, sounds=None):
     video track traced to its shot by its start (within one frame: CapCut snaps clips to its frame grid when it saves)
     and its file (a callback shows its source's still),
     every overlay on another video track, every audio clip as the narration, a music bed (its beats from
-    music-provenance.json) or a sound named in `sounds` ({file name: {"kind", "beats", "purpose"}}). What cannot be traced
-    is listed in `problems`, never guessed."""
+    music-provenance.json) or a sound named in `sounds` ({file name: {"kind", "beats", "purpose"}}; a file placed more
+    than once also lists its "placements", each {"start_s", "end_s", "kind", "beats", "purpose"}, and a clip is the one
+    that starts where it does, within one frame). What cannot be traced is listed in `problems`, never guessed."""
     n = int(video)
     d = Path(str(draft)).expanduser()
     content = json.loads((d / 'draft_content.json').read_text(encoding='utf-8'))
@@ -9628,6 +9629,15 @@ def capcut_project_timeline(rd, video, draft, sounds=None):
                               'beats': list((music[k] or {}).get('beats') or []), 'volume': c['volume'], 'track': t.get('name')})
             elif Path(c['file']).name.lower() in sounds:
                 x = sounds[Path(c['file']).name.lower()]
+                places = x.get('placements') if isinstance(x.get('placements'), list) else None
+                if places:
+                    hit = [p for p in places if isinstance(p, dict)
+                           and abs(float(p.get('start_s') or 0) - c['start_s']) <= frame_tol]
+                    if len(hit) != 1:
+                        problems.append(f'audio clip {c["file"]} at {c["start_s"]} s matches '
+                                        f'{"none" if not hit else "more than one"} of the placements of its sound')
+                        continue
+                    x = dict(x, **hit[0])
                 audio.append({'kind': str(x.get('kind') or 'sfx'), 'file': c['file'], 'start_s': c['start_s'],
                               'end_s': c['end_s'], 'beats': list(x.get('beats') or []), 'purpose': x.get('purpose', ''),
                               'volume': c['volume'], 'track': t.get('name')})
@@ -13985,7 +13995,8 @@ def main():
                        'still and beat; every sound to the narration, a recorded bed or a named sound)')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--draft', required=True, help='the CapCut project folder')
-    p.add_argument('--sounds', help='JSON {file name: {kind, beats, purpose}} for sounds that are not music or narration')
+    p.add_argument('--sounds', help='JSON {file name: {kind, beats, purpose}} for sounds that are not music or narration '
+                   '(a file placed more than once lists its placements, each with start_s, end_s, kind, beats, purpose)')
     p.add_argument('--extra', help='JSON of further notes kept in timeline.json (transitions, moves, captions)')
     p.set_defaults(func=cmd_timeline_write)
     p = sub.add_parser('timeline-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)

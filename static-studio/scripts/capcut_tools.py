@@ -1801,8 +1801,14 @@ def _capcut_build_plan(rd: Path, n: int, a) -> tuple:
                         if nm.lower() in {x.lower() for x in sound_names} and sound_names.get(nm, {}).get("_file") != str(f):
                             problems.append(f"{label}: another sound file is also named {nm}: timeline-write tells sounds apart by "
                                             "their file names")
-                        sound_names[nm] = {"kind": kind, "beats": beats, "purpose": str(it.get("purpose") or it.get("why") or ""),
-                                           "_file": str(f)}
+                        purpose = str(it.get("purpose") or it.get("why") or "")
+                        entry = sound_names.setdefault(nm, {"kind": kind, "beats": [], "purpose": purpose, "_file": str(f),
+                                                            "placements": []})
+                        entry["beats"] += [b for b in beats if b not in entry["beats"]]
+                        # one file placed at several moments keeps each placement's own beats and purpose: timeline-write
+                        # matches a clip to its placement by its start
+                        entry["placements"].append({"start_s": round(at, 3), "end_s": round(at + dur, 3), "kind": kind,
+                                                    "beats": beats, "purpose": purpose})
                     out_rows.append({"id": str(it.get("id") or f.stem), "kind": kind, "file": f.as_posix(), "sha256": sha,
                                      "at": at, "at_us": at_us, "dur": round(dur, 6), "dur_us": dur_us, "src_start": src,
                                      "src_start_us": round(src * 1e6), "volume": vol, "fade_in_us": round(fin * 1e6),
@@ -1825,7 +1831,8 @@ def _capcut_build_plan(rd: Path, n: int, a) -> tuple:
     plan = {"made_by": "capcut_tools.py capcut-build", "version": CAPCUT_BUILD_VERSION, "made_at": now_iso(), "run": str(rd),
             "video": n, "edit_duration_s": ep.get("edit_duration_s"), "narration": narration, "images": images,
             "overlays": overlays, "beds": beds, "sfx": sfx, "moves": moves, "held_silences": held,
-            "sounds_for_timeline_write": {k: {x: y for x, y in v.items() if x != "_file"} for k, v in sound_names.items()},
+            "sounds_for_timeline_write": {k: {x: y for x, y in v.items() if x != "_file" and (x != "placements" or len(y) > 1)}
+                                          for k, v in sound_names.items()},
             "inputs": inputs, "warnings": warnings,
             "note": "Everything the project holds, from the run's decided files; capcut_build.mjs places exactly this. Times in "
                     "seconds on the edit's clock (*_us: the same in microseconds, as CapCut stores them)."}
