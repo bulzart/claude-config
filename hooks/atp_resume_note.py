@@ -1,66 +1,70 @@
 #!/usr/bin/env python
 """SessionStart hook (matcher compact|resume): after a compaction or a resume, tell the agent which pipeline run is in
-progress (of /analyze-then-pick, /analyze-then-generate, /analyze-with-loupe, /create-static or /create-clips, whichever changed last) and which skill to re-invoke.  The skills' text may have been summarised away; the run's state.json still names the next one.
-It reads one small file and prints one short note; with no run in progress it prints nothing."""
+progress and which skill to load again: the skills' text may have been summarised away, the run's state.json still names it.
+
+It knows no pipeline by name.  It looks at every `runs` folder one level under ~/.claude, plus every `runs_root` that a
+`config.json` one level under ~/.claude names (a pipeline that keeps its runs elsewhere).  A run is in progress when its
+state.json changed in the last 36 hours, its stage is not a finished one, and it says what comes next (a `next_skill`, a
+`next_step` or a `todo.md`).  The newest such run is named by its folder path, or by the `command` field of its state.json
+when the pipeline writes one.  With no run in progress it prints nothing.
+
+RESUME_NOTE_ROOTS (folders separated by the system path separator) replaces the search, for tests."""
 import json
 import os
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
 
 CLAUDE = Path(__file__).resolve().parent.parent
-FINISHED = {"done", "redo_delivered", "delivered", "complete", "completed", "closed", "wrapped"}
-# (library folder, environment override, slash command)
-LIBS = [("analyze-then-pick", "ATP_HOME", "/analyze-then-pick"), ("analyze-then-generate", "ATG_HOME", "/analyze-then-generate"), ("analyze-with-loupe", "AWL_HOME", "/analyze-with-loupe"),
-        ("create-static", "CS_HOME", "/create-static")]
+FINISHED = {"done", "redo_delivered", "delivered", "complete", "completed", "closed", "wrapped", "released"}
+WINDOW_S = 36 * 3600
 
 
-def run_folders():
-    """(the folder that holds the runs, the slash command, whether a run counts only once the command has started it)."""
-    for folder, env, command in LIBS:
-        yield Path(os.environ.get(env) or CLAUDE / folder) / "runs", command, False
-    # /create-clips: its runs are made by the stream processor in the runs_root of its config (CC_RUNS_ROOT in the tests). A run the processor made and the command has not
-    # started has no next_skill: it is a recording, not a run in progress.
-    root = os.environ.get("CC_RUNS_ROOT")
-    if not root:
+def run_roots():
+    override = os.environ.get("RESUME_NOTE_ROOTS")
+    if override:
+        return {Path(p) for p in override.split(os.pathsep) if p}
+    roots = {p for p in CLAUDE.glob("*/runs") if p.is_dir()}
+    for cfg in CLAUDE.glob("*/config.json"):
         try:
-            root = json.loads((CLAUDE / "create-clips" / "config.json").read_text(encoding="utf-8")).get("runs_root")
-        except (OSError, ValueError):
-            root = None
-    if root:
-        yield Path(root).expanduser(), "/create-clips", True
+            root = json.loads(cfg.read_text(encoding="utf-8")).get("runs_root")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if isinstance(root, str) and root.strip():
+            roots.add(Path(root).expanduser())
+    return roots
 
 
-def main():
+def newest_run_in_progress():
     best = None
-    for runs, command, needs_next in run_folders():
+    for runs in run_roots():
         for p in runs.glob("*/state.json"):
-            if p.parent.name.startswith("client-fixes"):
-                continue
             try:
                 st = json.loads(p.read_text(encoding="utf-8"))
                 t = p.stat().st_mtime
             except (OSError, ValueError):
                 continue
-            if st.get("stage") in FINISHED or time.time() - t > 36 * 3600:
+            if not isinstance(st, dict) or st.get("stage") in FINISHED or time.time() - t > WINDOW_S:
                 continue
-            if needs_next and not st.get("next_skill"):
-                continue
+            if not (st.get("next_skill") or st.get("next_step") or (p.parent / "todo.md").is_file()):
+                continue        # nothing says what comes next: not a run someone is working through (e.g. a raw recording)
             if best is None or t > best[0]:
-                best = (t, p, st, command)
+                best = (t, p, st)
+    return best
+
+
+def main():
+    best = newest_run_in_progress()
     if not best:
         return
-    t, p, st, command = best
-    nxt = st.get("next_skill") or ""
-    where = f"stage `{st.get('stage', '?')}`" + (f", video {st['video']}" if st.get("video") else "")
-    if nxt:
-        todo = f"Re-invoke the skill `{nxt}` (Skill tool) before doing anything else: its text may have been summarised away."
-    else:
-        todo = (f"This run has no `next_skill` (it predates the skills layout): take the phase from `stage` / `next_step` "
-                f"(`{st.get('next_step', '?')}`) with the map in the command's resume section.")
-    todo_note = ""
-    todo_file = p.parent / "todo.md"        # the run's to-do (command item 38): what is done and what is next
+    t, p, st = best
+    run = p.parent
+    command = st.get("command") if isinstance(st.get("command"), str) and st.get("command").strip() else ""
+    facts = [f"{st['mode']} mode" if st.get("mode") else "", f"stage `{st['stage']}`" if st.get("stage") else "",
+             f"video {st['video']}" if st.get("video") else "", f"last change {datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M')}"]
+    head = f"A {command} run is in progress" if command else "A pipeline run is in progress"
+    note = f"{head}: `{run}` ({'; '.join(f for f in facts if f)})."
+    todo_file = run / "todo.md"
     if todo_file.is_file():
         nxt_line = ""
         try:
@@ -70,10 +74,15 @@ def main():
                     break
         except OSError:
             pass
-        todo_note = f" Read the run's to-do `{todo_file}` first (what is done and what is next).{nxt_line}"
-    note = (f"{command} run `{p.parent.name}` is in progress ({st.get('mode', '?')} mode, {where}; last change "
-            f"{datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M')}).{todo_note} {todo} Read `{p}`{'' if command == '/create-clips' else ' and the ledger'} for the exact point reached; "
-            f"if this session is not working on that run, ignore this note.")
+        note += f" Read the run's to-do `{todo_file}` first (what is done and what is next).{nxt_line}"
+    nxt = st.get("next_skill") or ""
+    if nxt:
+        note += f" Re-invoke the skill `{nxt}` (Skill tool) before doing anything else: its text may have been summarised away."
+    else:
+        step = f" (next step `{st['next_step']}`)" if st.get("next_step") else ""
+        note += (f" This run names no skill to load{step}: take the next step from its state and to-do with the resume section "
+                 f"of the command that made it.")
+    note += f" Read `{p}` for the exact point reached; if this session is not working on that run, ignore this note."
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": note}}))
 
 
