@@ -9826,7 +9826,14 @@ def cmd_bed_levels(args):
                 continue
             src = Path(t['file'])
             tag = f'{row["gain_db"]:+.1f}dB'.replace('+', 'p').replace('-', 'm')
-            out = Path(args.bake) / f'{src.stem}.bed-{tag}{src.suffix}'
+            # An excerpt carries its stretch in its name: two stretches of one bed at one level stay two files (a later
+            # one would overwrite the first, and CapCut and timeline-write tell sounds apart by their file names).
+            span = ''
+            if t.get('src_start') or t.get('dur'):
+                span = f'.from{float(t.get("src_start") or 0.0):g}s' + (f'-{float(t["dur"]):g}s' if t.get('dur') else '')
+            # the copy is written as PCM: a source in another container (an .mp3 sound effect) is baked to .wav
+            suffix = src.suffix if src.suffix.lower() == '.wav' else '.wav'
+            out = Path(args.bake) / f'{src.stem}.bed-{tag}{span}{suffix}'
             try:
                 b = bake_bed(src, out, row['gain_db'], t.get('src_start') or 0.0, t.get('dur'), t.get('fade_in') or 0.0,
                              t.get('fade_out') or 0.0)

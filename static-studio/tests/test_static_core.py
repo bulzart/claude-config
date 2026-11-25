@@ -4815,6 +4815,45 @@ class BedBakeTests(unittest.TestCase):
             self.assertEqual(rec['production_rev'], 3)
             self.assertEqual(rec['derivation']['src_start_s'], 1.0)
 
+    def test_two_stretches_of_one_bed_at_one_level_stay_two_files(self):
+        with tempfile.TemporaryDirectory() as td:
+            t = Path(td)
+            rd = t/'run'
+            save(rd/'state.json', {'schema': 'static-youtube-longform-v1'})
+            mus = rd/'70-edit/video-01/music'; mus.mkdir(parents=True)
+            for name, d in (('voice.wav', 6), ('M2.wav', 12)):
+                subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i',
+                                f'sine=frequency=440:duration={d},volume=0.5', str((mus if name == 'M2.wav' else t)/name)], check=True)
+            save(rd/'70-edit/video-01/music-provenance.json',
+                 {'video': 1, 'tracks': {os.path.normcase(str((mus/'M2.wav').resolve())): {'beats': ['B02'], 'production_rev': 3}}})
+            save(t/'plan.json', {'narration': str(t/'voice.wav'),
+                                 'tracks': [{'id': 'a', 'file': str(mus/'M2.wav'), 'under_speech_db': 20, 'src_start': 1.0, 'dur': 3.0},
+                                            {'id': 'b', 'file': str(mus/'M2.wav'), 'under_speech_db': 20, 'src_start': 6.0, 'dur': 5.0}]})
+            out = cli('bed-levels', '--plan', t/'plan.json', '--bake', mus, '--run', rd, '--video', 1)
+            a, b = (Path(r['baked']['file']) for r in out['tracks'])
+            self.assertNotEqual(a, b)                                                  # not one overwriting the other
+            for f, d in ((a, 3.0), (b, 5.0)):
+                r = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', str(f)],
+                                   capture_output=True, text=True)
+                self.assertAlmostEqual(float(r.stdout), d, delta=0.05)
+            prov = json.loads((rd/'70-edit/video-01/music-provenance.json').read_text(encoding='utf-8'))['tracks']
+            self.assertEqual(prov[os.path.normcase(str(b.resolve()))]['derivation']['src_start_s'], 6.0)
+
+    def test_an_mp3_sound_is_baked_to_a_wav_copy(self):
+        with tempfile.TemporaryDirectory() as td:
+            t = Path(td)
+            for name, d in (('voice.wav', 4), ('bird.mp3', 3)):
+                subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i',
+                                f'sine=frequency=880:duration={d},volume=0.5', str(t/name)], check=True)
+            save(t/'plan.json', {'narration': str(t/'voice.wav'),
+                                 'tracks': [{'id': 'bird', 'file': str(t/'bird.mp3'), 'under_speech_db': 15, 'src_start': 0.5,
+                                             'dur': 2.0}]})
+            out = cli('bed-levels', '--plan', t/'plan.json', '--bake', t/'baked')
+            self.assertTrue(out['ok'], out)
+            baked = Path(out['tracks'][0]['baked']['file'])
+            self.assertEqual(baked.suffix, '.wav')
+            self.assertTrue(baked.is_file())
+
 
 class RecheckWordsTests(unittest.TestCase):
     """A line heard whole on its second listen keeps that listen's word times (2026-11-22, L013)."""
