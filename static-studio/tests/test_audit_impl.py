@@ -61,7 +61,7 @@ class ReleaseStateTests(base.ExportBindingTests):
         save(p, prov)
         return sha
 
-    def release(self, f, record=True):
+    def release(self, f, record=True, final=None):
         """release-check on a file, with the gates this fixture has no records for (plan, narration, shots, the final
         read) answered clean: what is tested is the binding to the file and what gets written."""
         c = self.core
@@ -71,7 +71,8 @@ class ReleaseStateTests(base.ExportBindingTests):
                 mock.patch.object(c, 'audio_facts', return_value=dict(clean)), \
                 mock.patch.object(c, 'shot_facts', return_value=dict(clean)), \
                 mock.patch.object(c, 'timeline_facts', return_value=dict(clean)), \
-                mock.patch.object(c, 'review_state', return_value={'issues': [], 'warnings': [], 'rounds': 1}), \
+                mock.patch.object(c, 'review_state',
+                                  return_value=final or {'issues': [], 'warnings': [], 'rounds': 1}), \
                 mock.patch('sys.stdout', new_callable=io.StringIO) as so:
             try:
                 c.cmd_release_check(args)
@@ -150,6 +151,13 @@ class ReleaseStateTests(base.ExportBindingTests):
         dry = self.release(out, record=False)
         self.assertTrue(dry['ready'], dry['issues'])
         self.assertTrue(str(dry['release_record']).startswith('not written'))
+        self.assertFalse(c.release_path(rd, 1).exists())
+        # an open answer of the final review is said with its reason, not only by its number
+        self.assertNotIn('answers_needed', dry)
+        why = {'r2:F1': 'a recurring major problem is closed by a decision'}
+        held = self.release(out, final={'issues': ['final_review_r2_unanswered:F1'], 'warnings': [], 'rounds': 2,
+                                        'answers_needed': why})
+        self.assertEqual((held['ready'], held['answers_needed'], held['release_record']), (False, why, None))
         self.assertFalse(c.release_path(rd, 1).exists())
         self.assertTrue(self.release(out)['ready'])
         rec = json.loads(c.release_path(rd, 1).read_text(encoding='utf-8'))

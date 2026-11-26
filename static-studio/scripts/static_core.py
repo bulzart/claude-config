@@ -14155,7 +14155,11 @@ def cmd_release_check(args):
           'loudness': exp.get('loudness'), 'file_is': exp.get('role'),
           'human_review': {'on_record': hr['on_record'], 'kinds': hr['kinds']},
           'release_record': recorded or ('not written: pass --record once this is ready' if not issues else None),
-          'final_review_rounds': fin['rounds'], 'content': content,
+          'final_review_rounds': fin['rounds'],
+          # why each open answer of the final review is not yet an answer (a repeated major closed by the word "disputed"
+          # alone, a missing note): the issue names the findings, this says what each one still needs
+          **({'answers_needed': fin['answers_needed']} if fin.get('answers_needed') else {}),
+          'content': content,
           'note': 'Ready means every recorded gate passed for this exact file. It does not say the video is good: '
                   'that is the director\'s and the reviewers\' judgement, recorded in their files. It does not say '
                   'a person heard or watched it either: human_review says what is on record.'},
