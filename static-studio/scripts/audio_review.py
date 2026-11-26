@@ -26,6 +26,7 @@ CLEAR_RUN_S = 0.4            # a stretch with no voice this long lets what is un
 EARLY_STOP_S = 0.2           # a placement this much shorter than its file was cut before the file ended
 TAIL_FADED_DB = 12.0         # a tail this far under the sound's own level has been faded out
 NO_BED_S = 45.0              # a stretch this long with no music or ambience is listed (a fact, not a fault)
+EXPORT_DIFFERS_DB = 6.0      # the finished file plays a sound this far from what the project's files ask: look there
 
 
 def _np():
@@ -51,13 +52,36 @@ def levels(y):
     return 10 * np.log10((y[:n * hop].reshape(n, hop) ** 2).mean(1) + 1e-14)
 
 
-def voice_profile(narration_file):
-    """The narration's level frames, where it is speaking, and the level it speaks at."""
+def clip_gain_db(volume):
+    """A clip's volume in the project as dB (1 or nothing recorded: 0)."""
+    import math
+    try:
+        v = float(volume)
+    except (TypeError, ValueError):
+        return 0.0
+    return 0.0 if v <= 0 or abs(v - 1.0) < 1e-3 else 20 * math.log10(v)
+
+
+def voice_profile(narration_file, volume=None):
+    """The narration's level frames, where it is speaking, and the level it speaks at (the edit's narration plays from
+    0, so its clock is the film's)."""
     np = _np()
-    lv = levels(load_mono(narration_file))
+    lv = levels(load_mono(narration_file)) + clip_gain_db(volume)
     ref = float(np.percentile(lv, 90))
     active = lv > ref - ACTIVE_UNDER_DB
     return {'levels': lv, 'active': active, 'speech_db': round(float(np.median(lv[active])) if active.any() else ref, 1),
+            'duration_s': round(len(lv) * HOP_S, 2)}
+
+
+def export_profile(export_file, voice):
+    """A finished file (the export, or its master) on the same frames: its level through the film and the level it
+    plays the voice at, read where the narration speaks. None when the file has no sound to read."""
+    np = _np()
+    lv = levels(load_mono(export_file))
+    m = min(len(lv), len(voice['active']))
+    if m < 20 or not voice['active'][:m].any():
+        return None
+    return {'levels': lv, 'speech_db': round(float(np.median(lv[:m][voice['active'][:m]])), 1),
             'duration_s': round(len(lv) * HOP_S, 2)}
 
 
@@ -73,17 +97,22 @@ def _runs(mask):
     return out
 
 
-def placement_facts(track, voice):
+def placement_facts(track, voice, export=None):
     """One placed sound against the voice where it plays: how far under the voice it sits, how long it is heard with
-    no voice over it, and whether it was cut off before its file ended, still sounding, where nothing covers the cut."""
+    no voice over it, and whether it was cut off before its file ended, still sounding, where nothing covers the cut.
+    The level is the file's own with the clip's volume in the project (the house way bakes the level into the file and
+    places it at volume 1). export (export_profile): the same distance measured in the finished file, where no voice
+    covers the sound: what the audience gets, beside what the project asks for."""
     np = _np()
     a, b = float(track['start_s']), float(track['end_s'])
     out = {'kind': track.get('kind'), 'file': Path(str(track.get('file'))).name, 'start_s': round(a, 2), 'end_s': round(b, 2)}
     y = load_mono(track['file'])
-    if not len(y) or b <= a:
+    src0 = max(0.0, float(track.get('source_start_s') or 0.0))
+    if not len(y) or b <= a or src0 * SR >= len(y):
         return {**out, 'unreadable': True}
     file_s = len(y) / SR
-    lv = levels(y[:int((b - a) * SR)])
+    gain = clip_gain_db(track.get('volume'))
+    lv = levels(y[int(src0 * SR):int((src0 + b - a) * SR)]) + gain
     sounding = lv > max(float(lv.max()) - SOUNDING_UNDER_DB, -90.0)
     level = float(np.median(lv[sounding])) if sounding.any() else float(lv.max())
     i0 = int(round(a / HOP_S))
@@ -94,7 +123,7 @@ def placement_facts(track, voice):
     voice_here = float(np.median(vl[seg])) if len(seg) and seg.any() else None
     clear = [(s, e) for s, e in _runs(sounding & ~va) if (e - s) * HOP_S >= CLEAR_RUN_S]
     longest = max(clear, key=lambda r: r[1] - r[0]) if clear else None
-    early = file_s - (b - a)
+    early = file_s - src0 - (b - a)
     tail = float(np.median(lv[-2:]))
     j0, j1 = int(round((b - 0.15) / HOP_S)), int(round((b + 0.4) / HOP_S))
     out.update({
@@ -107,6 +136,19 @@ def placement_facts(track, voice):
         'stops_early_s': round(early, 2) if early > EARLY_STOP_S else 0.0,
         'cut_while_sounding': bool(early > EARLY_STOP_S and level - tail < TAIL_FADED_DB),
         'end_between_lines': not bool(voice['active'][max(0, j0):j1].any())})
+    if abs(gain) > 0.05:
+        out['clip_volume'] = round(float(track['volume']), 3)        # a level set in the project, not in the file
+    if export and clear:
+        # The same frames in both: the sound's own file and the finished file, where no voice covers it (two frames in
+        # from each side, so the voice's tail and onset are not read as music). Other sounds playing there too raise
+        # the finished file's figure a little; a large difference is a level the project's read-back does not carry.
+        spans = [(s + 2, e - 2) for s, e in clear if e - s > 6]
+        own = np.concatenate([lv[s:e] for s, e in spans]) if spans else np.zeros(0)
+        got = np.concatenate([export['levels'][i0 + s:i0 + e] for s, e in spans]) if spans else np.zeros(0)
+        if len(own) >= 4 and len(got) == len(own):
+            under, asked = export['speech_db'] - float(np.median(got)), voice['speech_db'] - float(np.median(own))
+            out['in_export'] = {'under_voice_db': round(under, 1), 'project_asks_db': round(asked, 1),
+                                'differs_db': round(under - asked, 1)}
     return out
 
 
@@ -171,6 +213,18 @@ def mmss(t):
     return f'{int(t // 60):02d}:{int(t % 60):02d}'
 
 
+def under_voice(p):
+    """How far under the voice a placed sound plays: in the finished file when that was measured, else as the
+    project's files ask."""
+    return (p.get('in_export') or {}).get('under_voice_db', p['under_voice_db'])
+
+
+def under_voice_words(p):
+    x = p.get('in_export')
+    return (f'{x["under_voice_db"]:g} dB under the voice in the finished file' if x else
+            f'{p["under_voice_db"]:g} dB under the voice by the project\'s files')
+
+
 def _item(kind, a, b, total, question, measured, hear=''):
     a, b = max(0.0, a), min(total, b) if total else b
     return {'kind': kind, 'from_s': round(a, 1), 'to_s': round(b, 1), 'where': f'{mmss(a)}-{mmss(b)}',
@@ -206,18 +260,18 @@ def listening_items(facts, texts=None, key_lines=None, limit_names=5):
                                hear=str(texts.get(n['line'], ''))[:110]))
     beds = [p for p in facts.get('placements') or [] if p.get('kind') in ('music', 'ambience') and not p.get('unreadable')]
     if beds:
-        quiet = max(beds, key=lambda p: p['under_voice_db'])
-        loud = min(beds, key=lambda p: p['under_voice_db'])
+        quiet = max(beds, key=under_voice)
+        loud = min(beds, key=under_voice)
         c = quiet.get('longest_clear_s') or [quiet['start_s'], min(quiet['end_s'], quiet['start_s'] + 10)]
         items.append(_item('music', c[0] - 4, c[1] + 4, total,
                            'Can you hear the music here? Is it as present as you want it?',
-                           f'{quiet["file"]}: {quiet["under_voice_db"]:g} dB under the voice, '
+                           f'{quiet["file"]}: {under_voice_words(quiet)}, '
                            f'{quiet["in_the_clear_s"]:g} s with no voice over it (the quietest in the film)'))
-        if loud is not quiet and quiet['under_voice_db'] - loud['under_voice_db'] >= 3:
+        if loud is not quiet and under_voice(quiet) - under_voice(loud) >= 3:
             mid = (loud['start_s'] + loud['end_s']) / 2
             items.append(_item('music', mid - 7, mid + 7, total,
                                'Does the music get in the way of the words here?',
-                               f'{loud["file"]}: {loud["under_voice_db"]:g} dB under the voice (the least quiet in the film)'))
+                               f'{loud["file"]}: {under_voice_words(loud)} (the least quiet in the film)'))
     for p in [p for p in facts.get('placements') or [] if p.get('cut_while_sounding') and p.get('end_between_lines')][:3]:
         items.append(_item('sound stop', p['end_s'] - 5, p['end_s'] + 3, total,
                            f'Do you hear a sound cut off at {mmss(p["end_s"])}?',

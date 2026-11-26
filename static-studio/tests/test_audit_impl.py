@@ -7,7 +7,9 @@ import argparse
 import importlib.util
 import io
 import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -134,6 +136,16 @@ class ReleaseStateTests(base.ExportBindingTests):
         self.assertTrue(rel['warnings'][0].startswith('no person has listened'), rel['warnings'])
         self.assertIsNone(rel['release_record'])
         self.assertFalse(c.release_path(rd, 1).exists())
+        # the sound of this exact file is measured first (sound-review --file): a review of the raw export is not one
+        # of its master, and the listening sheet it writes is the one handed to the user with the film
+        self.assertEqual(self.release(out, record=False)['issues'],
+                         ['sound:not_reviewed:run_sound-review_--file_on_this_file_(it_writes_the_listening_sheet_too)'])
+        cli('sound-review', '--run', rd, '--video', 1, '--file', raw)
+        self.assertEqual(self.release(out, record=False)['issues'],
+                         ['sound:not_measured_in_this_file:run_sound-review_--file_on_it'])
+        heard = cli('sound-review', '--run', rd, '--video', 1, '--file', out)
+        self.assertEqual((heard['measured_in'], heard['sounds_placed'], heard['listening_items']), ('master.mp4', 0, 1))
+        self.assertTrue(c.listening_sheet_path(rd, 1).is_file())
         # every gate passed: asked without --record it writes nothing, with it the release is on record for this file
         dry = self.release(out, record=False)
         self.assertTrue(dry['ready'], dry['issues'])
@@ -299,6 +311,481 @@ class DecisionFlowTests(base.StaticStudioTests):
         self.assertFalse([x for x in res['issues'] if x.startswith('script_review_r2') and 'F1' in x], res['issues'])
         self.assertEqual(res['creative']['answers_needed'], {})
         self.assertTrue(any('decided by the user: F1' in w for w in res['warnings']), res['warnings'])
+
+
+class DefectTests(unittest.TestCase):
+    """Defects the audit confirmed in the code, each held by a test."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.core = load_core('static_studio_core_defects')
+
+    def stops(self, fn, *a, **k):
+        """What a command prints when it stops (exit 2)."""
+        with mock.patch('sys.stdout', new_callable=io.StringIO) as so:
+            with self.assertRaises(SystemExit) as ex:
+                fn(*a, **k)
+        self.assertEqual(ex.exception.code, 2)
+        return json.loads(so.getvalue())
+
+    def test_a_damaged_record_stops_the_command_and_is_named(self):
+        # read as "nothing recorded yet", a damaged manifest would re-send (and bill) every narration part, and a
+        # damaged lock or budget register would let a second paid job through
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            self.assertEqual(c.read_json(td / 'absent.json'), {})
+            (td / 'list.json').write_text('[1, 2]', encoding='utf-8')
+            self.assertEqual(c.read_json(td / 'list.json'), {})
+            (td / 'bom.json').write_bytes(b'\xef\xbb\xbf{"a": 1}')
+            self.assertEqual(c.read_json(td / 'bom.json'), {'a': 1})
+            for name, raw in (('cut.json', b'{"status": "partial", "finished_parts": ['), ('empty.json', b''),
+                              ('bytes.json', b'\xff\xfe\x00{')):
+                (td / name).write_bytes(raw)
+                out = self.stops(c.read_json, td / name)
+                self.assertIn('is not valid JSON', out['error'])
+                self.assertIn('Nothing was changed', out['error'])
+                self.assertEqual(out['details']['file'], str(td / name))
+            self.assertEqual(self.stops(c.read_json, td / 'absent.json', required=True)['error'], 'Cannot read JSON')
+            # through a command: a run whose state is half-written is not taken for "no run here"
+            save(td / 'run/state.json', {'schema': c.SCHEMA, 'run_id': 'r'})
+            (td / 'run/state.json').write_text('{"schema": ', encoding='utf-8')
+            self.assertIn('is not valid JSON', cli('status', '--run', td / 'run', '--look', expected=2)['error'])
+
+    def test_an_unreadable_ledger_row_stops_before_money_is_counted(self):
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            rd = Path(td)
+            c.ledger_add(rd, {'kind': 'tts', 'ok': True, 'budget': 'B1', 'phase': 'done', 'credits_billed': 100})
+            with c.ledger_path(rd).open('a', encoding='utf-8') as f:
+                f.write('\n')                                                 # a blank line is not a row
+            self.assertEqual(len(c.ledger_rows(rd)), 1)
+            self.assertEqual(c.budget_spent(rd, 'B1')[0], 100)
+            with c.ledger_path(rd).open('a', encoding='utf-8') as f:
+                f.write('{"kind": "tts", "budget": "B1", "phase": "pending", "max_cre\n')     # cut off while writing
+            out = self.stops(c.ledger_rows, rd)
+            self.assertIn('paid ledger has a row that cannot be read', out['error'])
+            self.assertEqual((out['details']['line'], out['details']['text'][:14]), (3, '{"kind": "tts"'))
+            self.stops(c.budget_spent, rd, 'B1')                              # never counted as unspent
+
+    def test_a_reference_transcript_is_counted_and_the_narrators_norm_is_found(self):
+        c = self.core
+        with tempfile.TemporaryDirectory() as td:
+            rd = Path(td)
+            save(rd / '10-media/V001/transcript.json', {'segments': [{'text': 'one two three'}, {'text': 'four five'}, 'x']})
+            self.assertEqual(c.transcript_word_count(rd, 'V001'), 5)
+            self.assertEqual(c.transcript_word_count(rd, 'V002'), 0)
+            # the count is what the analysis sizing uses when the measurements are not there yet (it raised before)
+            cfg = {'words_per_image': 500, 'inspect_candidate_weight': 1, 'per_reference_overhead': 2}
+            self.assertEqual(c.ref_work(rd, 'V001', {'duration_s': 120, 'has_audio': True}, cfg)['transcript_words'], 5)
+            self.assertTrue(callable(c.transcript_words))                     # the word list keeps its own name
+            # the narrator's measured pace is read from the voice lock, where it is kept
+            save(rd / '40-plans/video-01/length-lock.json', {'pace_wpm': 150, 'per_ref_wpm': {'V001': 148, 'V002': 0}})
+            self.assertEqual(c.pace_context(rd, 1), {'target_wpm': 150, 'reference_wpm': [148], 'voice_wpm': None})
+            voice = {'voice_id': 'TESTVOICE', 'model_id': 'eleven_v4', 'settings': {}}
+            save(c.voice_lock_path(rd, 1), {**voice, 'measured': {**voice, 'wpm': 141.5, 'per_line_overhead_s': 0.42,
+                                                                   'words': 420}})
+            self.assertEqual(c.pace_context(rd, 1)['voice_wpm'], 141.5)
+
+
+@fixture_only
+class PlanningRules5Tests(base.StaticStudioTests):
+    """Planning rules 5 (2026-11-26): the subject is chosen with a look at what already exists and a working promise;
+    a script that grew past its first whole draft says what the added lines carry; a key line resting on a claim the
+    research did not confirm says how its words carry that; the opening is shown beside the references' hooks. Each
+    asks for presence or an accountable answer. None scores anything."""
+
+    NEED_COVERAGE = ('subject_selection_needs_coverage:what_already_exists_on_this_subject_where_you_looked_and_what_'
+                     'this_film_adds')
+    NEED_PROMISE = 'subject_selection_needs_its_promise:working_title_thumbnail_idea_and_what_the_viewer_expects'
+
+    def test_the_subject_is_chosen_with_an_outward_look_and_a_working_promise(self):
+        c = self.load_core()
+        ok = {'looked': [{'where': 'YouTube search', 'for': 'the supply order'}],
+              'exists': [{'what': 'a battle overview', 'by': 'a history channel', 'how_it_tells_it': 'hour by hour with maps'}],
+              'this_film_adds': 'the order itself as the story, read from the ledgers'}
+        self.assertEqual(c.coverage_issues(None), [self.NEED_COVERAGE])
+        self.assertEqual(c.coverage_issues(ok), [])
+        # nothing found is an answer, said in a sentence; a count of what exists decides nothing
+        self.assertEqual(c.coverage_issues({**ok, 'exists': [], 'none_found':
+                                            'two searches and one archive list show no film about this order'}), [])
+        self.assertEqual(c.coverage_issues({**ok, 'exists': ok['exists'] * 40}), [])
+        self.assertEqual(c.coverage_issues({**ok, 'exists': []}), [
+            'subject_selection_coverage_needs_what_exists_or_why_nothing_was_found:exists[{what,by,how_it_tells_it}]_or_none_found'])
+        self.assertEqual(c.coverage_issues({**ok, 'looked': [{'where': 'YouTube'}]}),
+                         ['subject_selection_coverage_needs_where_it_looked:looked[{where,for}]'])
+        self.assertEqual(c.coverage_issues({**ok, 'exists': [{'what': 'a film', 'how_it_tells_it': 'well'}]}),
+                         ['subject_selection_coverage_entry_1_needs_what_it_is_and_how_it_tells_it'])
+        self.assertEqual(c.coverage_issues({**ok, 'this_film_adds': 'more depth'}),
+                         ['subject_selection_coverage_missing_what_this_film_adds'])
+        self.assertEqual(c.selection_promise_issues(None), [self.NEED_PROMISE])
+        self.assertEqual(c.selection_promise_issues({'working_title': 'Order', 'thumbnail_idea': 'a clerk',
+                                                     'viewer_expects': 'a good story'}),
+                         ['subject_selection_promise_missing_working_title', 'subject_selection_promise_missing_thumbnail_idea',
+                          'subject_selection_promise_missing_what_the_viewer_expects'])
+        # through the lock: a direction without them is not complete; with them it is locked under rules 5
+        vd = self.write_plan(lock=False)
+        doc = self.direction_doc()
+        sel = doc['subject']['selection']
+        cov, pr = sel.pop('coverage'), sel.pop('promise')
+        save(vd / 'direction.json', doc)
+        self.review('treatment', [{'id': 'F1', 'severity': 'minor', 'treatment': 'A', 'problem': 'the quiet middle may wear thin',
+                                   'suggestion': 'vary it'}],
+                    {'F1': {'action': 'kept', 'note': 'the quiet middle is meant to rest the viewer'}})
+        res = cli('direction-lock', '--run', self.run, '--video', 1, expected=2)
+        self.assertEqual([x for x in res['details'] if x.startswith('subject_selection_')], [self.NEED_COVERAGE, self.NEED_PROMISE])
+        self.assertFalse((vd / 'direction-lock.json').exists())
+        self.assertEqual(c.selection_promise(doc), {})
+        self.assertEqual(c.selection_promise(self.direction_doc())['working_title'], pr['working_title'])
+        # an older direction hears them as advice; one whose subject was chosen again after they existed follows them
+        rd = self.home / 'older'
+        od = rd / '40-plans/video-01'
+        script_side = ['script_grew_17pct_since_its_first_complete_draft:say_what_the_added_lines_carry:plan-check_--grew-for',
+                       'key_lines_on_unconfirmed_claims_need_their_wording_answered:L045:claim-wording.json']
+        both = [self.NEED_COVERAGE, self.NEED_PROMISE] + script_side
+
+        def left(lock):
+            save(od / 'direction-lock.json', lock)
+            save(od / 'direction.json', {'decision': {'treatment': 'T1'}, 'subject': {'selection': {'candidate': 'T1'}}})
+            issues, warnings = list(both) + ['editorial_review_missing'], []
+            c.older_plan_advisory(rd, 1, issues, warnings)
+            self.assertEqual(len(issues) + len(warnings), 5)
+            return issues
+        self.assertEqual(left({'planning_rules': 4}), ['editorial_review_missing'])
+        self.assertEqual(left({'planning_rules': 5}), both + ['editorial_review_missing'])
+        self.assertEqual(left({'planning_rules': 4, 'planning_migration': {
+            'to': 5, 'sections': ['subject.selection.candidate'], 'artifacts': []}}), both[:2] + ['editorial_review_missing'])
+        self.assertEqual(left({'planning_rules': 4, 'planning_migration': {
+            'to': 5, 'sections': [], 'artifacts': ['script']}}), script_side + ['editorial_review_missing'])
+        self.assertEqual(left({'planning_rules': 4, 'planning_migration': {
+            'to': 4, 'sections': ['subject.selection.candidate'], 'artifacts': ['script']}}), ['editorial_review_missing'])
+
+    def test_a_script_is_held_to_its_own_first_whole_draft_not_to_the_length(self):
+        vd = self.write_plan()
+        res = cli('plan-check', '--run', self.run, '--video', 1)
+        self.assertTrue(res['ready'], res['issues'])
+        self.assertEqual(json.loads((vd / 'direction-lock.json').read_text(encoding='utf-8'))['planning_rules'], 5)
+        size = json.loads((vd / 'script-size.json').read_text(encoding='utf-8'))
+        self.assertEqual((size['first_complete_draft']['words'], size['first_complete_draft']['locked_s']), (1404, 600))
+        self.assertEqual((res['script_size']['now_words'], res['script_size']['grew_pct']), (1404, 0.0))
+        self.assertIsNone(res['length_conflict'])
+
+        def resized(n_lines):
+            """The script with n_lines lines (the last beat takes what is added or left)."""
+            script = json.loads((vd / 'script.json').read_text(encoding='utf-8'))
+            one = script['lines'][0]['text']
+            script['lines'] = [{'id': f'L{i:03}', 'text': one, 'pause_after_s': 0} for i in range(1, n_lines + 1)]
+            save(vd / 'script.json', script)
+            bm = json.loads((vd / 'beat-map.json').read_text(encoding='utf-8'))
+            bm['beats'][-1]['line_end'] = n_lines
+            save(vd / 'beat-map.json', bm)
+            return cli('plan-check', '--run', self.run, '--video', 1, expected=None)
+        # 61 lines: 17 % over the first whole draft. What the added lines carry is asked; "to reach the length" is
+        # refused as an answer before anything is read
+        res = resized(61)
+        grew = 'script_grew_17pct_since_its_first_complete_draft:say_what_the_added_lines_carry:plan-check_--grew-for'
+        self.assertIn(grew, res['issues'])
+        self.assertIn('user\'s length decision', cli('plan-check', '--run', self.run, '--video', 1, '--grew-for',
+                                                     'to fill', expected=2)['error'])
+        res = cli('plan-check', '--run', self.run, '--video', 1, '--grew-for',
+                  'the second depot move could not be followed without the two steps added before it', expected=None)
+        self.assertFalse([x for x in res['issues'] if x.startswith('script_grew_')], res['issues'])
+        self.assertEqual(res['script_size']['growth_answered_up_to_words'], 61 * 27)
+        # the first draft stays the measure, and growing well past the answered size asks again
+        self.assertTrue(any(x.startswith('script_grew_25pct_') for x in resized(65)['issues']))
+        self.assertEqual(json.loads((vd / 'script-size.json').read_text(encoding='utf-8'))['first_complete_draft']['words'], 1404)
+        # a script far under the lock: its own size goes to the user before anything is added
+        short = resized(40)
+        self.assertIn('script_forecast_misses_locked_length_by_over_8pct', short['issues'])
+        lc = short['length_conflict']
+        self.assertEqual((lc['locked_s'], lc['difference_s'] < 0), (600, True))
+        self.assertTrue(lc['what_to_do_first'].startswith('The script as written is the story\'s own size. Take that size '
+                                                          'to the user before adding anything'), lc)
+        self.assertIn('never to reach a length', lc['what_to_do_first'])
+        long_ = resized(70)['length_conflict']
+        self.assertTrue(long_['what_to_do_first'].startswith('The script runs longer than the lock. Cut what a listener '
+                                                             'would drift through first'), long_)
+
+    def test_a_key_line_on_an_unconfirmed_claim_says_how_its_words_carry_it(self):
+        c = self.load_core()
+        vd = self.write_plan()
+        self.assertTrue(cli('plan-check', '--run', self.run, '--video', 1)['ready'])
+        self.assertFalse((vd / 'claim-wording.json').exists())                 # nothing to answer: no file is made
+        # the "likely" claim is tied to a line of the key moment (the last beat, L041-L052)
+        cp = self.run / '30-research/video-01/claims.json'
+        claims = json.loads(cp.read_text(encoding='utf-8'))
+        claims['claims'][1]['line_refs'] = ['L045']
+        save(cp, claims)
+        res = cli('plan-check', '--run', self.run, '--video', 1, expected=2)
+        need = 'key_lines_on_unconfirmed_claims_need_their_wording_answered:L045:claim-wording.json'
+        self.assertIn(need, res['issues'])
+        self.assertEqual(res['creative']['claim_wording']['why'], {'L045': 'not answered'})
+        wp = vd / 'claim-wording.json'
+        doc = json.loads(wp.read_text(encoding='utf-8'))
+        entry = doc['answers']['L045']
+        self.assertEqual((entry['beat'], entry['claims'], entry['how']),
+                         ('B05', [{'id': 'C02', 'confidence': 'likely', 'note': ''}], ''))
+        self.assertIn('key_moment:B05', entry['carries'])
+        self.assertIn('ending', entry['carries'])
+
+        def answered(**a):
+            d = json.loads(wp.read_text(encoding='utf-8'))
+            d['answers']['L045'].update({'how': '', 'words': '', 'in_line': '', 'why': ''}, **a)
+            save(wp, d)
+            return c.claim_wording_facts(self.run, 1)['why'].get('L045')
+        self.assertEqual(answered(how='plain', why='it is fine'), '"plain" needs why it is safe to say without a qualifier')
+        self.assertEqual(answered(how='softened'), '"how" must be hedged or plain')
+        # a quoted hedge has to be in the line as written: no word list decides what counts as a hedge
+        self.assertEqual(answered(how='hedged', words='the records suggest'), 'the words quoted are not in L045 as it is written')
+        self.assertIsNone(answered(how='hedged', words='careful planning and real consequences'))
+        self.assertIsNone(answered(how='hedged', words='Careful  planning', in_line='L044'))     # an earlier line of its beat
+        self.assertEqual(answered(how='hedged', words='careful planning', in_line='L010'),
+                         '"in_line" must be this line or an earlier line of its beat (L041-L045)')
+        self.assertIsNone(answered(how='plain', why='the line states only the part the survey sheet itself shows'))
+        self.assertNotIn(need, cli('plan-check', '--run', self.run, '--video', 1, expected=None)['issues'])
+        # the line is reworded: the answer was for other words, so it is kept as superseded and asked again
+        script = json.loads((vd / 'script.json').read_text(encoding='utf-8'))
+        script['lines'][44]['text'] = 'The surviving sheet suggests the valley was drawn a mile too far north of the real one.'
+        save(vd / 'script.json', script)
+        self.assertEqual(c.claim_wording_facts(self.run, 1)['why'],
+                         {'L045': 'the line was reworded since this answer: answer for the words it has now'})
+        self.assertIn(need, cli('plan-check', '--run', self.run, '--video', 1, expected=2)['issues'])
+        doc = json.loads(wp.read_text(encoding='utf-8'))
+        self.assertEqual((doc['answers']['L045']['how'], doc['superseded'][0]['line'], doc['superseded'][0]['how']),
+                         ('', 'L045', 'plain'))
+        self.assertIsNone(answered(how='hedged', words='the surviving sheet suggests'))
+        # a claim that gets its second source needs no answer at all
+        claims['claims'][1]['confidence'] = 'confirmed'
+        save(cp, claims)
+        self.assertEqual(c.claim_wording_facts(self.run, 1)['lines'], 0)
+
+    def test_the_opening_is_shown_beside_the_references_hooks(self):
+        c = self.load_core()
+        vd = self.write_plan(review_script=False)
+        lines = json.loads((vd / 'script.json').read_text(encoding='utf-8'))['lines']
+        clock = c.line_clock(lines, 145)
+        self.assertEqual(clock['L001'], (0.0, 11.2))                           # 27 words at 145 wpm
+        self.assertEqual(clock['L002'][0], 11.6)                               # and the voice's gap after the line
+        self.assertEqual(c.opening_facts(self.run, 1, lines, 145), ({}, None))  # no reader yet: nothing is said
+
+        def read_by_a_reader(promise, expected=0):
+            packet = cli('review-packet', '--run', self.run, '--video', 1, '--kind', 'script')
+            self.assertIn('"clear_at"', Path(packet['packet']).read_text(encoding='utf-8'))
+            save(Path(packet['findings_file']), {'reviewer': 'test reader', 'findings': [], 'promise': promise,
+                                                 'developments': self.clear_development('script')})
+            return cli('review-record', '--run', self.run, '--video', 1, '--kind', 'script', expected=expected)
+        told = {'promised': 'to understand the decision and what it cost', 'first_delivered': 'L006', 'waiting': []}
+        bad = read_by_a_reader({**told, 'clear_at': 'near the start'}, expected=2)
+        self.assertIn('promise: "clear_at" must be a line of the script (L005) or "never"', bad['details'])
+        read_by_a_reader({**told, 'clear_at': 'L004'})
+        facts, said = c.opening_facts(self.run, 1, lines, 145)
+        self.assertEqual((facts['clear_at_line'], facts['clear_at_s'], facts['first_delivered_line'], facts['first_delivered_s']),
+                         ('L004', 45.9, 'L006', 57.9))
+        self.assertEqual((facts['working_title'], facts['reference_hooks_end_s'], said),
+                         ('The Order That Won the Battle', {}, None))           # no hook measured: nothing to stand beside
+        # the references this direction cites made their promise by 0:20 and 0:35: a look is asked, never a change
+        for ref, end in (('V001', 20), ('V002', 35)):
+            p = self.run / f'20-analysis/cards/{ref}.json'
+            card = json.loads(p.read_text(encoding='utf-8'))
+            card['hook'] = {'end_s': end}
+            save(p, card)
+        facts, said = c.opening_facts(self.run, 1, lines, 145)
+        self.assertEqual(facts['reference_hooks_end_s'], {'V001': 20.0, 'V002': 35.0})
+        self.assertTrue(said.startswith('opening: the latest reader knew what the video offers by L004, about 00:46 in'), said)
+        self.assertIn('V001 00:20, V002 00:35', said)
+        res = cli('plan-check', '--run', self.run, '--video', 1, expected=None)
+        self.assertEqual(res['creative']['opening']['clear_at_line'], 'L004')
+        self.assertTrue(any(w.startswith('opening: the latest reader knew') for w in res['warnings']), res['warnings'])
+        self.assertFalse([x for x in res['issues'] if 'opening' in x], res['issues'])
+        # a reader who was clear inside the references' range: the facts stay, nothing is said
+        card['hook'] = {'end_s': 50}
+        save(p, card)
+        self.assertIsNone(c.opening_facts(self.run, 1, lines, 145)[1])
+
+
+class SoundReviewTests(unittest.TestCase):
+    """The sound of a cut, measured: each piece of music against the voice where it plays, by the project's own files
+    and in the finished file, a sound cut off between two lines, the air at a turn, a silence nobody listened to, a
+    name heard differently; and the listening sheet for a person (2026-11-26: a finished film had been checked by
+    records and one whole-film figure, and nobody had measured or been asked to listen to any of this)."""
+
+    # six lines of "voice": a tone that stops between lines (seconds on the edit's clock)
+    T = [(0.5, 5.5), (6.0, 11.0), (11.5, 16.5), (19.5, 24.5), (27.5, 33.5), (35.5, 39.5)]
+    WORDS = [10, 10, 10, 10, 24, 9]
+
+    @classmethod
+    def setUpClass(cls):
+        cls.core = load_core('static_studio_core_sound')
+
+    def ff(self, *args):
+        subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', *map(str, args)], check=True)
+
+    def tone(self, out, hz, seconds, volume='1'):
+        self.ff('-f', 'lavfi', '-i', f'sine=frequency={hz}:sample_rate=44100:duration={seconds}', '-af',
+                f"volume='{volume}':eval=frame", '-ac', 1, out)
+        return out
+
+    def mixed(self, name, bed_b_gain=1.0):
+        """What an export would play: the voice, both beds and the effect where the project places them."""
+        out = self.td / name
+        self.ff('-i', self.narr, '-i', self.bed_a, '-i', self.bed_b, '-i', self.hit, '-filter_complex',
+                f'[2]atrim=0:12,volume={bed_b_gain},adelay=22000[b];[3]adelay=17000[h];'
+                '[0][1][b][h]amix=inputs=4:normalize=0:duration=first', '-ac', 1, out)
+        return out
+
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.td = Path(self._t.name)
+        rd = self.rd = self.td / 'run'
+        c = self.core
+        ed, vd, au = rd / '70-edit/video-01', rd / '40-plans/video-01', rd / '50-audio/video-01'
+        for d in (ed, vd, au):
+            d.mkdir(parents=True)
+        save(rd / 'state.json', {'schema': c.SCHEMA, 'run_id': 'r'})
+        speaking = '+'.join(f'between(t,{a},{b})' for a, b in self.T)
+        self.narr = self.tone(au / 'narration-edit.wav', 220, 40, f'if({speaking},1,0)')
+        self.bed_a = self.tone(ed / 'bed-a.wav', 440, 12, '0.1')          # 20 dB under the voice, its whole file placed
+        self.bed_b = self.tone(ed / 'bed-b.wav', 330, 30, '0.316')        # 10 dB under, cut off 18 s before its end
+        self.hit = self.tone(ed / 'hit.wav', 900, 0.5, '0.5')
+        self.tracks = [
+            {'kind': 'narration', 'file': str(self.narr), 'start_s': 0, 'end_s': 40, 'source_start_s': 0,
+             'source_end_s': 40, 'speed': 1, 'volume': 1},
+            {'kind': 'music', 'file': str(self.bed_a), 'start_s': 0, 'end_s': 12, 'beats': ['B01'], 'volume': 1},
+            {'kind': 'music', 'file': str(self.bed_b), 'start_s': 22, 'end_s': 34, 'beats': ['B03'], 'volume': 1},
+            {'kind': 'sfx', 'file': str(self.hit), 'start_s': 17.0, 'end_s': 17.5, 'beats': ['B02'], 'volume': 1}]
+        save(ed / 'timeline.json', {'audio_tracks': self.tracks})
+        save(ed / 'edit-plan.json', {'narration_for_edit': {'file': str(self.narr)}, 'holds': []})
+        save(vd / 'script.json', {'lines': [
+            {'id': f'L00{i}', 'text': f'Line {i} of the film says something plain about Qin and the river.'}
+            for i in range(1, 7)]})
+        save(vd / 'beat-map.json', {'beats': [
+            {'id': 'B01', 'line_start': 1, 'line_end': 2, 'chapter_start': True},
+            {'id': 'B02', 'line_start': 3, 'line_end': 4, 'chapter_start': True},
+            {'id': 'B03', 'line_start': 5, 'line_end': 6, 'key_moment': 'the letter is opened'}]})
+        gaps = [(b, self.T[i + 1][0]) for i, (a, b) in enumerate(self.T[:-1])] + [(39.5, 40.0)]
+        save(au / 'line-times.json', {
+            'lines': [{'id': f'L00{i + 1}', 'start_s': a, 'end_s': b, 'words': self.WORDS[i], 'gap_span_s': list(gaps[i])}
+                      for i, (a, b) in enumerate(self.T)],
+            'pronunciation_heard': [{'term': 'Qin', 'line': 'L002', 'heard_as_written': False, 'nearest_heard': 'kin'},
+                                    {'term': 'river', 'line': 'L002', 'heard_as_written': True}]})
+        save(vd / 'pronunciation.json', {'terms': [{'term': 'Qin', 'say': 'chin'}]})
+        save(vd / 'holds.json', {'decisions': {
+            'L003': {'line': 'L003', 'total_s': 3.0, 'no_hold': False, 'listened': None},
+            'L004': {'line': 'L004', 'total_s': 3.0, 'no_hold': False, 'listened': 'I heard it and it works'},
+            'L005': {'line': 'L005', 'total_s': None, 'no_hold': True, 'listened': None}}})
+
+    def tearDown(self):
+        self._t.cleanup()
+
+    def placed(self, res_or_rec, name):
+        return next(p for p in res_or_rec['placements'] if p['file'] == name)
+
+    def test_each_sound_is_measured_against_the_voice_where_it_plays(self):
+        c, rd = self.core, self.rd
+        res = cli('sound-review', '--run', rd, '--video', 1)
+        rec = json.loads(c.sound_review_path(rd, 1).read_text(encoding='utf-8'))
+        a, b = self.placed(rec, 'bed-a.wav'), self.placed(rec, 'bed-b.wav')
+        self.assertLess(abs(a['under_voice_db'] - 20), 1.0, a)
+        self.assertLess(abs(b['under_voice_db'] - 10), 1.0, b)
+        self.assertEqual((a['stops_early_s'], a['cut_while_sounding']), (0.0, False))
+        self.assertEqual((b['stops_early_s'], b['cut_while_sounding'], b['end_between_lines']), (18.0, True, True))
+        self.assertLess(abs(b['in_the_clear_s'] - 3.5), 0.3, b)                       # 24.5-27.5 and 33.5-34.0
+        self.assertNotIn('in_export', b)
+        self.assertLess(abs(res['music_under_voice_db']['quietest'] - 20), 1.0)
+        self.assertLess(abs(res['music_under_voice_db']['least_quiet'] - 10), 1.0)
+        self.assertTrue(any('bed-b.wav stops at 00:34' in x for x in res['look_at']), res['look_at'])
+        self.assertTrue(res['measured_in'].startswith('the project\'s own files only'), res['measured_in'])
+        # the turns: the chapter's first line beside the film's ordinary gap; the key moment is listed too
+        turns = {t['next']: t for t in res['turns']}
+        self.assertEqual((turns['L003']['why'], turns['L003']['gap_s']), ('chapter', 0.5))
+        self.assertEqual((turns['L005']['why'], turns['L005']['gap_s']), ('key moment', 3.0))
+        self.assertEqual(res['names_heard_differently'], ['Qin'])
+        self.assertEqual(res['holds_not_listened'], 1)
+        self.assertEqual(rec['holds_not_listened'], [{'line': 'L003', 'from_s': 16.5, 'to_s': 19.5, 'total_s': 3.0}])
+        self.assertEqual(rec['pace']['fastest'][0]['line'], 'L005')
+        self.assertNotIn('line_marks', rec)
+        # the listening sheet: a short list of places to listen, each with one question and an empty answer
+        kinds = [i['kind'] for i in rec['listening_items']]
+        for k in ('voice', 'key moment', 'name', 'music', 'sound stop', 'turn', 'silence', 'pace'):
+            self.assertIn(k, kinds)
+        self.assertEqual(kinds.count('music'), 2)
+        self.assertEqual([i['id'] for i in rec['listening_items']], [f'H{k}' for k in range(1, len(kinds) + 1)])
+        sheet = c.listening_sheet_path(rd, 1)
+        text = sheet.read_text(encoding='utf-8')
+        self.assertIn('| H1 | 00:00-00:25 | voice |', text)
+        self.assertIn('Is "Qin" said the way you want?', text)
+        self.assertIn('planned as "chin"; the transcript heard "kin"', text)
+        filled = json.loads(sheet.with_suffix('.json').read_text(encoding='utf-8'))
+        self.assertEqual({i['answer'] for i in filled['items']}, {''})
+        # what a reviewer who cannot hear is given: times, kinds and levels, no file names, no purposes
+        rows = '\n'.join(c.sound_rows(rec))
+        self.assertRegex(rows, r'- 00:00-00:12: music, (19|20|21)(\.\d)? dB under the voice')
+        self.assertIn('- sound effects at: 00:17', rows)
+        self.assertIn('- a sound stops at 00:34, cut before its end, between two lines', rows)
+        self.assertNotIn('bed-', rows)
+        self.assertNotIn('.wav', rows)
+
+    def test_the_finished_file_is_measured_and_a_review_answers_for_its_build_and_its_file(self):
+        c, rd = self.core, self.rd
+        ok = self.mixed('export.wav')
+        self.assertEqual(c.sound_review_state(rd, 1)[:12], 'not_reviewed')
+        res = cli('sound-review', '--run', rd, '--video', 1, '--file', ok)
+        rec = json.loads(c.sound_review_path(rd, 1).read_text(encoding='utf-8'))
+        for name, want in (('bed-a.wav', 20), ('bed-b.wav', 10)):
+            x = self.placed(rec, name)['in_export']
+            self.assertLess(abs(x['under_voice_db'] - want), 1.5, x)
+            self.assertLess(abs(x['differs_db']), 1.5, x)
+        self.assertEqual(res['measured_in'], 'export.wav')
+        self.assertFalse([x for x in res['look_at'] if 'export.wav plays it' in x], res['look_at'])
+        self.assertIn('in the finished file', '\n'.join(i['measured'] for i in rec['listening_items']))
+        sha = c.file_sha256(ok)
+        self.assertEqual(rec['export']['sha256'], sha)
+        self.assertIsNone(c.sound_review_state(rd, 1))
+        self.assertIsNone(c.sound_review_state(rd, 1, sha))
+        # another file of the same build has not been measured
+        loud = self.mixed('louder.wav', bed_b_gain=4.0)
+        self.assertEqual(c.sound_review_state(rd, 1, c.file_sha256(loud)), 'not_measured_in_this_file:run_sound-review_--file_on_it')
+        # a file that plays a bed 12 dB louder than the project's files ask: said as a place to look, with both figures
+        res = cli('sound-review', '--run', rd, '--video', 1, '--file', loud)
+        x = self.placed(json.loads(c.sound_review_path(rd, 1).read_text(encoding='utf-8')), 'bed-b.wav')['in_export']
+        self.assertLess(abs(x['differs_db'] + 12), 2.0, x)
+        self.assertTrue(any('bed-b.wav' in s and 'louder.wav plays it' in s for s in res['look_at']), res['look_at'])
+        # a sound moved in the project: the review answers for an earlier build
+        self.tracks[2]['start_s'], self.tracks[2]['end_s'] = 23, 35
+        save(rd / '70-edit/video-01/timeline.json', {'audio_tracks': self.tracks})
+        self.assertEqual(c.sound_review_state(rd, 1)[:36], 'reviewed_for_an_earlier_build_of_the')
+
+    def test_a_finished_run_is_only_read_with_out(self):
+        rd = self.rd
+        before = {p: (p.stat().st_size, p.stat().st_mtime_ns) for p in rd.rglob('*') if p.is_file()}
+        out = self.td / 'elsewhere'
+        res = cli('sound-review', '--run', rd, '--video', 1, '--out', out)
+        self.assertEqual({p: (p.stat().st_size, p.stat().st_mtime_ns) for p in rd.rglob('*') if p.is_file()}, before)
+        self.assertTrue((out / 'sound-review.json').is_file())
+        self.assertTrue((out / 'listening-sheet.md').is_file())
+        self.assertTrue((out / 'listening-sheet.json').is_file())
+        self.assertEqual(Path(res['listening_sheet']).parent, out.resolve())
+        # no narration to measure against: said, nothing written
+        (rd / '50-audio/video-01/narration-edit.wav').unlink()
+        bad = cli('sound-review', '--run', rd, '--video', 1, '--out', self.td / 'none', expected=2)
+        self.assertIn('No narration of the edit', bad['error'])
+        self.assertFalse((self.td / 'none').exists())
+
+    def test_long_stretches_without_music_and_a_clip_volume_are_facts(self):
+        ar = self.core._audio_review()
+        beds = ar.bed_stretches([{'kind': 'music', 'start_s': 10, 'end_s': 40}, {'kind': 'ambience', 'start_s': 40.2, 'end_s': 60},
+                                 {'kind': 'sfx', 'start_s': 70, 'end_s': 71}, {'kind': 'music', 'start_s': 200, 'end_s': 230}], 300)
+        self.assertEqual(beds['plays'], [[10, 60], [200, 230]])
+        self.assertEqual(beds['none_for_long'], [[60, 200], [230, 300]])
+        self.assertEqual(beds['share_of_runtime'], 0.27)
+        # a level set in the project instead of the file is carried into the figure and named
+        voice = ar.voice_profile(self.narr)
+        half = ar.placement_facts({**self.tracks[1], 'volume': 0.5}, voice)
+        self.assertEqual(half['clip_volume'], 0.5)
+        self.assertLess(abs(half['under_voice_db'] - 26), 1.0, half)
+        # a placement that starts inside its file is read from there
+        late = ar.placement_facts({**self.tracks[2], 'source_start_s': 18.0}, voice)
+        self.assertEqual(late['stops_early_s'], 0.0)
 
 
 if __name__ == '__main__':

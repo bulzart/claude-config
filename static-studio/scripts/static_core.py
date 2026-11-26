@@ -10065,7 +10065,8 @@ def capcut_project_timeline(rd, video, draft, sounds=None):
                               'volume': c['volume']})
             elif k in music:
                 audio.append({'kind': 'music', 'file': c['file'], 'start_s': c['start_s'], 'end_s': c['end_s'],
-                              'beats': list((music[k] or {}).get('beats') or []), 'volume': c['volume'], 'track': t.get('name')})
+                              'beats': list((music[k] or {}).get('beats') or []), 'volume': c['volume'], 'track': t.get('name'),
+                              'source_start_s': c['source_start_s']})     # where in its file it starts (sound-review)
             elif Path(c['file']).name.lower() in sounds:
                 x = sounds[Path(c['file']).name.lower()]
                 places = x.get('placements') if isinstance(x.get('placements'), list) else None
@@ -10079,7 +10080,7 @@ def capcut_project_timeline(rd, video, draft, sounds=None):
                     x = dict(x, **hit[0])
                 audio.append({'kind': str(x.get('kind') or 'sfx'), 'file': c['file'], 'start_s': c['start_s'],
                               'end_s': c['end_s'], 'beats': list(x.get('beats') or []), 'purpose': x.get('purpose', ''),
-                              'volume': c['volume'], 'track': t.get('name')})
+                              'volume': c['volume'], 'track': t.get('name'), 'source_start_s': c['source_start_s']})
             else:
                 problems.append(f'audio clip {c["file"]} at {c["start_s"]} s is not the narration, a recorded music bed '
                                 f'or a named sound')
@@ -12821,7 +12822,9 @@ image per minute, a frame every 5 seconds with the words spoken under it. Open e
 like a film. Then open its shot sheets: one frame of every shot in order, so a short shot that falls between two
 watch-sheet frames is seen too. Below them are a few measurements per minute (facts, not verdicts). Read nothing else and change no file
 except the one you are asked to write. You cannot hear the narration or the music: judge delivery only from the words
-and the measurements, and say so; never claim how the voice sounds.
+and the measurements, and say so; never claim how the voice sounds. A list below says where music, ambience and
+effects play in this cut and how far under the voice: use it for what the sound does and when (a long stretch with
+none, music that never changes, an effect at every turn), never for how it sounds.
 
 Judge it as it comes to you, not against a generic checklist. You are not told what any part is meant to do or make
 you feel, on purpose: that comparison is made afterwards, from your account.
@@ -13050,6 +13053,15 @@ def cmd_review_packet(args):
             shift += float(h.get('hold_s') or 0)
         text += ('\n## Held silences in this cut\n' + ('\n'.join(held_rows) if held_rows else
                  '- none: every pause is the voice\'s own') + '\n')
+        # Where sound plays in this cut and how far under the voice (sound-review): times, kinds and levels only. No
+        # file names and nothing of what a sound is meant to do: the reviewer judges what it does, fresh.
+        srv = read_json(sound_review_path(rd, n))
+        if srv and srv.get('tracks_digest') == sound_tracks_digest(rd, n):
+            basis = ('measured in this file' if (srv.get('export') or {}).get('fingerprint') == fp else
+                     'by the project\'s own sound files; this file itself was not measured')
+            text += f'\n## Sound in this cut ({basis}; you cannot hear it)\n' + '\n'.join(sound_rows(srv)) + '\n'
+        else:
+            text += '\n## Sound in this cut\n- not measured for this cut\n'
         # The sheets go with the packet into the reader's own folder: a confined reader (review-read) can open them,
         # and the packet names no path inside the run.
         def isolated_copies(paths, sub):
@@ -14111,14 +14123,19 @@ def cmd_release_check(args):
                                 'itself only through its watch sheets (a frame every 5 s) by the final reviewer, so '
                                 'drawn overlays and captions are checked by the timeline and caption checks, not '
                                 'frame by frame'}
+    # The sound of this exact file, measured (sound-review --file): each piece of music against the voice where it
+    # plays, in the file the audience gets, and the listening sheet written. A measurement, never a verdict.
+    snd = sound_review_state(rd, n, sha)
+    if snd:
+        issues.append('sound:' + snd)
     issues = list(dict.fromkeys(issues))
     # What a person did with this exact file, from the record alone. It never blocks: it is said, so "every check
     # passed" is not read as "someone heard it" (no agent can hear; the checks read records and measurements).
     hr = human_review_state(rd, n, sha)
     if not hr['on_record']:
         warnings.insert(0, 'no person has listened to or watched this file on record: every check here reads records '
-                           'and measurements (listening-sheet lists the few passages worth a person\'s ears; '
-                           'human-review records what they said)')
+                           'and measurements (sound-review wrote the listening sheet, the few passages worth a '
+                           'person\'s ears; human-review records what they said)')
     recorded = None
     if getattr(args, 'record', False) and not issues:
         # The release on record: this file, by its full sha256, at the moment every recorded gate passed for it.
@@ -14284,11 +14301,12 @@ def deliverable_facts(rd, video, live=True):
     if not steps['mastered']:
         pass
     elif not steps['verified']:
-        out.update({'state': 'mastered_not_released', 'next': 'the final watch review of the mastered file, then '
-                    'release-check --record on it'})
+        out.update({'state': 'mastered_not_released', 'next': 'sound-review --file on the mastered file, its final '
+                    'watch review, then release-check --record on it'})
     else:
         out.update({'state': 'released', 'next': ('' if steps['human_review'] != 'none on record' else
-                    'no person has listened or watched on record: listening-sheet, then human-review')})
+                    'no person has listened or watched on record: give the user the listening sheet (sound-review '
+                    'wrote it), then human-review')})
     return out
 
 
@@ -14388,46 +14406,64 @@ def _audio_review():
 
 
 def sound_tracks_digest(rd, video):
-    """The edit's sound as the project has it (timeline.json): which files play, from when to when, to a tenth of a
-    second. A sound review answers for the build it measured: a sound moved, added or replaced asks for it again."""
+    """The edit's sound as the project has it (timeline.json): which files play, from when to when (to a tenth of a
+    second), at which clip volume, and each file's size. A sound review answers for the build it measured: a sound
+    moved, added, replaced or re-recorded asks for it again."""
     tl = read_json(rd / '70-edit' / f'video-{int(video):02d}' / 'timeline.json')
-    return canonical_sha(sorted([str(t.get('kind')), Path(str(t.get('file'))).name,
-                                 round(float(t.get('start_s') or 0), 1), round(float(t.get('end_s') or 0), 1)]
-                                for t in tl.get('audio_tracks') or [] if isinstance(t, dict)))
+    rows = []
+    for t in tl.get('audio_tracks') or []:
+        if not isinstance(t, dict) or not t.get('file'):
+            continue
+        f = _run_file(rd, t['file'])
+        rows.append([str(t.get('kind')), f.name, round(float(t.get('start_s') or 0), 1),
+                     round(float(t.get('end_s') or 0), 1), round(float(1 if t.get('volume') is None else t['volume']), 3),
+                     f.stat().st_size if f.is_file() else None])
+    return canonical_sha(sorted(rows, key=str))
 
 
-def sound_review_state(rd, video):
-    """None when the sound of the project as it stands was reviewed (sound-review), else what is missing."""
+def sound_review_state(rd, video, sha=None):
+    """None when the sound of the project as it stands was reviewed (sound-review) and, with sha, measured in the
+    file that has this sha256; else what is missing."""
     sr = read_json(sound_review_path(rd, video))
     if not sr:
-        return 'not_reviewed:run_sound-review_on_the_checked_project_(it_writes_the_listening_sheet_too)'
+        return 'not_reviewed:run_sound-review_--file_on_this_file_(it_writes_the_listening_sheet_too)'
     if sr.get('tracks_digest') != sound_tracks_digest(rd, video):
-        return 'reviewed_for_an_earlier_build_of_the_project:run_sound-review_again'
+        return 'reviewed_for_an_earlier_build_of_the_project:run_sound-review_--file_again'
+    if sha and (sr.get('export') or {}).get('sha256') != sha:
+        return 'not_measured_in_this_file:run_sound-review_--file_on_it'
     return None
 
 
-def sound_review_facts(rd, video):
+def sound_review_facts(rd, video, export_file=None):
     """Everything sound-review measures for one video, from the files the run already has: each placed sound against
-    the voice, where music plays at all, the air at the turns, the pace of the lines, the names the transcript heard
-    differently, the silences nobody listened to. (facts, the lines' words, key-moment lines). Nothing is written."""
+    the voice (by the project's own files and, with export_file, in that finished file), where music plays at all, the
+    air at the turns, the pace of the lines, the names the transcript heard differently, the silences nobody listened
+    to. (facts, the lines' words, key-moment lines). Nothing is written."""
     n = int(video)
     ar = _audio_review()
     ed = rd / '70-edit' / f'video-{n:02d}'
     tracks = [t for t in read_json(ed / 'timeline.json').get('audio_tracks') or [] if isinstance(t, dict)]
     ep = read_json(ed / 'edit-plan.json')
-    nfile = next((t.get('file') for t in tracks if t.get('kind') == 'narration' and t.get('file')), None) or \
-        (ep.get('narration_for_edit') or {}).get('file')
+    nrow = next((t for t in tracks if t.get('kind') == 'narration' and t.get('file')), None)
+    nfile = (nrow or {}).get('file') or (ep.get('narration_for_edit') or {}).get('file')
     nfile = _run_file(rd, nfile) if nfile else None
     if not nfile or not nfile.is_file():
         error('No narration of the edit to measure against (timeline.json audio_tracks, or the edit plan\'s '
               'narration_for_edit): build and check the timeline first.')
-    voice = ar.voice_profile(nfile)
+    voice = ar.voice_profile(nfile, (nrow or {}).get('volume'))
+    export, exp = None, None
+    if export_file:
+        export = ar.export_profile(export_file, voice)
+        exp = {'file': Path(export_file).name, 'sha256': file_sha256(export_file),
+               'fingerprint': quick_fingerprint(Path(export_file))}
+        exp.update({'speech_db': export['speech_db'], 'duration_s': export['duration_s']} if export else
+                   {'unreadable': True})
     placements = []
     for t in tracks:
         if t.get('kind') == 'narration' or t.get('start_s') is None or t.get('end_s') is None:
             continue
         f = _run_file(rd, t.get('file'))
-        placements.append(ar.placement_facts({**t, 'file': f}, voice) if f.is_file() else
+        placements.append(ar.placement_facts({**t, 'file': f}, voice, export) if f.is_file() else
                           {'kind': t.get('kind'), 'file': f.name, 'start_s': t.get('start_s'), 'end_s': t.get('end_s'),
                            'unreadable': True})
     vd = video_dir(rd, n)
@@ -14466,7 +14502,7 @@ def sound_review_facts(rd, video):
             not_listened.append({'line': str(lid), 'from_s': round(float(a), 2), 'to_s': round(float(z), 2),
                                  'total_s': dc.get('total_s')})
     total = max([float(t.get('end_s') or 0) for t in tracks] + [voice['duration_s']])
-    return ({'duration_s': round(total, 2), 'narration': nfile.name, 'speech_db': voice['speech_db'],
+    return ({'duration_s': round(total, 2), 'narration': nfile.name, 'speech_db': voice['speech_db'], 'export': exp,
              'placements': placements, 'beds': ar.bed_stretches(placements, total),
              'turns': ar.turn_facts(ar.line_gaps(marks, order), first_lines), 'pace': ar.pace_facts(marks, order, words),
              'names': names, 'holds_not_listened': not_listened, 'line_marks': marks}, texts, key_lines)
@@ -14478,7 +14514,7 @@ def sound_rows(sr):
     no file names and nothing of what any sound is meant to do."""
     ar = _audio_review()
     ps = [p for p in sr.get('placements') or [] if isinstance(p, dict) and not p.get('unreadable')]
-    rows = [f'- {ar.mmss(p["start_s"])}-{ar.mmss(p["end_s"])}: {p.get("kind")}, {p.get("under_voice_db"):g} dB under the voice'
+    rows = [f'- {ar.mmss(p["start_s"])}-{ar.mmss(p["end_s"])}: {p.get("kind")}, {ar.under_voice(p):g} dB under the voice'
             for p in sorted(ps, key=lambda p: p['start_s']) if p.get('kind') in ('music', 'ambience')]
     if len(rows) > 40:
         rows = rows[:40] + [f'- and {len(rows) - 40} more stretches of music or ambience']
@@ -14500,12 +14536,15 @@ def cmd_sound_review(args):
     rd, st = run_folder(args)
     n = int(args.video)
     ar = _audio_review()
-    facts, texts, key_lines = sound_review_facts(rd, n)
+    f = Path(args.file).expanduser().resolve() if getattr(args, 'file', None) else None
+    if f and not f.is_file():
+        error('That file is not there.', {'file': str(f)})
+    facts, texts, key_lines = sound_review_facts(rd, n, f)
     items = ar.listening_items(facts, texts, key_lines)
     vd = video_dir(rd, n)
     title = read_json(vd / 'blueprint.json').get('title') or \
         selection_promise(read_json(vd / 'direction.json')).get('working_title') or f'video {n}'
-    name = Path(args.file).name if getattr(args, 'file', None) else 'the export of the checked project'
+    name = f.name if f else 'the export of the checked project'
     rec = {'made_at': now(), 'video': n, 'tracks_digest': sound_tracks_digest(rd, n),
            **{k: v for k, v in facts.items() if k != 'line_marks'}, 'listening_items': items,
            'what_this_is': 'levels, times and counts measured from the run\'s own files. No model listened, and '
@@ -14523,11 +14562,22 @@ def cmd_sound_review(args):
     look = [f'{p["file"]} stops at {ar.mmss(p["end_s"])} before its file ends, still sounding, between two lines'
             for p in facts['placements'] if p.get('cut_while_sounding') and p.get('end_between_lines')]
     look += [f'{p["file"]} could not be read' for p in facts['placements'] if p.get('unreadable')]
+    look += [f'{p["file"]} at {ar.mmss(p["start_s"])}: {f.name} plays it {p["in_export"]["under_voice_db"]:g} dB under '
+             f'the voice where the project\'s files ask for {p["in_export"]["project_asks_db"]:g}: a level the '
+             'project\'s read-back does not carry (a volume move, a muted track), another sound over it, or another build'
+             for p in facts['placements'] if abs((p.get('in_export') or {}).get('differs_db') or 0) >= ar.EXPORT_DIFFERS_DB]
+    if (facts.get('export') or {}).get('unreadable'):
+        look.append(f'{f.name} has no sound this could read against the narration: is it the export of this project?')
+    if not f:
+        look += [f'{p["file"]} plays at clip volume {p["clip_volume"]:g}: its level is set in the project, not in its '
+                 'file, and only the finished file shows what plays (sound-review --file)'
+                 for p in facts['placements'] if p.get('clip_volume') is not None]
     emit({'ok': True, 'video': n, 'record': str(rec_path), 'listening_sheet': str(sheet),
+          'measured_in': f.name if f else 'the project\'s own files only (no finished file given: --file)',
           'listening_items': len(items), 'listening_minutes': round(sum(i['to_s'] - i['from_s'] for i in items) / 60, 1),
           'voice_speech_db': facts['speech_db'], 'sounds_placed': len(facts['placements']),
-          'music_under_voice_db': ({'quietest': max(p['under_voice_db'] for p in beds),
-                                    'least_quiet': min(p['under_voice_db'] for p in beds)} if beds else None),
+          'music_under_voice_db': ({'quietest': max(ar.under_voice(p) for p in beds),
+                                    'least_quiet': min(ar.under_voice(p) for p in beds)} if beds else None),
           'music_share_of_runtime': facts['beds']['share_of_runtime'], 'no_music_for_long': facts['beds']['none_for_long'],
           'ordinary_gap_s': facts['turns']['ordinary_gap_s'],
           'turns': [{k: t.get(k) for k in ('beat', 'why', 'next', 'at_s', 'gap_s')} for t in facts['turns']['turns']],
@@ -14830,8 +14880,17 @@ def main():
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--file', required=True); p.add_argument('--kind', required=True, choices=HUMAN_REVIEW_KINDS)
     p.add_argument('--user-words', required=True, help='What the person said, in their own words')
-    p.add_argument('--answers', help='The filled listening sheet (JSON: item id to what they said)')
+    p.add_argument('--answers', help='The filled listening sheet (listening-sheet.json, each item with its answer)')
     p.add_argument('--sheet', help='The listening sheet they used'); p.set_defaults(func=cmd_human_review)
+    p = sub.add_parser('sound-review', help='The sound of the checked project, measured (each piece of music against '
+                       'the voice where it plays, in the finished file with --file), and the listening sheet: the few '
+                       'passages where only a person\'s ears can decide. No model, no verdict')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--file', help='The finished file to measure (the mastered export): release-check asks for the '
+                   'review of the exact file it releases')
+    p.add_argument('--out', help='Write the record and the sheet into this folder instead of the run (a finished '
+                   'production is then only read)')
+    p.set_defaults(func=cmd_sound_review)
     p = sub.add_parser('direction-reapprove', help='After a meaningful direction change: this artifact, as it is, '
                        'still serves the locked treatment (recorded with its reason, for this revision)')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)

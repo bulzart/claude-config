@@ -116,6 +116,23 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   the first plausible search result; fame doing the work; a reference's title repeated without further research; a
   sensational claim preferred over better-supported material; conflict or a climax assumed where the subject offers
   understanding; material that can't fill the length.
+- **Look at what already exists, before you commit.** For the candidate you are about to choose (and a close
+  runner-up), search the platform and the web for what a viewer can already watch on it: the videos that come up for the
+  words a viewer would type, who made them, and how each tells it (its angle, its opening, what it leaves out). Write it
+  in `selection.coverage` (07): `looked` (where, and for which words), `exists` (each one: `what`, `by`,
+  `how_it_tells_it`), or `none_found` in a sentence when the search found nothing, and `this_film_adds`: what a viewer
+  who has seen those gets here that they did not get there. A crowded subject is not a reason to drop it and an empty
+  one is not a reason to choose it: the question is what this film gives. View counts say what was clicked, never what
+  was watched to the end or enjoyed: note them as popularity if you like, never as proof that a way of telling works.
+  Copy nothing you find; the point is to know where this film stands. The checks ask only that the look was taken and
+  written down: no count, score or share decides anything. (2026-11-26: a finished film's subject had well-known videos
+  on it that nobody had looked at; its angle and its title were chosen blind.)
+- **What it will be clicked for.** With the subject, write the promise the film will be chosen by (`selection.promise`):
+  a `working_title`, a `thumbnail_idea` (the one picture, in words) and `viewer_expects` (what a person who clicks on
+  those two expects to get). It is a working promise, revised freely as the film takes shape, and it is what the
+  treatments, the opening and the readers are held to: the script's cold reader is given the title and says by which
+  line the film's offer was clear (06). A subject you cannot write an honest, specific promise for is a subject not yet
+  understood.
 - **Carry the value forward.** `value_to_carry`: the findings the film must deliver (`what`, `why_it_matters`,
   `certainty`; `rests_on`: the material ids it stands on, never said more surely than they allow; `needs_first`: the
   values the viewer must hold before it). Each is carried by a beat (`carries` in the beat map), after what it needs
@@ -145,15 +162,15 @@ viewer's time, and whether a source deserves trust, is the director's judgement,
 Write `40-plans/video-NN/blueprint.json` and a compelling 1–2-page `outline.md` that answer:
 
 1. **Audience promise.** Why click? What exact valuable feeling, knowledge or resolution will be delivered? Promise a real answer; don't set a misleading or overbroad challenge.
-2. **Carrying question.** What thoughtful uncertainty can sustain curiosity, and what are its real causal steps? Set it up early; it doesn't have to be shock or fear.
+2. **What carries the viewer through.** Where the subject has a question, what thoughtful uncertainty can sustain curiosity, and what are its real causal steps? Set it up early; it doesn't have to be shock or fear. Where it has none (a tutorial, a tour of a mechanism, a run of jokes), say what does carry them: progress they can see, understanding that builds, the next laugh (`reward_shape`). `central_question` is written only where there is one (03, 07).
 3. **Original angle.** What fresh viewpoint, organizing device, illustration method or surprising-but-well-supported contrast differentiates this video from its references?
-4. **Human lens.** Who or what experiences consequences? A relatable constraint, dilemma, error, physical scale, sensory detail or plain-language analogy often gives the facts a human shape. Historical actors are not fictional narrators unless clearly framed as reconstruction.
+4. **A way in.** Who or what experiences consequences? A relatable constraint, dilemma, error, physical scale, sensory detail or plain-language analogy often gives the facts a shape a viewer can hold. A person is one way in, not the only one: a mechanism may be followed through one drop of water, a method through the mistake it prevents. `human_lens` is written where the film is led by a person, a decision or a witness, and left out where it would be forced (03, 07). Real people are not fictional narrators unless clearly framed as reconstruction.
 5. **Movement.** Each section must earn its inclusion by altering the viewer's understanding: make a claim, show evidence, expose a constraint, deepen a dilemma, reveal an exception, demonstrate something or pay off an earlier detail. Do not line up five chapters that all restate the same point.
 6. **Meaningful relief.** Place natural laughter, warmth, awe, surprise, self-questioning or reflection where the material invites them. Leave some ambiguity for the viewer to resolve. Slow scenes may be the strongest scenes when there is something to contemplate.
 7. **Visual argument.** Sketch the picture that contributes information rather than echoes the narration. How do map movement, comparison, diagrams, artifacts, faces, scale, negative space or a quiet close-up change comprehension?
 8. **Closing satisfaction.** Answer the original promise, then offer an earned broader implication or question. Avoid an abrupt cut or a generic sermon/CTA.
 
-Treat the title/thumbnail as the **opening contract**. The first 30–60 seconds should demonstrate that the video can deliver, not waste time introducing the channel. The intro can begin with an outcome, an intimate detail, a specific problem, a source discovery or a visually legible contradiction. Avoid a single mandatory “what if I told you ...” gimmick.
+Treat the title/thumbnail as the **opening contract** (the working promise written with the subject: `selection.promise`). The opening should demonstrate that the video can deliver, not waste time introducing the channel: how soon is for this subject and its references to say (`plan-check` shows when the cold reader knew what the film offers beside the hooks of the references this direction cites; a later opening is a place to look, never a fault by itself). The intro can begin with an outcome, an intimate detail, a specific problem, a source discovery or a visually legible contradiction. Avoid a single mandatory “what if I told you ...” gimmick.
 
 ## Adaptive methodology: creative profiles and episode strategy
 

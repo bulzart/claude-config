@@ -236,7 +236,15 @@ class StaticStudioTests(unittest.TestCase):
                                     'the survey sheet with the misplaced valley','the error, then its long shadow')],
                  'selection':{'candidate':'T1','why':say('its consequence is clear and rests on a primary record'),
                               'decisive_material':['M1'],
-                              'over_alternatives':[{'candidate':'T2','why_not':say('the map error rests on one later study only')}]},
+                              'over_alternatives':[{'candidate':'T2','why_not':say('the map error rests on one later study only')}],
+                              # the outward look and the working promise (planning rules 5)
+                              'coverage':{'looked':[{'where':'YouTube search','for':'the supply order before the battle'}],
+                                          'exists':[{'what':'a long overview of the battle','by':'a large history channel',
+                                                     'how_it_tells_it':'the battle hour by hour, the order as one sentence'}],
+                                          'this_film_adds':say('the order itself as the story, read from the depot ledgers')},
+                              'promise':{'working_title':'The Order That Won the Battle',
+                                         'thumbnail_idea':'a clerk signing one order while an army waits',
+                                         'viewer_expects':say('to see how one quiet order decided a famous battle')}},
                  'value_to_carry':[{'id':'R1','what':'the supply decision decided the battle',
                                     'why_it_matters':'without it the army could not have moved',
                                     'certainty':'established','rests_on':['M1'],'payoff':True}]}
@@ -2560,7 +2568,7 @@ class StaticStudioTests(unittest.TestCase):
         # sent back to re-plan: those checks become advisories. Its other checks stay as they are.
         vd=self.write_plan()
         lock=json.loads((vd/'direction-lock.json').read_text(encoding='utf-8'))
-        self.assertEqual(lock['planning_rules'],4)               # a new lock is stamped (4: the pacing rules)
+        self.assertEqual(lock['planning_rules'],5)               # a new lock is stamped (5: the outward look, 2026-11-26)
         b=json.loads((vd/'blueprint.json').read_text(encoding='utf-8')); b.pop('audience_knows'); save(vd/'blueprint.json',b)
         self.assertTrue(any(x.startswith('blueprint_missing_audience_knows') for x in
                             cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']))
@@ -5615,6 +5623,14 @@ class TopicDiscoveryTests(unittest.TestCase):
              'selection': {'candidate': chosen, 'why': 'its strongest material is surprising, read at the source, and builds',
                            'decisive_material': ['M1'],
                            'over_alternatives': [{'candidate': a, 'why_not': self.WHY_NOT[i % 3]} for i, a in enumerate(alts)],
+                           # the outward look and the working promise (planning rules 5)
+                           'coverage': {'looked': [{'where': 'YouTube search', 'for': 'the chosen subject, by its usual names'}],
+                                        'exists': [{'what': 'a short explainer of it', 'by': 'a science channel',
+                                                    'how_it_tells_it': 'the answer in the first minute, then a list of facts'}],
+                                        'this_film_adds': 'the finding followed step by step from its source to its consequence'},
+                           'promise': {'working_title': 'Why This Place Works The Way It Does',
+                                       'thumbnail_idea': 'the place from above with one thing out of place',
+                                       'viewer_expects': 'to understand why it works that way and what it changes'},
                            **(sel_extra or {})},
              'value_to_carry': values if values is not None else [
                  {'id': 'R1', 'what': 'the core finding of the chosen subject', 'why_it_matters': 'it changes how the viewer sees it',
@@ -6128,6 +6144,25 @@ class TopicPathTests(unittest.TestCase):
             # the recorded exercises predate the niche's line (2026-11-24): their own words stand in for it
             sc_.setdefault('understood_as', f'{sc_.get("niche")} as the user asked for it: {sc_.get("user_words")}')
             sc_.setdefault('boundary', f'a subject outside {sc_.get("niche")}, told only with its techniques')
+        sel = subject['selection']
+        if 'coverage' not in sel and 'promise' not in sel:
+            # the recorded exercises predate the outward look and the working promise (planning rules 5, 2026-11-26):
+            # as recorded they miss exactly those two and nothing else. A stand-in that says what it is lets the path
+            # go on; no coverage is invented for research that never looked.
+            before = h.load_core().subject_issues(subject, (rp / 'sources.md').read_text(encoding='utf-8'), 600,
+                                                  ('V001', 'V002'), niche, claims)[0]
+            self.assertEqual(before, [
+                'subject_selection_needs_coverage:what_already_exists_on_this_subject_where_you_looked_and_what_this_film_adds',
+                'subject_selection_needs_its_promise:working_title_thumbnail_idea_and_what_the_viewer_expects'], (name, before))
+            ch = next(c for c in subject['candidates'] if str(c['id']) == str(sel['candidate']))
+            sel['coverage'] = {
+                'looked': [{'where': 'nowhere', 'for': 'existing videos on this subject'}],
+                'none_found': 'this exercise was recorded before the outward look existed, so nothing was searched for',
+                'this_film_adds': str(sel.get('why'))}
+            sel['promise'] = {'working_title': f'A film about {ch["subject"]}',
+                              'thumbnail_idea': f'one picture of {ch["subject"]}, as a stand-in',
+                              'viewer_expects': str(ch.get('reward') or ch.get('why_it_matters'))}
+            rep['predates_planning_rules_5'] = True
         iss, warn = h.load_core().subject_issues(subject, (rp / 'sources.md').read_text(encoding='utf-8'), 600,
                                                  ('V001', 'V002'), niche, claims)
         rep['subject_issues'], rep['subject_warnings'] = iss, warn
@@ -6156,6 +6191,7 @@ class TopicPathTests(unittest.TestCase):
         sb = sketch['beats']
         per = [52 // len(sb) + (1 if i < 52 % len(sb) else 0) for i in range(len(sb))]
         lines, beats, k, t = [], [], 0, 0.0
+        hedge_text = {}                      # line id -> the exercise's own hedge sentence placed on it
         cl = {c['id']: c for c in claims['claims']}
         for b, cnt in zip(sb, per):
             first = k + 1
@@ -6178,6 +6214,7 @@ class TopicPathTests(unittest.TestCase):
                 words = str(sentence).split()
                 lines[slot - 1]['text'] = ' '.join(words + self.WORDS.split()[:max(0, 26 - len(words))]) + '.'
                 hedges[r] = f'L{slot:03}'
+                hedge_text[f'L{slot:03}'] = str(sentence)
                 slot += 1
             if b.get('key_moment'):
                 sig = dict(b.get('significance') or {})
@@ -6212,6 +6249,25 @@ class TopicPathTests(unittest.TestCase):
                                                 encoding='utf-8')
         h.review_script()
         pc = cli('plan-check', '--run', run, '--video', 1, expected=None)
+        # Planning rules 5 (2026-11-26): a key line resting on a claim the research did not confirm says how its words
+        # carry that. Real research has such lines, and the check finds them. The harness answers as the writer would:
+        # where the exercise's own hedge sentence is that line, its first words are quoted (they are in the line);
+        # elsewhere the placeholder line states nothing of the claim, and the answer says so.
+        cwp = vd / 'claim-wording.json'
+        if cwp.is_file():
+            asked = sorted(pc['creative']['claim_wording']['open'])
+            self.assertEqual([x for x in pc['issues'] if not x.startswith('key_lines_on_unconfirmed_claims_')], [], (name, pc['issues']))
+            cw = json.loads(cwp.read_text(encoding='utf-8'))
+            for lid in asked:
+                e = cw['answers'][lid]
+                self.assertTrue(e['claims'] and all(c['confidence'] != 'confirmed' for c in e['claims']), (name, lid, e))
+                if lid in hedge_text:
+                    e.update(how='hedged', words=' '.join(hedge_text[lid].split()[:5]))
+                else:
+                    e.update(how='plain', why='a placeholder line of the test harness: it states nothing of the claim itself')
+            save(cwp, cw)
+            rep['claim_wording'] = {lid: cw['answers'][lid]['how'] for lid in asked}
+            pc = cli('plan-check', '--run', run, '--video', 1, expected=None)
         rep['plan_check_issues'] = pc['issues']
         self.assertTrue(pc['ready'], (name, pc['issues']))
         # the shot plan from the sketch: each beat's lines shared among its shots

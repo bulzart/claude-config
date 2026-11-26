@@ -52,6 +52,10 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run 
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run "RUN" --video 1 --kind script
 #   -> answer every finding; a major one: revise, then a round-2 packet for a NEW agent.
 python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RUN" --video 1
+#   -> it writes 40-plans/video-01/claim-wording.json when a key line rests on a claim the research did not confirm:
+#      answer each entry there (hedged with the words quoted, or plain with why), then plan-check again (03).
+#   -> a script more than 15% above its first whole draft is asked what the added lines carry (never "the length"):
+#      plan-check --run "RUN" --video 1 --grew-for "the second depot move could not be followed without them"
 # How the comparable narrators speak and pause (same yardstick later used on the voice):
 python "$HOME/.claude/static-studio/scripts/static_core.py" pace-profile --run "RUN" --video 1
 # Voice: five candidates described by the narrator this story needs (character, register, age,
@@ -110,6 +114,9 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" hold-decide --run "R
 # Agent makes/records CapCut project (edit-plan narration_for_edit at 0 s, speed 1, untrimmed; stills at the retimed
 # shot times) and writes project-derived timeline.json, naming the project in capcut_draft.
 python "$HOME/.claude/static-studio/scripts/static_core.py" timeline-check --run "RUN" --video 1
+# The sound of the checked project, measured from the run's own files (no model, no verdict): each piece of music
+# against the voice where it plays, cut-offs, the air at the turns, names heard differently. Look before exporting.
+python "$HOME/.claude/static-studio/scripts/static_core.py" sound-review --run "RUN" --video 1
 # The export's sound to the loudness the references are mastered at (the picture copied, the export kept):
 python "$HOME/.claude/static-studio/scripts/static_core.py" master-sound --run "RUN" --video 1 \
   --file "RUN/80-deliverables/video-01/export/final.mp4" --out "C:/videos/final.mp4" --target-lufs -14 \
@@ -117,6 +124,9 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" master-sound --run "
 # Only after an actual MP4 is accessible:
 python "$HOME/.claude/static-studio/scripts/static_core.py" export-check \
   --run "RUN" --video 1 --file "C:/videos/final.mp4" --deep
+# The sound measured in THIS file (what the audience gets), and the listening sheet for the user: the few passages
+# where only a person's ears can decide. release-check asks for it. (--out DIR on a finished run: the run is only read.)
+python "$HOME/.claude/static-studio/scripts/static_core.py" sound-review --run "RUN" --video 1 --file "C:/videos/final.mp4"
 # The final watch review of THIS file: watch sheets, a fresh reviewer, answers, then every gate at once.
 python "$HOME/.claude/static-studio/scripts/static_core.py" av-profile --run "RUN" --video 1 --file "C:/videos/final.mp4"
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind final --file "C:/videos/final.mp4"
@@ -126,14 +136,16 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" release-check --run 
 python "$HOME/.claude/static-studio/scripts/static_core.py" deliverable --run "RUN" --video 1
 # What a person did with that file, in their own words (never written for them):
 python "$HOME/.claude/static-studio/scripts/static_core.py" human-review --run "RUN" --video 1 --file "C:/videos/final.mp4" \
-  --kind listened --user-words "the words the user said"
+  --kind listened --user-words "the words the user said" --answers "RUN/80-deliverables/video-01/listening-sheet.json"
 python "$HOME/.claude/static-studio/scripts/static_core.py" status --run "RUN"
 ```
 
 `status` reports each video's stage from its recorded gates, never a stored guess: `planning`, `direction_locked`,
-`script_checked`, `narration_recorded`, `narration_measured`, `stills`, `edit_checked`, `exported`, `released`. It moves
-`state.json`'s `stage` forward when it lags (the run's stage is its least advanced video's), never backward; a passing
-`plan-check` advances it too.
+`script_checked`, `narration_recorded`, `narration_measured`, `stills`, `edit_checked`, `exported`, `released`. It sets
+`state.json`'s `stage` to what the records say (the run's stage is its least advanced video's), both ways: a film
+rebuilt after its release no longer reads `released` (`stage_was` and `stage_note` say what changed; `status --look`
+reports the same and writes nothing). A passing `plan-check` advances it too. `released` means a mastered file passed
+`release-check --record`; `deliverable` says which file that is.
 
 ## Content review (agent written; `content-review` checks and saves it)
 
@@ -470,7 +482,13 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
       {"id": "T2", "subject": "...", "...": "researched more lightly: sources may stand in for claims"}
     ],
     "selection": {"candidate": "T1", "why": "...", "decisive_material": ["M1"],
-                  "over_alternatives": [{"candidate": "T2", "why_not": "..."}]},
+                  "over_alternatives": [{"candidate": "T2", "why_not": "..."}],
+                  "coverage": {"looked": [{"where": "YouTube search", "for": "the words a viewer would type"}],
+                               "exists": [{"what": "a 40-minute overview", "by": "a large history channel",
+                                           "how_it_tells_it": "hour by hour; this decision is one sentence in it"}],
+                               "this_film_adds": "what a viewer of those gets here that they did not get there"},
+                  "promise": {"working_title": "...", "thumbnail_idea": "the one picture, in words",
+                              "viewer_expects": "what a person who clicks on those two expects to get"}},
     "value_to_carry": [{"id": "R1", "what": "...", "why_it_matters": "...", "certainty": "established",
                         "rests_on": ["M1"], "payoff": true},
                        {"id": "R2", "what": "...", "why_it_matters": "...", "certainty": "contested", "hedge": "...",
@@ -526,7 +544,10 @@ candidate's `runtime` (`progression` of what the viewer newly gets on which mate
 `several` or `progressive`; `rests_on`, the candidate's own material ids in a factual subject; `why_substantial`;
 `needs_first`; `worth_the_buildup`; required for the chosen one, a warning for an alternative), the choice
 (`decisive_material`,
-confirmed when established; `over_alternatives`, one reason per alternative) and `value_to_carry` (`rests_on`,
+confirmed when established; `over_alternatives`, one reason per alternative; `coverage`, the outward look: `looked`
+with where and for what, `exists` with what each is and how it tells it, or `none_found` in a sentence, and
+`this_film_adds`; `promise`: `working_title`, `thumbnail_idea`, `viewer_expects`; presence only, no count or score, 02)
+and `value_to_carry` (`rests_on`,
 `needs_first`; the value the payoff delivers marked `"payoff": true`, resting on the payoff's material: never dropped,
 reaching a key moment for `builds_to` or `several` and more than one beat for `progressive`), which the beat map
 `carries` in that order (with `hedges` for a contested, speculative or assumed value
@@ -559,8 +580,8 @@ its `movements` the beat map, script and shot plan. `direction_facts` reports ea
 (minutes before its first promise movement, what comes before it) and the length lock's cohort beside it: facts, never
 a verdict. Evidence that cites a reference
 outside the locked niche declares it in `evidence.borrowed` (`[{ref, technique, not_taken}]`: the technique borrowed,
-and the subject assumptions not taken). `direction-lock.json` keeps the hash, the time, `planning_rules` (3 on a lock made since the storytelling rules of 2026-11-24, kept through
-`--revise`; a lock stamped 2 or without a stamp was approved before rules it need not follow, and those are advisory
+and the subject assumptions not taken). `direction-lock.json` keeps the hash, the time, `planning_rules` (5 on a lock made since 2026-11-26, kept through
+`--revise`; a lock stamped lower or without a stamp was approved before rules it need not follow, and those are advisory
 for it, 10 §3), `planning_migration` on such an older lock once a substantive revision reached something (`{to, sections,
 artifacts, history}`: where the current rules now apply), the treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
 follows: `production_rev` (raised by a change that alters what production must do), `sections` (one hash per field,
@@ -599,8 +620,9 @@ In a round after the first, a major finding's answer also carries its recurrence
 `structure` or `treatment` scope needs `direction-lock --revise` after that read, a `duration` scope a length decision
 made after it. The record lists `recurrence_candidates` (each new major beside the closest earlier majors: facts for
 this answer). A script reader's record (brief 5) also keeps its `promise` (`promised`, `first_delivered`, `waiting`:
-`[{lines, felt: anticipation | delay, why}]`); a delay becomes a W finding (minor), a promise never delivered a major
-one. A harmless serialization slip is put into the format by `review-record` and listed in `format_normalized`
+`[{lines, felt: anticipation | delay, why}]`; since brief 6 also `clear_at`, the first line by which the reader knew
+what the video would give them, or "never"); a delay becomes a W finding (minor), a promise never delivered a major
+one; `clear_at` makes no finding: plan-check shows it beside the references' hooks (`creative.opening`). A harmless serialization slip is put into the format by `review-record` and listed in `format_normalized`
 (`[{where, was, now}]`), the reader's file as written kept in the run and named in `findings_as_written`.
 
 A recurring major that is disputed (or whose scope is `dispute`) carries the decision that closes it (06):
@@ -666,10 +688,46 @@ references'. All of it is measurement; none of it is a verdict.
   "audio_tracks": [
     {"kind": "narration", "file": "C:/path/to/narration-edit.wav", "start_s": 0, "end_s": 1150.2,
      "source_start_s": 0, "source_end_s": 1150.2, "speed": 1},
-    {"kind": "music", "file": "C:/path/to/bed-01.wav", "start_s": 0, "end_s": 96.0, "beats": ["B01", "B02"]}
+    {"kind": "music", "file": "C:/path/to/bed-01.wav", "start_s": 0, "end_s": 96.0, "beats": ["B01", "B02"],
+     "volume": 1, "source_start_s": 0}
   ]
 }
 ```
+
+## Story size, claim wording and the sound review (written by `plan-check` and `sound-review`)
+
+`40-plans/video-NN/script-size.json` (plan-check writes it; never edit it): the first whole draft, once, and each
+answer to "what do the added lines carry".
+
+```json
+{"first_complete_draft": {"at": "2026-11-26T18:00:00+00:00", "words": 1404, "forecast_s": 601.6, "locked_s": 600},
+ "growth_answers": [{"at": "...", "words": 1647, "why": "the second depot move could not be followed without them"}]}
+```
+
+`40-plans/video-NN/claim-wording.json` (plan-check writes the entries; the director fills `how` and `words` or `why`):
+
+```json
+{"answers": {"L045": {
+   "text": "The surviving sheet suggests the valley was drawn a mile too far north.",
+   "beat": "B05", "carries": ["key_moment:B05", "ending"],
+   "claims": [{"id": "C02", "confidence": "likely", "note": "one later study only"}],
+   "how": "hedged", "words": "the surviving sheet suggests", "in_line": "", "why": ""}},
+ "superseded": []}
+```
+
+`"how": "plain"` takes `"why"` (five words or more) instead of `"words"`. The quoted words must be in the line as it is
+written (or in the earlier line of the same beat named in `in_line`); a reworded line or a changed claim empties the
+entry and keeps the old answer under `superseded`.
+
+`70-edit/video-NN/sound-review.json` (sound-review writes it; `--out DIR` writes it there instead): `tracks_digest`
+(the build it measured), `speech_db`, `export` (the finished file measured, with its sha256), `placements` (each
+sound: `kind`, `file`, `start_s`, `end_s`, `under_voice_db`, `in_the_clear_s`, `stops_early_s`, `cut_while_sounding`,
+`end_between_lines`, and with `--file` `in_export`: `under_voice_db`, `project_asks_db`, `differs_db`), `beds`
+(`plays`, `none_for_long`, `share_of_runtime`), `turns` (`ordinary_gap_s` and, for each chapter's first line and each
+key moment, `gap_s`), `pace`, `names`, `holds_not_listened`, and `listening_items`. All of it is levels, times and
+counts: no model listened and nothing in it says how the film sounds. The listening sheet beside the deliverable
+(`80-deliverables/video-NN/listening-sheet.md` and `.json`) is what the user answers; `human-review --answers` keeps
+their answers.
 
 With `capcut_draft`, `timeline-check` reads the narration's segments (file, timeline and source ranges, speed) from the CapCut project itself; the `audio_tracks` narration entry is then only a note. Either way the narration must be the edit plan's `narration_for_edit` file, unchanged, at 0 s, at speed 1, covering the file once from start to end.
 

@@ -156,12 +156,15 @@ No numbers decide this. Two things do:
    for quality, not to fit a pace (05).
 
 Then `direction-lock`. The script and the beat directions are written from the locked treatment. A new lock is
-stamped `planning_rules: 4`, kept through `--revise` (3, the storytelling rules of 2026-11-24: each treatment's
+stamped `planning_rules: 5`, kept through `--revise` (3, the storytelling rules of 2026-11-24: each treatment's
 movements with its promise marked, the decision's `promise_and_delivery` and `length_fit`, and a key moment's
 dependency never called a mystery unless it is withheld, 03; 4, the pacing rules of 2026-11-25: the decision's
-`pacing`). A lock stamped 2 or 3 keeps its plan the same way: the rules added after it reach it as advisories
+`pacing`; 5, the rules of 2026-11-26: the chosen subject's outward look and working promise, `selection.coverage`
+and `selection.promise`, 02; what a script that grew past its first whole draft carries, and how a key line words a
+claim the research did not confirm, 03). A lock stamped 2, 3 or 4 keeps its plan the same way: the rules added after it reach it as advisories
 except where a substantive revision reaches (one that changes what production must do, recorded in
-`planning_migration`; the pacing rules when that revision also changes the decision). A revision of reasons alone
+`planning_migration`; the pacing rules when that revision also changes the decision; the subject rules of 5 when
+the subject is chosen again, its script rules when the script is sent back to work). A revision of reasons alone
 brings no newer rule. A lock without the stamp was approved before 2026-11-24, and it
 keeps its plan: the planning rules added that day reach it only as warnings that start "advisory (this direction was
 approved before the planning rules of 2026-11-24, which it need not follow): ..." in plan-check, shot-check,
@@ -383,9 +386,13 @@ These are craft principles. Each one says when it applies.
    tags or a name are in doubt, a short `narration-trial` (approved and priced first) compares them one change at a
    time and gives the user clips to hear. Then the first real parts: the pace (a forecast tested on them, never a target; a conflict with the length goes to the user, 05), every line heard, and
    `delivery.json` for the performance.
-4. **The final watch review.** `av-profile --video NN --file export.mp4` makes the export's watch sheets;
-   `review-packet --kind final --file` gives a fresh reviewer the sheets, the parts by time only and the held
-   silences; what each part is meant to do stays with you, to compare with its account when you answer. Its key
+4. **The sound, measured; then the final watch review.** `sound-review` after `timeline-check` shows what the sound
+   of the cut does before an export is spent (each piece of music against the voice where it plays, a cut-off, the
+   air at the turns), and `sound-review --file` on the mastered file measures it in the file the audience gets and
+   writes the listening sheet for the user: the few passages only ears can judge (05). `av-profile --video NN --file
+   export.mp4` makes the export's watch sheets;
+   `review-packet --kind final --file` gives a fresh reviewer the sheets, the parts by time only, the held
+   silences and where the sound plays; what each part is meant to do stays with you, to compare with its account when you answer. Its key
    moments are reconciled the same way. Fix, re-export, and the new file gets its own read. `release-check` confirms every gate for that exact file, and `--record` puts the release on record; `deliverable` names the file to hand over.
 
 What the code enforces is the order, the versions and the answers. A passed `release-check` means the process was
