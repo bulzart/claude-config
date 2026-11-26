@@ -11172,8 +11172,8 @@ def cmd_bed_levels(args):
                                    'by_db': float(lf['by_db']), 'at_s': at, 'why': str(lf['why']).strip(),
                                    'under_speech_db_at_its_peak': round(row['target_under_speech_db'] - float(lf['by_db']), 1)}
                     # how much room the voice left: a rise and its way back need a silence of twice the ramp and
-                    # the guards (on the real film of 2026-11-26, 64 s of opening music held two pauses of half a
-                    # second, and a lift had nothing to rise in)
+                    # the guards (measured on the film of 2026-11-24: 64 s of opening music held two pauses of 0.8 s,
+                    # half a second each once the guards are off, and the bed came up by 4 dB of the 9 asked)
                     tops = [w[2] for w in row['lift']['windows']]
                     by = float(lf['by_db'])
                     room = ('More room is a planned silence the music carries, music that enters before the words or '
