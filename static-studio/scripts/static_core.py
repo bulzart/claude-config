@@ -13872,14 +13872,32 @@ def deliverable_facts(rd, video, live=True):
         hr = human_review_state(rd, n, msha)
         steps['human_review'] = hr['kinds'] or 'none on record'
         out['file'] = made.get('file')
-    if not steps['exported']:
-        out.update({'state': 'built_not_exported', 'next': 'export the checked project from CapCut, then master-sound '
-                    'and export-check --deep on the mastered file'})
-    elif not steps['mastered']:
-        raw_only = not msha or msha not in allx
-        out.update({'state': 'exported_not_mastered' if raw_only else 'mastered_not_checked',
-                    'next': ('master-sound on the export, then ' if raw_only else '')
-                            + 'export-check --deep on the mastered file'})
+    mname = Path(str(made.get('file') or '?')).name
+
+    def short(x):                   # why a check on record does not count, in a few words
+        return 'it was checked without --deep' if not x.get('deep') else \
+            'its check found: ' + ', '.join(str(i) for i in (x.get('issues') or [])[:2])
+    if steps['mastered']:
+        pass
+    elif msha and msha not in allx:
+        out.update({'state': 'mastered_not_checked',
+                    'next': f'export-check --deep on the mastered file ({mname}): no check of it is on record'})
+    elif msha and msha in cur:
+        out.update({'state': 'master_check_found_issues',
+                    'next': f'the mastered file ({mname}) did not pass export-check --deep ({short(cur[msha])}): fix '
+                            'that, then check the new master'})
+    elif steps['exported']:
+        out.update({'state': 'exported_not_mastered',
+                    'next': 'master-sound on the export, then export-check --deep on the mastered file'})
+    else:
+        failed = [x for s, x in cur.items() if s not in good]
+        out.update({'state': 'built_not_exported',
+                    'next': (f'the export on record ({Path(str(failed[-1].get("file") or "?")).name}) does not count: '
+                             f'{short(failed[-1])}' if failed else
+                             'export the checked project from CapCut, then master-sound and export-check --deep on the '
+                             'mastered file')})
+    if not steps['mastered']:
+        pass
     elif not steps['verified']:
         out.update({'state': 'mastered_not_released', 'next': 'the final watch review of the mastered file, then '
                     'release-check --record on it'})
