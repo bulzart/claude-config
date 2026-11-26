@@ -721,10 +721,13 @@ entry and keeps the old answer under `superseded`.
 
 `70-edit/video-NN/sound-review.json` (sound-review writes it; `--out DIR` writes it there instead): `tracks_digest`
 (the build it measured), `speech_db`, `export` (the finished file measured, with its sha256), `placements` (each
-sound: `kind`, `file`, `start_s`, `end_s`, `under_voice_db`, `in_the_clear_s`, `stops_early_s`, `cut_while_sounding`,
-`end_between_lines`, and with `--file` `in_export`: `under_voice_db`, `project_asks_db`, `differs_db`), `beds`
-(`plays`, `none_for_long`, `share_of_runtime`), `turns` (`ordinary_gap_s` and, for each chapter's first line and each
-key moment, `gap_s`), `pace`, `names`, `holds_not_listened`, and `listening_items`. All of it is levels, times and
+sound: `kind`, `file`, `start_s`, `end_s`, `under_voice_db` by its own file, `voice_over_it_share`, `in_the_clear_s`,
+`stops_early_s`, `cut_while_sounding`, `end_between_lines`, `ends_with_the_film`, and with `--file` `in_export`: what
+the finished file plays where no voice covers the sound, `under_voice_db`, beside what all the project's sounds there
+ask for together, `project_asks_db`, and `differs_db`), `beds` (`music` and `ambience` apart, each with `plays`,
+`none_for_long`, `share_of_runtime`), `turns` (`ordinary_gap_s` and, for each chapter's first line and each
+key moment, `gap_s`), `pace`, `names` (each name with a use the transcript did not recognise: `uses`, `recognised`,
+`line`, `nearest_heard`, `say`), `holds_not_listened`, and `listening_items`. All of it is levels, times and
 counts: no model listened and nothing in it says how the film sounds. The listening sheet beside the deliverable
 (`80-deliverables/video-NN/listening-sheet.md` and `.json`) is what the user answers; `human-review --answers` keeps
 their answers.

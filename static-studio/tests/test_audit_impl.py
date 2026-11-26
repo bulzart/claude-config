@@ -176,6 +176,14 @@ class ReleaseStateTests(base.ExportBindingTests):
         self.assertEqual(hr['deliverable']['steps']['human_review'], ['listened', 'watched'])
         self.assertEqual(c.deliverable_facts(rd, 1)['next'], '')
         self.assertFalse(c.human_review_state(rd, 1, c.file_sha256(raw))['on_record'])
+        # the master is moved away afterwards: the record stands, and the report says the file is not where it was
+        away = Path(out).with_name('moved-away.mp4')
+        Path(out).rename(away)
+        d = c.deliverable_facts(rd, 1)
+        self.assertEqual(d['state'], 'released')
+        self.assertTrue(any('no longer at its path: master.mp4' in s for s in d['stale']), d['stale'])
+        away.rename(Path(out))
+        self.assertFalse([s for s in c.deliverable_facts(rd, 1)['stale'] if 'no longer' in s])
         # the project is changed and not checked again: it is no longer the project that was built
         c2 = json.loads(json.dumps(self.content))
         c2['tracks'][0]['segments'][0]['material_id'], c2['tracks'][0]['segments'][1]['material_id'] = 'v2', 'v1'
@@ -667,8 +675,11 @@ class SoundReviewTests(unittest.TestCase):
             'lines': [{'id': f'L00{i + 1}', 'start_s': a, 'end_s': b, 'words': self.WORDS[i], 'gap_span_s': list(gaps[i])}
                       for i, (a, b) in enumerate(self.T)],
             'pronunciation_heard': [{'term': 'Qin', 'line': 'L002', 'heard_as_written': False, 'nearest_heard': 'kin'},
-                                    {'term': 'river', 'line': 'L002', 'heard_as_written': True}]})
-        save(vd / 'pronunciation.json', {'terms': [{'term': 'Qin', 'say': 'chin'}]})
+                                    {'term': 'river', 'line': 'L002', 'heard_as_written': True},
+                                    # a possessive, and a name heard as its planned respelling: the voice said both
+                                    {'term': 'Jing', 'line': 'L003', 'heard_as_written': False, 'nearest_heard': 'jings'},
+                                    {'term': 'Zhong', 'line': 'L004', 'heard_as_written': False, 'nearest_heard': 'jong'}]})
+        save(vd / 'pronunciation.json', {'terms': [{'term': 'Qin', 'say': 'chin'}, {'term': 'Zhong', 'say': 'Jong'}]})
         save(vd / 'holds.json', {'decisions': {
             'L003': {'line': 'L003', 'total_s': 3.0, 'no_hold': False, 'listened': None},
             'L004': {'line': 'L004', 'total_s': 3.0, 'no_hold': False, 'listened': 'I heard it and it works'},
@@ -700,6 +711,10 @@ class SoundReviewTests(unittest.TestCase):
         self.assertEqual((turns['L003']['why'], turns['L003']['gap_s']), ('chapter', 0.5))
         self.assertEqual((turns['L005']['why'], turns['L005']['gap_s']), ('key moment', 3.0))
         self.assertEqual(res['names_heard_differently'], ['Qin'])
+        self.assertEqual([(d['uses'], d['recognised'], d['line']) for d in rec['names']], [(1, 0, 'L002')])
+        self.assertEqual((res['music_share_of_runtime'], res['no_music_for_long'], res['ambience_share_of_runtime']),
+                         (0.6, [], 0.0))
+        self.assertIsNone(res['file_against_project'])
         self.assertEqual(res['holds_not_listened'], 1)
         self.assertEqual(rec['holds_not_listened'], [{'line': 'L003', 'from_s': 16.5, 'to_s': 19.5, 'total_s': 3.0}])
         self.assertEqual(rec['pace']['fastest'][0]['line'], 'L005')
@@ -736,8 +751,10 @@ class SoundReviewTests(unittest.TestCase):
             self.assertLess(abs(x['under_voice_db'] - want), 1.5, x)
             self.assertLess(abs(x['differs_db']), 1.5, x)
         self.assertEqual(res['measured_in'], 'export.wav')
-        self.assertFalse([x for x in res['look_at'] if 'export.wav plays it' in x], res['look_at'])
-        self.assertIn('in the finished file', '\n'.join(i['measured'] for i in rec['listening_items']))
+        self.assertFalse([x for x in res['look_at'] if 'export.wav plays' in x], res['look_at'])
+        self.assertGreaterEqual(res['file_against_project']['passages_measured'], 2)
+        self.assertLess(res['file_against_project']['largest_difference_db'], 1.5)
+        self.assertIn('the finished file', '\n'.join(i['measured'] for i in rec['listening_items']))
         sha = c.file_sha256(ok)
         self.assertEqual(rec['export']['sha256'], sha)
         self.assertIsNone(c.sound_review_state(rd, 1))
@@ -749,7 +766,11 @@ class SoundReviewTests(unittest.TestCase):
         res = cli('sound-review', '--run', rd, '--video', 1, '--file', loud)
         x = self.placed(json.loads(c.sound_review_path(rd, 1).read_text(encoding='utf-8')), 'bed-b.wav')['in_export']
         self.assertLess(abs(x['differs_db'] + 12), 2.0, x)
-        self.assertTrue(any('bed-b.wav' in s and 'louder.wav plays it' in s for s in res['look_at']), res['look_at'])
+        self.assertTrue(any('bed-b.wav' in s and 'louder.wav plays this passage 1' in s and 'louder' in s
+                            for s in res['look_at']), res['look_at'])
+        rows = '\n'.join(c.sound_rows(json.loads(c.sound_review_path(rd, 1).read_text(encoding='utf-8'))))
+        self.assertRegex(rows, r'- 00:22-00:34: music, \S+ dB under the voice \(the finished file plays this passage '
+                               r'1\d(\.\d)? dB louder than the project asks\)')
         # a sound moved in the project: the review answers for an earlier build
         self.tracks[2]['start_s'], self.tracks[2]['end_s'] = 23, 35
         save(rd / '70-edit/video-01/timeline.json', {'audio_tracks': self.tracks})
@@ -773,11 +794,13 @@ class SoundReviewTests(unittest.TestCase):
 
     def test_long_stretches_without_music_and_a_clip_volume_are_facts(self):
         ar = self.core._audio_review()
-        beds = ar.bed_stretches([{'kind': 'music', 'start_s': 10, 'end_s': 40}, {'kind': 'ambience', 'start_s': 40.2, 'end_s': 60},
-                                 {'kind': 'sfx', 'start_s': 70, 'end_s': 71}, {'kind': 'music', 'start_s': 200, 'end_s': 230}], 300)
-        self.assertEqual(beds['plays'], [[10, 60], [200, 230]])
-        self.assertEqual(beds['none_for_long'], [[60, 200], [230, 300]])
-        self.assertEqual(beds['share_of_runtime'], 0.27)
+        placed = [{'kind': 'music', 'start_s': 10, 'end_s': 40}, {'kind': 'ambience', 'start_s': 40.2, 'end_s': 60},
+                  {'kind': 'sfx', 'start_s': 70, 'end_s': 71}, {'kind': 'music', 'start_s': 200, 'end_s': 230}]
+        beds = ar.beds_by_kind(placed, 300)              # music and ambience apart: a room tone is not music
+        self.assertEqual(beds['music']['plays'], [[10, 40], [200, 230]])
+        self.assertEqual(beds['music']['none_for_long'], [[40, 200], [230, 300]])
+        self.assertEqual(beds['music']['share_of_runtime'], 0.2)
+        self.assertEqual((beds['ambience']['plays'], beds['ambience']['share_of_runtime']), ([[40.2, 60]], 0.07))
         # a level set in the project instead of the file is carried into the figure and named
         voice = ar.voice_profile(self.narr)
         half = ar.placement_facts({**self.tracks[1], 'volume': 0.5}, voice)
@@ -786,6 +809,98 @@ class SoundReviewTests(unittest.TestCase):
         # a placement that starts inside its file is read from there
         late = ar.placement_facts({**self.tracks[2], 'source_start_s': 18.0}, voice)
         self.assertEqual(late['stops_early_s'], 0.0)
+
+    def test_sounds_that_play_together_are_compared_together_and_a_room_tone_is_not_music(self):
+        """Found on the first real film (2026-11-26, 51 sounds): a room tone under everything made each faint sound
+        over it read as a wrong level in the finished file, read its own end at the film's last frame as a cut-off
+        between two lines, and hid every stretch without music."""
+        c, rd = self.core, self.rd
+        ed = rd / '70-edit/video-01'
+        floor = self.tone(ed / 'floor.wav', 150, 50, '0.0316')       # 30 dB under: a 50 s file under the whole 40 s film
+        faint = self.tone(ed / 'faint.wav', 440, 12, '0.01')         # 40 dB under: heard alone in no file
+        save(ed / 'timeline.json', {'audio_tracks': [
+            self.tracks[0],
+            {'kind': 'ambience', 'file': str(floor), 'start_s': 0, 'end_s': 40, 'volume': 1},
+            {'kind': 'music', 'file': str(faint), 'start_s': 0, 'end_s': 12, 'volume': 1}]})
+        export = self.td / 'export.wav'
+        self.ff('-i', self.narr, '-i', floor, '-i', faint, '-filter_complex',
+                '[1]atrim=0:40[f];[0][f][2]amix=inputs=3:normalize=0:duration=first', '-ac', 1, export)
+        res = cli('sound-review', '--run', rd, '--video', 1, '--file', export)
+        rec = json.loads(c.sound_review_path(rd, 1).read_text(encoding='utf-8'))
+        f, m = self.placed(rec, 'floor.wav'), self.placed(rec, 'faint.wav')
+        # the faint music alone asks for 40 dB under the voice; with the room tone the two ask for about 29.6 together,
+        # and that is what the file plays
+        self.assertLess(abs(m['under_voice_db'] - 40), 1.0, m)
+        self.assertLess(abs(m['in_export']['project_asks_db'] - 29.6), 1.0, m)
+        self.assertLess(abs(m['in_export']['differs_db']), 1.5, m)
+        self.assertFalse([x for x in res['look_at'] if 'plays this passage' in x], res['look_at'])
+        # the room tone runs to the film's last frame: cut before its file ends, with the film, not between two lines
+        self.assertEqual((f['stops_early_s'], f['cut_while_sounding'], f.get('ends_with_the_film')), (10.0, True, True))
+        self.assertFalse([x for x in res['look_at'] if 'stop' in x], res['look_at'])
+        kinds = [i['kind'] for i in rec['listening_items']]
+        self.assertNotIn('sound stop', kinds)
+        # music and ambience are counted apart, and the sheet asks about the words where the least quiet sound is
+        self.assertEqual((res['music_share_of_runtime'], res['ambience_share_of_runtime']), (0.3, 1.0))
+        self.assertIn('ambience', kinds)
+        self.assertIn('Does the ambience get in the way of the words here?', c.listening_sheet_path(rd, 1).read_text(encoding='utf-8'))
+        rows = '\n'.join(c.sound_rows(rec))
+        self.assertRegex(rows, r'- 00:00-00:40: ambience, (29|30|31)(\.\d)? dB under the voice')
+        self.assertNotIn('a sound stops', rows)
+        self.assertNotIn('no music from', rows)                 # 28 s without music: under the 45 s that is listed
+        # no music at all: said in one row, not as one long stretch
+        save(ed / 'timeline.json', {'audio_tracks': [self.tracks[0], {'kind': 'ambience', 'file': str(floor),
+                                                                    'start_s': 0, 'end_s': 40, 'volume': 1}]})
+        cli('sound-review', '--run', rd, '--video', 1)
+        rows = c.sound_rows(json.loads(c.sound_review_path(rd, 1).read_text(encoding='utf-8')))
+        self.assertIn('- no music in this cut', rows)
+
+    def test_a_name_said_as_planned_is_not_listed_as_heard_differently(self):
+        c = self.core
+        rows = ([{'term': 'Qin', 'line': 'L001', 'heard_as_written': True}] * 3
+                + [{'term': 'Qin', 'line': 'L004', 'heard_as_written': False, 'nearest_heard': 'qins'},
+                   {'term': 'Zhong', 'line': 'L005', 'heard_as_written': False, 'nearest_heard': 'jong'},
+                   {'term': 'Chen Sheng', 'line': 'L006', 'heard_as_written': False, 'nearest_heard': 'chun'},
+                   {'term': 'Hei Fu', 'line': 'L002', 'heard_as_written': True}]
+                + [{'term': 'Hei Fu', 'line': f'L01{k}', 'heard_as_written': False, 'nearest_heard': 'hefu'} for k in range(3)]
+                + [{'term': 'Yuan', 'line': 'L020', 'heard_as_written': False, 'nearest_heard': 'a'},
+                   {'term': 'Yuan', 'line': 'L021', 'heard_as_written': False, 'nearest_heard': None}])
+        pron = {'Qin': {'say': 'Chin'}, 'Zhong': {'say': 'Jong'}, 'Chen Sheng': {'say': 'Chun Shung'},
+                'Hei Fu': {'say': 'Hay Foo'}, 'Yuan': {'say': 'Yoo-en'}}
+        got = c.names_to_listen_for(rows, pron)
+        # never recognised first, then the least recognised; a possessive and a planned respelling are not listed
+        self.assertEqual([(d['term'], d['recognised'], d['uses'], d['line']) for d in got],
+                         [('Yuan', 0, 2, 'L020'), ('Hei Fu', 1, 4, 'L010')])
+        self.assertEqual((got[1]['heard'], got[1]['say'], got[1]['nearest_heard']), (['hefu'], 'Hay Foo', 'hefu'))
+        # a nearest word that is nothing like the name is the transcript's noise: kept, not shown as what was heard
+        self.assertEqual((got[0]['heard'], got[0]['nearest_heard']), (['a'], None))
+        ar = c._audio_review()
+        item = next(i for i in ar.listening_items({'duration_s': 30.0, 'names': got, 'line_marks': {
+            'L020': {'start': 5.0, 'end': 8.0}, 'L010': {'start': 12.0, 'end': 15.0}}}) if 'Yuan' in i['question'])
+        self.assertEqual(item['measured'],
+                         'planned as "Yoo-en"; the transcript heard nothing near it (recognised in 0 of its 2 uses)')
+
+    def test_the_sheet_asks_about_the_words_only_where_words_are(self):
+        ar = self.core._audio_review()
+        base = {'in_the_clear_s': 1.0, 'longest_clear_s': None}
+        facts = {'duration_s': 100.0, 'placements': [
+            {**base, 'kind': 'music', 'file': 'theme.bed-m20dB.from0s-10s.wav', 'start_s': 10.0, 'end_s': 20.0,
+             'under_voice_db': 22.0, 'voice_over_it_share': 0.9},
+            # a swell inside a silence: the loudest music of the film, with no words under it
+            {**base, 'kind': 'music', 'file': 'swell.wav', 'start_s': 40.0, 'end_s': 44.0, 'under_voice_db': 8.0,
+             'voice_over_it_share': 0.1},
+            {**base, 'kind': 'music', 'file': 'far.wav', 'start_s': 60.0, 'end_s': 70.0, 'under_voice_db': 35.0,
+             'voice_over_it_share': 1.0},
+            {**base, 'kind': 'ambience', 'file': 'room.wav', 'start_s': 0.0, 'end_s': 100.0, 'under_voice_db': 31.0,
+             'voice_over_it_share': 0.8, 'cut_while_sounding': True, 'end_between_lines': True,
+             'ends_with_the_film': True, 'stops_early_s': 9.0}]}
+        items = ar.listening_items(facts)
+        said = '\n'.join(f'{i["kind"]}: {i["question"]} {i["measured"]}' for i in items)
+        self.assertIn('music: Does the music get in the way of the words here? "theme": 22 dB under the voice', said)
+        self.assertNotIn('swell', said)
+        self.assertIn('"far": 35 dB under the voice', said)
+        self.assertNotIn('finished file', said)                 # none was measured: nothing is said of one
+        self.assertNotIn('sound stop', [i['kind'] for i in items])
+        self.assertIn('ambience still sounding at the film\'s last frame', said)
 
 
 if __name__ == '__main__':

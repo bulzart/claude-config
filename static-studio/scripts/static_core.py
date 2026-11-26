@@ -13057,8 +13057,9 @@ def cmd_review_packet(args):
         # file names and nothing of what a sound is meant to do: the reviewer judges what it does, fresh.
         srv = read_json(sound_review_path(rd, n))
         if srv and srv.get('tracks_digest') == sound_tracks_digest(rd, n):
-            basis = ('measured in this file' if (srv.get('export') or {}).get('fingerprint') == fp else
-                     'by the project\'s own sound files; this file itself was not measured')
+            basis = ('levels by the project\'s own sound files, checked in this file where no voice covers them'
+                     if (srv.get('export') or {}).get('fingerprint') == fp else
+                     'levels by the project\'s own sound files; this file itself was not measured')
             text += f'\n## Sound in this cut ({basis}; you cannot hear it)\n' + '\n'.join(sound_rows(srv)) + '\n'
         else:
             text += '\n## Sound in this cut\n- not measured for this cut\n'
@@ -14259,6 +14260,14 @@ def deliverable_facts(rd, video, live=True):
         out['stale'].append(f'{len(older)} export(s) on record belong to an earlier build of the project and count for '
                             'nothing now: ' + ', '.join(Path(str(x.get('file') or '?')).name for x in older[:4]))
     steps['exported'] = bool(good)
+    if live:
+        # The records stand when a checked file is moved or deleted afterwards, and the report says so: "next" would
+        # otherwise send the director to a file that is not there (seen 2026-11-26 on a run whose export had been
+        # checked in a folder that was later cleared).
+        gone = [Path(str(x['file'])).name for x in good.values() if x.get('file') and not Path(str(x['file'])).is_file()]
+        if gone:
+            out['stale'].append('on record, and no longer at its path: ' + ', '.join(gone[:4]) + ' (the record '
+                                'stands; a step that needs the file needs it put back, or a new export)')
     m = read_json(rd / '80-deliverables' / f'video-{n:02d}' / 'master.json')
     made = m.get('mastered') or {}
     msha = made.get('sha256')
@@ -14434,6 +14443,46 @@ def sound_review_state(rd, video, sha=None):
     return None
 
 
+def names_to_listen_for(heard_rows, pron):
+    """The names worth a listen, from how the transcript heard each use of a name on the pronunciation list
+    (voice-measure's pronunciation_heard). A use counts as recognised when it was heard as written, as written with a
+    possessive s ("Qin's" comes back as "qins"), or as its planned respelling ("Zhong", planned "Jong", heard "jong"):
+    in all three the voice said what the plan asked. Listed: each name with a use that was none of these, the least
+    recognised first, with the first such line. Whisper's spelling is never proof of a wrong name; this only chooses
+    where a person listens (found on the first real film, 2026-11-26: the plain list was filled with possessives and
+    with names said exactly as planned). `nearest_heard` is the line's word most like the name; one that shares under
+    half its letters with it ("a" for "Yuan") is the transcript's noise, kept under `heard` and not shown as what was
+    heard."""
+    letters = lambda s: re.sub(r'[\W_]', '', str(s or '').lower())
+    by = {}
+    for r in heard_rows:
+        if not isinstance(r, dict) or not r.get('term') or not isinstance(r.get('heard_as_written'), bool):
+            continue
+        term = str(r['term'])
+        say = (pron.get(term) or {}).get('say')
+        d = by.setdefault(term, {'term': term, 'uses': 0, 'recognised': 0, 'line': None, 'nearest_heard': None,
+                                 'heard': [], 'say': say})
+        d['uses'] += 1
+        forms = set()
+        for src in (term, say):
+            parts = [letters(x) for x in re.split(r'[\s\-]+', str(src or '')) if letters(x)]
+            if parts:
+                forms |= {parts[0], ''.join(parts)}
+        ok, h = r['heard_as_written'], letters(r.get('nearest_heard'))
+        if not ok and h:
+            ok = h in forms or (h.endswith('s') and h[:-1] in forms)
+        if ok:
+            d['recognised'] += 1
+            continue
+        if d['line'] is None:
+            near = max((difflib.SequenceMatcher(None, h, x).ratio() for x in forms), default=0.0) if h else 0.0
+            d['line'], d['nearest_heard'] = str(r.get('line')), (r.get('nearest_heard') if near >= 0.5 else None)
+        if r.get('nearest_heard') and r['nearest_heard'] not in d['heard']:
+            d['heard'].append(r['nearest_heard'])
+    return sorted((d for d in by.values() if d['recognised'] < d['uses']),
+                  key=lambda d: (d['recognised'] / d['uses'], -d['uses']))
+
+
 def sound_review_facts(rd, video, export_file=None):
     """Everything sound-review measures for one video, from the files the run already has: each placed sound against
     the voice (by the project's own files and, with export_file, in that finished file), where music plays at all, the
@@ -14458,14 +14507,11 @@ def sound_review_facts(rd, video, export_file=None):
                'fingerprint': quick_fingerprint(Path(export_file))}
         exp.update({'speech_db': export['speech_db'], 'duration_s': export['duration_s']} if export else
                    {'unreadable': True})
-    placements = []
-    for t in tracks:
-        if t.get('kind') == 'narration' or t.get('start_s') is None or t.get('end_s') is None:
-            continue
-        f = _run_file(rd, t.get('file'))
-        placements.append(ar.placement_facts({**t, 'file': f}, voice, export) if f.is_file() else
-                          {'kind': t.get('kind'), 'file': f.name, 'start_s': t.get('start_s'), 'end_s': t.get('end_s'),
-                           'unreadable': True})
+    total = max([float(t.get('end_s') or 0) for t in tracks] + [voice['duration_s']])
+    placements = ar.placements_review(
+        [{**t, 'file': _run_file(rd, t.get('file'))} for t in tracks
+         if t.get('kind') != 'narration' and t.get('start_s') is not None and t.get('end_s') is not None],
+        voice, export, total)
     vd = video_dir(rd, n)
     lines = read_json(vd / 'script.json').get('lines') or []
     order = [str((l or {}).get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
@@ -14485,12 +14531,7 @@ def sound_review_facts(rd, video, export_file=None):
     lt = read_json(rd / '50-audio' / f'video-{n:02d}' / 'line-times.json')
     words = {str(r.get('id')): int(r.get('words') or 0) for r in lt.get('lines') or [] if isinstance(r, dict)}
     pron = {str(t.get('term')): t for t in read_json(pronunciation_path(rd, n)).get('terms') or [] if isinstance(t, dict)}
-    names = []
-    for r in lt.get('pronunciation_heard') or []:
-        if isinstance(r, dict) and r.get('heard_as_written') is False and \
-                str(r.get('term')) not in {x['term'] for x in names}:
-            names.append({'term': str(r.get('term')), 'line': str(r.get('line')), 'nearest_heard': r.get('nearest_heard'),
-                          'say': (pron.get(str(r.get('term'))) or {}).get('say')})
+    names = names_to_listen_for(lt.get('pronunciation_heard') or [], pron)
     held = {str(h.get('after_line')): h.get('times_in_edit') or {} for h in ep.get('holds') or [] if isinstance(h, dict)}
     not_listened = []
     for lid, dc in (read_json(vd / 'holds.json').get('decisions') or {}).items():
@@ -14501,30 +14542,36 @@ def sound_review_facts(rd, video, export_file=None):
         if a is not None and z is not None:
             not_listened.append({'line': str(lid), 'from_s': round(float(a), 2), 'to_s': round(float(z), 2),
                                  'total_s': dc.get('total_s')})
-    total = max([float(t.get('end_s') or 0) for t in tracks] + [voice['duration_s']])
     return ({'duration_s': round(total, 2), 'narration': nfile.name, 'speech_db': voice['speech_db'], 'export': exp,
-             'placements': placements, 'beds': ar.bed_stretches(placements, total),
+             'placements': placements, 'beds': ar.beds_by_kind(placements, total),
              'turns': ar.turn_facts(ar.line_gaps(marks, order), first_lines), 'pace': ar.pace_facts(marks, order, words),
              'names': names, 'holds_not_listened': not_listened, 'line_marks': marks}, texts, key_lines)
 
 
 def sound_rows(sr):
     """A sound review as plain rows for a reviewer who cannot hear: where music and ambience play and how far under
-    the voice, the long stretches with none, where effects fall, a sound cut off between lines. Times and levels only:
-    no file names and nothing of what any sound is meant to do."""
+    the voice (by the project's own files; said where the finished file plays a passage far from that), the long
+    stretches with no music, where effects fall, a sound cut off between lines. Times and levels only: no file names
+    and nothing of what any sound is meant to do."""
     ar = _audio_review()
     ps = [p for p in sr.get('placements') or [] if isinstance(p, dict) and not p.get('unreadable')]
-    rows = [f'- {ar.mmss(p["start_s"])}-{ar.mmss(p["end_s"])}: {p.get("kind")}, {ar.under_voice(p):g} dB under the voice'
-            for p in sorted(ps, key=lambda p: p['start_s']) if p.get('kind') in ('music', 'ambience')]
+
+    def row(p):
+        gap = ar.export_gap_words(p)
+        return (f'- {ar.mmss(p["start_s"])}-{ar.mmss(p["end_s"])}: {p.get("kind")}, {p["under_voice_db"]:g} dB under '
+                'the voice' + (f' ({gap})' if gap else ''))
+    rows = [row(p) for p in sorted(ps, key=lambda p: p['start_s']) if p.get('kind') in ('music', 'ambience')]
     if len(rows) > 40:
         rows = rows[:40] + [f'- and {len(rows) - 40} more stretches of music or ambience']
-    rows += [f'- no music or ambience from {ar.mmss(a)} to {ar.mmss(b)}'
-             for a, b in (sr.get('beds') or {}).get('none_for_long') or []]
+    music = (sr.get('beds') or {}).get('music')
+    if isinstance(music, dict) and ps:
+        rows += ([f'- no music from {ar.mmss(a)} to {ar.mmss(b)}' for a, b in music.get('none_for_long') or []]
+                 if music.get('plays') else ['- no music in this cut'])
     fx = [ar.mmss(p['start_s']) for p in sorted(ps, key=lambda p: p['start_s']) if p.get('kind') == 'sfx']
     if fx:
         rows.append('- sound effects at: ' + ', '.join(fx))
     rows += [f'- a sound stops at {ar.mmss(p["end_s"])}, cut before its end, between two lines'
-             for p in ps if p.get('cut_while_sounding') and p.get('end_between_lines')]
+             for p in ps if ar.is_cut_off(p)]
     return rows or ['- no music, ambience or effects in this cut: the voice alone']
 
 
@@ -14558,14 +14605,25 @@ def cmd_sound_review(args):
     write_json(sheet.with_suffix('.json'), {'video': n, 'file': name, 'how': 'fill "answer" for each item in the '
                'person\'s own words, then: human-review --answers this-file', 'items': [
                    {k: i.get(k) for k in ('id', 'kind', 'where', 'question', 'measured', 'answer')} for i in items]})
-    beds = [p for p in facts['placements'] if p.get('kind') in ('music', 'ambience') and not p.get('unreadable')]
+    ps = [p for p in facts['placements'] if not p.get('unreadable')]
+    music = [p for p in ps if p.get('kind') == 'music']
     look = [f'{p["file"]} stops at {ar.mmss(p["end_s"])} before its file ends, still sounding, between two lines'
-            for p in facts['placements'] if p.get('cut_while_sounding') and p.get('end_between_lines')]
+            for p in ps if ar.is_cut_off(p)]
+    covered = [p for p in ps if p.get('cut_while_sounding') and not p.get('end_between_lines')
+               and not p.get('ends_with_the_film')]
+    if covered:
+        look.append(f'{len(covered)} sound(s) stop before their files end, still sounding, with a line over the cut: '
+                    + ', '.join(f'{p["file"]} at {ar.mmss(p["end_s"])}' for p in covered[:8])
+                    + (f' and {len(covered) - 8} more' if len(covered) > 8 else ''))
     look += [f'{p["file"]} could not be read' for p in facts['placements'] if p.get('unreadable')]
-    look += [f'{p["file"]} at {ar.mmss(p["start_s"])}: {f.name} plays it {p["in_export"]["under_voice_db"]:g} dB under '
-             f'the voice where the project\'s files ask for {p["in_export"]["project_asks_db"]:g}: a level the '
-             'project\'s read-back does not carry (a volume move, a muted track), another sound over it, or another build'
-             for p in facts['placements'] if abs((p.get('in_export') or {}).get('differs_db') or 0) >= ar.EXPORT_DIFFERS_DB]
+    measured = [p['in_export'] for p in ps if p.get('in_export')]
+    look += [f'{p["file"]} at {ar.mmss(p["start_s"])}: {f.name} plays this passage '
+             f'{abs(p["in_export"]["differs_db"]):g} dB {"louder" if p["in_export"]["differs_db"] < 0 else "quieter"} '
+             f'against the voice than the project\'s sounds there ask for together '
+             f'({p["in_export"]["under_voice_db"]:g} dB under the voice where they ask for '
+             f'{p["in_export"]["project_asks_db"]:g}): a level the project\'s read-back does not carry (a volume move, '
+             'a muted track), or another build'
+             for p in ps if abs((p.get('in_export') or {}).get('differs_db') or 0) >= ar.EXPORT_DIFFERS_DB]
     if (facts.get('export') or {}).get('unreadable'):
         look.append(f'{f.name} has no sound this could read against the narration: is it the export of this project?')
     if not f:
@@ -14576,9 +14634,14 @@ def cmd_sound_review(args):
           'measured_in': f.name if f else 'the project\'s own files only (no finished file given: --file)',
           'listening_items': len(items), 'listening_minutes': round(sum(i['to_s'] - i['from_s'] for i in items) / 60, 1),
           'voice_speech_db': facts['speech_db'], 'sounds_placed': len(facts['placements']),
-          'music_under_voice_db': ({'quietest': max(ar.under_voice(p) for p in beds),
-                                    'least_quiet': min(ar.under_voice(p) for p in beds)} if beds else None),
-          'music_share_of_runtime': facts['beds']['share_of_runtime'], 'no_music_for_long': facts['beds']['none_for_long'],
+          'music_under_voice_db': ({'quietest': max(p['under_voice_db'] for p in music),
+                                    'least_quiet': min(p['under_voice_db'] for p in music)} if music else None),
+          'music_share_of_runtime': facts['beds']['music']['share_of_runtime'],
+          'no_music_for_long': facts['beds']['music']['none_for_long'],
+          'ambience_share_of_runtime': facts['beds']['ambience']['share_of_runtime'],
+          'file_against_project': ({'passages_measured': len(measured),
+                                    'largest_difference_db': max(abs(x['differs_db']) for x in measured)}
+                                   if measured else None),
           'ordinary_gap_s': facts['turns']['ordinary_gap_s'],
           'turns': [{k: t.get(k) for k in ('beat', 'why', 'next', 'at_s', 'gap_s')} for t in facts['turns']['turns']],
           'names_heard_differently': [x['term'] for x in facts['names']],
