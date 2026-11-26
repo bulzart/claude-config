@@ -28,9 +28,7 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   exact topic or story the blind treatment reader is also asked whether each treatment is still a video about what was
   asked (06), and for a niche with its boundary whether each is still a video of that niche; a "partly" or "no" is a
   finding you answer. With a niche lock (01, "Discovering the niches"), `scope.niche` is the locked niche's name or
-  id, and its `understood_as` and `boundary` start from the niche map's `identity` and `boundary`. A run made before
-  niche discovery and grouped by `--cohort-id` (03) names its niche by its own names: the cohort id, or a niche its
-  references' cards name, never the internal `__cohort__:` label.
+  id, and its `understood_as` and `boundary` start from the niche map's `identity` and `boundary`.
 - **What this audience values.** Read it from the references and the niche, never from one niche's idea of interesting:
   a history video may reward consequential decisions, a geography video an extraordinary phenomenon understood, a
   biology video a surprising mechanism, a tutorial a problem solved, a "what if" its logically developed consequences,
@@ -45,8 +43,7 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   dropped and why). Before comparing, read at least the source behind each finalist's strongest material: an
   alternative that loses only because it was never read was never compared. The checks name one ruled out on search
   summaries alone, and refuse an open scope where every alternative was. Comparable depth matters more than many
-  candidates. (In five research runs on 2026-11-24, three began with a search for the subject they ended up choosing,
-  read three to five sources for it and none or one for each alternative, which then lost partly for being unread.)
+  candidates.
 - **Research the material, not titles.** For each promising candidate (an event, a mechanism, a phenomenon, a problem
   and its solution, a question, a relationship, a transformation, a concept), find what genuinely makes it worth a
   viewer's time: `what_happens` (what is discovered, explained, shown or experienced), `why_it_matters` (within this
@@ -93,8 +90,7 @@ exceptional explanation. The material decides this, not polish, fame or drama.
 - **The ending comes from this subject.** Its last finding, a result the viewer can now use, an honest open question,
   a consequence still unfolding, a joke's last turn: what this material ends on. A return to the opening image belongs
   only where the return itself says something new; a device any video could use is a template, however well it
-  works once. (In the same five runs every ending, a tutorial's and a thought experiment's included, went back to its
-  opening scene "read again".)
+  works once.
 - **Enough for the locked length, judged from the material.** No share of minutes decides this: six minutes of notes can
   hold ten when each development opens the next, and fifteen may not when they repeat. For each candidate write its
   `runtime.progression` (what the viewer newly gets, step by step, each step resting on its material ids), a `verdict`
@@ -125,8 +121,7 @@ exceptional explanation. The material decides this, not polish, fame or drama.
   one is not a reason to choose it: the question is what this film gives. View counts say what was clicked, never what
   was watched to the end or enjoyed: note them as popularity if you like, never as proof that a way of telling works.
   Copy nothing you find; the point is to know where this film stands. The checks ask only that the look was taken and
-  written down: no count, score or share decides anything. (2026-11-26: a finished film's subject had well-known videos
-  on it that nobody had looked at; its angle and its title were chosen blind.)
+  written down: no count, score or share decides anything.
 - **What it will be clicked for.** With the subject, write the promise the film will be chosen by (`selection.promise`):
   a `working_title`, a `thumbnail_idea` (the one picture, in words) and `viewer_expects` (what a person who clicks on
   those two expects to get). It is a working promise, revised freely as the film takes shape, and it is what the
@@ -231,4 +226,4 @@ For factual work, obtain primary and credible secondary sources independent of r
 
 Mined references may contribute functional techniques (e.g., start with the outcome, explain with a scale comparison, slow down on a decision), but never copy their unique shot sequences, artistic identities, voice recordings, specific scripts, distinct jokes or watermarked materials. No attempt to disguise replicated footage. For a borrowed functional device write `source timestamp → audience function → genuinely different new application → adaptation trade-off`. Generate original assets or use sources with clear licenses.
 
-**Internal conversation:** Creative lead may critique concepts internally while drafting. Independent readers come in at three points only: the blind treatment comparison, the cold read of the script, and the final watch review (06, 10), never at every small edit. A revision gets a fresh read when it touches what the reader's verdict rested on (a key moment's lines and what it depends on, a hedge, a line carrying a researched value or a claim, a comprehension gap), however few its words; a rewording elsewhere does not, and the answers file can say a change is wording only (`revision_notes`, 06). Do not outsource artistic judgment to a rigid number: the producer owns the final direction, and records why when it overrules a reader.
+**Internal conversation:** Creative lead may critique concepts internally while drafting. Independent readers come in at three points only: the blind treatment comparison, the cold read of the script, and the final watch review (06, 10), never at every small edit. A revision that touches what a reader's verdict rested on gets a fresh read (06). Do not outsource artistic judgment to a rigid number: the producer owns the final direction, and records why when it overrules a reader.

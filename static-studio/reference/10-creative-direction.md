@@ -203,9 +203,7 @@ field by field and says what the change touched (`affects`, and `outdated_now` f
   shot plan.
 
 **Reconsidering the treatment.** A lock protects the direction from drift, never from a correction. When two
-independent readers find the same major problem, the revision between them did not reach its cause: the answer to the
-later finding says so (`recurrence`: what the earlier revision missed, and whether the cause is wording, order,
-structure, the treatment, the material or the duration, 06), and rewording is refused as its answer. A structural or
+independent readers find the same major problem, the revision between them did not reach its cause (06, "A problem that comes back"). A structural or
 treatment cause is answered by re-planning: revise the chosen treatment (its movements, its structure and pace, or
 another treatment) and re-lock with `--revise`, keeping what works (the voice, the strongest material, the samples
 that landed); the script and what follows it are rebuilt from the new plan and read afresh. A duration cause is a
@@ -382,18 +380,8 @@ These are craft principles. Each one says when it applies.
    stay on record for the release sheet. A problem both readers found that you do not cure is closed by a
    `decision` (06): the cures weighed, what each costs, and, when the strongest is blocked by the length, the recorded
    narration or the budget, the user's own answer.
-3. **The narrator, then a representative calibration.** The shortlist goes to the user with its listening files, and `voice-pick` records their listening choice for this treatment (05). The first paid recording shows the whole performance the script asks for (an explanation and an expressive passage, the hardest names, the tags, a transition into a silence): part 1 when it holds that, else a short representative `narration-trial` first. When the voice, its stability, the
-   tags or a name are in doubt, a short `narration-trial` (approved and priced first) compares them one change at a
-   time and gives the user clips to hear. Then the first real parts: the pace (a forecast tested on them, never a target; a conflict with the length goes to the user, 05), every line heard, and
-   `delivery.json` for the performance.
-4. **The sound, measured; then the final watch review.** `sound-review` after `timeline-check` shows what the sound
-   of the cut does before an export is spent (each piece of music against the voice where it plays, a cut-off, the
-   air at the turns), and `sound-review --file` on the mastered file measures it in the file the audience gets and
-   writes the listening sheet for the user: the few passages only ears can judge (05). `av-profile --video NN --file
-   export.mp4` makes the export's watch sheets;
-   `review-packet --kind final --file` gives a fresh reviewer the sheets, the parts by time only, the held
-   silences and where the sound plays; what each part is meant to do stays with you, to compare with its account when you answer. Its key
-   moments are reconciled the same way. Fix, re-export, and the new file gets its own read. `release-check` confirms every gate for that exact file, and `--record` puts the release on record; `deliverable` names the file to hand over.
+3. **The narrator, then a representative calibration** (05). The user's listening choice for this treatment, the smallest paid recording that shows the whole performance the script asks for, then the first real parts: the pace (a forecast tested on them, never a target; a conflict with the length goes to the user), every line heard, and `delivery.json` for the performance.
+4. **The sound, measured; then the final watch review** (05, 06). `sound-review` after `timeline-check` shows what the sound of the cut does before an export is spent, and on the mastered file it writes the listening sheet for the user: the few passages only ears can judge. The final reviewer gets the export's watch sheets, the parts by time only, the held silences and where the sound plays; what each part is meant to do stays with you, to compare with its account when you answer. Its key moments are reconciled the same way. Fix, re-export, and the new file gets its own read. `release-check` confirms every gate for that exact file, and `--record` puts the release on record; `deliverable` names the file to hand over.
 
 What the code enforces is the order, the versions and the answers. A passed `release-check` means the process was
 followed. Whether the film is a pleasure to watch is the director's and the reviewers' judgement, and the user's.

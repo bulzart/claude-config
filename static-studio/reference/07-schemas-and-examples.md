@@ -201,7 +201,7 @@ more>"}]`, in direction.json for a treatment and in beat-map.json for a beat.
 
 ## Reference cards (agent generated)
 
-Create `20-analysis/cards/V001.json` for every unique video in `00-inventory/references.json`. Required minimum: `reference_id`, `niches` (what the video is about: its subject matter, a list), `story_form` (how it tells it: one primary form), and `viewer_experience` (list of timed meaningful moments); `viewer_reward` keeps what the viewer comes for apart from the rest (01). The analysing agent leaves `cohort_id` out: comparable cohorts are decided in the niche map, with every reference in view. (A run made before niche discovery may carry a director-set `cohort_id` on its cards, which its `length --cohort-id` matches; references of different story forms need `--forms-why`, 03.) The detailed suggested schema is in manual 01; include actual timestamps, source vs interpretation, script delivery, shot/form analysis and tradeoffs.
+Create `20-analysis/cards/V001.json` for every unique video in `00-inventory/references.json`. Required minimum: `reference_id`, `niches` (what the video is about: its subject matter, a list), `story_form` (how it tells it: one primary form), and `viewer_experience` (list of timed meaningful moments); `viewer_reward` keeps what the viewer comes for apart from the rest (01). The analysing agent leaves `cohort_id` out: comparable cohorts are decided in the niche map, with every reference in view. The detailed suggested schema is in manual 01; include actual timestamps, source vs interpretation, script delivery, shot/form analysis and tradeoffs.
 
 ## Analysis plan and niche discovery (`analysis-plan`, `niche-evidence`, `niche-map.json`, `niche-check`, `niche-lock`)
 
@@ -257,8 +257,6 @@ speech_rate_wpm, story_forms, languages, length_would_refuse}}`) and `batches_pe
 `selected_niche` (the name), `selected_niche_id` and `niche_discovery`. `length-lock.json` then records `niche` (the
 name), `niche_id`, `niche_lock_sha256` and the `cohort_id` it used.
 
-**Important:** `cohorts` only groups by reported niche/form and measured ffprobe duration. Agents, not a keyword regex, decide what a video is actually about. A video can be in two niches, but a 50-second Short and a 15-minute episode must not share one Standard duration lock. If group spread is large, explicitly choose a narrow set of comparable IDs for `length`.
-
 ## Blueprint and exact script (agent generated)
 
 Minimal `40-plans/video-01/blueprint.json`:
@@ -279,8 +277,6 @@ Minimal `40-plans/video-01/blueprint.json`:
   "chapter_outline": [{"id": "B01", "purpose": "orient"}, {"id": "B02", "purpose": "complicate"}]
 }
 ```
-
-`narrative_approach` is universally required. `central_question` and `human_lens` are conditional: include them when the format is investigative or decision-driven; omit them for tutorials, essays, or other formats where they would be forced.
 
 `40-plans/video-01/script.json`:
 
@@ -303,7 +299,7 @@ Minimal `40-plans/video-01/blueprint.json`:
 }
 ```
 
-`pace_wpm` above (190) is an example number, not a universal default. So are the pause lengths: each is set by its own moment and decided again on the recorded voice and the picture, never copied. Write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then the voice's real one (`60-voice/video-NN/voice-lock.json` → `measured.wpm`) once its first part is measured. The two genuinely differ: on one run the references measured 195–206 WPM and the voice 186–187. `text` is sent exactly as written, inline tags included, and tags are not counted as words; it holds nothing else (no SSML, braces, asterisks, stage directions in parentheses, notes in brackets or IPA). `pause_after_s` up to 1 s needs nothing, since the voice's own gap gives it. A longer one names `pause_via` (`"tag"`: a pause tag at this line's end or the next line's start; `"edit"`: a hold inserted by `retime-shots`) and its `pause_purpose`. Each kept tag gets a line under "Delivery and tags" in `editorial-review.md` (plan-check checks it), and each `content_flags` hit gets one under "Content flags". Each comprehension signal gets a line under "Comprehension", or shares one with signals of the same root (a name in common, or one beat): the ids, one kind and the reason (plan-check checks it; `comprehension_signals_grouped_without_a_shared_cause` names a line that groups unrelated ones). Each pace signal is examined under "Pace": a line naming the beat id (or `overall`), five words or more, which beats with one shared cause may share (the audio gate checks it).
+`pace_wpm` above (190) is an example number, not a universal default. So are the pause lengths: each is set by its own moment and decided again on the recorded voice and the picture, never copied. Write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then the voice's real one (`60-voice/video-NN/voice-lock.json` → `measured.wpm`) once its first part is measured. `text` is sent exactly as written, inline tags included, and tags are not counted as words; it holds nothing else (no SSML, braces, asterisks, stage directions in parentheses, notes in brackets or IPA). The sections of `editorial-review.md` the checks read ("Delivery and tags", "Content flags", "Comprehension", "Pace") are in 03.
 
 `40-plans/video-01/pronunciation.json` (optional; only the words the voice may say wrong):
 
@@ -315,7 +311,7 @@ Minimal `40-plans/video-01/blueprint.json`:
 ]}
 ```
 
-`ipa` goes between forward slashes (sent inside double quotes, as ElevenLabs' v4 examples write it); `respell` is plain letters. `confirmed` and `likely` name their `source`; `uncertain` is flagged for a probe and the user's ear. Only what is sent changes: the script and captions keep the canonical spelling.
+Fields and use: 05, "Pronunciation". Only what is sent changes: the script and captions keep the canonical spelling.
 
 `40-plans/video-01/beat-map.json`:
 
@@ -374,7 +370,7 @@ kind of video is built. How the same fields might read elsewhere (illustrations,
 
 ## Audio manifest (automatically produced with paid TTS)
 
-Under `50-audio/video-01/`, the TTS tool creates `manifest.json`: voice/model/language, `voice_lock` (the setup recorded with), `chunks` (line ranges, the `beats` each part carries, `text_sha256` of the canonical text and `sent_sha256` of exactly what was sent, characters), `finished_parts`, `part_revs` (the direction revision each part was recorded under), `part_records` (per finished part: voice, model, settings, voice revision, treatment, direction revision, both fingerprints, the context sent with it, the request id, the credits billed (`credits_billed`) and `recovered_from_history`) and `status`. Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. Parts keep their line boundaries once recorded. A part whose lines, pronunciation, voice setup or direction changed is listed by the dry run, and `--rerecord-changed` re-records just those, with old takes in `superseded/` and the change in `history`; `--rerecord-parts N --reason` redoes a part after listening. Adding or removing lines, or changing the voice, model or language, needs `--rechunk`/`--archive-existing` (the folder moves to `video-NN-archive-<time>`). `audio-check` disallows a partial or missing line/audio, mixed voice setups, a line not heard or a tag read aloud, rejects a duration outside the audio tolerance, and rejects a narration that, with its planned edit holds, cannot fit the export window. `tts --max-parts 1 --execute` stops after the first part (`mode: partial_by_design_max_parts`) so it can be measured before paying for the rest.
+Under `50-audio/video-01/`, the TTS tool creates `manifest.json`: voice/model/language, `voice_lock` (the setup recorded with), `chunks` (line ranges, the `beats` each part carries, `text_sha256` of the canonical text and `sent_sha256` of exactly what was sent, characters), `finished_parts`, `part_revs` (the direction revision each part was recorded under), `part_records` (per finished part: voice, model, settings, voice revision, treatment, direction revision, both fingerprints, the context sent with it, the request id, the credits billed (`credits_billed`) and `recovered_from_history`) and `status`. Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. Re-recording a part, re-chunking and what `audio-check` refuses are in 05 (`tts --max-parts 1 --execute` leaves `mode: partial_by_design_max_parts`; an archived folder is `video-NN-archive-<time>`).
 
 `logs/elevenlabs-ledger.jsonl` (the run's spend record, two lines per billed request: narration parts, probes, trials, Voice Design): first `{"phase": "pending", "attempt_id", "at", "kind", "video", "part" or "trial"/"run"/"budget", "model_id", "voice_id", "characters", "context_characters", "max_credits", "balance_before", "request_sha256", "pid"}` before it is sent, then the same with `"phase": "done"`, `"ok", "error", "outcome", "request_id", "character_cost_header", "balance_after", "delta"` and, for a trial, `"credits_billed"` (a request cut off by a crash keeps only its pending line; one recovered from the account history gets `"phase": "recovered"`). `outcome` is `completed`, `failed` (a 4xx: answered before any work, never billed), `uncertain` (a timeout, a lost connection or a 5xx) or `charged_incomplete` (billed, the answer unusable). An attempt whose outcome is unknown is settled before the same request is sent again: from the account history, or by a `"phase": "reconciled"` row with the reason when the user allowed one new attempt (`--retry-unreconciled`). `delta` is the balance drop (other use of the account in between can only push it up), `character_cost_header` ElevenLabs' own `character-cost` reply header; `logs/elevenlabs-models.json` caches what ElevenLabs reports for each model (credits per character, maximum characters per request) for a day.
 
@@ -532,28 +528,7 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
 }
 ```
 
-`subject` comes first (02 "Finding the subject"): the user's scope (`understood_as` and `boundary` for every kind, a
-niche included; for a subject, topic or story also `selection.how_scope_kept`; in a run grouped by `--cohort-id`,
-`niche` is the cohort id or a niche its references' cards name, never the internal `__cohort__:` label), what this
-audience values, what the references show
-(observed apart from interpreted), the researched candidates (at least two in an open scope; each material item with
-its `id` and certainty: established on `claims` whose sources the ledger says were read, reasoned `from` established
-items, contested with its `hedge`, speculative or assumed with its `framed_as`, invented only when not factual), each
-candidate's `runtime` (`progression` of what the viewer newly gets on which material, `verdict`, `why`, `shortfall`;
-`runtime_decision` with the user's words when the chosen one is short or uncertain) and `payoff` (`shape`: `builds_to`,
-`several` or `progressive`; `rests_on`, the candidate's own material ids in a factual subject; `why_substantial`;
-`needs_first`; `worth_the_buildup`; required for the chosen one, a warning for an alternative), the choice
-(`decisive_material`,
-confirmed when established; `over_alternatives`, one reason per alternative; `coverage`, the outward look: `looked`
-with where and for what, `exists` with what each is and how it tells it, or `none_found` in a sentence, and
-`this_film_adds`; `promise`: `working_title`, `thumbnail_idea`, `viewer_expects`; presence only, no count or score, 02)
-and `value_to_carry` (`rests_on`,
-`needs_first`; the value the payoff delivers marked `"payoff": true`, resting on the payoff's material: never dropped,
-reaching a key moment for `builds_to` or `several` and more than one beat for `progressive`), which the beat map
-`carries` in that order (with `hedges` for a contested, speculative or assumed value
-in an ordinary beat), the script says (a claim's `line_refs` inside the carrying beat) and the key moments' shots show
-(`carries_significance`; every shot of a beat that carries an uncertain value says how its picture keeps it so,
-`uncertainty_shown`, 04). A direction locked before `subject` existed keeps working, with a warning.
+`subject` comes first (02 "Finding the subject"): what each field holds and what the checks ask of it is there (in a run grouped by `--cohort-id`, `niche` is the cohort id or a niche its references' cards name, never the internal `__cohort__:` label). A direction locked before `subject` existed keeps working, with a warning.
 
 `30-research/video-01/sources.md`, one entry per source (the `Access` line is what the checks read):
 
@@ -567,20 +542,7 @@ in an ordinary beat), the script says (a claim's `line_refs` inside the carrying
 
 `30-research/video-01/claims.json`: `{"claims": [{"id": "C01", "claim": "...", "sources": ["S1"], "confidence":
 "confirmed", "note": "...", "line_refs": ["L034"]}]}`; confidence is confirmed (a primary record, or two or more
-independent credible sources, read), likely (one credible source), disputed or legend. At least two approaches
-(between them at least three of perspective/scale/structure/voice/visualization, at least one that challenges the
-references' formula), with `chosen_approach.exploration`: what range of ways to tell it was considered and why these
-approaches cover it. Two to four treatments, each with `carries_values` (`[{value, how}]`: how it delivers every payoff
-value, in its own terms) and `movements` (`[{what, minutes, promise}]`: how the whole video unfolds, at least two,
-`promise: true` where it delivers what the opening promises; the blind reader sees them without those marks), and
-the `decision` with `carries_payoff` (how the chosen treatment makes the payoff land), `promise_and_delivery`,
-`length_fit` and `pacing` (10 §3, 03: the reference narrators this narration follows, weighed, never averaged;
-plan-check reports their measured profiles, the range, the script's density and the forecast across the range); a change to the chosen treatment's `carries_values` marks the beat map and script, a change to
-its `movements` the beat map, script and shot plan. `direction_facts` reports each treatment's `promise_timing`
-(minutes before its first promise movement, what comes before it) and the length lock's cohort beside it: facts, never
-a verdict. Evidence that cites a reference
-outside the locked niche declares it in `evidence.borrowed` (`[{ref, technique, not_taken}]`: the technique borrowed,
-and the subject assumptions not taken). `direction-lock.json` keeps the hash, the time, `planning_rules` (5 on a lock made since 2026-11-26, kept through
+independent credible sources, read), likely (one credible source), disputed or legend. What the approaches, the treatments (their `carries_values`, `movements` and samples) and the `decision` must hold is in 02 and 10 §2-§3; `direction_facts` reports each treatment's `promise_timing` and the length lock's cohort as facts, never a verdict; `evidence.borrowed` is `[{ref, technique, not_taken}]`. `direction-lock.json` keeps the hash, the time, `planning_rules` (5 on a lock made since 2026-11-26, kept through
 `--revise`; a lock stamped lower or without a stamp was approved before rules it need not follow, and those are advisory
 for it, 10 §3), `planning_migration` on such an older lock once a substantive revision reached something (`{to, sections,
 artifacts, history}`: where the current rules now apply), the treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
@@ -641,18 +603,7 @@ user's to lift (`decided_by: "user"` with their `user_words`); plan-check report
 until then.
 
 A major finding is `revised` or `disputed`, never just `kept`, and gets a fresh read in the next round (until round 2
-for the script and the final review, round 1 for the treatments). A fresh read also follows a changed line the
-reader's verdict rested on (`script_revised_where_it_matters_since_its_last_read:L045(key_moment:B05),...`: a key
-moment's lines and what they depend on, a hedge, a value's beat, a claim's line, a comprehension gap), however few its
-words; the share of words changed is only a warning. `revision_notes` says, per line and in five words or more, that
-a change is wording only: that line then forces no fresh read, and it leaves the count of lines edited after review.
-The read's lines are matched to the current script by their words as well as their numbers (`align_script_lines`:
-the reading with fewer changed lines wins, the numbers on a tie), so a line added or removed renumbers the lines after
-it without counting them as revised; a line moved counts (the order is what a reader followed), and a removed line
-counts beside what its neighbours carry. Name lines in `revision_notes` by their numbers in the script as it now
-stands; a `revised` answer may name them that way or by the numbers the reader saw, and a cut line by the number the
-reader saw. A beat's or shot's line numbers are its place, not its content (`part_sha`), so later beats, their shots
-and a waiting re-check stay as they were; a record made before 2026-11-25 is compared as it was made. A claim's
+for the script and the final review, round 1 for the treatments). When else a fresh read follows (a changed line the reader's verdict rested on; `revision_notes` for a change of wording only) and how lines are matched after a renumbering are in 06. A claim's
 `line_refs` still name lines by number: renumbered lines need them updated (plan-check names one left pointing
 elsewhere).
 
@@ -758,8 +709,4 @@ refuses a longer one, `track_N_caption_longer_than_the_music_model_reads`). `tim
 them. Pictures made any other way (supplied by the user, drawn) are accepted as a set with `direction-reapprove
 --artifact stills --reason "..."`, on record.
 
-Again these are a small excerpt, not a passing whole-film timeline. Fill every segment until the actual project ends, with meaningful beat IDs and no gaps; base timestamps on CapCut project readback. Timeline gate success still requires a human watch/listen pass and an **independent MP4 export check**.
-
-## Repeat or start a new channel
-
-`/create-video more <RUN> [N]` continues the run, preserves its niche and uses new video IDs; each new video chooses its own direction and narrator (keeping the series' voice and look is a recorded choice). `/create-video clone <RUN>` creates a new run with **only reference inventory and analytical cards**, not shared source assets or an unearned approved script. Re-analyze newly added files; do not automatically duplicate a finished episode.
+Again these are a small excerpt, not a passing whole-film timeline. Fill every segment until the actual project ends, with meaningful beat IDs and no gaps; base timestamps on CapCut project readback. A passed timeline gate is not an export: the exported MP4 gets its own checks (05), and a person's watch or listen is offered, never required.

@@ -6,7 +6,7 @@ A reference folder may contain formats you recognise and ones you don't. Treat *
 
 ## Intake, audio and visual coverage
 
-Use `static_core.py init`, `scan`, `prepare --dry-run`, then `prepare`. Never skip Whisper merely because speech is present in auto-captions; `prepare --skip-whisper` needs `--reason`, since a reference without its words loses its pace, its pauses and what is said where. Faster-Whisper with word timestamps, VAD, and original source audio creates `10-media/V###/transcript.json` plus `.txt` (when available). Listen to the video yourself; repair/annotate uncertain names, numerals, quotes, jokes, irony, tonal delivery and sound-only context. Whisper is **an imperfect observation aid**, not an authority on dialogue. For silent clips, mark no audio; for a failed transcribe mark *unknown/unprocessed*, not “no speech.”
+Use `static_core.py init`, `scan`, `prepare --dry-run`, then `prepare`. Never skip Whisper merely because speech is present in auto-captions; `prepare --skip-whisper` needs `--reason`, since a reference without its words loses its pace, its pauses and what is said where. Faster-Whisper with word timestamps, VAD, and original source audio creates `10-media/V###/transcript.json` plus `.txt` (when available). Repair/annotate uncertain names, numerals, quotes, jokes, irony, tonal delivery and sound-only context. Whisper is **an imperfect observation aid**, not an authority on dialogue. For silent clips, mark no audio; for a failed transcribe mark *unknown/unprocessed*, not “no speech.”
 
 Visual pass: two sampled frames per second is broad semantic coverage (the run's analysis rate, `state.json` `analysis_fps`: 2 for a new run, each frame picked by and kept with its own source timestamp; a run keeps the rate it was analysed at, and one made before keeps its 5 fps nominal slots); read it as temporal sequence, not random isolated thumbnails. At 2 fps a shot shorter than about a second can merge with its neighbours and a flash is rarely seen: the av-profile lists `inspect_candidates` (flashes, cut series, transitions, short shots; every one of them, none dropped silently), and `inspect-window --ref V### --from mm:ss --to mm:ss` looks closer at one brief stretch (10 fps by default, or `--native` for every frame; a `--fps` at or below the run's analysis rate is refused, since it would show nothing the run's own frames do not; at most a few hundred frames, never a whole video). To understand a cut, reveal, text animation, camera move or split-second joke, seek into the original video and use full-native-FPS extraction for the specific reference (`prepare --ids V### --full-fps`) or a narrow decoded segment. `--full-fps` can create enormous files for long videos: plan space and inspect in digestible ranges. Important for 30/60 fps reference edits: measure actual frame-to-frame changes; a contact sheet is only a coarse map. Retain timestamps and original frame order. Never assert that examining a subset equals reviewing every native frame.
 
@@ -171,16 +171,11 @@ notes and content review:
 
 Runtime is measured by ffprobe, not estimated from cards. **A combined average over five 40-second explainers and five
 15-minute history videos is invalid as the Standard length of either.** Even 8-minute and 35-minute videos of one niche
-may form separate runtime families: give them separate cohorts. A reference narrated in another language than the
-run's cannot set the computed pace: choose references in the run's language, or give `--pace-wpm` with `--pace-why`
-(03). `cohorts --run "RUN"` still lists the cards' exact label groups (min, median, max, spread): a quick look, never
+may form separate runtime families: give them separate cohorts. `cohorts --run "RUN"` still lists the cards' exact label groups (min, median, max, spread): a quick look, never
 the niches. A run made before niche discovery (no `niche_discovery` in its `state.json`) keeps its earlier way: its
 niche is a card label, or a `cohort_id` the director set on the cards, and `length` takes it from there.
 
-**Outcome:** The user sees distinct creative directions rather than a generic count of references. Each niche gets a
-**creative profile** (`20-analysis/creative-profiles/[niche-slug].md`) from the synthesis: what appears to work for
-that audience, what weaknesses exist, and what creative territory remains unexplored. See §02 for the profile
-structure. The writer gains *permission to be original*; source titles, names, jokes, voice clones or watermark/overlay
+**Outcome:** the user sees distinct creative directions rather than a count of references, and each niche gets its creative profile (02). The writer gains *permission to be original*; source titles, names, jokes, voice clones or watermark/overlay
 text do not get repeated in the new video's final creative work.
 
 
