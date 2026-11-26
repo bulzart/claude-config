@@ -35,6 +35,10 @@ NO_BED_S = 45.0              # a stretch this long with no music is listed (a fa
 EXPORT_DIFFERS_DB = 6.0      # the finished file plays a passage this far from what the project's sounds ask: look there
 FILM_END_S = 0.5             # a sound that plays to within this of the film's end ends with the film
 WORDS_OVER_IT = 0.5          # the voice is over at least this share of a sound: one the words must be heard over
+BETWEEN_WORDS_S = 0.4        # a pause of the voice this long is where the sound between the words is read (av_tools GAP_MIN_S)
+BETWEEN_TRIM = 2             # level frames left out at each edge of it: the voice's tail and onset (av_tools GAP_TRIM_S)
+LIFT_RAMP_S = 0.6            # how long a lifted bed takes to rise and to come back, unless its plan says
+LIFT_GUARD_S = 0.15          # a rise starts this long after the voice stops and is over this long before it returns
 
 
 def _np():
@@ -130,6 +134,7 @@ def _placed(track, voice):
     longest = max(clear, key=lambda r: r[1] - r[0]) if clear else None
     early = file_s - src0 - (b - a)
     tail = float(np.median(lv[-2:]))
+    alone = np.concatenate([lv[s:e] for s, e in clear]) if clear else None
     j0, j1 = int(round((b - 0.15) / HOP_S)), int(round((b + 0.4) / HOP_S))
     out.update({
         'level_db': round(level, 1), 'peak_db': round(float(lv.max()), 1),
@@ -137,6 +142,8 @@ def _placed(track, voice):
         'voice_over_it_share': round(float((sounding & va).sum()) / max(1, int(sounding.sum())), 2),
         'in_the_clear_s': round(sum(e - s for s, e in clear) * HOP_S, 1),
         'longest_clear_s': [round(a + longest[0] * HOP_S, 2), round(a + longest[1] * HOP_S, 2)] if longest else None,
+        # its level where it is heard alone, against the level the voice speaks at
+        'alone_under_voice_db': round(voice['speech_db'] - float(np.median(alone)), 1) if alone is not None else None,
         'file_s': round(file_s, 2),
         'stops_early_s': round(early, 2) if early > EARLY_STOP_S else 0.0,
         'cut_while_sounding': bool(early > EARLY_STOP_S and level - tail < TAIL_FADED_DB),
@@ -154,27 +161,137 @@ def placement_facts(track, voice):
     return _placed(track, voice)[0]
 
 
-def placements_review(tracks, voice, export=None, total_s=None):
+def project_mix(placed, voice):
+    """The level of everything the project plays, frame by frame: the narration (its own floor in its pauses) and
+    every placed sound, summed as power."""
+    np = _np()
+    live = [(i0, lv) for _, i0, lv, _ in placed if lv is not None]
+    n = max([len(voice['levels'])] + [i0 + len(lv) for i0, lv in live])
+    power = np.zeros(n)
+    power[:len(voice['levels'])] += 10 ** (voice['levels'] / 10)
+    for i0, lv in live:
+        power[i0:i0 + len(lv)] += 10 ** (lv / 10)
+    return 10 * np.log10(power + 1e-14)
+
+
+def between_words(mix, voice):
+    """What plays between the words, by the project's own files: in every pause of the voice of BETWEEN_WORDS_S or
+    more (the silence before the first word and after the last left out), the level of everything the project plays
+    there against the level the voice speaks at. The reading the reference measurements take from a finished film
+    (av_tools gap_level_rel_speech_db: the same pause length and the same trim), so a mix can be set beside its models
+    before it is exported. A forecast: the export is measured from its own sound, on Whisper's word times."""
+    np = _np()
+    m = len(voice['levels'])
+    rel = []
+    for s, e in _runs(~voice['active'][:m]):
+        if s == 0 or e >= m or (e - s) * HOP_S < BETWEEN_WORDS_S:
+            continue
+        a, b = s + BETWEEN_TRIM, e - BETWEEN_TRIM
+        if b > a:
+            rel.append(float(np.median(mix[a:b])) - voice['speech_db'])
+    if not rel:
+        return {'pauses': 0, 'gap_level_rel_speech_db': None}
+    return {'pauses': len(rel), 'gap_level_rel_speech_db': {
+        k: round(float(np.percentile(rel, q)), 1) for k, q in (('p10', 10), ('median', 50), ('p90', 90))}}
+
+
+def music_alone(placements):
+    """Where music is heard with no voice over it: for how long in all, its longest such stretch, how far under the
+    voice's level it plays there, and the most any piece comes up there above its own level through the film
+    (rises_when_alone_db: near 0 when one level was set for the whole of it). None when the film has no music."""
+    ps = [p for p in placements if p.get('kind') == 'music' and not p.get('unreadable')]
+    if not ps:
+        return None
+    spans = [p['longest_clear_s'] for p in ps if p.get('longest_clear_s')]
+    rows = [(p['under_voice_db'], p['alone_under_voice_db']) for p in ps if p.get('alone_under_voice_db') is not None]
+    return {'seconds': round(sum(p.get('in_the_clear_s') or 0 for p in ps), 1),
+            'longest': max(spans, key=lambda s: s[1] - s[0]) if spans else None,
+            'under_voice_db_there': [min(a for _, a in rows), max(a for _, a in rows)] if rows else None,
+            'rises_when_alone_db': round(max(u - a for u, a in rows), 1) if rows else None}
+
+
+def voice_silences(voice, min_s, a=0.0, b=None):
+    """Where the voice is silent for min_s or more on the film's clock, inside [a, b]; after the narration's last word
+    the film has no voice, to b. [(from_s, to_s)]."""
+    import math
+    np = _np()
+    m = len(voice['levels'])
+    end = float(b) if b is not None else m * HOP_S
+    quiet = np.ones(max(m, int(math.ceil(end / HOP_S))), dtype=bool)
+    quiet[:m] = ~voice['active'][:m]
+    out = []
+    for s, e in _runs(quiet):
+        x, y = max(float(a), s * HOP_S), min(end, e * HOP_S)
+        if y - x >= float(min_s):
+            out.append((round(x, 2), round(y, 2)))
+    return out
+
+
+def bake_lift(path, at_s, windows, by_db, ramp_s=LIFT_RAMP_S, guard_s=LIFT_GUARD_S):
+    """Raise a baked bed where it is meant to be heard. Inside each window (the film's clock; the file starts at at_s)
+    its level climbs by up to by_db over ramp_s, holds, and is back at its own level before the window ends, a guard
+    inside each edge so a rise never sits on a word. A window too short for both ramps rises only as far as its length
+    allows: the slope stays the same, so nothing pumps. Written over the file itself, in its own sample format; refused
+    when the rise would clip. Returns the windows that changed the file, each with the rise it reached."""
+    import os
+    import soundfile as sf
+    np = _np()
+    by, ramp = float(by_db), max(0.05, float(ramp_s))
+    wins = sorted((float(a) + guard_s, float(b) - guard_s) for a, b in windows if float(b) - float(a) > 2 * guard_s)
+    used, peak, lifted = {}, 0.0, 0
+    tmp = str(path) + '.lifting'
+    with sf.SoundFile(str(path)) as src:
+        sr = src.samplerate
+        with sf.SoundFile(tmp, 'w', samplerate=sr, channels=src.channels, subtype=src.subtype, format=src.format) as dst:
+            pos = 0
+            while True:
+                block = src.read(sr * 20, dtype='float32', always_2d=True)
+                if not len(block):
+                    break
+                t0 = float(at_s) + pos / sr
+                env = None
+                for k, (a, b) in enumerate(wins):
+                    if b <= t0 or a >= t0 + len(block) / sr:
+                        continue
+                    if env is None:
+                        t = t0 + np.arange(len(block)) / sr
+                        env = np.zeros(len(block))
+                    e = by * np.clip(np.minimum(t - a, b - t) / ramp, 0.0, 1.0)
+                    used[k] = max(used.get(k, 0.0), float(e.max()))
+                    env = np.maximum(env, e)
+                if env is not None and (env > 0).any():
+                    block = block * (10 ** (env / 20)).astype('float32')[:, None]
+                    lifted += int((env > 0.05).sum())
+                    peak = max(peak, float(np.abs(block[env > 0]).max()))
+                dst.write(block)
+                pos += len(block)
+    if peak > 1.0:
+        os.remove(tmp)
+        raise ValueError(f'the rise would clip the file (its peak would reach {peak:.2f} of full scale): lift it less, '
+                         'or set the bed lower')
+    os.replace(tmp, str(path))
+    return {'windows': [[round(wins[k][0], 2), round(wins[k][1], 2), round(v, 1)] for k, v in sorted(used.items())
+                        if v > 0.05],
+            'lifted_s': round(lifted / sr, 1), 'ramp_s': ramp}
+
+
+def placements_review(tracks, voice, export=None, total_s=None, between=None):
     """Every placed sound against the voice (placement_facts), which of them play to the film's last frame (total_s),
     and, with a finished file (export_profile), that file measured where no voice covers each sound, beside what all
     the project's sounds playing there ask for together. Together, because sounds overlap: a faint piece of music over
     a room tone is heard alone in no file, and comparing the file with that one piece reads the room tone as a wrong
-    level."""
+    level. A dict given as `between` is filled with between_words (what the whole mix plays in the voice's pauses)."""
     np = _np()
     placed = [_placed(t, voice) for t in tracks]
     if total_s:
         for facts, *_ in placed:
             if not facts.get('unreadable') and facts['end_s'] >= float(total_s) - FILM_END_S:
                 facts['ends_with_the_film'] = True
+    mix = project_mix(placed, voice) if export or between is not None else None
+    if between is not None:
+        between.update(between_words(mix, voice))
     if export:
-        live = [(i0, lv) for _, i0, lv, _ in placed if lv is not None]
-        n = max([len(voice['levels'])] + [i0 + len(lv) for i0, lv in live])
-        power = np.zeros(n)
-        power[:len(voice['levels'])] += 10 ** (voice['levels'] / 10)        # the narration's own floor in its pauses
-        for i0, lv in live:
-            power[i0:i0 + len(lv)] += 10 ** (lv / 10)
-        mix = 10 * np.log10(power + 1e-14)
-        m = min(n, len(export['levels']))
+        m = min(len(mix), len(export['levels']))
         for facts, i0, lv, clear in placed:
             # Two frames in from each side of a run with no voice, so the voice's tail and onset are not read as music.
             idx = [k for s, e in clear if e - s > 6 for k in range(i0 + s + 2, min(i0 + e - 2, m))]

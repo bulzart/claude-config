@@ -365,6 +365,8 @@ class StaticStudioTests(unittest.TestCase):
         save(vd/'script.json',{'language':'en','pace_wpm':145,'lines':lines,'tags_exception':TAG_EXCEPTION})
         # one opening only (planning rules 6): the contest has its own tests (test_creative_pass)
         save(vd/'opening.json',{'single_opening_why': 'a test fixture whose every line is the same plain sentence: no other way into it can be written'})
+        # the fixture's shots and sound are placeholders: it says so where a craft choice would be asked for
+        save(vd/'craft-choices.json',{'choices':[{'measure':m,'why':'a test fixture of a few placeholder shots and tones: it plans no real picture rhythm and no real mix'} for m in ('pictures_per_min','seen_again_share','sound_under_voice_db','sound_moves_db')]})
         beats=[{'id':f'B{i:02}','start_s':(i-1)*120, 'end_s':i*120,
                 'line_start':(i-1)*10+1 if i<5 else 41,
                 'line_end':i*10 if i<5 else 52,
@@ -2709,7 +2711,14 @@ class StaticStudioTests(unittest.TestCase):
               {'id':'lab','type':'text','at':[0.3,0.3],'text':'ON PAPER ONLY','size':0.1,'fill':'#2B1D14'}]}
         save(dd/'D01.json',spec)
         iss,warn=core.drawing_facts(self.run,1)
-        self.assertEqual((iss,warn),([],[]))
+        # nothing is wrong with it; the count from zero is listed once, as a place to look ("0 AGENTS" is on screen first)
+        self.assertEqual(iss,[])
+        self.assertEqual(len(warn),1,warn)
+        self.assertTrue(warn[0].startswith('counters that first show another figure than the one they land on: D01 "0 AGENTS" to "27 AGENTS"'),warn)
+        whole={**spec,'elements':[{k:v for k,v in spec['elements'][0].items() if k!='in'},spec['elements'][1]]}
+        save(dd/'D01.json',whole)
+        self.assertEqual(core.drawing_facts(self.run,1),([],[]))    # the figure shown whole: nothing to look at
+        save(dd/'D01.json',spec)
         spec['elements'][0]['to']=30
         save(dd/'D01.json',spec)
         iss,_=core.drawing_facts(self.run,1)
@@ -5769,7 +5778,8 @@ class TopicDiscoveryTests(unittest.TestCase):
                       runtime={'progression': [{'adds': 'the premise and what is certain', 'material': ['M1', 'M2']},
                                                {'adds': 'the tides that follow from it', 'material': ['M3']},
                                                {'adds': 'what might follow, said as might', 'material': ['M4']}],
-                               'verdict': 'sustains', 'why': 'three layers of consequence fill it for curious viewers'},
+                               'verdict': 'sustains', 'why': 'three layers of consequence fill it for curious viewers',
+                               'natural_minutes': [8, 12]},
                       payoff={'shape': 'progressive', 'rests_on': ['M3'],
                               'why_substantial': 'the viewer rebuilds a familiar world one solid consequence at a time',
                               'needs_first': 'that the Moon raises most of the tides',
@@ -6250,6 +6260,7 @@ class TopicPathTests(unittest.TestCase):
         save(rp / 'claims.json', claims)
         save(vd / 'script.json', {'language': 'en', 'pace_wpm': 145, 'lines': lines, 'tags_exception': TAG_EXCEPTION})
         save(vd / 'opening.json', {'single_opening_why': 'a test fixture whose every line is the same plain sentence: no other way into it can be written'})      # placeholder lines: one opening only
+        save(vd / 'craft-choices.json', {'choices':[{'measure':m,'why':'a test fixture of a few placeholder shots and tones: it plans no real picture rhythm and no real mix'} for m in ('pictures_per_min','seen_again_share','sound_under_voice_db','sound_moves_db')]})
         save(vd / 'beat-map.json', {'target_length_s': 600, 'beats': beats})
         # the placeholder script's comprehension signals (the exercise's own hedge sentences, placed one per line by this
         # harness) classified as the editorial stage would: kept, since the harness, not a writer, put them there

@@ -6326,6 +6326,303 @@ def writing_signals(lines, language='en'):
     return out
 
 
+# ---------------------------------------------------------------- the film beside its models
+# The audit of 2026-11-26: the finished film cut 7.5 times a minute where its five models cut 9.8 to 21.4, showed a
+# picture again in 30% of its shots where they do in 0 to 6%, and kept the sound between its words within 10 dB where
+# theirs moves 18 to 38. Every one of those numbers was in the run; none was ever set beside the others, so none was a
+# decision. This sets them side by side while each can still be changed: the picture plan before a still is made, the
+# mix before the export, the export before its release. Measurements, never verdicts: a film may differ from every
+# model it has, and where it does on a habit a viewer feels, the director says why (craft-choices.json).
+MODEL_MEASURES = (
+    # key, what it is, digits shown, asked for its reason when the film lies outside every model
+    ('pictures_per_min', 'cuts a minute (a new picture, or a return to one)', 1, True),
+    ('picture_stands_s', 'how long a picture stands, median (s)', 1, False),
+    ('longest_picture_s', 'the longest a picture stands (s)', 1, False),
+    ('seen_again_share', 'shots that show a picture seen before (share of the shots)', 2, True),
+    ('moving_time_share', 'time the picture is moving (share)', 2, False),
+    ('pauses_per_min', 'pauses a minute (0.3 s or more)', 1, False),
+    ('long_pauses_per_min', 'pauses of 0.8 s or more a minute', 2, False),
+    ('longest_pause_s', 'the longest pause (s)', 1, False),
+    ('sound_under_voice_db', 'the sound between the words: dB under the voice (median)', 0, True),
+    ('sound_moves_db', 'how far that sound moves through the film (its quiet tenth to its loud tenth, dB)', 0, True))
+PICTURE_MEASURES = ('pictures_per_min', 'picture_stands_s', 'longest_picture_s', 'seen_again_share', 'moving_time_share')
+MIN_CRAFT_WORDS = 12          # a craft choice's reason is a sentence, as an opening that stands alone has one
+# a shot that sets two things side by side: its composition says so, or its prompt names both halves
+TWO_SIDED = re.compile(r'split[- ]screen|\bdiptych\b', re.I)
+
+
+def model_measures(summary):
+    """One measured film (an av-profile summary) as the MODEL_MEASURES it holds."""
+    pic = summary.get('picture') if isinstance(summary.get('picture'), dict) else {}
+    nar = summary.get('narration') if isinstance(summary.get('narration'), dict) else {}
+    pp = nar.get('pause_profile') if isinstance(nar.get('pause_profile'), dict) else {}
+    gap = nar.get('gap_level_rel_speech_db') if isinstance(nar.get('gap_level_rel_speech_db'), dict) else {}
+    shots = pic.get('shots') or 0
+    return {'pictures_per_min': pic.get('cuts_per_min'),
+            'picture_stands_s': (pic.get('shot_length_s') or {}).get('median'),
+            'longest_picture_s': pic.get('longest_shot_s'),
+            'seen_again_share': (pic.get('same_picture_again') or 0) / shots if shots else None,
+            'moving_time_share': pic.get('moving_time_share'),
+            'pauses_per_min': nar.get('pauses_per_min'),
+            'long_pauses_per_min': pp.get('pauses_0_8s_plus_per_min'),
+            'longest_pause_s': pp.get('longest_pause_s'),
+            'sound_under_voice_db': -gap['median'] if gap.get('median') is not None else None,
+            'sound_moves_db': (gap['p90'] - gap['p10'] if gap.get('p10') is not None and gap.get('p90') is not None
+                               else None)}
+
+
+def model_refs(rd, video):
+    """(the film's models, notes): the measured references its direction studied (direction.json evidence.references),
+    or the ones evidence.models names among them when the director holds only some of them as models for how the film
+    looks and sounds."""
+    d = read_json(video_dir(rd, video) / 'direction.json')
+    ev = d.get('evidence') if isinstance(d.get('evidence'), dict) else {}
+    refs = list(dict.fromkeys(str(x).strip().upper() for x in ev.get('references') or [] if str(x).strip()))
+    named = [str(x).strip().upper() for x in ev.get('models') or [] if str(x).strip()] \
+        if isinstance(ev.get('models'), list) else []
+    notes = [f'{x} is named as a model but is not among the direction\'s evidence references' for x in named
+             if x not in refs]
+    if named and any(x in refs for x in named):
+        refs = [r for r in refs if r in named]
+    return refs, notes
+
+
+def craft_choices_path(rd, video):
+    return video_dir(rd, video) / 'craft-choices.json'
+
+
+def craft_choices(rd, video):
+    """{measure: why} for every craft choice on record with a real reason (craft-choices.json
+    choices[{measure, why}])."""
+    out = {}
+    for c in read_json(craft_choices_path(rd, video)).get('choices') or []:
+        if isinstance(c, dict) and n_words(c.get('why')) >= MIN_CRAFT_WORDS:
+            out[str(c.get('measure') or '').strip()] = str(c['why']).strip()
+    return out
+
+
+def picture_plan_facts(rd, video):
+    """The picture plan in time, from the shot plan on the film's clock (film_clock): how many pictures and stills, how
+    long each stands, which return and for how long, the still shown most, the beats that open on a picture already
+    seen, the shots that set two things side by side with nothing drawn on them; and under `measures` what that makes
+    of the measures a finished film is read by. {} until a script and a shot plan exist. Facts only."""
+    n = int(video)
+    vd = video_dir(rd, n)
+    script = read_json(vd / 'script.json')
+    lines = [l for l in script.get('lines') or [] if isinstance(l, dict)]
+    shots = [s for s in read_json(rd / '60-visuals' / f'video-{n:02d}' / 'shot-plan.json').get('shots') or []
+             if isinstance(s, dict)]
+    if not lines or not shots:
+        return {}
+    ids = [str(l.get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
+    pace = float(script.get('pace_wpm') or read_json(vd / 'length-lock.json').get('pace_wpm') or 0) or 150.0
+    clock, basis, _ = film_clock(rd, n, lines, pace)
+    starts = []
+    for s in shots:
+        lid = str(s.get('line_start'))
+        if lid not in clock:
+            starts.append(None)
+            continue
+        a, z = clock[lid]
+        sw = s.get('start_word')
+        if isinstance(sw, int) and not isinstance(sw, bool) and sw > 1:      # a cut on a word inside the line
+            a += (z - a) * min(1.0, (sw - 1) / max(1, count_words(lines[ids.index(lid)].get('text', ''))))
+        starts.append(a)
+    end = clock[ids[-1]][1]
+    rows = []
+    for k, (s, a) in enumerate(zip(shots, starts)):
+        if a is not None:
+            rows.append((s, a, max(0.0, next((x for x in starts[k + 1:] if x is not None), end) - a)))
+    total = end - rows[0][1] if rows else 0.0
+    if not rows or total <= 0:
+        return {}
+    by_id = {str(s.get('id')): s for s in shots}
+
+    def still_of(s):                         # the still a shot shows: its own, or the one it returns to
+        seen = set()
+        while s.get('reuses') and str(s['reuses']) in by_id and str(s.get('id')) not in seen:
+            seen.add(str(s.get('id')))
+            s = by_id[str(s['reuses'])]
+        return str(s.get('id'))
+    use, first_of_beat = {}, {}
+    for s, a, d in rows:
+        u = use.setdefault(still_of(s), {'times': 0, 'seconds': 0.0})
+        u['times'] += 1
+        u['seconds'] += d
+        first_of_beat.setdefault(str(s.get('beat_id')), s)
+    again = [r for r in rows if r[0].get('reuses')]
+    top = max(use.items(), key=lambda kv: kv[1]['seconds'])
+    longest = max(rows, key=lambda r: r[2])
+    lengths = sorted(d for _, _, d in rows)
+
+    def two_sided(s):
+        prompt = str(s.get('frame_prompt') or s.get('prompt') or '')
+        return ('split' in str(s.get('composition') or '').lower() or bool(TWO_SIDED.search(prompt))
+                or ('left half' in prompt.lower() and 'right half' in prompt.lower()))
+    bare = [str(s.get('id')) for s in shots if two_sided(s)
+            and str(s.get('diagram_or_overlay') or 'none').strip().lower() in ('', 'none', 'false', '0')]
+    return {'basis': basis, 'shots': len(rows), 'stills': len(use), 'seconds': round(total, 1),
+            'seen_again': {'shots': len(again), 'share_of_shots': round(len(again) / len(rows), 2),
+                           'share_of_time': round(sum(r[2] for r in again) / total, 2)},
+            'most_shown': {'still': top[0], 'times': top[1]['times'], 'seconds': round(top[1]['seconds'], 1),
+                           'share_of_time': round(top[1]['seconds'] / total, 2)},
+            'longest': {'shot': str(longest[0].get('id')), 'seconds': round(longest[2], 1), 'from_s': round(longest[1], 1)},
+            'beats_opening_on_a_seen_picture': [b for b, s in first_of_beat.items() if s.get('reuses')],
+            'two_sided_with_nothing_drawn': bare,
+            'measures': {'pictures_per_min': (len(rows) - 1) / (total / 60),
+                         'picture_stands_s': statistics.median(lengths), 'longest_picture_s': lengths[-1],
+                         'seen_again_share': len(again) / len(rows)}}
+
+
+def picture_plan_words(pf):
+    """picture_plan_facts as the one or two sentences a check shows."""
+    sa, ms, lg = pf['seen_again'], pf['most_shown'], pf['longest']
+    out = [f'pictures: {pf["stills"]} still(s) in {pf["shots"]} shot(s) over {_mmss(pf["seconds"])} on {pf["basis"]}'
+           + (f'; {sa["shots"]} shot(s) show a picture seen before ({sa["share_of_shots"]:.0%} of the shots, '
+              f'{sa["share_of_time"]:.0%} of the time)' if sa['shots'] else '; no picture returns')
+           + (f'; the still shown most is {ms["still"]}: {ms["times"]} times, {_mmss(ms["seconds"])} in all '
+              f'({ms["share_of_time"]:.0%} of the film)' if ms['times'] > 1 else '')
+           + f'; the longest a picture stands is {lg["seconds"]:g} s ({lg["shot"]}, from {_mmss(lg["from_s"])})']
+    if pf['beats_opening_on_a_seen_picture']:
+        out.append('pictures: ' + ', '.join(pf['beats_opening_on_a_seen_picture'][:12]) + ' open(s) on a picture the '
+                   'viewer has already seen: a return they will feel, or the start of a part with nothing new to show?')
+    if pf['two_sided_with_nothing_drawn']:
+        out.append('pictures: ' + ', '.join(pf['two_sided_with_nothing_drawn'][:12]) + ' set(s) two things side by side '
+                   'with nothing drawn on them: will a viewer know which side is which without a word on each?')
+    return out
+
+
+def export_measures(rd, video, export_file):
+    """A finished file's own measurements (its av-profile), read the way a model's are; {} when it has none yet."""
+    target = export_av_path(rd, int(video), quick_fingerprint(Path(export_file).expanduser().resolve()))
+    s = dict(read_json(target).get('summary') or {})
+    if not s:
+        return {}
+    nar = dict(s.get('narration') or {})
+    if nar and not nar.get('pause_profile'):
+        words = transcript_words(read_json(target.with_name(target.stem + '-whisper.json')))
+        if words:
+            s['narration'] = {**nar, 'pause_profile': pause_profile(words)}
+    return model_measures(s)
+
+
+def models_beside_facts(rd, video, export_file=None, sound=None):
+    """{models, rows, departures, notes}: every MODEL_MEASURES row with each model's value, their range, and this film's
+    value before its export (the picture plan on the film's clock; the recorded narration; the mix by the project's own
+    files, from the current sound review or `sound`) and in the export when one is given and measured. A row's
+    `outside` says on which side of every model the film lies ('under', 'over'), read on the export when there is one,
+    else on the value before it; a range needs two measured models. departures: [{measure, said, issue}], the issue
+    set where a reason is asked for and none is on record."""
+    n = int(video)
+    refs, notes = model_refs(rd, n)
+    models, rates = {}, set()
+    for v in refs:
+        prof = read_json(ref_av_path(rd, v))
+        if prof.get('summary'):
+            models[v] = model_measures(prof['summary'])
+            rates.add(prof.get('sampled_fps'))
+    if len(rates - {None}) > 1:
+        notes.append('the models\' frames were sampled at different rates: compare their cuts a minute with care')
+    plan = picture_plan_facts(rd, n)
+    before = dict(plan.get('measures') or {})
+    basis = {k: 'planned: the shot plan on ' + plan['basis'] for k in before}
+    nar = read_json(rd / '50-audio' / f'video-{n:02d}' / 'delivery.json').get('summary') or {}
+    if nar.get('pauses_per_min') is not None:
+        before['pauses_per_min'] = nar['pauses_per_min']
+        basis['pauses_per_min'] = 'the recorded narration, before the edit\'s holds'
+    if sound is None:
+        sr = read_json(sound_review_path(rd, n))
+        sound = sr.get('between_words') if sr and sr.get('tracks_digest') == sound_tracks_digest(rd, n) else None
+    gap = (sound or {}).get('gap_level_rel_speech_db')
+    if isinstance(gap, dict) and gap.get('median') is not None:
+        before['sound_under_voice_db'], before['sound_moves_db'] = -gap['median'], gap['p90'] - gap['p10']
+        basis['sound_under_voice_db'] = basis['sound_moves_db'] = \
+            'the mix by the project\'s own files: a forecast of the export'
+    exp = export_measures(rd, n, export_file) if export_file else {}
+    if export_file and not exp:
+        notes.append('this file has no measurements of its own yet (av-profile --video NN --file): read on the values '
+                     'before the export')
+    answers = craft_choices(rd, n)
+    out = {'models': list(models), 'rows': [], 'departures': [], 'notes': notes}
+    if len(models) < 2:
+        notes.append(('no model of this film is measured' if not models else 'one measured model only')
+                     + ': a range needs two, so nothing is read as inside or outside')
+    for key, what, nd, asked in MODEL_MEASURES:
+        mv = {v: round(float(m[key]), nd) for v, m in models.items() if m.get(key) is not None}
+        rng = [min(mv.values()), max(mv.values())] if len(mv) >= 2 else None
+        b = round(float(before[key]), nd) if before.get(key) is not None else None
+        e = round(float(exp[key]), nd) if exp.get(key) is not None else None
+        ours, on = (e, 'export') if e is not None else (b, 'before') if b is not None else (None, None)
+        outside = ('under' if ours < rng[0] else 'over' if ours > rng[1] else None) if rng and ours is not None else None
+        out['rows'].append({'measure': key, 'what': what, 'models': mv, 'range': rng, 'before_export': b,
+                            'before_basis': basis.get(key), 'export': e, 'read_on': on, 'outside': outside,
+                            'asked': asked, 'why': answers.get(key)})
+        if not outside:
+            continue
+        where = 'in the export' if on == 'export' else basis.get(key) or 'before the export'
+        said = (f'{what}: {ours:g} here ({where}); every model is {"higher" if outside == "under" else "lower"} '
+                f'({rng[0]:g} to {rng[1]:g}: ' + ', '.join(f'{k} {v:g}' for k, v in mv.items()) + ')')
+        issue = None
+        if answers.get(key):
+            said = f'craft choice: {said}. The reason on record: {answers[key]}'
+        elif asked:
+            issue = (f'craft_choice_{key}:{ours:g}_here_every_model_is_{"higher" if outside == "under" else "lower"}'
+                     f'_({rng[0]:g}_to_{rng[1]:g}):change_it_or_say_why_in_craft-choices.json')
+            said += ': a choice, or something nobody chose? (craft-choices.json holds the answer)'
+        out['departures'].append({'measure': key, 'said': said, 'issue': issue})
+    return out
+
+
+def models_beside_markdown(facts, title=''):
+    """The comparison as a page a person reads in a minute."""
+    refs = facts.get('models') or []
+
+    def cell(v):
+        return '' if v is None else f'{v:g}'
+    head = ('| measure | ' + ' | '.join(refs + ['the models', 'this film before its export', 'this film\'s export'])
+            + ' |\n' + '|---' * (len(refs) + 4) + '|\n')
+    body = ''
+    for r in facts.get('rows') or []:
+        def ours(v, on):
+            return cell(v) + (' **(outside)**' if v is not None and r['outside'] and r['read_on'] == on else '')
+        body += ('| ' + ' | '.join([r['what']] + [cell(r['models'].get(v)) for v in refs]
+                                   + [f'{r["range"][0]:g} to {r["range"][1]:g}' if r['range'] else '',
+                                      ours(r['before_export'], 'before'), ours(r['export'], 'export')]) + ' |\n')
+    return (f'# The film beside its models{": " + title if title else ""}\n\n'
+            'Measured the same way in every film. A difference is a fact, never a fault: where this film lies outside '
+            'every model on a habit a viewer feels, the reason is on record or still to give.\n\n' + head + body
+            + '\n## Where this film lies outside every model\n\n'
+            + ('\n'.join('- ' + d['said'] for d in facts.get('departures') or []) or '- nowhere') + '\n'
+            + ('\n## Notes\n\n' + '\n'.join('- ' + x for x in facts['notes']) + '\n' if facts.get('notes') else ''))
+
+
+def cmd_beside_models(args):
+    """The film beside its models (models_beside_facts): pictures, pauses and sound, measured the same way. --file adds
+    a finished file's own measurements; --out FILE.md also writes the page there. Reads only."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    f = Path(args.file).expanduser().resolve() if getattr(args, 'file', None) else None
+    if f and not f.is_file():
+        error('That file is not there.', {'file': str(f)})
+    facts = models_beside_facts(rd, n, f)
+    vd = video_dir(rd, n)
+    title = read_json(vd / 'blueprint.json').get('title') or \
+        selection_promise(read_json(vd / 'direction.json')).get('working_title') or ''
+    page = models_beside_markdown(facts, str(title))
+    out = Path(args.out).expanduser().resolve() if getattr(args, 'out', None) else None
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(page, encoding='utf-8')
+    emit({'ok': True, 'video': n, **facts, 'pictures': {k: v for k, v in picture_plan_facts(rd, n).items()
+                                                        if k != 'measures'} or None,
+          'craft_choices_file': str(craft_choices_path(rd, n)), 'page': str(out) if out else None,
+          **({} if out else {'page_text': page}),
+          'reading': 'Each number is a habit of a finished film, measured the same way in all of them. A film may '
+                     'differ from every model it has: what matters is that the difference was chosen. Where a reason '
+                     'is asked for, change the plan or the mix, or write the reason (craft-choices.json: '
+                     '{"choices": [{"measure": "...", "why": "..."}]}).'})
+
+
 def shot_check_path(rd, video):
     return rd / '60-visuals' / f'video-{int(video):02d}' / 'shot-check.json'
 
@@ -6443,6 +6740,19 @@ def shot_facts(rd, video, keep=''):
             else:
                 out['issues'].append(msg + ':update_them_or_shot-check_--keep_why_they_still_fit')
     out['overlays'] = sum(1 for s in shots if str(s.get('diagram_or_overlay')).lower() not in ('', 'false', 'none', '0'))
+    # The picture plan in time, and beside the film's models: where it lies outside every one of them on a habit a
+    # viewer feels (how often the picture changes, how often one returns), the reason is asked for before a still is
+    # made (craft-choices.json). Facts and one accountable answer: nothing is scored, and no number is right.
+    pf = picture_plan_facts(rd, n)
+    out['pictures'] = {k: v for k, v in pf.items() if k != 'measures'} or None
+    if pf:
+        out['warnings'] += picture_plan_words(pf)
+        beside = models_beside_facts(rd, n)
+        out['beside_the_models'] = {'models': beside['models'], 'notes': beside['notes'],
+                                    'rows': [r for r in beside['rows'] if r['measure'] in PICTURE_MEASURES]}
+        for dp in beside['departures']:
+            if dp['measure'] in PICTURE_MEASURES:
+                (out['issues'] if dp['issue'] else out['warnings']).append(dp['issue'] or dp['said'])
     older_plan_advisory(rd, n, out['issues'], out['warnings'])
     out['ready'] = not out['issues']
     return out
@@ -6938,6 +7248,19 @@ def opening_facts(rd, video, lines, pace):
     return out, said
 
 
+def film_clock(rd, video, lines, pace):
+    """({line id: (start_s, end_s)}, what those times are, measured): the recorded narration's own times in the edit
+    (with its holds) once every line is measured, else a forecast at the planning pace."""
+    n = int(video)
+    ids = [str(l.get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
+    marks = edit_landmarks(rd, n)
+    if ids and all((marks.get(i) or {}).get('start') is not None for i in ids):
+        held = bool(read_json(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json').get('holds'))
+        return ({i: (float(marks[i]['start']), float(marks[i]['end'])) for i in ids},
+                'the recorded narration' + (' with the edit\'s holds' if held else ''), True)
+    return line_clock(lines, pace), f'the planning pace ({pace:g} wpm), without holds: a forecast', False
+
+
 # ---------------------------------------------------------------- the run sheet: the film on one page
 # The audit of 2026-11-26 found a slow middle of three and a half minutes that fourteen checks and thirteen reads had
 # passed: each looked at one thing, none at the film's course. The run sheet puts that course on one page, from what
@@ -6959,19 +7282,11 @@ def run_sheet_facts(rd, video):
     ids = [str(l.get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
     lang = str(script.get('language') or lock.get('language') or 'en')
     pace = float(script.get('pace_wpm') or lock.get('pace_wpm') or 0) or 150.0
-    marks = edit_landmarks(rd, n)
-    measured = all((marks.get(i) or {}).get('start') is not None for i in ids)
-    if measured:
-        clock = {i: (float(marks[i]['start']), float(marks[i]['end'])) for i in ids}
-        held = bool(read_json(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json').get('holds'))
-        out['basis'] = 'the recorded narration' + (' with the edit\'s holds' if held else '')
-    else:
-        clock = line_clock(lines, pace)
-        out['basis'] = f'the planning pace ({pace:g} wpm), without holds: a forecast'
+    clock, out['basis'], measured = film_clock(rd, n, lines, pace)
     subj = read_json(vd / 'direction.json').get('subject')
     vals = {str(v.get('id')): v for v in (subj.get('value_to_carry') if isinstance(subj, dict) else None) or []
             if isinstance(v, dict)}
-    seen_names, names_by_line = set(), dict(script_names(lines, lang))
+    seen_names, names_by_line, given = set(), dict(script_names(lines, lang)), set()
     shots = [s for s in read_json(rd / '60-visuals' / f'video-{n:02d}' / 'shot-plan.json').get('shots') or []
              if isinstance(s, dict)]
     tracks = [t for t in read_json(rd / '70-edit' / f'video-{n:02d}' / 'timeline.json').get('audio_tracks') or []
@@ -7000,7 +7315,10 @@ def run_sheet_facts(rd, video):
         nums = len(NUMBER_WORDS.findall(text)) if lang.lower().startswith('en') else len(re.findall(r'\d[\d,.]*', text))
         carried = [str(r).strip() for r in b.get('carries') or [] if str(r).strip() in vals]
         km = str(b.get('key_moment')).strip() if is_key_moment(b) else None
-        gives = ([f'KEY MOMENT: {km}'] if km else []) + [str(vals[r].get('what') or r) for r in carried]
+        again = [r for r in carried if r in given]          # a value an earlier beat already gave the viewer
+        given.update(carried)
+        gives = ([f'KEY MOMENT: {km}'] if km else []) + [('again: ' if r in again else '') + str(vals[r].get('what') or r)
+                                                         for r in carried]
         bid = str(b.get('id'))
         mine_shots = [s for s in shots if str(s.get('beat_id')) == bid]
         words = sum(count_words(lines[ids.index(i)].get('text', '')) for i in mine)
@@ -7009,7 +7327,7 @@ def run_sheet_facts(rd, video):
                      'words_per_min': round(words / ((z - a) / 60)) if z - a > 1 else None,
                      'new_names': new, 'numbers': nums,
                      'waits_for': str(b.get('viewer_question') or '').strip() or None,
-                     'gives': '; '.join(gives) or None, 'key_moment': km, 'carries': carried,
+                     'gives': '; '.join(gives) or None, 'key_moment': km, 'carries': carried, 'given_before': again,
                      'job': str(b.get('narrative_job') or '').strip()[:140] or None,
                      'pictures': ({'planned': len(mine_shots),
                                    'seen_before': sum(1 for s in mine_shots if s.get('reuses'))} if shots else None),
@@ -7032,20 +7350,42 @@ def run_sheet_facts(rd, video):
     def span_words(first, last):
         return (f'{_mmss(first["from_s"])}-{_mmss(last["to_s"])} ({_mmss(last["to_s"] - first["from_s"])}, '
                 + (first['beat'] if first is last else f'{first["beat"]} to {last["beat"]}') + ')')
-    # 1. the longest stretch in which nothing is marked as a turn, a payoff or a researched value
-    if any(r['key_moment'] or r['carries'] for r in rows):
-        best, cur = None, []
+    # 1. the longest stretch between two key moments, and what the film gives the viewer inside it: a researched value
+    #    for the first time, one an earlier beat already gave, or none. (The real film's slow middle was its longest
+    #    such stretch: four minutes whose beats each "carried a value", three of them one already given.)
+    if any(r['key_moment'] for r in rows):
+        runs, cur = [], []
         for r in rows + [None]:
-            if r is not None and not (r['key_moment'] or r['carries']):
+            if r is not None and not r['key_moment']:
                 cur.append(r)
                 continue
-            if cur and (best is None or cur[-1]['to_s'] - cur[0]['from_s'] > best[-1]['to_s'] - best[0]['from_s']):
-                best = cur
+            if cur:
+                runs.append(cur)
             cur = []
-        if best:
-            look.append('run sheet: the longest stretch with no key moment and no researched value carried is '
-                        + span_words(best[0], best[-1]) + ': what does a viewer get there that they did not have '
-                        'before, and would they miss it if it were gone?')
+        # the two longest: a film always has one before its first key moment, and the next is the one inside it
+        runs = sorted(runs, key=lambda c: c[-1]['to_s'] - c[0]['from_s'], reverse=True)[:2]
+
+        def inside(run):
+            first = [r['beat'] for r in run if len(r['carries']) > len(r['given_before'])]
+            old = [r['beat'] for r in run if r['carries'] and len(r['carries']) == len(r['given_before'])]
+            none = [r['beat'] for r in run if not r['carries']]
+            return '; '.join(x for x in (
+                'a researched value for the first time in ' + ', '.join(first) if first else '',
+                'one an earlier beat already gave in ' + ', '.join(old) if old else '',
+                'none in ' + ', '.join(none) if none and (first or old) else '') if x)
+        if len(runs) == 1:
+            got = inside(runs[0])
+            look.append('run sheet: the longest stretch with no key moment is ' + span_words(runs[0][0], runs[0][-1]) + '. '
+                        + (f'In it the viewer is given {got}' if got else 'No beat in it carries a researched value')
+                        + ': what keeps them watching through it, and would they miss any of it if it were gone?')
+        elif runs:
+            look.append('run sheet: the two longest stretches with no key moment are ' + '; and '.join(
+                span_words(c[0], c[-1]) + (f', where the viewer is given {inside(c)}' if inside(c)
+                                           else ', where no beat carries a researched value') for c in runs)
+                        + ': what keeps them watching through each, and would they miss any of it if it were gone?')
+    else:
+        look.append('run sheet: no beat is marked as a key moment (a turn, a reveal, a payoff): where does this film '
+                    'give the viewer what it promised?')
     # 2. what the viewer is waiting for
     noq = [r['beat'] for r in rows if not r['waits_for']]
     if noq and len(noq) == len(rows):
@@ -10674,12 +11014,74 @@ def bake_bed(src, out, gain_db, src_start=0.0, dur=None, fade_in=0.0, fade_out=0
             'fade_in_s': float(fade_in or 0.0), 'fade_out_s': float(fade_out or 0.0)}
 
 
+BED_LEVEL_STUDY = ('One listening study on television documentaries (Torcoli and others, 2019; 22 listeners) '
+                   'recommends the commentary at least 10 LU over the music and 15 LU over ambience, and found up to 15 '
+                   'LU over music (20 over ambience) still pleasing. Context for a choice, never a rule: a room tone, '
+                   'a pulse under a list and a theme that is meant to be heard want different levels.')
+
+
+def lift_problem(track):
+    """Why a track's lift cannot be baked as written (None when it can). A lift raises the bed where it is meant to be
+    heard: {"by_db", "why", and "where_voice_is_silent_s" (every pause of the voice this long) and/or "moments"
+    ([[from_s, to_s]] on the film's clock), optional "ramp_s"}, on a track that says where it starts in the film
+    ("at")."""
+    lf = track.get('lift')
+    if not isinstance(lf, dict):
+        return 'lift is an object: {"by_db", "why", "where_voice_is_silent_s" and/or "moments", "ramp_s"}'
+    try:
+        if float(lf.get('by_db') or 0) <= 0:
+            return 'lift.by_db says how many dB the bed rises (above 0)'
+        if track.get('at') is None or float(track['at']) < 0:
+            return 'a lifted track says where its baked copy starts on the film\'s clock ("at", in seconds)'
+        if lf.get('where_voice_is_silent_s') is not None and float(lf['where_voice_is_silent_s']) <= 0:
+            return 'lift.where_voice_is_silent_s is a length in seconds (above 0)'
+        moments = lf.get('moments') or []
+        if any(float(m[1]) <= float(m[0]) for m in moments):
+            return 'each of lift.moments is [from_s, to_s] on the film\'s clock'
+    except (TypeError, ValueError, IndexError, KeyError):
+        return 'lift.by_db, at, where_voice_is_silent_s and moments are numbers (moments: [[from_s, to_s]])'
+    if lf.get('where_voice_is_silent_s') is None and not moments:
+        return 'lift says where the bed rises: where_voice_is_silent_s (every pause this long) and/or moments'
+    if n_words(lf.get('why')) < MIN_NOTE_WORDS:
+        return 'lift.why says what the rise is for (a few words at least)'
+    return None
+
+
+def bed_level_context(rd, video):
+    """What a bed's level is chosen against: the film's models as measured (the sound between their words, which is
+    not the same yardstick as a loudness difference) and the one published study on the matter. Context, never a
+    rule."""
+    out = {'published': BED_LEVEL_STUDY}
+    if rd and video:
+        refs, _ = model_refs(rd, int(video))
+        rows = {}
+        for v in refs:
+            m = model_measures(read_json(ref_av_path(rd, v)).get('summary') or {})
+            if m.get('sound_under_voice_db') is not None:
+                rows[v] = {'db_under_the_voice': round(m['sound_under_voice_db']),
+                           'moves_db': round(m['sound_moves_db']) if m.get('sound_moves_db') is not None else None}
+        if rows:
+            out['models'] = {'between_their_words': rows,
+                             'how_read': 'the level between the words of each finished film against its voice (room '
+                                         'tone and effects included), and how far it moves from its quiet tenth to '
+                                         'its loud tenth: sound-review reads this film\'s mix the same way'}
+    return out
+
+
 def cmd_bed_levels(args):
     plan = read_json(Path(args.plan), required=True)
     try:
         res = bed_levels(plan['narration'], plan['tracks'])
     except (KeyError, TypeError, ValueError) as exc:
         emit({'ok': False, 'error': str(exc)}, 2)
+    lifted = [t for t in plan['tracks'] if isinstance(t, dict) and t.get('lift') not in (None, {}, False)]
+    for t in lifted:
+        prob = lift_problem(t)
+        if prob:
+            emit({'ok': False, 'error': f'track {t.get("id") or t.get("file")}: {prob}'}, 2)
+    if lifted and not args.bake:
+        emit({'ok': False, 'error': 'a lift lives in the baked file (CapCut ignores a clip\'s volume): run with --bake'}, 2)
+    voice = None
     if args.bake:
         # each track baked: its stretch, its gain and its fades in the file; a recorded bed's copy carries the bed's record
         rd = Path(args.run).expanduser().resolve() if args.run else None
@@ -10697,7 +11099,10 @@ def cmd_bed_levels(args):
                 span = f'.from{float(t.get("src_start") or 0.0):g}s' + (f'-{float(t["dur"]):g}s' if t.get('dur') else '')
             # the copy is written as PCM: a source in another container (an .mp3 sound effect) is baked to .wav
             suffix = src.suffix if src.suffix.lower() == '.wav' else '.wav'
-            out = Path(args.bake) / f'{src.stem}.bed-{tag}{span}{suffix}'
+            lf = t.get('lift') if t in lifted else None
+            # a lifted copy is another file than the same stretch left even
+            ltag = f'.lift{float(lf["by_db"]):g}dB' if lf else ''
+            out = Path(args.bake) / f'{src.stem}.bed-{tag}{ltag}{span}{suffix}'
             try:
                 b = bake_bed(src, out, row['gain_db'], t.get('src_start') or 0.0, t.get('dur'), t.get('fade_in') or 0.0,
                              t.get('fade_out') or 0.0)
@@ -10705,12 +11110,48 @@ def cmd_bed_levels(args):
                 row['error'] = f'bake: {exc}'
                 continue
             row.update({'baked': b, 'volume_in_project': 1.0})
+            if lf:
+                # The bed rises where it is meant to be heard: in the voice's pauses of the length asked for, inside
+                # the stretch this copy plays over, and at the moments named. In the file, as its level is.
+                try:
+                    ar = _audio_review()
+                    voice = voice or ar.voice_profile(plan['narration'])
+                    at = float(t['at'])
+                    wins = (ar.voice_silences(voice, float(lf['where_voice_is_silent_s']), at, at + b['dur_s'])
+                            if lf.get('where_voice_is_silent_s') is not None else [])
+                    wins += [(float(m[0]), float(m[1])) for m in lf.get('moments') or []]
+                    row['lift'] = {**ar.bake_lift(out, at, wins, float(lf['by_db']),
+                                                  float(lf.get('ramp_s') or ar.LIFT_RAMP_S)),
+                                   'by_db': float(lf['by_db']), 'at_s': at, 'why': str(lf['why']).strip(),
+                                   'under_speech_db_at_its_peak': round(row['target_under_speech_db'] - float(lf['by_db']), 1)}
+                    # how much room the voice left: a rise and its way back need a silence of twice the ramp and
+                    # the guards (on the real film of 2026-11-26, 64 s of opening music held two pauses of half a
+                    # second, and a lift had nothing to rise in)
+                    tops = [w[2] for w in row['lift']['windows']]
+                    by = float(lf['by_db'])
+                    room = ('More room is a planned silence the music carries, music that enters before the words or '
+                            'plays on after the last, or a moment named in "moments".')
+                    row['lift']['full_rises'] = sum(1 for x in tops if x >= by - 0.05)
+                    if not tops:
+                        row['lift']['note'] = ('nothing was lifted: no pause of that length, and no moment, inside this '
+                                               'stretch. ' + room)
+                    elif not row['lift']['full_rises']:
+                        need = 2 * (row['lift']['ramp_s'] + ar.LIFT_GUARD_S)
+                        row['lift']['note'] = (f'no silence in this stretch is long enough for the whole rise ({by:g} dB '
+                                               f'up and back takes {need:g} s with no voice): the bed comes up by '
+                                               f'{max(tops):g} dB at most. ' + room)
+                except (OSError, ValueError, KeyError, TypeError, ImportError, RuntimeError) as exc:
+                    row['error'] = f'lift: {exc}'
+                    continue
             rec = prov.get(_pkey(src))
             if rec:
                 derived.append({**{k: v for k, v in rec.items() if k != 'made_at'}, 'out': str(out), 'derived_from': str(src),
-                                'derivation': {k: b[k] for k in ('src_start_s', 'dur_s', 'gain_db', 'fade_in_s', 'fade_out_s')}})
+                                'derivation': {**{k: b[k] for k in ('src_start_s', 'dur_s', 'gain_db', 'fade_in_s', 'fade_out_s')},
+                                               **({'lift': {k: row['lift'][k] for k in ('by_db', 'at_s', 'windows', 'ramp_s')}}
+                                                  if lf else {})}})
         if derived:
             res['recorded_in'] = record_media(rd, args.video, 'music', derived)
+    res['context'] = bed_level_context(Path(args.run).expanduser().resolve() if args.run else None, args.video)
     if args.out:
         Path(args.out).write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding='utf-8')
     emit({'ok': all('error' not in t for t in res['tracks']), **res})
@@ -10769,7 +11210,7 @@ def drawing_facts(rd, video):
     language = read_json(video_dir(rd, n) / 'length-lock.json').get('language') or 'en'
     themes = excluded_themes(rd, n)
     palette = [p.lstrip('#') for p in read_json(style_lock_path(rd, n)).get('palette') or []]
-    unvouched = []
+    unvouched, counting = [], []
     for sp in sorted(ddir.glob('*.json')):
         spec = read_json(sp)
         if not isinstance(spec, dict) or not spec.get('shot') or not isinstance(spec.get('elements'), list):
@@ -10788,6 +11229,8 @@ def drawing_facts(rd, video):
         said = _numbers_said(' '.join(str(l.get('text') or '') for l in lines[a:b + 1]), language) \
             if a is not None and b is not None else set()
         for c in facts.get('counters') or []:
+            if c.get('from_text') and c.get('from_text') != c.get('to_text'):
+                counting.append(f'{sp.stem} "{c["from_text"]}" to "{c["to_text"]}"')
             to = c.get('to')
             try:
                 fig = str(int(round(float(to)))) if float(to) == int(float(to)) else str(to)
@@ -10816,6 +11259,12 @@ def drawing_facts(rd, video):
     if unvouched:
         warn.append(f'{len(unvouched)} drawing(s) rendered before render records ({", ".join(unvouched[:8])}): their spec '
                     'and still are not vouched for; render again to record them')
+    if counting:
+        # 2026-11-26: five counters ran from 0 with their words attached, so the screen read "1 shield = about 0 coins"
+        warn.append('counters that first show another figure than the one they land on: ' + '; '.join(counting[:10])
+                    + ('' if len(counting) <= 10 else f' and {len(counting) - 10} more') + ': while it counts, the '
+                    'screen says the first. True of something (a tally that grows before the viewer), or a statement '
+                    'the film does not make? A figure can appear whole (no "in"), or count from where it really starts')
     return iss, warn
 
 
@@ -15015,9 +15464,17 @@ def cmd_release_check(args):
     if rc:
         issues.append('research:changed_since_the_direction_lock_and_not_rechecked:' +
                       ','.join(rc.get('sources', []) + rc.get('claims', [])))
+    # Where this finished file lies outside every model on a habit a viewer feels, its reason is on record
+    # (craft-choices.json): asked here for what the picture plan could not show (the mix, the export as measured).
+    asked_at_plan = {str(x).split(':')[0] for x in shots['issues']}
+    craft = [dp['issue'] for dp in models_beside_facts(rd, n, args.file)['departures']
+             if dp['issue'] and dp['issue'].split(':')[0] not in asked_at_plan]
+    craft_said = []
+    older_plan_advisory(rd, n, craft, craft_said)
+    issues += [f'craft:{x}' for x in craft]
     issues = list(dict.fromkeys(issues))
     warnings = list(dict.fromkeys(plan.get('warnings', []) + shots.get('warnings', []) + edit.get('warnings', []) +
-                                  fin['warnings']))
+                                  fin['warnings'] + craft_said))
     looks = read_json(picture_looks_path(rd, n)).get('looks') or {}
     shown = {_pkey(_run_file(rd, c.get('asset_path'))) for c in
              read_json(rd / '70-edit' / f'video-{n:02d}' / 'timeline.json').get('visual_segments') or []
@@ -15430,10 +15887,11 @@ def sound_review_facts(rd, video, export_file=None):
         exp.update({'speech_db': export['speech_db'], 'duration_s': export['duration_s']} if export else
                    {'unreadable': True})
     total = max([float(t.get('end_s') or 0) for t in tracks] + [voice['duration_s']])
+    between = {}
     placements = ar.placements_review(
         [{**t, 'file': _run_file(rd, t.get('file'))} for t in tracks
          if t.get('kind') != 'narration' and t.get('start_s') is not None and t.get('end_s') is not None],
-        voice, export, total)
+        voice, export, total, between=between)
     vd = video_dir(rd, n)
     lines = read_json(vd / 'script.json').get('lines') or []
     order = [str((l or {}).get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
@@ -15466,6 +15924,7 @@ def sound_review_facts(rd, video, export_file=None):
                                  'total_s': dc.get('total_s')})
     return ({'duration_s': round(total, 2), 'narration': nfile.name, 'speech_db': voice['speech_db'], 'export': exp,
              'placements': placements, 'beds': ar.beds_by_kind(placements, total),
+             'between_words': between or None, 'music_alone': ar.music_alone(placements),
              'turns': ar.turn_facts(ar.line_gaps(marks, order), first_lines), 'pace': ar.pace_facts(marks, order, words),
              'names': names, 'holds_not_listened': not_listened, 'line_marks': marks}, texts, key_lines)
 
@@ -15552,6 +16011,21 @@ def cmd_sound_review(args):
         look += [f'{p["file"]} plays at clip volume {p["clip_volume"]:g}: its level is set in the project, not in its '
                  'file, and only the finished file shows what plays (sound-review --file)'
                  for p in facts['placements'] if p.get('clip_volume') is not None]
+    # Where music is heard with no voice over it, and how much it comes up there: a film whose music never rises where
+    # nobody speaks has one level for the whole of it (the audit of 2026-11-26: a closing theme at room-tone level).
+    alone = facts.get('music_alone')
+    if alone and alone.get('seconds') and alone.get('rises_when_alone_db') is not None:
+        lg = alone.get('longest')
+        span = f', never for longer than {lg[1] - lg[0]:.1f} s at a time (at {_mmss(lg[0])})' if lg else ''
+        look.append(f'music is heard with no voice over it for {alone["seconds"]:g} s in all{span}; there it plays at '
+                    f'most {max(0.0, alone["rises_when_alone_db"]):g} dB above its level under the words. Is there a '
+                    'moment where the music is meant to be heard, and does the voice leave it room? (a held silence the '
+                    'music carries, music that enters before the words or plays on after the last; bed-levels then '
+                    'lifts the bed there)')
+    # The mix beside the film's models, by the project's own files and in the finished file when it is measured
+    beside = models_beside_facts(rd, n, f, sound=facts.get('between_words'))
+    heard = [r for r in beside['rows'] if r['measure'] not in PICTURE_MEASURES]
+    look += [dp['said'] for dp in beside['departures'] if dp['measure'] not in PICTURE_MEASURES]
     emit({'ok': True, 'video': n, 'record': str(rec_path), 'listening_sheet': str(sheet),
           'measured_in': f.name if f else 'the project\'s own files only (no finished file given: --file)',
           'listening_items': len(items), 'listening_minutes': round(sum(i['to_s'] - i['from_s'] for i in items) / 60, 1),
@@ -15561,6 +16035,10 @@ def cmd_sound_review(args):
           'music_share_of_runtime': facts['beds']['music']['share_of_runtime'],
           'no_music_for_long': facts['beds']['music']['none_for_long'],
           'ambience_share_of_runtime': facts['beds']['ambience']['share_of_runtime'],
+          'music_heard_alone': alone, 'sound_between_the_words': facts.get('between_words'),
+          'beside_the_models': {'models': beside['models'], 'rows': heard, 'notes': beside['notes']},
+          'craft_choices_asked': [dp['issue'] for dp in beside['departures'] if dp['issue']
+                                  and dp['measure'] not in PICTURE_MEASURES],
           'file_against_project': ({'passages_measured': len(measured),
                                     'largest_difference_db': max(abs(x['differs_db']) for x in measured)}
                                    if measured else None),
@@ -15852,6 +16330,13 @@ def main():
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--out', default='', help='Also write the page as Markdown to this file')
     p.set_defaults(func=cmd_run_sheet)
+    p = sub.add_parser('beside-models', help='The film beside its models: cuts a minute, how long a picture stands, '
+                       'pictures seen again, pauses, the sound between the words; each model, their range, this film '
+                       'before its export and in it (reads only)')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--file', default='', help='A finished file whose own measurements (av-profile) are set beside')
+    p.add_argument('--out', default='', help='Also write the page as Markdown to this file')
+    p.set_defaults(func=cmd_beside_models)
     p = sub.add_parser('opening-packet', help='The opening contest: one blind packet per fresh reader (2-4 openings '
                        'written from the same material, and the titles the film would sit beside)')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
@@ -15967,7 +16452,9 @@ def main():
     p.add_argument('--frames', type=int, default=8); p.set_defaults(func=cmd_captions_preview)
     p = sub.add_parser('bed-levels', help='the clip volume that puts each music bed or sound a chosen number of dB under '
                        'the voice, from measured loudness (EBU R128)')
-    p.add_argument('--plan', required=True, help='JSON {narration, tracks: [{id, file, under_speech_db, why}]}')
+    p.add_argument('--plan', required=True, help='JSON {narration, tracks: [{id, file, under_speech_db, why, and for a '
+                   'bed that rises where it is meant to be heard: at, lift{by_db, why, where_voice_is_silent_s, moments, '
+                   'ramp_s}}]}')
     p.add_argument('--out', help='also write the answer here (the build reads its volumes)')
     p.add_argument('--bake', help='a folder: write each track as it must play (its stretch src_start/dur, its gain, its fade_in/fade_out) to be placed at volume 1 with no CapCut fades')
     p.add_argument('--run', help='with --bake: record each baked copy of a recorded music bed in music-provenance.json')

@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_static_core as base                                    # noqa: E402
 from test_static_core import cli, save                             # noqa: E402
+import test_audit_impl as audit                                    # noqa: E402
 from test_audit_impl import fixture_only                           # noqa: E402
 
 PACE = ('--pace-wpm', 145, '--pace-why', 'the test narrator reads at this pace')
@@ -316,9 +317,8 @@ class RunSheetTests(base.StaticStudioTests):
                          {'beats': 5, 'key_moments': 1, 'values_carried': 1, 'pictures_planned': None})
         look = facts['look_at']
         self.assertEqual(len(look), 2, look)
-        self.assertTrue(look[0].startswith('run sheet: the longest stretch with no key moment and no researched value '
-                                           'carried is 00:00-'), look)
-        self.assertIn('B01 to B04', look[0])
+        self.assertTrue(look[0].startswith('run sheet: the longest stretch with no key moment is 00:00-'), look)
+        self.assertIn('B01 to B04). No beat in it carries a researched value: what keeps them watching', look[0])
         self.assertTrue(look[1].startswith('run sheet: no beat says what the viewer is waiting for'), look)
         # what the viewer waits for, what the ear has to catch, and how many pictures carry each beat
         bm = read(vd / 'beat-map.json')
@@ -409,6 +409,310 @@ class ReaderTests(base.StaticStudioTests):
         self.assertEqual(core.BRIEF_VERSION, 7)
         self.assertIn('"would_stop_at": "<mm:ss where you would have left, or none>"', core.FINAL_BRIEF)
         self.assertNotIn('1_10', core.FINAL_BRIEF + core.SCRIPT_BRIEF + core.TREATMENT_BRIEF)
+
+
+# two measured models with known habits (the fixture's two references, their measurements replaced)
+MODEL_A = {'picture': {'shots': 100, 'cuts_per_min': 10.0, 'shot_length_s': {'p10': 2.0, 'median': 5.0, 'p90': 9.0},
+                       'longest_shot_s': 20.0, 'same_picture_again': 4, 'moving_time_share': 0.5},
+           'narration': {'pauses_per_min': 12.0, 'pause_profile': {'pauses_0_8s_plus_per_min': 1.0, 'longest_pause_s': 1.2},
+                         'gap_level_rel_speech_db': {'p10': -30.0, 'median': -20.0, 'p90': -10.0}}}
+MODEL_B = {'picture': {'shots': 200, 'cuts_per_min': 16.0, 'shot_length_s': {'p10': 1.5, 'median': 3.0, 'p90': 6.0},
+                       'longest_shot_s': 12.0, 'same_picture_again': 0, 'moving_time_share': 0.2},
+           'narration': {'pauses_per_min': 18.0, 'pause_profile': {'pauses_0_8s_plus_per_min': 2.5, 'longest_pause_s': 3.0},
+                         'gap_level_rel_speech_db': {'p10': -40.0, 'median': -25.0, 'p90': -12.0}}}
+# a finished file that lies outside both on four habits
+FILM = {'picture': {'shots': 60, 'cuts_per_min': 6.0, 'shot_length_s': {'median': 9.0}, 'longest_shot_s': 30.0,
+                    'same_picture_again': 18, 'moving_time_share': 0.3},
+        'narration': {'pauses_per_min': 14.0, 'gap_level_rel_speech_db': {'p10': -31.0, 'median': -30.0, 'p90': -25.0}}}
+ASKED = ('pictures_per_min', 'seen_again_share', 'sound_under_voice_db', 'sound_moves_db')
+WHY = ('each still is a painted map the viewer has to read, so it stands until the narration has walked the whole '
+       'route across it')
+
+
+def models(run):
+    """The film's two models as measured films with known habits."""
+    for v, s in (('V001', MODEL_A), ('V002', MODEL_B)):
+        p = Path(run) / '20-analysis/av' / f'{v}.json'
+        prof = read(p) if p.is_file() else {}
+        prof['summary'] = {**(prof.get('summary') or {}), **s}
+        save(p, prof)
+
+
+@fixture_only
+class ModelsBesideTests(base.StaticStudioTests):
+    """The film beside its models (the audit of 2026-11-26: the finished film cut 7.5 times a minute where its five
+    models cut 9.8 to 21.4 and showed a picture again in 30% of its shots where they do in 0 to 6%; every number was
+    in the run, none was ever set beside the others, so none was a decision)."""
+
+    def check(self, expected=0):
+        return cli('shot-check', '--run', self.run, '--video', 1, expected=expected)
+
+    def crafts(self, res):
+        return [x for x in res['issues'] if x.startswith('craft_choice_')]
+
+    def test_the_picture_plan_is_set_beside_the_models_before_a_still_is_made(self):
+        vd = self.write_plan()
+        shots = self.shots_for_plan()
+        models(self.run)
+        choices = vd / 'craft-choices.json'
+        choices.unlink()                     # the fixture's own answer: this test gives the real ones
+        core = self.load_core()
+        f = core.models_beside_facts(self.run, 1)
+        self.assertEqual(f['models'], ['V001', 'V002'])
+        row = {r['measure']: r for r in f['rows']}
+        cuts = row['pictures_per_min']
+        self.assertEqual((cuts['models'], cuts['range'], cuts['outside'], cuts['read_on'], cuts['export']),
+                         ({'V001': 10.0, 'V002': 16.0}, [10.0, 16.0], 'under', 'before', None))
+        self.assertLess(cuts['before_export'], 1.0)
+        self.assertTrue(cuts['before_basis'].startswith('planned: the shot plan on the planning pace (145 wpm)'))
+        again = row['seen_again_share']
+        self.assertEqual((again['range'], again['before_export'], again['outside']), ([0.0, 0.04], 0.0, None))
+        self.assertEqual((row['sound_under_voice_db']['models'], row['sound_moves_db']['range']),
+                         ({'V001': 20.0, 'V002': 25.0}, [20.0, 28.0]))
+        self.assertIsNone(row['sound_moves_db']['before_export'])
+        # asked only where a viewer feels it: how long a picture stands is said, never asked
+        self.assertEqual([d['measure'] for d in f['departures'] if d['issue']], ['pictures_per_min'])
+        self.assertIn('longest_picture_s', [d['measure'] for d in f['departures']])
+        res = self.check(expected=2)
+        self.assertEqual(res['issues'], self.crafts(res))
+        self.assertRegex(res['issues'][0], r'^craft_choice_pictures_per_min:0\.\d_here_every_model_is_higher_'
+                                           r'\(10_to_16\):change_it_or_say_why_in_craft-choices\.json$')
+        self.assertEqual([r['measure'] for r in res['beside_the_models']['rows']], list(core.PICTURE_MEASURES))
+        pic = res['pictures']
+        self.assertEqual((pic['shots'], pic['stills'], pic['seen_again']['shots'], pic['most_shown']['times']), (5, 5, 0, 1))
+        self.assertTrue(any(w.startswith('pictures: 5 still(s) in 5 shot(s) over ') and '; no picture returns; ' in w
+                            for w in res['warnings']), res['warnings'])
+        # a token is not a reason; a sentence is, and it stays in sight at every check
+        save(choices, {'choices': [{'measure': 'pictures_per_min', 'why': 'slow on purpose'}]})
+        self.assertEqual(len(self.crafts(self.check(expected=2))), 1)
+        save(choices, {'choices': [{'measure': 'pictures_per_min', 'why': WHY}]})
+        res = self.check()
+        self.assertTrue(res['ready'])
+        self.assertTrue(any(w.startswith('craft choice: cuts a minute (a new picture, or a return to one): 0.')
+                            and w.endswith('The reason on record: ' + WHY) for w in res['warnings']), res['warnings'])
+        # a picture that returns, a part that opens on one, two things side by side with nothing drawn on them
+        shots[3]['reuses'] = 'S1'
+        shots[2]['composition'] = 'split'
+        save(self.run / '60-visuals/video-01/shot-plan.json', {'video': 1, 'shots': shots})
+        res = self.check(expected=2)
+        self.assertEqual(self.crafts(res), ['craft_choice_seen_again_share:0.2_here_every_model_is_lower_(0_to_0.04):'
+                                            'change_it_or_say_why_in_craft-choices.json'])
+        said = ' | '.join(res['warnings'])
+        self.assertIn('1 shot(s) show a picture seen before (20% of the shots, ', said)
+        self.assertIn('pictures: B04 open(s) on a picture the viewer has already seen', said)
+        self.assertIn('pictures: S3 set(s) two things side by side with nothing drawn on them', said)
+        self.assertEqual((res['pictures']['stills'], res['pictures']['most_shown']['still'],
+                          res['pictures']['most_shown']['times']), (4, 'S1', 2))
+        # a direction approved before these rules hears it as advice
+        lock = read(vd / 'direction-lock.json')
+        save(vd / 'direction-lock.json', {**lock, 'planning_rules': 5})
+        res = self.check(expected=None)
+        self.assertFalse(self.crafts(res))
+        self.assertTrue(any(w.startswith('advisory (this direction was approved before planning rules it need not '
+                                         'follow): craft_choice_seen_again_share') for w in res['warnings']), res['warnings'])
+        save(vd / 'direction-lock.json', lock)
+        # the whole comparison as a page: read only, written where it is asked for
+        before = {p: p.stat().st_mtime_ns for p in self.run.rglob('*') if p.is_file()}
+        page = cli('beside-models', '--run', self.run, '--video', 1)
+        self.assertEqual(before, {p: p.stat().st_mtime_ns for p in self.run.rglob('*') if p.is_file()})
+        self.assertIn("| measure | V001 | V002 | the models | this film before its export | this film's export |",
+                      page['page_text'])
+        self.assertIn('| 10 to 16 | 0.', page['page_text'])
+        self.assertIn('**(outside)**', page['page_text'])
+        self.assertIn('## Where this film lies outside every model', page['page_text'])
+        out = self.home / 'pages' / 'beside.md'
+        self.assertEqual(cli('beside-models', '--run', self.run, '--video', 1, '--out', out)['page'], str(out.resolve()))
+        self.assertTrue(out.read_text(encoding='utf-8').startswith('# The film beside its models: A test title'))
+        # a finished file is read on its own measurements, the way its models are
+        film = self.home / 'film.mp4'
+        film.write_bytes(b'not a film, only a file with a fingerprint' * 50)
+        save(core.export_av_path(self.run, 1, core.quick_fingerprint(film)), {'summary': FILM})
+        f = core.models_beside_facts(self.run, 1, film)
+        row = {r['measure']: r for r in f['rows']}
+        self.assertEqual((row['pictures_per_min']['export'], row['pictures_per_min']['read_on'],
+                          row['pictures_per_min']['why']), (6.0, 'export', WHY))
+        self.assertEqual((row['seen_again_share']['export'], row['seen_again_share']['outside']), (0.3, 'over'))
+        self.assertEqual((row['sound_under_voice_db']['export'], row['sound_under_voice_db']['outside']), (30.0, 'over'))
+        self.assertEqual((row['sound_moves_db']['export'], row['sound_moves_db']['outside']), (6.0, 'under'))
+        self.assertEqual((row['pauses_per_min']['export'], row['pauses_per_min']['outside']), (14.0, None))
+        self.assertEqual([d['measure'] for d in f['departures'] if d['issue']], list(ASKED[1:]))
+        # the director may hold only some of the references as models; one model gives no range
+        d = read(vd / 'direction.json')
+        d['evidence']['models'] = ['V002', 'V099']
+        save(vd / 'direction.json', d)
+        f = core.models_beside_facts(self.run, 1)
+        self.assertEqual((f['models'], f['departures']), (['V002'], []))
+        self.assertTrue(any('V099 is named as a model but' in x for x in f['notes']), f['notes'])
+        self.assertTrue(any('one measured model only' in x for x in f['notes']), f['notes'])
+
+
+class BreathingSoundTests(unittest.TestCase):
+    """Music that can rise where nobody speaks (the audit of 2026-11-26: every bed at one level for the whole film,
+    20 to 25 LU under the voice, a closing theme at room-tone level; the level was picked with nothing to pick it
+    against, and CapCut ignores a clip's volume, so a rise has to be in the file). The fixture is the sound review's:
+    a tone for the voice that stops between six lines."""
+
+    T, WORDS = audit.SoundReviewTests.T, audit.SoundReviewTests.WORDS
+    ff, tone, setUp, tearDown = (audit.SoundReviewTests.ff, audit.SoundReviewTests.tone, audit.SoundReviewTests.setUp,
+                                 audit.SoundReviewTests.tearDown)
+    EVEN = {'id': 'even', 'under_speech_db': 22, 'why': 'a pulse under the whole film'}
+    FOR = 'the theme comes up in the held breaths between the letters'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.core = audit.load_core('static_studio_core_breathing')
+
+    def level(self, path, at_s):
+        """A file's level around one moment (dB, over half a second)."""
+        ar = self.core._audio_review()
+        lv = ar.levels(ar.load_mono(path))
+        i = int(round(at_s / ar.HOP_S))
+        return float(lv[i - 5:i + 5].mean())
+
+    def windows(self, got, want):
+        """A lift's windows, each edge within one level frame of where the voice stops and starts, the rise exact."""
+        self.assertEqual(len(got), len(want), got)
+        for g, w in zip(got, want):
+            self.assertLessEqual(max(abs(g[0] - w[0]), abs(g[1] - w[1])), 0.06, got)
+            self.assertEqual(g[2], w[2], got)
+
+    def bake(self, tracks, expected=0, bake=True):
+        plan = self.td / 'beds.json'
+        save(plan, {'narration': str(self.narr), 'tracks': tracks})
+        return cli('bed-levels', '--plan', plan, *(('--bake', self.td / 'baked') if bake else ()), expected=expected)
+
+    def review(self, bed):
+        """The sound review of a cut whose only music is this bed, under the whole film."""
+        save(self.rd / '70-edit/video-01/timeline.json', {'audio_tracks': [
+            self.tracks[0], {'kind': 'music', 'file': str(bed), 'start_s': 0, 'end_s': 40, 'beats': ['B01'], 'volume': 1}]})
+        return cli('sound-review', '--run', self.rd, '--video', 1)
+
+    def test_a_bed_rises_where_nobody_speaks_and_is_back_before_the_next_word(self):
+        rd = self.rd
+        src = self.tone(self.td / 'theme.wav', 330, 40, '0.316')
+        even = {**self.EVEN, 'file': str(src)}
+        lift = {'by_db': 9, 'where_voice_is_silent_s': 1.5, 'ramp_s': 0.5, 'why': self.FOR}
+        res = self.bake([even, {**even, 'id': 'breathing', 'at': 0.0, 'lift': lift}])
+        flat, up = res['tracks']
+        self.assertNotIn('lift', flat)
+        # the three pauses of 1.5 s or more, a guard inside each edge; the half-second gaps are left alone
+        self.windows(up['lift']['windows'], [[16.65, 19.35, 9.0], [24.65, 27.35, 9.0], [33.65, 35.35, 9.0]])
+        self.assertEqual((up['lift']['by_db'], up['lift']['under_speech_db_at_its_peak'], up['lift']['ramp_s'],
+                          up['lift']['why']), (9.0, 13.0, 0.5, self.FOR))
+        self.assertLess(abs(up['lift']['lifted_s'] - 7.1), 0.3, up['lift'])
+        a, b = Path(flat['baked']['file']), Path(up['baked']['file'])
+        self.assertNotEqual(a.name, b.name)
+        self.assertIn('.lift9dB', b.name)
+        self.assertFalse(list((self.td / 'baked').glob('*.lifting')))
+        # in the file itself: 9 dB up in the middle of a pause, at its own level under the words and as the voice returns
+        own = self.level(a, 13.0)
+        self.assertLess(abs(self.level(b, 13.0) - own), 0.3)
+        self.assertLess(abs(self.level(b, 18.0) - own - 9.0), 0.5)
+        self.assertLess(abs(self.level(b, 26.0) - own - 9.0), 0.5)
+        self.assertLess(abs(self.level(b, 19.75) - own), 0.5)
+        self.assertIn('Torcoli', res['context']['published'])
+        # the sound review reads both mixes the way a finished film is read: what plays between the words, and
+        # whether the music comes up where it is heard alone
+        models(rd)
+        save(rd / '40-plans/video-01/direction.json', {'evidence': {'references': ['V001', 'V002']}})
+        res = self.review(a)
+        gap = res['sound_between_the_words']['gap_level_rel_speech_db']
+        self.assertGreaterEqual(res['sound_between_the_words']['pauses'], 3)
+        self.assertLess(abs(gap['median'] + 22), 2.0, gap)
+        self.assertLess(gap['p90'] - gap['p10'], 1.0, gap)
+        self.assertLess(abs(res['music_heard_alone']['rises_when_alone_db']), 1.0, res['music_heard_alone'])
+        self.assertTrue(any(x.startswith('music is heard with no voice over it for ') and 'never for longer than '
+                            in x and 'does the voice leave it room?' in x for x in res['look_at']), res['look_at'])
+        rows = {r['measure']: r for r in res['beside_the_models']['rows']}
+        self.assertNotIn('pictures_per_min', rows)
+        self.assertEqual((rows['sound_moves_db']['range'], rows['sound_moves_db']['outside'],
+                          rows['sound_moves_db']['read_on'], rows['sound_under_voice_db']['outside']),
+                         ([20.0, 28.0], 'under', 'before', None))
+        self.assertEqual([x.split(':')[0] for x in res['craft_choices_asked']], ['craft_choice_sound_moves_db'])
+        self.assertTrue(any(x.startswith('how far that sound moves through the film') and 'every model is higher' in x
+                            for x in res['look_at']), res['look_at'])
+        res = self.review(b)
+        gap = res['sound_between_the_words']['gap_level_rel_speech_db']
+        self.assertGreater(gap['p90'] - gap['p10'], 7.0, gap)
+        self.assertGreater(res['music_heard_alone']['rises_when_alone_db'], 6.0, res['music_heard_alone'])
+        # a reason on record is shown with the fact, and nothing more is asked
+        save(rd / '40-plans/video-01/craft-choices.json', {'choices': [{'measure': m, 'why': WHY} for m in ASKED]})
+        res = self.review(b)
+        self.assertEqual(res['craft_choices_asked'], [])
+        self.assertTrue(any(x.startswith('craft choice: how far that sound moves through the film') for x in res['look_at']),
+                        res['look_at'])
+
+    def test_a_lift_says_where_how_much_and_what_for(self):
+        src = self.tone(self.td / 'theme.wav', 330, 40, '0.316')
+        t = {**self.EVEN, 'file': str(src), 'at': 0.0}
+        for lift, said in (({'by_db': 9, 'where_voice_is_silent_s': 1.5}, 'lift.why says what the rise is for'),
+                           ({'by_db': 9, 'why': self.FOR}, 'lift says where the bed rises'),
+                           ({'by_db': 0, 'where_voice_is_silent_s': 1.5, 'why': self.FOR}, 'lift.by_db says how many dB'),
+                           ({'by_db': 9, 'moments': [[20, 18]], 'why': self.FOR}, 'each of lift.moments is [from_s, to_s]'),
+                           ('up', 'lift is an object')):
+            self.assertIn(said, self.bake([{**t, 'lift': lift}], expected=2)['error'])
+        good = {'by_db': 9, 'where_voice_is_silent_s': 1.5, 'why': self.FOR}
+        self.assertIn('where its baked copy starts',
+                      self.bake([{**{k: v for k, v in t.items() if k != 'at'}, 'lift': good}], expected=2)['error'])
+        self.assertIn('a lift lives in the baked file', self.bake([{**t, 'lift': good}], expected=2, bake=False)['error'])
+        self.assertFalse((self.td / 'baked').exists())
+        # a moment the director names is lifted whether or not the voice speaks there; a stretch that starts later in
+        # the film is lifted on the film's clock
+        row = self.bake([{**t, 'at': 10.0, 'dur': 20, 'lift': {'by_db': 6, 'moments': [[12.0, 14.0]], 'why': self.FOR,
+                                                               'where_voice_is_silent_s': 2.5}}])['tracks'][0]
+        self.windows(row['lift']['windows'], [[12.15, 13.85, 6.0], [16.65, 19.35, 6.0], [24.65, 27.35, 6.0]])
+        f = Path(row['baked']['file'])
+        self.assertLess(abs(self.level(f, 8.0) - self.level(f, 5.0) - 6.0), 0.5)     # film 18.0 against film 15.0
+        # a rise the file cannot hold is refused, and nothing half-written is left behind
+        row = self.bake([{**t, 'lift': {**good, 'by_db': 60}}])['tracks'][0]
+        self.assertTrue(row['error'].startswith('lift: the rise would clip the file'), row)
+        self.assertFalse(list((self.td / 'baked').glob('*.lifting')))
+        # no pause that long inside the stretch: said, and the file is the even one
+        row = self.bake([{**t, 'lift': {**good, 'where_voice_is_silent_s': 5}}])['tracks'][0]
+        self.assertEqual((row['lift']['windows'], row['lift']['lifted_s'], row['lift']['full_rises']), ([], 0.0, 0))
+        self.assertIn('nothing was lifted', row['lift']['note'])
+        self.assertIn('More room is a planned silence the music carries', row['lift']['note'])
+        # pauses too short for the whole rise: the bed comes up as far as each allows, and the answer says so
+        row = self.bake([{**t, 'lift': {**good, 'ramp_s': 2.0}}])['tracks'][0]
+        self.assertEqual((len(row['lift']['windows']), row['lift']['full_rises']), (3, 0))
+        self.assertLess(max(w[2] for w in row['lift']['windows']), 9.0)
+        self.assertIn('no silence in this stretch is long enough for the whole rise (9 dB up and back takes 4.3 s',
+                      row['lift']['note'])
+        # room enough: the count of whole rises, and no note
+        row = self.bake([{**t, 'lift': good}])['tracks'][0]
+        self.assertEqual(row['lift']['full_rises'], 3)
+        self.assertNotIn('note', row['lift'])
+
+
+@fixture_only
+class ReleaseCraftTests(audit.ReleaseStateTests):
+    """A finished file that lies outside every model on a habit a viewer feels has its reason on record before it is
+    released; a direction approved before this rule hears it as advice."""
+
+    def test_the_finished_file_is_read_beside_its_models_before_release(self):
+        c, rd = self.core, self.rd
+        raw = self.export(self.td / 'raw.mp4', self.stills)
+        self.passed(raw)
+        out = self.master(raw)
+        self.passed(out)
+        cli('sound-review', '--run', rd, '--video', 1, '--file', out)
+        self.assertTrue(self.release(out, record=False)['ready'])        # no models named: nothing to stand beside
+        models(rd)
+        save(rd / '40-plans/video-01/direction.json', {'evidence': {'references': ['V001', 'V002']}})
+        save(c.export_av_path(rd, 1, c.quick_fingerprint(Path(out))), {'summary': FILM})
+        res = self.release(out, record=False)
+        self.assertEqual([x.split(':')[:2] for x in res['issues']], [['craft', f'craft_choice_{m}'] for m in ASKED])
+        self.assertIn('craft:craft_choice_sound_moves_db:6_here_every_model_is_higher_(20_to_28):change_it_or_say_why_'
+                      'in_craft-choices.json', res['issues'])
+        choices = rd / '40-plans/video-01/craft-choices.json'
+        save(choices, {'choices': [{'measure': m, 'why': WHY} for m in ASKED]})
+        self.assertTrue(self.release(out, record=False)['ready'])
+        choices.unlink()
+        save(rd / '40-plans/video-01/direction-lock.json', {'planning_rules': 5})
+        res = self.release(out, record=False)
+        self.assertTrue(res['ready'], res['issues'])
+        self.assertEqual(len([w for w in res['warnings'] if w.startswith(
+            'advisory (this direction was approved before planning rules it need not follow): craft_choice_')]), 4)
 
 
 if __name__ == '__main__':
