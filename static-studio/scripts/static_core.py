@@ -5300,10 +5300,65 @@ def expand_lines(spec, order):
     return out
 
 
-ANSWER_RULES = 3       # 2 (2026-11-24): a revised significance finding names its cause; 3 (2026-11-24, storytelling
+ANSWER_RULES = 4       # 2 (2026-11-24): a revised significance finding names its cause; 3 (2026-11-24, storytelling
                        # brief): a major finding of a later round says whether it recurs and, if so, its root cause;
+                       # 4 (2026-11-26): a recurring major that is disputed carries the decision that closes it;
                        # rounds recorded before keep their rules
 RECURRENCE_SCOPES = ('wording', 'order', 'structure', 'treatment', 'material', 'duration', 'dispute')
+# What can stand in the way of the strongest cure of a recurring major. The last three are locks only the user can
+# lift: the approved length, narration already recorded and paid for, the budget. A cure they block is the user's
+# decision, put to them with the options and recorded in their own words; the work on that finding stops until then
+# (2026-11-26: a slow stretch eight reads had found was closed "disputed" three times because the cut that would cure
+# it fell under the length window, "a length decision the user makes", and no decision was ever asked for).
+DECISION_BLOCKS = ('nothing', 'length', 'recorded_narration', 'budget', 'other')
+OWNER_BLOCKS = ('length', 'recorded_narration', 'budget')
+
+
+def _decision_block(dec):
+    return str((dec if isinstance(dec, dict) else {}).get('blocked_by') or '').strip().lower().split(':')[0].strip()
+
+
+def owner_lock_pending(ans):
+    """The user's lock that stands in the way of a disputed recurring major's cure while their decision is not on
+    record ('length', 'recorded_narration' or 'budget'), or None."""
+    dec = (ans or {}).get('decision') if isinstance((ans or {}).get('decision'), dict) else {}
+    head = _decision_block(dec)
+    if head not in OWNER_BLOCKS:
+        return None
+    decided = str(dec.get('decided_by') or '').strip().lower() == 'user' and n_words(dec.get('user_words')) >= 3
+    return None if decided else head
+
+
+def decision_problem(dec):
+    """Why the decision that closes a recurring major is not yet one, or None. A problem two readers found is closed by
+    a decision, never by the word "disputed" alone: the cures that were weighed (two at least, each with what it would
+    do and what it costs; leaving the passage as it is may be one), which was taken, what stands in the way of the
+    strongest, and who decided. Whether the choice is right stays the director's or the user's judgement: this only
+    makes the choice explicit and gives the user theirs."""
+    dec = dec if isinstance(dec, dict) else {}
+    opts = [o for o in dec.get('options') or [] if isinstance(o, dict)
+            and n_words(o.get('cure')) >= 3 and n_words(o.get('cost')) >= 3]
+    if len(opts) < 2:
+        return ('a recurring major problem is closed by a decision: decision.options lists the cures weighed (two at '
+                'least, each {"cure": what it would do, "cost": what it costs}; leaving it as it is may be one)')
+    if not str(dec.get('chosen') or '').strip():
+        return 'decision.chosen says which of the options was taken'
+    head = _decision_block(dec)
+    if head not in DECISION_BLOCKS:
+        return ('decision.blocked_by says what stands in the way of the strongest cure: '
+                + ' | '.join(DECISION_BLOCKS) + ' (other: say what)')
+    if head == 'other' and n_words(dec.get('blocked_by')) < 3:
+        return 'decision.blocked_by "other" needs to say what'
+    by = str(dec.get('decided_by') or '').strip().lower()
+    if by not in ('director', 'user'):
+        return 'decision.decided_by is "director" or "user"'
+    if head in OWNER_BLOCKS and by != 'user':
+        return (f'the strongest cure is blocked by {head.replace("_", " ")}, which only the user can lift: put the '
+                'options to them, stop work on this finding until they answer, and record decision.decided_by "user" '
+                'with their own words (decision.user_words)')
+    if by == 'user' and n_words(dec.get('user_words')) < 3:
+        return 'decision.user_words carries what the user said, in their own words'
+    return None
 # The planning rules added on 2026-11-24 (PLANNING_RULES 2): what a NEW direction must plan. A direction approved before
 # them (its lock carries no planning_rules) keeps the plan it was approved with: these checks are shown to it as
 # advisories, never as re-planning (the user, 2026-11-24). Safety and content, money, asset integrity and release
@@ -5492,6 +5547,8 @@ def answer_problem(kind, finding, ans, rules=ANSWER_RULES):
             if scope == 'wording' and act != 'disputed':
                 return ('a major problem an earlier reader also found is not fixed by rewording: name the order, '
                         'structure, treatment, material or duration cause it fixes, or dispute it with the reason')
+            if int(rules or 1) >= 4 and (act == 'disputed' or scope == 'dispute'):
+                return decision_problem(ans.get('decision'))
     return None
 
 
@@ -5700,7 +5757,8 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
     last read still describing what exists now (for a script, its held silences too). Issues block; warnings are
     shown and kept for the release sheet."""
     recs = review_records(vd, kind)
-    st = {'kind': kind, 'rounds': len(recs), 'issues': [], 'warnings': [], 'majors_closed_by_decision': []}
+    st = {'kind': kind, 'rounds': len(recs), 'issues': [], 'warnings': [], 'majors_closed_by_decision': [],
+          'answers_needed': {}}
     if not recs:
         st['issues'].append(f'{kind}_review_missing')
         return st
@@ -5768,8 +5826,15 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
         for f in fs:
             fid = str(f.get('id'))
             a = ans.get(fid) or {}
-            if answer_problem(kind, f, a, rec.get('answer_rules', 1)):
+            why_open = answer_problem(kind, f, a, rec.get('answer_rules', 1))
+            if why_open:
                 open_ids.append(fid)
+                st['answers_needed'][f'r{rnd}:{fid}'] = why_open
+                # a cure only the user can unlock is said as what it is: a stop, not one more open answer
+                lock = owner_lock_pending(a) if int(rec.get('answer_rules') or 1) >= 4 else None
+                if lock:
+                    st['issues'].append(f'{kind}_review_r{rnd}_{fid}_waits_for_the_users_decision:'
+                                        f'its_cure_is_blocked_by_{lock}')
                 continue
             if kind == 'script' and str(a.get('action')).strip().lower() == 'revised' and later is not None:
                 ls = expand_lines(a.get('lines'), list(dict.fromkeys(list(old) + list(later))))
@@ -5808,8 +5873,11 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
         st['issues'].append(f'{kind}_review_round_{rnd + 1}_required')
     elif majors:
         st['majors_closed_by_decision'] = majors
+        by_user = [m for m in majors if str((((ans.get(m) or {}) if isinstance(ans.get(m), dict) else {}).get('decision')
+                                             or {}).get('decided_by') or '').strip().lower() == 'user']
         st['warnings'].append(f'{kind} review: round {rnd} still found major problems ({", ".join(majors)}); '
-                              'the director closed them with the reasons in the answers')
+                              'the director closed them with the reasons in the answers'
+                              + (f' (decided by the user: {", ".join(by_user)})' if by_user else ''))
     if rec.get('subject_sha256') != current_sha:
         if kind == 'script' and snapshot is not None:
             old = rec.get('subject_snapshot') or {}
@@ -6767,7 +6835,9 @@ def plan_facts(rd, video):
             'creative': {'direction_locked': bool(dlock), 'locked_late': bool(dlock.get('late_reason')),
                          'treatment': dfacts.get('chosen_treatment'), 'production_rev': dlock.get('production_rev'),
                          'outdated': outdated_artifacts(rd, video), 'script_review_rounds': script_review['rounds'],
-                         'majors_closed_by_decision': script_review.get('majors_closed_by_decision') or []},
+                         'majors_closed_by_decision': script_review.get('majors_closed_by_decision') or [],
+                         # why each open answer is not yet an answer (a finding waiting for the user says so)
+                         'answers_needed': script_review.get('answers_needed') or {}},
             'writing_signals': writing_signals(lines, lock.get('language') or script.get('language') or 'en'),
             'forecast_s': forecast, 'real_narration_forecast_s': real_narr, 'real_forecast_s': real,
             # The point uses each cue's measured cost at its place, a delivery cue's band the whole line's change: when
@@ -9659,6 +9729,16 @@ def export_provenance_path(rd, video):
     return rd / '80-deliverables' / f'video-{int(video):02d}' / 'export-provenance.json'
 
 
+def release_path(rd, video):
+    """The release record: the one file release-check passed (release-check --record), by its full sha256."""
+    return rd / '80-deliverables' / f'video-{int(video):02d}' / 'release.json'
+
+
+def human_review_path(rd, video):
+    """What a person did with an export, in their own words: listened, watched, or said they will not (human-review)."""
+    return rd / '80-deliverables' / f'video-{int(video):02d}' / 'human-review.json'
+
+
 def planned_blanks_path(rd, video):
     return rd / '70-edit' / f'video-{int(video):02d}' / 'planned-blanks.json'
 
@@ -10283,14 +10363,15 @@ def cmd_export_check(args):
     res = export_facts(rd, args.video, args.file, deep=args.deep)
     # The export on record by its full sha256, with the project it was checked against: release-check binds to this.
     f = Path(args.file).expanduser().resolve()
-    sha = file_sha256(f)
+    sha = res['sha256']
     p = export_provenance_path(rd, args.video)
     rec = read_json(p) or {'video': int(args.video), 'exports': {}}
     rec.setdefault('exports', {})[sha] = {
         'file': str(f), 'sha256': sha, 'fingerprint': quick_fingerprint(f), 'size_bytes': f.stat().st_size,
         'checked_at': now(), 'deep': bool(args.deep), 'ready': res['ready'], 'issues': res['issues'],
         'metadata': res['metadata'], 'project': res.get('project'), 'pictures': res.get('pictures'),
-        'blank_spans': res.get('blank_spans'), 'narration_in_export': res.get('narration_in_export')}
+        'blank_spans': res.get('blank_spans'), 'narration_in_export': res.get('narration_in_export'),
+        'loudness': res.get('loudness'), 'role': res.get('role')}
     write_json(p, rec)
     res['provenance'] = {'file': str(p), 'sha256': sha}
     res.pop('project', None)
@@ -13346,7 +13427,13 @@ def cmd_review_record(args):
                       '(root_cause) and what kind of correction it needs (scope: ' + ' | '.join(RECURRENCE_SCOPES)
                       + '). Rewording does not answer a problem two readers found; a structural or treatment cause '
                       'is answered by a direction revision (direction-lock --revise), a duration cause by a length '
-                      'decision the user approves.'}
+                      'decision the user approves. A recurring major that is disputed is closed by a decision, never '
+                      'by the word alone: "decision": {"options": [{"cure": what it would do, "cost": what it costs}, '
+                      '... two at least; leaving it as it is may be one], "chosen": which was taken, "blocked_by": '
+                      + ' | '.join(DECISION_BLOCKS) + ' (what stands in the way of the strongest cure), "decided_by": '
+                      '"director" | "user", "user_words": their own words}. When the length, narration already '
+                      'recorded or the budget blocks the cure, the decision is the user\'s: put the options to them '
+                      'and stop work on that finding until they answer.'}
         if recon:
             doc['reconcile'] = recon
             doc['how_reconcile'] = (
@@ -13390,7 +13477,38 @@ def cmd_shot_check(args):
     emit(res, 0 if res['ready'] else 2)
 
 
-def export_facts(rd, video, file, deep=False):
+MASTER_LOUDNESS_TOLERANCE_LU = 0.5      # what master-sound itself accepts as reached
+MASTER_PEAK_TOLERANCE_DB = 0.5
+
+
+def export_role(rd, video, sha, loud, issues, warnings):
+    """What a file is to this video, from the master record and its own measured sound: 'master' (the recorded
+    mastered file, which must still measure what its record says), 'unmastered_export' (the export that master was
+    made from) or 'not_on_record'. The plain sentence goes to the lists given, so CapCut's own export is never taken
+    for the deliverable (2026-11-26: a film left at -23.4 LUFS; its file was exported after the run's last record)."""
+    mrec = read_json(rd / '80-deliverables' / f'video-{int(video):02d}' / 'master.json')
+    il, tp = loud.get('integrated_lufs'), loud.get('true_peak_dbtp')
+    said = f'{il:g} LUFS' if il is not None else 'an unmeasured loudness'
+    made = mrec.get('mastered') or {}
+    if made.get('sha256') == sha:
+        tgt, ceil = mrec.get('target_lufs'), mrec.get('true_peak_ceiling_dbtp')
+        if tgt is not None and (il is None or abs(il - float(tgt)) > MASTER_LOUDNESS_TOLERANCE_LU):
+            issues.append(f'export_master_measures_{said.replace(" ", "_")}_not_its_recorded_{float(tgt):g}_LUFS')
+        if ceil is not None and tp is not None and tp > float(ceil) + MASTER_PEAK_TOLERANCE_DB:
+            issues.append(f'export_master_true_peak_{tp:g}_dBTP_is_over_its_ceiling_{float(ceil):g}')
+        return 'master'
+    if (mrec.get('export') or {}).get('sha256') == sha:
+        warnings.append(f'this file is the unmastered export ({said}): the deliverable is its master, {made.get("file")}')
+        return 'unmastered_export'
+    if made:
+        warnings.append(f'this file is not the recorded master, and not the export it was made from ({said}; the master '
+                        f'was made at {mrec.get("target_lufs")} LUFS): a new export needs its own master (master-sound)')
+    else:
+        warnings.append(f'not mastered yet: this file measures {said}; master-sound makes the deliverable')
+    return 'not_on_record'
+
+
+def export_facts(rd, video, file, deep=False, sha=None):
     lock = read_json(video_dir(rd, video) / 'length-lock.json')
     if not lock:
         error('Length lock not found for video')
@@ -13421,6 +13539,11 @@ def export_facts(rd, video, file, deep=False):
     # export's sound, window by window along the film (a speed change drifts, a cut or an insert jumps, a missing
     # stretch is not found), and the level of everything else under the voice.
     warnings, narration_match = [], None
+    # The file's own sound, measured on the file (never assumed from the step that should have made it), and what
+    # the file is to this video: the recorded master, the export it was made from, or a file no record knows.
+    sha = sha or file_sha256(video_file)
+    loud = loudness_stats(video_file) if meta['has_audio'] else {}
+    role = export_role(rd, video, sha, loud, issues, warnings)
     plan = read_json(rd / '70-edit' / f'video-{int(video):02d}' / 'edit-plan.json')
     nfe = plan.get('narration_for_edit') or {}
     nf = _run_file(rd, nfe['file']) if nfe.get('file') else None
@@ -13525,6 +13648,7 @@ def export_facts(rd, video, file, deep=False):
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'file': str(video_file), 'metadata': meta,
             'target_s': target, 'difference_s': round(meta['duration_s'] - target, 2), 'diagnostic_flags': diag,
             'blank_spans': blanks, 'pictures': pictures, 'project': project, 'deep': bool(deep),
+            'sha256': sha, 'loudness': loud, 'role': role,
             'narration_in_export': {k: v for k, v in (narration_match or {}).items() if k != 'windows'} or None}
 
 
@@ -13547,7 +13671,7 @@ def cmd_release_check(args):
               [f'export:{x}' for x in exp['issues']] + fin['issues'])
     # This exact file (its full sha256): deep-checked against its project, that project unchanged since, and the master.
     f = Path(args.file).expanduser().resolve()
-    sha = file_sha256(f)
+    sha = exp['sha256']
     prov = (read_json(export_provenance_path(rd, n)).get('exports') or {}).get(sha)
     if not prov:
         issues.append('export:not_checked_as_this_exact_file:run_export-check_--deep_on_it')
@@ -13603,11 +13727,35 @@ def cmd_release_check(args):
                                 'drawn overlays and captions are checked by the timeline and caption checks, not '
                                 'frame by frame'}
     issues = list(dict.fromkeys(issues))
+    # What a person did with this exact file, from the record alone. It never blocks: it is said, so "every check
+    # passed" is not read as "someone heard it" (no agent can hear; the checks read records and measurements).
+    hr = human_review_state(rd, n, sha)
+    if not hr['on_record']:
+        warnings.insert(0, 'no person has listened to or watched this file on record: every check here reads records '
+                           'and measurements (listening-sheet lists the few passages worth a person\'s ears; '
+                           'human-review records what they said)')
+    recorded = None
+    if getattr(args, 'record', False) and not issues:
+        # The release on record: this file, by its full sha256, at the moment every recorded gate passed for it.
+        old = read_json(release_path(rd, n))
+        write_json(release_path(rd, n), {
+            'video': n, 'released_at': now(), 'file': str(f), 'sha256': sha,
+            'technical': {'ready': True, 'checked_at': now(), 'loudness': exp.get('loudness')},
+            'final_review_rounds': fin['rounds'],
+            'human_review': {'on_record': hr['on_record'], 'kinds': hr['kinds']},
+            'warnings': warnings,
+            'history': (old.get('history') or []) + ([{k: old.get(k) for k in ('released_at', 'file', 'sha256')}]
+                                                     if old.get('sha256') else [])})
+        recorded = str(release_path(rd, n))
     emit({'ready': not issues, 'release_status': 'ready' if not issues else 'blocked', 'issues': issues,
           'warnings': warnings, 'export': {k: exp[k] for k in ('file', 'metadata', 'target_s', 'difference_s')},
+          'loudness': exp.get('loudness'), 'file_is': exp.get('role'),
+          'human_review': {'on_record': hr['on_record'], 'kinds': hr['kinds']},
+          'release_record': recorded or ('not written: pass --record once this is ready' if not issues else None),
           'final_review_rounds': fin['rounds'], 'content': content,
           'note': 'Ready means every recorded gate passed for this exact file. It does not say the video is good: '
-                  'that is the director\'s and the reviewers\' judgement, recorded in their files.'},
+                  'that is the director\'s and the reviewers\' judgement, recorded in their files. It does not say '
+                  'a person heard or watched it either: human_review says what is on record.'},
          0 if not issues else 2)
 
 
@@ -13627,8 +13775,124 @@ def advance_stage(rd, stage):
     write_json(rd / 'state.json', st)
 
 
-def video_stage(rd, video, plan_ready, audio):
-    """How far one video got, from what is recorded (never a stored guess): the furthest gate passed in order."""
+def set_stage(rd, stage):
+    """state.json's stage as the records derive it (status): it follows them both ways, so a film rebuilt after its
+    release no longer reads 'released' (2026-11-26: a run said so with its last build never exported on record)."""
+    st = read_json(rd / 'state.json')
+    if not st or stage not in STAGES or st.get('stage') == stage:
+        return
+    st['stage'] = stage
+    write_json(rd / 'state.json', st)
+
+
+def exports_of_current_project(rd, video):
+    """The exports on record that answer for the project as it stands: the one timeline-check passed last, compared
+    as project_changes compares (CapCut's own frame snapping aside). An export of an earlier build stays on record and
+    counts for nothing here. An export checked without a project (no CapCut draft known) is kept as it was."""
+    n = int(video)
+    exp = read_json(export_provenance_path(rd, n)).get('exports') or {}
+    cur = read_json(timeline_check_path(rd, n)).get('snapshot')
+    out = {}
+    for sha, x in exp.items():
+        if not isinstance(x, dict):
+            continue
+        snap = (x.get('project') or {}).get('snapshot')
+        if cur and snap:
+            try:
+                if project_changes(snap, cur):
+                    continue
+            except (TypeError, ValueError, KeyError):
+                continue
+        out[sha] = x
+    return out
+
+
+HUMAN_REVIEW_KINDS = ('listened', 'watched', 'listened_and_watched', 'waived')
+
+
+def human_review_state(rd, video, sha=None):
+    """What a person did with an export, from the record alone (human-review): for the file with this sha256, or
+    every entry when none is given. Never inferred from a step having run, and never written by a check."""
+    rows = [r for r in read_json(human_review_path(rd, video)).get('reviews') or [] if isinstance(r, dict)]
+    mine = [r for r in rows if sha is None or r.get('sha256') == sha]
+    kinds = []
+    for r in mine:
+        for k in (['listened', 'watched'] if r.get('kind') == 'listened_and_watched' else [r.get('kind')]):
+            if k and k not in kinds:
+                kinds.append(k)
+    return {'on_record': bool(mine), 'kinds': kinds, 'latest': mine[-1] if mine else None,
+            'entries_for_other_files': len(rows) - len(mine)}
+
+
+def deliverable_facts(rd, video, live=True):
+    """Where one video's deliverable stands, from the records and nothing else. Each step is its own fact and none
+    stands in for another: a project built and checked is not an export; an export is not its master; a master that
+    passed every check is not one a person heard. `live` also reads the CapCut project as it is now, so a project
+    changed after its check is said to be unchecked. Nothing is written."""
+    n = int(video)
+    steps = {'built': False, 'exported': False, 'mastered': False, 'verified': False, 'human_review': 'none on record'}
+    out = {'state': 'not_built', 'file': None, 'steps': steps, 'stale': [], 'next': 'timeline-check on the built project'}
+    tc = read_json(timeline_check_path(rd, n))
+    if not tc:
+        return out
+    steps['built'] = True
+    if live and tc.get('draft') and tc.get('snapshot'):
+        try:
+            ch = project_changes(tc['snapshot'], project_snapshot(rd, n, tc['draft']))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            ch = None
+            out['stale'].append('the CapCut project could not be read, so it was not compared with its check: '
+                                + str(exc)[:100])
+        if ch:
+            steps['built'] = False
+            out.update({'state': 'project_changed_since_its_check',
+                        'next': 'timeline-check again: the project changed after it was checked ('
+                                + '; '.join(ch[:2]) + ')'})
+            return out
+    allx = read_json(export_provenance_path(rd, n)).get('exports') or {}
+    cur = exports_of_current_project(rd, n)
+    good = {s: x for s, x in cur.items() if x.get('ready') and x.get('deep')}
+    older = [x for s, x in allx.items() if isinstance(x, dict) and s not in cur]
+    if older:
+        out['stale'].append(f'{len(older)} export(s) on record belong to an earlier build of the project and count for '
+                            'nothing now: ' + ', '.join(Path(str(x.get('file') or '?')).name for x in older[:4]))
+    steps['exported'] = bool(good)
+    m = read_json(rd / '80-deliverables' / f'video-{n:02d}' / 'master.json')
+    made = m.get('mastered') or {}
+    msha = made.get('sha256')
+    steps['mastered'] = bool(msha and msha in good)
+    if msha and msha not in cur:
+        out['stale'].append('the master on record was made from an earlier build: ' + Path(str(made.get('file') or '?')).name)
+    rel = read_json(release_path(rd, n))
+    steps['verified'] = bool(steps['mastered'] and rel.get('sha256') == msha and (rel.get('technical') or {}).get('ready'))
+    if rel.get('sha256') and not steps['verified']:
+        out['stale'].append('a release is on record for a file that is not the current master: '
+                            + Path(str(rel.get('file') or '?')).name + f' ({rel.get("released_at")})')
+    if steps['mastered']:
+        hr = human_review_state(rd, n, msha)
+        steps['human_review'] = hr['kinds'] or 'none on record'
+        out['file'] = made.get('file')
+    if not steps['exported']:
+        out.update({'state': 'built_not_exported', 'next': 'export the checked project from CapCut, then master-sound '
+                    'and export-check --deep on the mastered file'})
+    elif not steps['mastered']:
+        raw_only = not msha or msha not in allx
+        out.update({'state': 'exported_not_mastered' if raw_only else 'mastered_not_checked',
+                    'next': ('master-sound on the export, then ' if raw_only else '')
+                            + 'export-check --deep on the mastered file'})
+    elif not steps['verified']:
+        out.update({'state': 'mastered_not_released', 'next': 'the final watch review of the mastered file, then '
+                    'release-check --record on it'})
+    else:
+        out.update({'state': 'released', 'next': ('' if steps['human_review'] != 'none on record' else
+                    'no person has listened or watched on record: listening-sheet, then human-review')})
+    return out
+
+
+def video_stage(rd, video, plan_ready, audio, deliv=None):
+    """How far one video got, from what is recorded (never a stored guess): the furthest gate passed in order. The
+    last steps are read for the project as it stands (deliverable_facts): an export or a release of an earlier build
+    moves nothing."""
     n = int(video)
     vd = video_dir(rd, n)
     stage = 'planning'
@@ -13643,13 +13907,14 @@ def video_stage(rd, video, plan_ready, audio):
             stage = 'narration_measured'
     if stage == 'narration_measured' and read_json(artifact_path(rd, n, 'stills')).get('images'):
         stage = 'stills'
-    if stage == 'stills' and read_json(timeline_check_path(rd, n)):
+    if stage != 'stills':
+        return stage
+    steps = (deliv or deliverable_facts(rd, n))['steps']
+    if steps['built']:
         stage = 'edit_checked'
-    exp = read_json(export_provenance_path(rd, n)).get('exports') or {}
-    if stage == 'edit_checked' and any(x.get('ready') and x.get('deep') for x in exp.values()):
+    if stage == 'edit_checked' and steps['exported']:
         stage = 'exported'
-    m = read_json(rd / '80-deliverables' / f'video-{n:02d}' / 'master.json')
-    if stage == 'exported' and (m.get('mastered') or {}).get('sha256') in exp:
+    if stage == 'exported' and steps['verified']:
         stage = 'released'
     return stage
 
@@ -13667,8 +13932,10 @@ def cmd_status(args):
         plan = plan_facts(rd, i)
         audio = audio_facts(rd, i)
         hf = hold_facts(rd, i)
+        deliv = deliverable_facts(rd, i)
         videos[str(i)] = {'target_s': read_json(vd/'length-lock.json').get('target_length_s'),
-                          'stage': video_stage(rd, i, plan['ready'], audio),
+                          'stage': video_stage(rd, i, plan['ready'], audio, deliv),
+                          'deliverable': deliv,
                           'plan_ready': plan['ready'], 'audio_ready': audio['ready'],
                           'holds': {'planned_or_decided': len(hf['holds']), 'provisional': hf['undecided'],
                                     'decided_after_narration': hf['decided_narration'],
@@ -13677,17 +13944,73 @@ def cmd_status(args):
                                        'reviews': {k: len(review_records(vd, k)) for k in REVIEW_MAX_ROUNDS}},
                           'issues': list(dict.fromkeys(plan['issues'] + audio['issues'])),
                           'warnings': plan.get('warnings', [])}
-    # the run's stage is its least advanced video's, from the recorded gates: a stale stored stage is corrected
+    # The run's stage is its least advanced video's, from the recorded gates. The stored stage follows it both ways:
+    # a gate that no longer holds (a project rebuilt after its release, a script changed after its check) moves it
+    # back, so the stored word never claims more than the records do. --look reports and writes nothing.
     got = [v['stage'] for v in videos.values() if v.get('stage') in STAGES]
+    stored = st.get('stage')
     if got:
         least = min(got, key=STAGES.index)
-        if st.get('stage') != least and (st.get('stage') not in STAGES or STAGES.index(least) > STAGES.index(st['stage'])):
-            advance_stage(rd, least)
-            st = read_json(rd / 'state.json')
-    emit({'ok': True, 'run': str(rd), 'stage': st.get('stage'), 'selected_niche': st.get('selected_niche'),
+        if stored != least:
+            if not getattr(args, 'look', False):
+                set_stage(rd, least)
+            st = {**st, 'stage': least}
+    moved = ({'stage_was': stored, 'stage_note': 'the stored stage did not match the records: ' + (
+        'corrected in state.json' if not getattr(args, 'look', False) else 'state.json left as it is (--look)')}
+             if stored != st.get('stage') else {})
+    emit({'ok': True, 'run': str(rd), 'stage': st.get('stage'), **moved, 'selected_niche': st.get('selected_niche'),
           'selected_niche_id': st.get('selected_niche_id'), 'niche_discovery': st.get('niche_discovery'),
           'reference_videos': len([x for x in inv.get('items', []) if x.get('kind') == 'video']),
           'videos': videos})
+
+
+def cmd_deliverable(args):
+    """Which file is the deliverable, and what stands between the project and it. With --file: what that file is to
+    this video (the recorded master, the export it was made from, an export of an earlier build, or a file no record
+    knows), with its own measured loudness. Reads only: nothing is written to the run."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    d = deliverable_facts(rd, n)
+    out = {'ok': True, 'video': n, **d}
+    if args.file:
+        f = Path(args.file).expanduser().resolve()
+        if not f.is_file():
+            error('File not found', str(f))
+        sha, loud, said = file_sha256(f), loudness_stats(f), []
+        role = export_role(rd, n, sha, loud, said, said)
+        allx = read_json(export_provenance_path(rd, n)).get('exports') or {}
+        out['this_file'] = {
+            'file': str(f), 'sha256': sha, 'duration_s': probe(f).get('duration_s'), 'loudness': loud, 'is': role,
+            'has_an_export_check': sha in allx,
+            'of_the_project_as_it_stands': (sha in exports_of_current_project(rd, n)) if sha in allx else None,
+            'checked_project_length_s': (read_json(timeline_check_path(rd, n)).get('snapshot') or {}).get('end_s'),
+            'is_the_deliverable': bool(d['steps']['verified'] and read_json(release_path(rd, n)).get('sha256') == sha),
+            'said': said}
+    emit(out)
+
+
+def cmd_human_review(args):
+    """Record what a person did with one export, in their own words: listened, watched, both, or their word that they
+    will not (waived). No agent can hear a film or watch it play; this is the only record that says a person did.
+    --answers carries the filled listening sheet (its item ids to what the person said)."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    f = Path(args.file).expanduser().resolve()
+    if not f.is_file():
+        error('File not found', str(f))
+    if n_words(args.user_words) < 3:
+        error('--user-words carries what the person said, in their own words (a few words at least). Never write it '
+              'for them: no entry is better than an invented one.')
+    answers = read_json(Path(args.answers), required=True) if args.answers else None
+    sha = file_sha256(f)
+    p = human_review_path(rd, n)
+    rec = read_json(p) or {'video': n, 'reviews': []}
+    rec.setdefault('reviews', []).append({
+        'at': now(), 'file': str(f), 'sha256': sha, 'kind': args.kind, 'user_words': args.user_words.strip(),
+        **({'answers': answers} if answers else {}), **({'sheet': str(args.sheet)} if args.sheet else {})})
+    write_json(p, rec)
+    emit({'ok': True, 'record': str(p), 'file': str(f), 'kind': args.kind, 'entries': len(rec['reviews']),
+          'deliverable': deliverable_facts(rd, n)})
 
 
 def main():
@@ -13920,6 +14243,19 @@ def main():
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--file', required=True); p.set_defaults(func=cmd_release_check)
     p.add_argument('--thumbnail', default='', help='The thumbnail file: it must be looked at clean like every picture')
+    p.add_argument('--record', action='store_true', help='When every gate passes, write the release record for this '
+                   'exact file (80-deliverables/video-NN/release.json). Without it the check writes nothing')
+    p = sub.add_parser('deliverable', help='Which file is the deliverable and what stands before it, from the records; '
+                       '--file says what a given file is (master, raw export, earlier build, unknown). Reads only')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True); p.add_argument('--file')
+    p.set_defaults(func=cmd_deliverable)
+    p = sub.add_parser('human-review', help='Record what a person did with one export, in their own words: listened, '
+                       'watched, both, or their word that they will not')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--file', required=True); p.add_argument('--kind', required=True, choices=HUMAN_REVIEW_KINDS)
+    p.add_argument('--user-words', required=True, help='What the person said, in their own words')
+    p.add_argument('--answers', help='The filled listening sheet (JSON: item id to what they said)')
+    p.add_argument('--sheet', help='The listening sheet they used'); p.set_defaults(func=cmd_human_review)
     p = sub.add_parser('direction-reapprove', help='After a meaningful direction change: this artifact, as it is, '
                        'still serves the locked treatment (recorded with its reason, for this revision)')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
@@ -14023,6 +14359,8 @@ def main():
     p.add_argument('--why', required=True, help='Why this loudness')
     p.set_defaults(func=cmd_master_sound)
     p = sub.add_parser('status'); p.add_argument('--run', required=True); p.set_defaults(func=cmd_status)
+    p.add_argument('--look', action='store_true', help='Report only: state.json is not corrected (a finished run stays '
+                   'byte for byte as it is)')
     p = sub.add_parser('content-review', help='The content record: a reference\'s review (--ref --file; --signals '
                        'for where to look), the look at every picture of an edit (--video --pictures --file), --status')
     p.add_argument('--run', required=True); p.add_argument('--ref'); p.add_argument('--file')
