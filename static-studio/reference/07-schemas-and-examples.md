@@ -121,7 +121,12 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" export-check \
 python "$HOME/.claude/static-studio/scripts/static_core.py" av-profile --run "RUN" --video 1 --file "C:/videos/final.mp4"
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind final --file "C:/videos/final.mp4"
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run "RUN" --video 1 --kind final
-python "$HOME/.claude/static-studio/scripts/static_core.py" release-check --run "RUN" --video 1 --file "C:/videos/final.mp4"
+python "$HOME/.claude/static-studio/scripts/static_core.py" release-check --run "RUN" --video 1 --file "C:/videos/final.mp4" --record
+# Which file is the deliverable and what stands between the project and it (reads only; --file F: what that file is):
+python "$HOME/.claude/static-studio/scripts/static_core.py" deliverable --run "RUN" --video 1
+# What a person did with that file, in their own words (never written for them):
+python "$HOME/.claude/static-studio/scripts/static_core.py" human-review --run "RUN" --video 1 --file "C:/videos/final.mp4" \
+  --kind listened --user-words "the words the user said"
 python "$HOME/.claude/static-studio/scripts/static_core.py" status --run "RUN"
 ```
 
@@ -597,6 +602,21 @@ this answer). A script reader's record (brief 5) also keeps its `promise` (`prom
 `[{lines, felt: anticipation | delay, why}]`); a delay becomes a W finding (minor), a promise never delivered a major
 one. A harmless serialization slip is put into the format by `review-record` and listed in `format_normalized`
 (`[{where, was, now}]`), the reader's file as written kept in the run and named in `findings_as_written`.
+
+A recurring major that is disputed (or whose scope is `dispute`) carries the decision that closes it (06):
+
+```json
+"F1": {"action": "disputed", "note": "The cut that cures it falls under the length window.",
+       "recurrence": {"recurs_of": "r1:F1", "root_cause": "two background beats in a row leave the brothers", "scope": "dispute"},
+       "decision": {"options": [{"cure": "cut the two background beats to one", "cost": "about 40 s under the locked length"},
+                                {"cure": "leave the passage as it is", "cost": "the slow stretch both readers found stays"}],
+                    "chosen": "cut the two background beats to one", "blocked_by": "length",
+                    "decided_by": "user", "user_words": "cut it, a shorter film is fine"}}
+```
+
+`blocked_by` is `nothing`, `length`, `recorded_narration`, `budget` or `other: <what>`. The middle three are the
+user's to lift (`decided_by: "user"` with their `user_words`); plan-check reports the finding as waiting for them
+until then.
 
 A major finding is `revised` or `disputed`, never just `kept`, and gets a fresh read in the next round (until round 2
 for the script and the final review, round 1 for the treatments). A fresh read also follows a changed line the

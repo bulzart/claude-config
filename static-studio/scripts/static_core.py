@@ -98,15 +98,33 @@ def error(message, details=None):
 
 
 def read_json(path, required=False):
+    """A JSON record as a dict; {} when the file is not there (or holds something other than an object). A file that
+    IS there and cannot be parsed stops the command and is named: an empty answer would let the check that reads it
+    pass, or start over what was already done (2026-11-26: a damaged narration manifest read as "nothing recorded
+    yet" would have re-sent, and billed, every part; a damaged lock or budget register would have let a second paid
+    job through). A byte-order mark is not damage."""
     try:
-        obj = json.loads(Path(path).read_text(encoding='utf-8'))
-        if not isinstance(obj, dict):
-            raise ValueError('expected JSON object')
-        return obj
-    except (OSError, ValueError) as exc:
+        raw = Path(path).read_text(encoding='utf-8-sig')
+    except UnicodeDecodeError as exc:
+        raw, bad = None, str(exc)
+    except OSError as exc:
         if required:
             error('Cannot read JSON', {'file': str(path), 'reason': str(exc)})
         return {}
+    if raw is not None:
+        try:
+            obj = json.loads(raw)
+        except ValueError as exc:
+            obj, bad = None, str(exc)
+        else:
+            if isinstance(obj, dict):
+                return obj
+            if required:
+                error('Cannot read JSON', {'file': str(path), 'reason': 'expected JSON object'})
+            return {}
+    error('A record cannot be read: the file is there but is not valid JSON (damaged, or half-written). Nothing was '
+          'changed. Restore it (its .bak, its history, or the step that writes it), or remove it if it should not exist.',
+          {'file': str(path), 'reason': bad[:200]})
 
 
 def write_json(path, obj):
@@ -805,7 +823,9 @@ def ref_analysis_state(rd, vid):
             'content_review': (rd / '20-analysis/content' / f'{vid}.json').is_file()}
 
 
-def transcript_words(rd, vid):
+def transcript_word_count(rd, vid):
+    """A reference's transcript size in words. (Named apart from transcript_words(tjson), the word list further down:
+    the two shared one name until 2026-11-26, the later one won, and this count raised a TypeError when it was needed.)"""
     t = read_json(rd / '10-media' / vid / 'transcript.json')
     return sum(n_words(s.get('text')) for s in t.get('segments') or [] if isinstance(s, dict))
 
@@ -832,7 +852,7 @@ def ref_work(rd, vid, row, cfg):
         estimated.append('shot_sheets')
     words = ((av.get('summary') or {}).get('narration') or {}).get('words')
     if not isinstance(words, int):
-        words = transcript_words(rd, vid)
+        words = transcript_word_count(rd, vid)
         if not words and row.get('has_audio'):
             estimated.append('transcript_words')
     cands = len(av.get('inspect_candidates') or [])
@@ -3008,6 +3028,52 @@ def candidate_read_sources(c, cidx, ledger):
     return sorted(x for x in srcs if (ledger.get(x) or {}).get('access') == 'read')
 
 
+def coverage_issues(cov):
+    """The chosen subject's outward look (selection.coverage): where the director looked for what already exists on
+    it, what was found (or why nothing was), and what this film gives a viewer that those do not. The reader of the
+    record is the director choosing and the user approving; no count, score or share decides anything here."""
+    if not isinstance(cov, dict):
+        return ['subject_selection_needs_coverage:what_already_exists_on_this_subject_where_you_looked_and_what_this_'
+                'film_adds']
+    out = []
+    if not [x for x in cov.get('looked') or [] if isinstance(x, dict) and n_words(x.get('where')) >= 1
+            and n_words(x.get('for')) >= 2]:
+        out.append('subject_selection_coverage_needs_where_it_looked:looked[{where,for}]')
+    rows = [x for x in cov.get('exists') or [] if isinstance(x, dict)] if isinstance(cov.get('exists'), list) else []
+    if not rows and n_words(cov.get('none_found')) < MIN_FIELD_WORDS:
+        out.append('subject_selection_coverage_needs_what_exists_or_why_nothing_was_found:exists[{what,by,'
+                   'how_it_tells_it}]_or_none_found')
+    for i, x in enumerate(rows, 1):
+        if n_words(x.get('what')) < 2 or n_words(x.get('how_it_tells_it')) < 4:
+            out.append(f'subject_selection_coverage_entry_{i}_needs_what_it_is_and_how_it_tells_it')
+    if n_words(cov.get('this_film_adds')) < MIN_FIELD_WORDS:
+        out.append('subject_selection_coverage_missing_what_this_film_adds')
+    return out
+
+
+def selection_promise_issues(pr):
+    """What the film will be clicked for (selection.promise), in words: a working title, the picture a thumbnail would
+    show, and what a viewer who clicks expects to get. A working promise, revised freely; it gives the treatments, the
+    opening and the readers something to be held to."""
+    if not isinstance(pr, dict):
+        return ['subject_selection_needs_its_promise:working_title_thumbnail_idea_and_what_the_viewer_expects']
+    out = []
+    if n_words(pr.get('working_title')) < 2:
+        out.append('subject_selection_promise_missing_working_title')
+    if n_words(pr.get('thumbnail_idea')) < 4:
+        out.append('subject_selection_promise_missing_thumbnail_idea')
+    if n_words(pr.get('viewer_expects')) < MIN_FIELD_WORDS:
+        out.append('subject_selection_promise_missing_what_the_viewer_expects')
+    return out
+
+
+def selection_promise(direction):
+    """The chosen subject's working promise ({} when none): working_title, thumbnail_idea, viewer_expects."""
+    subj = (direction or {}).get('subject')
+    sel = subj.get('selection') if isinstance(subj, dict) and isinstance(subj.get('selection'), dict) else {}
+    return sel.get('promise') if isinstance(sel.get('promise'), dict) else {}
+
+
 def key_moment_evidence_signals(direction, beats, claims):
     """A key moment is where the viewer's trust is made or lost. One that carries a value said as established (or as a
     consequence reasoned from it) on claims that each rest on a single source ('likely', none confirmed) is named, so
@@ -3400,6 +3466,10 @@ def subject_issues(subj, sources_text='', locked_s=None, refs=(), locked_niche=N
         iss.append(f'subject_exact_{kind}_must_be_kept:selection.keeps_user_scope')
     if kind in ('subject', 'topic', 'story') and n_words(sel.get('how_scope_kept')) < MIN_FIELD_WORDS:
         iss.append(f'subject_{kind}_scope_needs_how_scope_kept:selection.how_scope_kept')
+    # The outward look and the promise (planning rules 5): what already exists on the chosen subject and what this
+    # film gives that those do not; and what the film will be clicked for, chosen with the subject so the opening has
+    # a contract to keep. Presence only: whether the subject is worth making stays the director's judgement.
+    iss += coverage_issues(sel.get('coverage')) + selection_promise_issues(sel.get('promise'))
     reasons = {}
     for c in cands:
         cid = str(c.get('id'))
@@ -5359,11 +5429,13 @@ def decision_problem(dec):
     if by == 'user' and n_words(dec.get('user_words')) < 3:
         return 'decision.user_words carries what the user said, in their own words'
     return None
+
+
 # The planning rules added on 2026-11-24 (PLANNING_RULES 2): what a NEW direction must plan. A direction approved before
 # them (its lock carries no planning_rules) keeps the plan it was approved with: these checks are shown to it as
 # advisories, never as re-planning (the user, 2026-11-24). Safety and content, money, asset integrity and release
 # validation are never in this list: they hold for every run.
-PLANNING_RULES = 4
+PLANNING_RULES = 5
 NEW_PLANNING_RULES = re.compile(
     r'(direction_evidence_\w+?_is_outside_the_locked_niche'
     r'|chosen_approach_missing_exploration'
@@ -5397,7 +5469,19 @@ PLANNING_RULES_V3 = re.compile(
 # natural variation, active against overall pace, pauses and comprehension), says where in their range this narration
 # belongs, and states its uncertainty when only one reference matches. Older directions see them as advisories.
 PLANNING_RULES_V4 = re.compile(r'(decision_missing_pacing|decision_pacing_)')
-PLANNING_RULES_ADDED = ((2, NEW_PLANNING_RULES), (3, PLANNING_RULES_V3), (4, PLANNING_RULES_V4))
+# The outward look and the accountable wording (PLANNING_RULES 5, 2026-11-26, after the audit of a finished film): the
+# chosen subject says what already exists on it and what this film adds, and carries the promise it will be clicked
+# for (a working title and a thumbnail idea); a script that grew well past its first complete draft says what the
+# added lines carry; a key moment's line that rests on a claim the research did not confirm says how its words carry
+# that. Presence and accountable answers only. Older directions see them as advisories.
+PLANNING_RULES_V5 = re.compile(
+    r'(subject_selection_needs_coverage'
+    r'|subject_selection_coverage_'
+    r'|subject_selection_needs_its_promise'
+    r'|subject_selection_promise_'
+    r'|script_grew_\d+pct_since_its_first_complete_draft'
+    r'|key_lines_on_unconfirmed_claims_need_their_wording_answered)')
+PLANNING_RULES_ADDED = ((2, NEW_PLANNING_RULES), (3, PLANNING_RULES_V3), (4, PLANNING_RULES_V4), (5, PLANNING_RULES_V5))
 
 
 def planning_rules_of(rd, video):
@@ -5430,6 +5514,13 @@ def migrated_rule(issue, migration, chosen_treatment=None, chosen_candidate=None
     # the pacing rules (4) reach an older direction whose decision was revised after they existed
     if PLANNING_RULES_V4.match(s):
         return int((migration or {}).get('to') or 0) >= 4 and sec('decision.treatment', 'decision.reasons')
+    # the rules of 2026-11-26 (5) reach an older direction whose subject was chosen again, or whose script was sent
+    # back to work, after they existed
+    if PLANNING_RULES_V5.match(s):
+        if int((migration or {}).get('to') or 0) < 5:
+            return False
+        return bool(new_subject or sec(prefix=('subject.selection',))) if s.startswith('subject_selection_') \
+            else remade('script')
     # the storytelling rules (3) reach what a revision of an older direction touched
     if int((migration or {}).get('to') or 0) >= 3:
         m3 = re.match(r'treatment_(\w+?)_(?:needs_movements|never_marks_where_its_promise_is_delivered)', s)
@@ -6569,6 +6660,237 @@ def ref_pace_stats(rd, vid, duration_s=None):
     return out
 
 
+# ---------------------------------------------------------------- story size, the opening, the wording of uncertain facts
+# Planning rules 5 (2026-11-26). Each gathers evidence and asks for an accountable answer where a look is due; none
+# decides whether the film is good, and no number here is a target.
+SCRIPT_GROWTH_LOOK = 0.15     # a script this much larger than its first complete draft is looked at: what grew, and why
+
+
+def script_size_path(vd):
+    return vd / 'script-size.json'
+
+
+def script_is_whole(lines, beats):
+    """Every line has a beat and every beat its lines: a whole draft, not a part of one."""
+    try:
+        spans = sorted((int(b['line_start']), int(b['line_end'])) for b in beats if isinstance(b, dict))
+    except (KeyError, TypeError, ValueError):
+        return False
+    return bool(lines) and bool(spans) and spans[0][0] == 1 and spans[-1][1] == len(lines)
+
+
+def script_size_facts(vd, words):
+    """The script beside its own first complete draft (plan-check records that draft once): how much it has grown,
+    and whether the growth was accounted for. A story's first whole draft is the nearest thing to its natural size; a
+    script that grows far past it while the length stays locked may be filling the length (2026-11-26: a film was
+    filled to its first lock, and the filled stretch became its slow middle). (facts, issue or None)."""
+    sz = read_json(script_size_path(vd))
+    first = sz.get('first_complete_draft') if isinstance(sz.get('first_complete_draft'), dict) else {}
+    out = {'first_complete_draft': first or None, 'now_words': words}
+    if not first.get('words') or not words:
+        return out, None
+    grew = (words - int(first['words'])) / int(first['words'])
+    covered = max((int(a['words']) for a in sz.get('growth_answers') or [] if isinstance(a, dict) and a.get('words')
+                   and n_words(a.get('why')) >= MIN_NOTE_WORDS), default=0)
+    out.update({'grew_pct': round(100 * grew, 1), 'growth_answered_up_to_words': covered or None})
+    if grew > SCRIPT_GROWTH_LOOK and words > covered * 1.05:
+        return out, (f'script_grew_{round(100 * grew)}pct_since_its_first_complete_draft:say_what_the_added_lines_carry:'
+                     'plan-check_--grew-for')
+    return out, None
+
+
+def record_script_size(rd, video, words, forecast_s, grew_for=''):
+    """plan-check's own record of the script's size: its first complete draft, once, and each answer to "why did it
+    grow" with the size it was given for. True when something was written."""
+    vd = video_dir(rd, video)
+    sz = read_json(script_size_path(vd))
+    changed = False
+    if not isinstance(sz.get('first_complete_draft'), dict) and words and script_is_whole(
+            read_json(vd / 'script.json').get('lines') or [], read_json(vd / 'beat-map.json').get('beats') or []):
+        sz['first_complete_draft'] = {'at': now(), 'words': words, 'forecast_s': forecast_s,
+                                      'locked_s': read_json(vd / 'length-lock.json').get('target_length_s')}
+        changed = True
+    if grew_for:
+        sz.setdefault('growth_answers', []).append({'at': now(), 'words': words, 'why': grew_for.strip()})
+        changed = True
+    if changed:
+        write_json(script_size_path(vd), sz)
+    return changed
+
+
+def line_clock(lines, pace_wpm, overhead_s=DEFAULT_LINE_OVERHEAD_S):
+    """About when each line starts and ends at the planning pace: {id: (start_s, end_s)}. A forecast, as the pace is;
+    holds are left out (it is read for the opening minutes)."""
+    t, out = 0.0, {}
+    for i, l in enumerate(lines):
+        d = count_words(l.get('text', '')) * 60 / float(pace_wpm)
+        out[str(l.get('id') or f'L{i + 1:03d}')] = (round(t, 1), round(t + d, 1))
+        t += d + overhead_s
+    return out
+
+
+def opening_facts(rd, video, lines, pace):
+    """When the latest cold reader knew what the video offers (promise.clear_at) and when they first got it
+    (first_delivered), in seconds at the planning pace, beside the title's promise and the hooks of the references this
+    direction cites (their cards' hook.end_s). Facts for the director; one sentence when the film takes longer to say
+    what it offers than every one of those references: a look, never a rule. (facts, sentence or None)."""
+    vd = video_dir(rd, video)
+    recs = review_records(vd, 'script')
+    pr = recs[-1][0].get('promise') if recs else None
+    if not isinstance(pr, dict) or not pace or not lines:
+        return {}, None
+    clock = line_clock(lines, pace)
+    ids = list(clock)
+
+    def lines_of(spec):
+        s = str(spec or '').strip()
+        return (expand_lines(_line_specs(s), ids) or []) if s and s.lower() != 'never' else []
+    clear, got = lines_of(pr.get('clear_at')), lines_of(pr.get('first_delivered'))
+    d = read_json(vd / 'direction.json')
+    hooks = {}
+    for r in _ids((d.get('evidence') or {}).get('references') if isinstance(d.get('evidence'), dict) else []):
+        h = read_json(rd / '20-analysis/cards' / f'{r.upper()}.json').get('hook')
+        if isinstance(h, dict) and isinstance(h.get('end_s'), (int, float)) and not isinstance(h['end_s'], bool) \
+                and h['end_s'] > 0:
+            hooks[r.upper()] = float(h['end_s'])
+    sp = selection_promise(d)
+    out = {'reader_round': recs[-1][0].get('_round'), 'reader_was_promised': pr.get('promised'),
+           'clear_at_line': clear[-1] if clear else None, 'clear_at_s': clock[clear[-1]][1] if clear else None,
+           'first_delivered_line': got[0] if got else None, 'first_delivered_s': clock[got[0]][0] if got else None,
+           'working_title': sp.get('working_title'), 'title_promises': sp.get('viewer_expects'),
+           'reference_hooks_end_s': hooks, 'basis': 'the planning pace, without holds: a forecast'}
+    said = None
+    if out['clear_at_s'] is not None and hooks and out['clear_at_s'] > max(hooks.values()):
+        said = (f'opening: the latest reader knew what the video offers by {out["clear_at_line"]}, about '
+                f'{_mmss(out["clear_at_s"])} in at the planning pace; the references this direction cites have made '
+                f'their promise by {_mmss(max(hooks.values()))} at the latest ('
+                + ', '.join(f'{k} {_mmss(v)}' for k, v in sorted(hooks.items())) + '). Look at what a viewer gets '
+                'before that line: an opening may take longer when every stretch of it rewards, and the reader\'s '
+                '"waiting" says whether it did')
+    return out, said
+
+
+def claim_wording_path(vd):
+    return vd / 'claim-wording.json'
+
+
+CLAIM_WORDING_HOW = ('"how" is "hedged" (with "words": the words of the line that carry the doubt or say whose finding '
+                     'it is, quoted exactly; "in_line" when they sit in an earlier line of the same beat) or "plain" '
+                     '(with "why": what the line states is the part the research confirms, or why it is safe to say '
+                     'without a qualifier). A claim that gets a stronger source needs no answer: raise its confidence.')
+
+
+def _same_words(s):
+    return re.sub(r'\s+', ' ', strip_tags(str(s or ''))).strip().lower()
+
+
+def key_line_claims(rd, video):
+    """The script lines that carry a key moment, the payoff or the ending and are tied (claims.json line_refs) to a
+    claim the research did not confirm: {line: {text, beat, carries, claims: [{id, confidence, note}], earlier}}.
+    'earlier' lists the lines of the same beat up to and including it, where a hedge for it may sit."""
+    vd = video_dir(rd, video)
+    lines = read_json(vd / 'script.json').get('lines') or []
+    ids = [str((l or {}).get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
+    text = {i: str((l or {}).get('text') or '') for i, l in zip(ids, lines)}
+    beats = [b for b in read_json(vd / 'beat-map.json').get('beats') or [] if isinstance(b, dict)]
+    span = {}
+    for b in beats:
+        try:
+            mine = ids[int(b['line_start']) - 1:int(b['line_end'])]
+        except (KeyError, TypeError, ValueError):
+            continue
+        for k, x in enumerate(mine):
+            span[x] = (str(b.get('id')), mine[:k + 1])
+    last = str(beats[-1].get('id')) if beats else None
+    cidx = claims_index(read_json(claims_path(rd, video)))
+    out = {}
+    for lid, tags in script_dependencies(vd).items():
+        if lid not in span:
+            continue
+        carries = [t for t in tags if t.startswith(('key_moment:', 'payoff:'))]
+        if span[lid][0] == last:
+            carries.append('ending')
+        weak = [{'id': c, 'confidence': str(cidx[c].get('confidence') or '').strip().lower(),
+                 'note': str(cidx[c].get('note') or '')[:240]}
+                for c in (t.split(':', 1)[1] for t in tags if t.startswith('claim:'))
+                if c in cidx and str(cidx[c].get('confidence') or '').strip().lower() != 'confirmed']
+        if carries and weak:
+            out[lid] = {'text': text[lid], 'beat': span[lid][0], 'carries': carries, 'claims': weak,
+                        'earlier': span[lid][1]}
+    return out, text
+
+
+def claim_wording_problem(lid, item, ans, text):
+    """Why a key line's answer on its unconfirmed claims is not yet one, or None."""
+    a = ans if isinstance(ans, dict) else {}
+    how = str(a.get('how') or '').strip().lower()
+    if not how:
+        return 'not answered'
+    if _same_words(a.get('text')) != _same_words(item['text']):
+        return 'the line was reworded since this answer: answer for the words it has now'
+    had = {(str(c.get('id')), str(c.get('confidence') or '').lower()) for c in a.get('claims') or [] if isinstance(c, dict)}
+    if {(c['id'], c['confidence']) for c in item['claims']} - had:
+        return 'a claim tied to this line changed since this answer'
+    if how == 'hedged':
+        where = str(a.get('in_line') or lid).strip()
+        if where not in item['earlier']:
+            return f'"in_line" must be this line or an earlier line of its beat ({item["earlier"][0]}-{lid})'
+        words = _same_words(a.get('words'))
+        if not words or words not in _same_words(text.get(where)):
+            return f'the words quoted are not in {where} as it is written'
+        return None
+    if how == 'plain':
+        return None if n_words(a.get('why')) >= MIN_NOTE_WORDS else '"plain" needs why it is safe to say without a qualifier'
+    return '"how" must be hedged or plain'
+
+
+def claim_wording_facts(rd, video):
+    """Key lines resting on claims the research did not confirm, and which of them still wait for the director's
+    answer (claim-wording.json). The code never judges the wording: it shows the line beside what the research held,
+    and checks that an answer exists for the words as they are (a quoted hedge is really in the line)."""
+    items, text = key_line_claims(rd, video)
+    ans = read_json(claim_wording_path(video_dir(rd, video))).get('answers') or {}
+    why = {}
+    for lid, it in items.items():
+        p = claim_wording_problem(lid, it, ans.get(lid), text)
+        if p:
+            why[lid] = p
+    return {'lines': len(items), 'open': sorted(why), 'why': why,
+            'file': str(claim_wording_path(video_dir(rd, video))) if items else None}
+
+
+def merge_claim_wording(rd, video):
+    """plan-check's side of claim-wording.json: an entry for every key line that needs an answer, with the line as it
+    is written and the claims it rests on; an answered entry whose line or claims changed is kept under 'superseded'
+    and asked again. Answers are never written here. True when the file changed."""
+    vd = video_dir(rd, video)
+    items, _ = key_line_claims(rd, video)
+    p = claim_wording_path(vd)
+    doc = read_json(p)
+    if not items and not doc:
+        return False
+    ans = doc.get('answers') if isinstance(doc.get('answers'), dict) else {}
+    changed = False
+    for lid, it in items.items():
+        cur = ans.get(lid) if isinstance(ans.get(lid), dict) else None
+        fresh = {'text': it['text'], 'beat': it['beat'], 'carries': it['carries'], 'claims': it['claims'],
+                 'how': '', 'words': '', 'in_line': '', 'why': ''}
+        if cur is None:
+            ans[lid], changed = fresh, True
+            continue
+        had = {(str(c.get('id')), str(c.get('confidence') or '').lower()) for c in cur.get('claims') or []
+               if isinstance(c, dict)}
+        if _same_words(cur.get('text')) != _same_words(it['text']) or \
+                {(c['id'], c['confidence']) for c in it['claims']} - had:
+            if str(cur.get('how') or '').strip():
+                doc.setdefault('superseded', []).append({'line': lid, 'at': now(), **cur})
+            ans[lid], changed = fresh, True
+    if changed:
+        write_json(p, {'how': CLAIM_WORDING_HOW, **{k: v for k, v in doc.items() if k not in ('how', 'answers')},
+                       'answers': ans})
+    return changed
+
+
 def plan_facts(rd, video):
     vd = video_dir(rd, video)
     lock = read_json(vd / 'length-lock.json')
@@ -6702,6 +7024,33 @@ def plan_facts(rd, video):
             issues.append('real_forecast_outside_export_tolerance')
     elif pace and abs(forecast - target) > max(10, .08 * target):
         issues.append('script_forecast_misses_locked_length_by_over_8pct')
+    # A script that misses the lock is first a question about the lock, not about the script: the story's own size
+    # goes to the user before anything is added to reach a length (2026-11-26). And a script that has grown far past
+    # its first complete draft says what the added lines carry.
+    length_conflict = None
+    est = real if real is not None else (forecast if pace else None)
+    if est is not None and lines and {'real_forecast_outside_export_tolerance',
+                                      'script_forecast_misses_locked_length_by_over_8pct'} & set(issues):
+        length_conflict = {
+            'story_runs_s': est, 'locked_s': target, 'difference_s': round(est - target, 1),
+            'what_to_do_first': (
+                'The script as written is the story\'s own size. Take that size to the user before adding anything: a '
+                'shorter length (length --revise --user-approved) is the first answer. Material is added only when the '
+                'film lacks something the viewer needs, which the direction names; never to reach a length.'
+                if est < target else
+                'The script runs longer than the lock. Cut what a listener would drift through first (the boredom '
+                'pass). If what is left still runs long, the longer length is the user\'s decision (length --revise '
+                '--user-approved); a strong passage is never cut only to fit.')}
+    script_size, grew = script_size_facts(vd, words)
+    if grew:
+        issues.append(grew)
+    cw = claim_wording_facts(rd, video) if lines else {'lines': 0, 'open': [], 'why': {}, 'file': None}
+    if cw['open']:
+        issues.append('key_lines_on_unconfirmed_claims_need_their_wording_answered:' + ','.join(cw['open'])
+                      + ':claim-wording.json')
+    opening, opening_said = opening_facts(rd, video, lines, pace)
+    if opening_said:
+        warnings.append(opening_said)
     # Held silence never stands in for story, and never makes the length. The content is the narration with the voice's
     # own gaps and its delivery tags; the silence is what the edit holds add plus what pause tags perform. When the
     # content alone falls short of the window and the silence is what reaches it, the length is being padded: blocked.
@@ -6837,7 +7186,12 @@ def plan_facts(rd, video):
                          'outdated': outdated_artifacts(rd, video), 'script_review_rounds': script_review['rounds'],
                          'majors_closed_by_decision': script_review.get('majors_closed_by_decision') or [],
                          # why each open answer is not yet an answer (a finding waiting for the user says so)
-                         'answers_needed': script_review.get('answers_needed') or {}},
+                         'answers_needed': script_review.get('answers_needed') or {},
+                         # when the reader knew what the video offers, beside the title's promise and the references
+                         'opening': opening or None,
+                         # key lines resting on claims the research did not confirm, and which still wait for an answer
+                         'claim_wording': cw},
+            'script_size': script_size, 'length_conflict': length_conflict,
             'writing_signals': writing_signals(lines, lock.get('language') or script.get('language') or 'en'),
             'forecast_s': forecast, 'real_narration_forecast_s': real_narr, 'real_forecast_s': real,
             # The point uses each cue's measured cost at its place, a delivery cue's band the whole line's change: when
@@ -6895,7 +7249,16 @@ def cmd_plan_check(args):
     keep = getattr(args, 'keep', '') or ''
     if keep and n_words(keep) < MIN_NOTE_WORDS:
         error('Say why the lines of the changed beats still fit (a few words at least).')
+    grew_for = getattr(args, 'grew_for', '') or ''
+    if grew_for and n_words(grew_for) < MIN_NOTE_WORDS:
+        error('--grew-for says what the lines added since the first complete draft carry (which value, development or '
+              'viewer need). "To reach the length" is not an answer: that is the user\'s length decision.')
     result = plan_facts(rd, args.video)
+    # plan-check's own records, written before the verdict is read: the first complete draft's size (once), an answer
+    # to "why did it grow", and the entries of claim-wording.json the director answers
+    if any([record_script_size(rd, args.video, result.get('words'), result.get('forecast_s'), grew_for)
+            if 'words' in result else False, merge_claim_wording(rd, args.video) if 'words' in result else False]):
+        result = plan_facts(rd, args.video)
     bl = beat_line_issues(rd, args.video, keep)
     if bl:
         result['issues'] = result['issues'] + bl
@@ -7175,11 +7538,17 @@ def ledger_rows(rd):
     p = ledger_path(rd)
     rows = []
     if p.is_file():
-        for line in p.read_text(encoding='utf-8', errors='replace').splitlines():
+        for i, line in enumerate(p.read_text(encoding='utf-8', errors='replace').splitlines(), 1):
+            if not line.strip():
+                continue
             try:
                 rows.append(json.loads(line))
             except ValueError:
-                pass
+                # A row that cannot be read may be a request that was sent and billed: skipping it would count the
+                # money as unspent (2026-11-26). The ledger is the money record; it is looked at, never guessed past.
+                error('The paid ledger has a row that cannot be read. Nothing was sent. Look at that line: complete it '
+                      'from ElevenLabs\' history, or remove it if no request was made, then run this again.',
+                      {'file': str(p), 'line': i, 'text': line[:160]})
     return rows
 
 
@@ -10600,11 +10969,12 @@ def pace_context(rd, video):
     (length lock per_ref_wpm) and the narrator's measured norm (the voice lock), when known."""
     vd = video_dir(rd, int(video))
     ll = read_json(vd / 'length-lock.json')
-    vl = read_json(vd / 'voice-lock.json') or read_json(rd / 'voice-lock.json')
     per = ll.get('per_ref_wpm') or {}
+    # the narrator's measured norm: where the voice lock really keeps it (60-voice/video-NN/voice-lock.json,
+    # "measured"). Until 2026-11-26 this looked in the plans folder for a key that is no longer written: always empty.
     return {'target_wpm': ll.get('pace_wpm'),
             'reference_wpm': [v for v in (per.values() if isinstance(per, dict) else per) if v],
-            'voice_wpm': vl.get('measured_wpm')}
+            'voice_wpm': (voice_measurement(rd, int(video)) or {}).get('wpm')}
 PACE_SLOW_WORDS = ('slow', 'slower', 'unhurried', 'reflective', 'measured', 'calm', 'gentle', 'lingering', 'deliberate',
                    'quiet', 'patient', 'breathing', 'hushed')
 PACE_FAST_WORDS = ('brisk', 'quick', 'quicker', 'urgent', 'fast', 'faster', 'rapid', 'energetic', 'punchy', 'driving',
@@ -12322,14 +12692,16 @@ Think about:
 2. When you first got what the opening made you want (the experience, the answer or the result you came for), and
    what came before it: which stretches gave you something on the way (a discovery, tension, a laugh, an
    explanation that clicked, a reason to care) and which only made you wait for it. A long build is fine when it
-   rewards you, and a slow, quiet passage can be exactly right: say so. Write this in "promise".
+   rewards you, and a slow, quiet passage can be exactly right: say so. Write this in "promise". Note there too the
+   first line by which you knew what this video was going to give you ("clear_at"): the point where you could have
+   told a friend what it is and why to watch it.
 3. Your gut: would you keep watching, from 1 to 10, and why? (a viewer's gut, not a quality score)
 4. Where your attention dropped, and why: facts with no consequence for anyone, the same point made again, a list
    read aloud, a sentence pattern repeating, textbook register, explaining what you had already felt, exposition
    before you cared, background you were given before you knew why it mattered. Roughly how long each stretch felt.
    Did the length feel earned, or did any part feel like filling?
-5. Following it by ear, the first time: who each person is when they matter, and what they want; what has happened
-   and what is happening now; why each new fact matters. Where did you have to stop and work something out? Where
+5. Following it by ear, the first time: who or what each thing is when it matters (a person and what they want, a
+   place, a term, a part of a machine); what has happened and what is happening now; why each new fact matters. Where did you have to stop and work something out? Where
    did a line lean on something you were never told, or told so long before that you had lost it (at the moments
    that matter most, did you still have the name, place or fact they rest on)? Where did too many new names, numbers
    or places arrive at once? Where was something deliberately held back, and did that feel like a promise (you
@@ -12376,6 +12748,7 @@ Write your answer as JSON, and nothing else, to: {OUT}
   "reviewer": "fresh cold reader",
   "verdict": {{"promise": "...", "delivered": "...", "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
   "promise": {{"promised": "what the opening made you want, in your words",
+              "clear_at": "the first line by which you knew what this video would give you, or never",
               "first_delivered": "the line where you first got it, or never",
               "waiting": [{{"lines": "{EX_RANGE}", "felt": "anticipation | delay",
                            "why": "what this stretch gave you on the way, or why it only made you wait"}}]}},
@@ -12456,7 +12829,8 @@ you feel, on purpose: that comparison is made afterwards, from your account.
    there, and where did your attention drift?
 2. Where does it get visually repetitive, or the pictures stop adding anything to the words (a slideshow)?
 3. Where do picture and words not connect, or contradict each other?
-4. Where does it feel like a lecture or a dry documentary instead of a story? Where does it drag or rush?
+4. Where does it stop feeling like something you chose to watch (a lecture, a list read aloud, a dry report)? Where
+   does it drag or rush?
 5. Continuity breaks: a person, place, object, light or time of day that jumps without reason.
 6. The first minute and the ending.
 7. Anything on screen or in the words that breaks the house rules, however it is carried: said outright,
@@ -12543,7 +12917,9 @@ def cmd_review_packet(args):
     lock = read_json(vd / 'length-lock.json', required=True)
     minutes = round(lock['target_length_s'] / 60)
     blue = read_json(vd / 'blueprint.json')
-    title = blue.get('title') or (blue.get('title_options') or ['(untitled)'])[0]
+    # the title a reader "clicked": the blueprint's, else the working title chosen with the subject (selection.promise)
+    title = blue.get('title') or (blue.get('title_options') or [None])[0] or \
+        selection_promise(read_json(vd / 'direction.json')).get('working_title') or '(untitled)'
     if isinstance(title, dict):
         title = title.get('title') or json.dumps(title, ensure_ascii=False)
     folder = vd / 'reviews'          # created only when a packet is actually written: a refusal leaves no trace
@@ -12596,7 +12972,10 @@ def cmd_review_packet(args):
         # What the video promises its viewer, nothing of the director's case for it: the chosen approach's pitch, and
         # the reference scenes the content reviews cut, stay out of a blind reader's packet (2026-11-24 audit); the
         # cut material is kept out by the content checks and the editorial stage
-        premise = str(blue.get('audience_promise') or '').strip()
+        # (the blueprint is usually written after this read: the promise chosen with the subject stands in until then)
+        sp = selection_promise(d)
+        premise = str(blue.get('audience_promise') or '').strip() or ': '.join(
+            x for x in (str(sp.get('working_title') or '').strip(), str(sp.get('viewer_expects') or '').strip()) if x)
         text = _fill(TREATMENT_BRIEF, K=len(trs), PREMISE=premise or '(see the samples)', MINUTES=minutes,
                      HOUSE_RULES=HOUSE_RULES, OUT=out_path)
         # An exact topic or story: the reader also says whether each treatment is still a video about what was asked
@@ -12794,7 +13173,10 @@ AT_RX = r'\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?(\s*,\s*\d{1,3}:\d{2}(\s*-\s*\d{1,
 # knowledge. Readers now name the developments that matter most and keep three judgements apart for each (what
 # happened / why it matters, from the video alone / whether it paid off); review-record turns a gap into a finding
 # answered like any other. Not every video needs danger or a twist: the reward is the video's own (10 §4, 06).
-BRIEF_VERSION = 5          # 3: would_be_different, learned_when; 4 (audit 2026-11-23): the final reader is not told
+BRIEF_VERSION = 6          # 6 (2026-11-26): the script reader also notes the line by which the video's offer was clear
+                           # ("clear_at"); the final reviewer gets the sound of the cut as measured facts; wording that
+                           # assumed people and a story made neutral.
+                           # 3: would_be_different, learned_when; 4 (audit 2026-11-23): the final reader is not told
                            # the intent, why_it_matters and likely_cause are required, key moments sealed; 5
                            # (2026-11-24, storytelling brief): the script reader also says what the opening promised,
                            # where it was first delivered and which waits gave something on the way ("promise")
@@ -12971,6 +13353,9 @@ def promise_problems(p, order):
     fd = str(p.get('first_delivered') or '').strip()
     if fd.lower() != 'never' and (not fd or expand_lines(_line_specs(fd), order) is None):
         out.append('promise: "first_delivered" must be a line of the script (L005 or L005-L009) or "never"')
+    ca = str(p.get('clear_at') or '').strip()       # asked since brief 6; a reader's file without it is still read
+    if ca and ca.lower() != 'never' and expand_lines(_line_specs(ca), order) is None:
+        out.append('promise: "clear_at" must be a line of the script (L005) or "never"')
     if not isinstance(p.get('waiting'), list):
         out.append('promise: "waiting" must be a list (empty when nothing made you wait)')
     for k, w in enumerate(p.get('waiting') or [], 1):
@@ -13927,14 +14312,17 @@ def video_stage(rd, video, plan_ready, audio, deliv=None):
         stage = 'stills'
     if stage != 'stills':
         return stage
-    steps = (deliv or deliverable_facts(rd, n))['steps']
-    if steps['built']:
-        stage = 'edit_checked'
-    if stage == 'edit_checked' and steps['exported']:
-        stage = 'exported'
-    if stage == 'exported' and steps['verified']:
-        stage = 'released'
-    return stage
+    return stage_after_stills((deliv or deliverable_facts(rd, n))['steps'])
+
+
+def stage_after_stills(steps):
+    """The last stages from the deliverable's steps, each needing the one before: a project built and checked, an
+    export of that project that passed its deep check, and the release on record for its checked master."""
+    if not steps.get('built'):
+        return 'stills'
+    if not steps.get('exported'):
+        return 'edit_checked'
+    return 'released' if steps.get('verified') else 'exported'
 
 
 def cmd_status(args):
@@ -13980,6 +14368,174 @@ def cmd_status(args):
           'selected_niche_id': st.get('selected_niche_id'), 'niche_discovery': st.get('niche_discovery'),
           'reference_videos': len([x for x in inv.get('items', []) if x.get('kind') == 'video']),
           'videos': videos})
+
+
+def sound_review_path(rd, video):
+    return rd / '70-edit' / f'video-{int(video):02d}' / 'sound-review.json'
+
+
+def listening_sheet_path(rd, video):
+    return rd / '80-deliverables' / f'video-{int(video):02d}' / 'listening-sheet.md'
+
+
+def _audio_review():
+    """The sound review (audio_review.py, next to this file), loaded only when a sound command needs it."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import audio_review
+    return audio_review
+
+
+def sound_tracks_digest(rd, video):
+    """The edit's sound as the project has it (timeline.json): which files play, from when to when, to a tenth of a
+    second. A sound review answers for the build it measured: a sound moved, added or replaced asks for it again."""
+    tl = read_json(rd / '70-edit' / f'video-{int(video):02d}' / 'timeline.json')
+    return canonical_sha(sorted([str(t.get('kind')), Path(str(t.get('file'))).name,
+                                 round(float(t.get('start_s') or 0), 1), round(float(t.get('end_s') or 0), 1)]
+                                for t in tl.get('audio_tracks') or [] if isinstance(t, dict)))
+
+
+def sound_review_state(rd, video):
+    """None when the sound of the project as it stands was reviewed (sound-review), else what is missing."""
+    sr = read_json(sound_review_path(rd, video))
+    if not sr:
+        return 'not_reviewed:run_sound-review_on_the_checked_project_(it_writes_the_listening_sheet_too)'
+    if sr.get('tracks_digest') != sound_tracks_digest(rd, video):
+        return 'reviewed_for_an_earlier_build_of_the_project:run_sound-review_again'
+    return None
+
+
+def sound_review_facts(rd, video):
+    """Everything sound-review measures for one video, from the files the run already has: each placed sound against
+    the voice, where music plays at all, the air at the turns, the pace of the lines, the names the transcript heard
+    differently, the silences nobody listened to. (facts, the lines' words, key-moment lines). Nothing is written."""
+    n = int(video)
+    ar = _audio_review()
+    ed = rd / '70-edit' / f'video-{n:02d}'
+    tracks = [t for t in read_json(ed / 'timeline.json').get('audio_tracks') or [] if isinstance(t, dict)]
+    ep = read_json(ed / 'edit-plan.json')
+    nfile = next((t.get('file') for t in tracks if t.get('kind') == 'narration' and t.get('file')), None) or \
+        (ep.get('narration_for_edit') or {}).get('file')
+    nfile = _run_file(rd, nfile) if nfile else None
+    if not nfile or not nfile.is_file():
+        error('No narration of the edit to measure against (timeline.json audio_tracks, or the edit plan\'s '
+              'narration_for_edit): build and check the timeline first.')
+    voice = ar.voice_profile(nfile)
+    placements = []
+    for t in tracks:
+        if t.get('kind') == 'narration' or t.get('start_s') is None or t.get('end_s') is None:
+            continue
+        f = _run_file(rd, t.get('file'))
+        placements.append(ar.placement_facts({**t, 'file': f}, voice) if f.is_file() else
+                          {'kind': t.get('kind'), 'file': f.name, 'start_s': t.get('start_s'), 'end_s': t.get('end_s'),
+                           'unreadable': True})
+    vd = video_dir(rd, n)
+    lines = read_json(vd / 'script.json').get('lines') or []
+    order = [str((l or {}).get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
+    texts = {i: strip_tags((l or {}).get('text') or '') for i, l in zip(order, lines)}
+    marks = {k: v for k, v in edit_landmarks(rd, n).items() if v.get('start') is not None}
+    first_lines, key_lines = {}, {}
+    for k, b in enumerate(x for x in read_json(vd / 'beat-map.json').get('beats') or [] if isinstance(x, dict)):
+        try:
+            a, z = order[int(b['line_start']) - 1], order[int(b['line_end']) - 1]
+        except (KeyError, TypeError, ValueError, IndexError):
+            continue
+        if k and b.get('chapter_start') is True:
+            first_lines[a] = {'beat': str(b.get('id')), 'why': 'chapter'}
+        if is_key_moment(b):
+            first_lines.setdefault(a, {'beat': str(b.get('id')), 'why': 'key moment'})
+            key_lines[z] = str(b.get('id'))
+    lt = read_json(rd / '50-audio' / f'video-{n:02d}' / 'line-times.json')
+    words = {str(r.get('id')): int(r.get('words') or 0) for r in lt.get('lines') or [] if isinstance(r, dict)}
+    pron = {str(t.get('term')): t for t in read_json(pronunciation_path(rd, n)).get('terms') or [] if isinstance(t, dict)}
+    names = []
+    for r in lt.get('pronunciation_heard') or []:
+        if isinstance(r, dict) and r.get('heard_as_written') is False and \
+                str(r.get('term')) not in {x['term'] for x in names}:
+            names.append({'term': str(r.get('term')), 'line': str(r.get('line')), 'nearest_heard': r.get('nearest_heard'),
+                          'say': (pron.get(str(r.get('term'))) or {}).get('say')})
+    held = {str(h.get('after_line')): h.get('times_in_edit') or {} for h in ep.get('holds') or [] if isinstance(h, dict)}
+    not_listened = []
+    for lid, dc in (read_json(vd / 'holds.json').get('decisions') or {}).items():
+        if not isinstance(dc, dict) or dc.get('no_hold') is True or dc.get('listened'):
+            continue
+        te, m = held.get(str(lid)) or {}, marks.get(str(lid)) or {}
+        a, z = te.get('silence_from_s', m.get('silence_start')), te.get('silence_to_s', m.get('silence_end'))
+        if a is not None and z is not None:
+            not_listened.append({'line': str(lid), 'from_s': round(float(a), 2), 'to_s': round(float(z), 2),
+                                 'total_s': dc.get('total_s')})
+    total = max([float(t.get('end_s') or 0) for t in tracks] + [voice['duration_s']])
+    return ({'duration_s': round(total, 2), 'narration': nfile.name, 'speech_db': voice['speech_db'],
+             'placements': placements, 'beds': ar.bed_stretches(placements, total),
+             'turns': ar.turn_facts(ar.line_gaps(marks, order), first_lines), 'pace': ar.pace_facts(marks, order, words),
+             'names': names, 'holds_not_listened': not_listened, 'line_marks': marks}, texts, key_lines)
+
+
+def sound_rows(sr):
+    """A sound review as plain rows for a reviewer who cannot hear: where music and ambience play and how far under
+    the voice, the long stretches with none, where effects fall, a sound cut off between lines. Times and levels only:
+    no file names and nothing of what any sound is meant to do."""
+    ar = _audio_review()
+    ps = [p for p in sr.get('placements') or [] if isinstance(p, dict) and not p.get('unreadable')]
+    rows = [f'- {ar.mmss(p["start_s"])}-{ar.mmss(p["end_s"])}: {p.get("kind")}, {p.get("under_voice_db"):g} dB under the voice'
+            for p in sorted(ps, key=lambda p: p['start_s']) if p.get('kind') in ('music', 'ambience')]
+    if len(rows) > 40:
+        rows = rows[:40] + [f'- and {len(rows) - 40} more stretches of music or ambience']
+    rows += [f'- no music or ambience from {ar.mmss(a)} to {ar.mmss(b)}'
+             for a, b in (sr.get('beds') or {}).get('none_for_long') or []]
+    fx = [ar.mmss(p['start_s']) for p in sorted(ps, key=lambda p: p['start_s']) if p.get('kind') == 'sfx']
+    if fx:
+        rows.append('- sound effects at: ' + ', '.join(fx))
+    rows += [f'- a sound stops at {ar.mmss(p["end_s"])}, cut before its end, between two lines'
+             for p in ps if p.get('cut_while_sounding') and p.get('end_between_lines')]
+    return rows or ['- no music, ambience or effects in this cut: the voice alone']
+
+
+def cmd_sound_review(args):
+    """The sound of the checked project, measured from the run's own files, and the listening sheet: the few passages
+    where only a person's ears can decide, each with its time in the film and one question. Run it after
+    timeline-check (and again when a sound moves). It uses no model and gives no verdict; a person's answers are
+    recorded with human-review --answers. --out DIR writes both files there and nothing in the run."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    ar = _audio_review()
+    facts, texts, key_lines = sound_review_facts(rd, n)
+    items = ar.listening_items(facts, texts, key_lines)
+    vd = video_dir(rd, n)
+    title = read_json(vd / 'blueprint.json').get('title') or \
+        selection_promise(read_json(vd / 'direction.json')).get('working_title') or f'video {n}'
+    name = Path(args.file).name if getattr(args, 'file', None) else 'the export of the checked project'
+    rec = {'made_at': now(), 'video': n, 'tracks_digest': sound_tracks_digest(rd, n),
+           **{k: v for k, v in facts.items() if k != 'line_marks'}, 'listening_items': items,
+           'what_this_is': 'levels, times and counts measured from the run\'s own files. No model listened, and '
+                           'nothing here says how the film sounds: that is what the listening sheet asks a person.'}
+    out = Path(args.out).expanduser().resolve() if getattr(args, 'out', None) else None
+    rec_path = out / 'sound-review.json' if out else sound_review_path(rd, n)
+    sheet = out / 'listening-sheet.md' if out else listening_sheet_path(rd, n)
+    write_json(rec_path, rec)
+    sheet.parent.mkdir(parents=True, exist_ok=True)
+    sheet.write_text(ar.sheet_markdown(items, str(title), name, facts), encoding='utf-8')
+    write_json(sheet.with_suffix('.json'), {'video': n, 'file': name, 'how': 'fill "answer" for each item in the '
+               'person\'s own words, then: human-review --answers this-file', 'items': [
+                   {k: i.get(k) for k in ('id', 'kind', 'where', 'question', 'measured', 'answer')} for i in items]})
+    beds = [p for p in facts['placements'] if p.get('kind') in ('music', 'ambience') and not p.get('unreadable')]
+    look = [f'{p["file"]} stops at {ar.mmss(p["end_s"])} before its file ends, still sounding, between two lines'
+            for p in facts['placements'] if p.get('cut_while_sounding') and p.get('end_between_lines')]
+    look += [f'{p["file"]} could not be read' for p in facts['placements'] if p.get('unreadable')]
+    emit({'ok': True, 'video': n, 'record': str(rec_path), 'listening_sheet': str(sheet),
+          'listening_items': len(items), 'listening_minutes': round(sum(i['to_s'] - i['from_s'] for i in items) / 60, 1),
+          'voice_speech_db': facts['speech_db'], 'sounds_placed': len(facts['placements']),
+          'music_under_voice_db': ({'quietest': max(p['under_voice_db'] for p in beds),
+                                    'least_quiet': min(p['under_voice_db'] for p in beds)} if beds else None),
+          'music_share_of_runtime': facts['beds']['share_of_runtime'], 'no_music_for_long': facts['beds']['none_for_long'],
+          'ordinary_gap_s': facts['turns']['ordinary_gap_s'],
+          'turns': [{k: t.get(k) for k in ('beat', 'why', 'next', 'at_s', 'gap_s')} for t in facts['turns']['turns']],
+          'names_heard_differently': [x['term'] for x in facts['names']],
+          'holds_not_listened': len(facts['holds_not_listened']), 'look_at': look,
+          'next': 'Read look_at and the turns as places to examine, never as faults. Give the user the listening sheet '
+                  'with the export: it is short on purpose. Record what they say with human-review (--answers for the '
+                  'filled sheet). A listen is offered, never required; no check here stands in for one.'})
 
 
 def cmd_deliverable(args):
@@ -14096,6 +14652,8 @@ def main():
     p.set_defaults(func=cmd_length)
     p = sub.add_parser('plan-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--keep', default='', help='Beats changed since the last check whose lines still fit: why')
+    p.add_argument('--grew-for', default='', help='The script grew well past its first complete draft: what the added '
+                   'lines carry (a value, a development, something the viewer needs). Never "to reach the length"')
     p.set_defaults(func=cmd_plan_check)
     p = sub.add_parser('voice-candidates'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--count', type=int, default=5); p.add_argument('--search', default='')

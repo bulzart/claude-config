@@ -6667,10 +6667,6 @@ class NichePathTests(unittest.TestCase):
         self.assertFalse(names['collection-x'] & names['collection-y'])
         self.assertNotEqual(len(maps['collection-x']['niches']), len(maps['collection-y']['niches']))
 
-if __name__=='__main__':
-    unittest.main()
-
-
 class StorytellingTests(unittest.TestCase):
     """The storytelling brief (2026-11-24): promise and delivery, waits that build or only delay, a problem two readers
     find, a key moment's dependency, harmless format slips, how the whole video unfolds, and the same logic across
@@ -6759,8 +6755,10 @@ class StorytellingTests(unittest.TestCase):
         wording = dict(base, recurrence={'recurs_of': 'r1:F1', 'root_cause': 'the background still comes first here',
                                          'scope': 'wording'})
         self.assertIn('rewording', c.answer_problem('script', f, wording))
-        self.assertIsNone(c.answer_problem('script', f, dict(wording, action='disputed',
-                                                             note='the reader wanted a different video, and says so')))
+        disputed = dict(wording, action='disputed', note='the reader wanted a different video, and says so')
+        self.assertIsNone(c.answer_problem('script', f, disputed, 3))            # as rounds before 2026-11-26 were answered
+        # since then a disputed recurring major is closed by a decision, not by the word alone (test_audit_impl)
+        self.assertIn('decision.options', c.answer_problem('script', f, disputed))
         structure = dict(base, recurrence={'recurs_of': 'r1:F1', 'root_cause': 'the treatment puts background first',
                                            'scope': 'structure'})
         self.assertIsNone(c.answer_problem('script', f, structure))
@@ -7138,3 +7136,7 @@ class PacingTests(unittest.TestCase):
             self.assertIn('Mother, send the summer clothes', guide)
             self.assertNotIn('[warmly]', guide)
             self.assertEqual(res['questions_ready'], ['Q1'])
+
+
+if __name__=='__main__':
+    unittest.main()

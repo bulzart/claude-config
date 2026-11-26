@@ -376,7 +376,9 @@ These are craft principles. Each one says when it applies.
    reconcile each key moment in the answers file (`reconcile`, 06): what it was planned to mean beside what the reader
    took from it, `same`, `different_but_valid` or `gap`; a gap counts as a major finding. A major
    finding gets a fresh round-2 read of the revised script, by a new agent. After round 2 you decide, and the reasons
-   stay on record for the release sheet.
+   stay on record for the release sheet. A problem both readers found that you do not cure is closed by a
+   `decision` (06): the cures weighed, what each costs, and, when the strongest is blocked by the length, the recorded
+   narration or the budget, the user's own answer.
 3. **The narrator, then a representative calibration.** The shortlist goes to the user with its listening files, and `voice-pick` records their listening choice for this treatment (05). The first paid recording shows the whole performance the script asks for (an explanation and an expressive passage, the hardest names, the tags, a transition into a silence): part 1 when it holds that, else a short representative `narration-trial` first. When the voice, its stability, the
    tags or a name are in doubt, a short `narration-trial` (approved and priced first) compares them one change at a
    time and gives the user clips to hear. Then the first real parts: the pace (a forecast tested on them, never a target; a conflict with the length goes to the user, 05), every line heard, and
@@ -384,7 +386,7 @@ These are craft principles. Each one says when it applies.
 4. **The final watch review.** `av-profile --video NN --file export.mp4` makes the export's watch sheets;
    `review-packet --kind final --file` gives a fresh reviewer the sheets, the parts by time only and the held
    silences; what each part is meant to do stays with you, to compare with its account when you answer. Its key
-   moments are reconciled the same way. Fix, re-export, and the new file gets its own read. `release-check` confirms every gate for that exact file.
+   moments are reconciled the same way. Fix, re-export, and the new file gets its own read. `release-check` confirms every gate for that exact file, and `--record` puts the release on record; `deliverable` names the file to hand over.
 
 What the code enforces is the order, the versions and the answers. A passed `release-check` means the process was
 followed. Whether the film is a pleasure to watch is the director's and the reviewers' judgement, and the user's.
