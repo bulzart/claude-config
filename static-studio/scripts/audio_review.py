@@ -227,6 +227,25 @@ def voice_silences(voice, min_s, a=0.0, b=None):
     return out
 
 
+def level_move(track, a, b, lead_s=3.0, q=90):
+    """How far a placed sound's own level moves in [a, b] of the film against the lead_s before it, in dB (positive: it
+    comes up there): its level there less its level before, each read at the q-th percentile of its 50 ms frames (90:
+    its loud tenth, where a swell shows; 50: its middle, where a dip does). What a swell or a dip decided for a held
+    silence looks like in the file itself. The music's own writing moves the level too, so this is a fact to listen
+    beside. None when either stretch lies outside the file."""
+    np = _np()
+    y = load_mono(track['file'])
+    off = max(0.0, float(track.get('source_start_s') or 0.0)) - float(track['start_s'])
+
+    def level(x0, x1):
+        i, j = int(round((x0 + off) * SR)), int(round((x1 + off) * SR))
+        if i < 0 or j > len(y) or j - i < 2 * int(SR * HOP_S):
+            return None
+        return float(np.percentile(levels(y[i:j]), q))
+    inside, before = level(float(a), float(b)), level(float(a) - float(lead_s), float(a) - 0.1)
+    return None if inside is None or before is None else round(inside - before, 1)
+
+
 def bake_lift(path, at_s, windows, by_db, ramp_s=LIFT_RAMP_S, guard_s=LIFT_GUARD_S):
     """Raise a baked bed where it is meant to be heard. Inside each window (the film's clock; the file starts at at_s)
     its level climbs by up to by_db over ramp_s, holds, and is back at its own level before the window ends, a guard

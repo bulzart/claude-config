@@ -235,8 +235,13 @@ class OpeningContestTests(base.StaticStudioTests):
                 self.assertNotIn(hidden, text)
             for shown in ('"The Order That Won the Battle" (its picture: a clerk signing one order while an army waits)',
                           '"The Battle, Hour by Hour"', '"Why Armies Starve" (its picture: an empty supply wagon)',
-                          'A clerk dipped his pen', '"would_click"'):
+                          'A clerk dipped his pen', '"would_click"',
+                          # the answer's example names every opening of this packet, and closes as JSON does
+                          '"A": {"wants_to_know": "...", "slips_at": "... (or: nowhere)"',
+                          '"C": {"wants_to_know": "...", "slips_at": "...", "thinks_it_is": "...", "like_every_other": "..."}},\n'
+                          '  "keep_watching"'):
                 self.assertIn(shown, text)
+            self.assertNotIn('"D": {', text)
         metas = [read(vd / 'reviews' / f'packet-opening-r{k}.json') for k in (1, 2)]
         self.assertEqual(sorted(metas[0]['labels'].values()), ['O1', 'O2', 'O3'])
         self.assertTrue(metas[0]['labels'] != metas[1]['labels'] or metas[0]['shelf'] != metas[1]['shelf'])
@@ -279,6 +284,23 @@ class OpeningContestTests(base.StaticStudioTests):
         save(vd / 'opening.json', doc)
         self.assertEqual(self.contest_issues()[0], ['opening_contest_not_read'])
         self.assertEqual([p['round'] for p in self.packets('--readers', 1)['packets']], [3])
+
+    def test_a_picture_only_our_titles_have_is_not_shown(self):
+        # the reader must not be able to tell which titles are ours: a picture described for ours alone would say so
+        vd = self.write_plan(review_script=False)
+        save(vd / 'opening.json', dict(OPENINGS, shelf={'ours': OPENINGS['shelf']['ours'],
+                                                        'others': ['The Battle, Hour by Hour', 'Why Armies Starve']}))
+        made = self.packets('--readers', 1)
+        text = Path(made['packets'][0]['packet']).read_text(encoding='utf-8')
+        self.assertNotIn('(its picture:', text)
+        self.assertIn('"The Order That Won the Battle"', text)
+        self.assertTrue(any(w.startswith('the shelf shows titles only') for w in made['warnings']), made['warnings'])
+        # with a picture beside them the thumbnail ideas are read as well, and nothing is said
+        save(vd / 'opening.json', OPENINGS)
+        made = self.packets('--readers', 1)
+        self.assertIn('(its picture: a pen above a ledger of depots)',
+                      Path(made['packets'][0]['packet']).read_text(encoding='utf-8'))
+        self.assertEqual(made['warnings'], [])
 
     def test_one_opening_only_is_said_and_shown(self):
         vd = self.write_plan(review_script=False)

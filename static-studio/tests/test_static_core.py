@@ -4142,6 +4142,35 @@ class StaticStudioTests(unittest.TestCase):
         cli('retime-shots','--run',self.run,'--video',1)
         plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
         self.assertTrue(check(0.0,plan['edit_duration_s']))                 # a bed playing under a bare silence: caught
+        # A swell is read back from the bed's own file: decided and not baked, it is said; baked with a lift, measured.
+        import numpy as np, soundfile as sf
+        cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--total',1.6,'--bed','swells',
+            '--reason','the theme comes up in the silence after the turn and settles again')
+        cli('retime-shots','--run',self.run,'--video',1)
+        plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        tm=plan['pauses'][0]['times_in_edit']
+        steady=self.home/'steady.wav'; lifted=self.home/'steady.lift9dB.wav'
+        t=np.arange(int(48000*(plan['edit_duration_s']+1)))/48000
+        sf.write(str(steady),(0.02*np.sin(2*np.pi*220*t)).astype('float32'),48000,subtype='PCM_16')
+        shutil.copyfile(steady,lifted)
+        ar=self.load_core()._audio_review()
+        baked=ar.bake_lift(lifted,0.0,[(tm['silence_from_s'],tm['silence_to_s'])],9.0)
+        self.assertEqual(len(baked['windows']),1,baked)
+        def swell(bed):
+            save(tdir/'timeline.json',{'canvas':'1920x1080','visual_segments':[],
+                 'audio_tracks':[{'kind':'narration','file':plan['narration_for_edit']['file'],'start_s':0,
+                                  'end_s':plan['edit_duration_s']},
+                                 {'kind':'music','file':str(bed),'start_s':0,'end_s':plan['edit_duration_s'],'beats':['B01']}]})
+            res=cli('timeline-check','--run',self.run,'--video',1,expected=2)
+            self.assertEqual([x for x in res['issues'] if '_bed_' in x],[])
+            return [w for w in res['warnings'] if 'the bed swells' in w]
+        said=swell(steady)
+        self.assertTrue(len(said)==1 and 'its file plays +0 dB there' in said[0] and 'the swell is not in the file' in said[0],said)
+        said=swell(lifted)
+        self.assertTrue(len(said)==1 and 'the swell is not in the file' not in said[0],said)
+        rise=float(re.search(r'in its file it plays \+([\d.]+) dB there',said[0]).group(1))
+        self.assertGreater(rise,6.0)                                        # a 1.6 s silence: most of the 9 dB at its top
+        self.assertLessEqual(rise,9.1)
 
     def test_performance_plan_cues_and_bands(self):
         core=self.load_core()

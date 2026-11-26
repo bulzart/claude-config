@@ -694,7 +694,9 @@ entry and keeps the old answer under `superseded`.
               "taken_from_others": "...", "package": "P1"}}
 ```
 
-Two to four `candidates`. Without a `shelf`, the working promise stands among the titles `selection.coverage` found. Each
+Two to four `candidates`. Without a `shelf`, the working promise stands among the titles `selection.coverage` found. Our
+own small pictures are shown to the readers only when a title beside them has its picture described too (`others:
+[{"title", "thumbnail"}]`): a picture only ours have would tell the reader which are ours. Each
 reader's answer is kept as a review record (`reviews/opening-r<N>.json`) and counts only for these exact openings. One
 way in only: `{"single_opening_why": "twelve words or more"}`.
 

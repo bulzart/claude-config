@@ -10237,8 +10237,25 @@ def timeline_facts(rd, video):
             if not ok:
                 issues.append(f'hold_{p["after_line"]}_bed_{bed}_not_in_the_project_at_{_mmss(a)}')
             elif bed in ('dips', 'swells'):
-                warnings.append(f'{p["after_line"]}: the bed {bed} at {_mmss(a)}-{_mmss(nxt)}: a volume move the read-back '
-                                'does not carry; listen there')
+                # What the bed's own file does there. A swell is baked into the file (bed-levels with a lift), so it
+                # can be read back; the music's own writing moves the level too, so ears still decide.
+                move = None
+                try:
+                    cover = next(t for t in beds if float(t['start_s']) <= a + 0.05 and float(t['end_s']) >= b - 0.05)
+                    move = _audio_review().level_move({**cover, 'file': _run_file(rd, cover.get('file'))}, a, b,
+                                                      q=90 if bed == 'swells' else 50)
+                except (StopIteration, ImportError, OSError, ValueError, KeyError, TypeError, RuntimeError):
+                    pass
+                where = f'{p["after_line"]}: the bed {bed} at {_mmss(a)}-{_mmss(nxt)}'
+                if move is None:
+                    warnings.append(where + ': a volume move the read-back does not carry; listen there')
+                elif bed == 'swells' and move < 1.0:
+                    warnings.append(where + f' by decision, but its file plays {move:+g} dB there against the seconds '
+                                    'before: the swell is not in the file. Bake it with bed-levels and a lift over '
+                                    'this silence (09); listen there')
+                else:
+                    warnings.append(where + f': in its file it plays {move:+g} dB there against the seconds before; '
+                                    'listen there')
     cursor, seen = 0.0, {}
     for i, clip in enumerate(seq, 1):
         try:
@@ -14102,8 +14119,7 @@ Write your answer as JSON, and nothing else, to: {OUT}
 {{
   "reviewer": "fresh reader",{SHELF_JSON}
   "openings": {{"A": {{"wants_to_know": "...", "slips_at": "... (or: nowhere)", "thinks_it_is": "...",
-                      "like_every_other": "yes | partly | no, and why"}},
-               "B": {{"wants_to_know": "...", "slips_at": "...", "thinks_it_is": "...", "like_every_other": "..."}}}},
+                      "like_every_other": "yes | partly | no, and why"}}{MORE_OPENINGS}}},
   "keep_watching": "<the label you would keep watching>",
   "why": "...",
   "keep_from_others": "...",
@@ -14325,6 +14341,13 @@ def cmd_opening_packet(args):
     d = read_json(vd / 'direction.json')
     cands = {str(c['id']): c for c in opening_candidates(doc)}
     ours, others = opening_shelf(doc, d)
+    if any(x['thumbnail'] for x in ours) and not any(x['thumbnail'] for x in others):
+        # a picture described for our titles alone would tell the reader which entries are ours
+        ours = [{**x, 'thumbnail': ''} for x in ours]
+        c_warn = c_warn + ['the shelf shows titles only: a small picture is described for our own titles and for none '
+                           'of the titles beside them, which would have told the reader which are ours. To have the '
+                           'thumbnail idea read too, describe the others\' pictures as well (shelf.others [{title, '
+                           'thumbnail}])']
     sha = opening_sha(doc)
     readers = max(1, min(int(args.readers or 2), len(OPENING_STANCES)))
     folder = vd / 'reviews'
@@ -14347,8 +14370,11 @@ def cmd_opening_packet(args):
         shelf_text = OPENING_SHELF.replace('{ENTRIES}', '\n'.join(
             f'{i}. "{x["title"]}"' + (f' (its picture: {x["thumbnail"]})' if x['thumbnail'] else '')
             for i, x in entries.items())) if entries else ''
+        more = ''.join(',\n               "' + lab + '": {{"wants_to_know": "...", "slips_at": "...", "thinks_it_is": '
+                       '"...", "like_every_other": "..."}}' for lab in list(labels)[1:])
         text = _fill(OPENING_BRIEF, STANCE=OPENING_STANCES[(k - 1) % len(OPENING_STANCES)], K=len(cands),
-                     HOUSE_RULES=HOUSE_RULES, SHELF_JSON=OPENING_SHELF_JSON if entries else '', OUT=out_path)
+                     HOUSE_RULES=HOUSE_RULES, SHELF_JSON=OPENING_SHELF_JSON if entries else '', OUT=out_path,
+                     MORE_OPENINGS=more)
         text = text.replace('{SHELF}', shelf_text)       # titles are the makers' own words: never run through _fill
         for lab, cid in labels.items():
             c = cands[cid]
