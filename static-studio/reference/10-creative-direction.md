@@ -60,12 +60,25 @@ for the experience it serves. An idea of ours that no reference uses is welcome:
 the viewer, and judge it in context. The aim is informed originality, not evidence-shaped imitation: the references
 show what audiences are used to and what a device can do; this film's choices come from its own story.
 
+**The models stay beside the film.** The references the direction cites (`evidence.references`; `evidence.models`
+names a few of them when only those set the bar for this film) are its models, and what was measured of them does not
+stop at the length lock. `beside-models --run "RUN" --video NN` sets them beside this film, model by model, with the
+range they span: cuts a minute, how long a picture stands, how often a picture is seen again, pauses, the sound
+between the words and how far it moves. The picture plan is read this way at `shot-check`, the mix at `sound-review`,
+the finished file at `release-check` (`beside-models --file` shows its table). Inside the models' range nothing is
+asked. Outside every model on
+picture rhythm or on the sound between the words, the film does something none of its models does: sometimes that is
+the idea, sometimes an accident nobody chose. Decide which; then change it, or write the reason
+(`40-plans/video-NN/craft-choices.json`, 07; twelve words or more), which is shown beside the numbers at every later
+check. A range needs two measured models, and it is never a target: the models show what this audience is used to, not
+what this film must do.
+
 Write what you learn into the cards (`audiovisual_moments`, `narration_delivery`, `delight`: 01) and the niche's
 creative profile (02): what makes these videos *enjoyable*, not only what they contain, and what remains unexplored.
 
 ## 2. From the story approach to an audiovisual treatment
 
-02 finds the *subject* (topic discovery: `subject`, what it offers this audience, its payoff and the value the film must carry) and chooses the *story*: the angle, the approaches (as many genuinely different ones as the subject allows, at least two, with the range explored in `chosen_approach.exploration`) and why one wins. The strategy's `progression` is how the subject's researched progression is told across the locked length, and each treatment shows in its samples how it makes the researched values land. The **treatment** decides how
+02 finds the *subject* (topic discovery: `subject`, what it offers this audience, its payoff and the value the film must carry) and chooses the *story*: the angle, the approaches (as many genuinely different ones as the subject allows, at least two, with the range explored in `chosen_approach.exploration`) and why one wins. The strategy's `progression` is how the subject's researched progression is told across the film's length, and each treatment shows in its samples how it makes the researched values land. The **treatment** decides how
 that story sounds and looks, as one idea. Write two to four treatments of the chosen approach that genuinely
 differ: different narrators, different relationships between picture and word, different emotional temperatures.
 Not one treatment at three intensities.
@@ -109,6 +122,9 @@ Each treatment decides:
   debt). There is no time limit: a mystery can hold its answer to the end when the way there rewards; a tutorial
   delivers its result step by step; a slow, quiet passage can be exactly right. `direction_facts` reports each
   treatment's minutes before its first promise movement and what comes before it: facts for you, never a verdict.
+  Added up, the movements are this treatment's own length: where the story sets the length (03), that total is what
+  gets locked once the treatment is chosen. Give each movement the minutes its telling needs, never minutes to reach a
+  figure.
 
 Then write its **samples**: the opening, a quiet middle and the moment where its value lands hardest (its turn
 when the subject has one, `turning_point`; otherwise its best demonstration, clearest understanding or biggest
@@ -155,16 +171,23 @@ No numbers decide this. Two things do:
    several where several match, never an average, never one convenient reference). The narrator is chosen later
    for quality, not to fit a pace (05).
 
-Then `direction-lock`. The script and the beat directions are written from the locked treatment. A new lock is
-stamped `planning_rules: 5`, kept through `--revise` (3, the storytelling rules of 2026-11-24: each treatment's
+Where the story sets the length, lock it now: `length --run "RUN" --video NN --mode story` takes the chosen
+treatment's movements and the narrators `pacing` marks relevant (03). Tell the user the figure before any paid
+narration.
+
+Then `direction-lock` (it needs a length lock). The script and the beat directions are written from the locked treatment. A new lock is
+stamped `planning_rules: 6`, kept through `--revise` (3, the storytelling rules of 2026-11-24: each treatment's
 movements with its promise marked, the decision's `promise_and_delivery` and `length_fit`, and a key moment's
 dependency never called a mystery unless it is withheld, 03; 4, the pacing rules of 2026-11-25: the decision's
 `pacing`; 5, the rules of 2026-11-26: the chosen subject's outward look and working promise, `selection.coverage`
 and `selection.promise`, 02; what a script that grew past its first whole draft carries, and how a key line words a
-claim the research did not confirm, 03). A lock stamped 2, 3 or 4 keeps its plan the same way: the rules added after it reach it as advisories
+claim the research did not confirm, 03; 6, the craft rules of the same day: the chosen subject's own size,
+`runtime.natural_minutes`, 02; the opening contest, §4; a reason where the film lies outside every one of its models,
+§1). A lock stamped 2 to 5 keeps its plan the same way: the rules added after it reach it as advisories
 except where a substantive revision reaches (one that changes what production must do, recorded in
 `planning_migration`; the pacing rules when that revision also changes the decision; the subject rules of 5 when
-the subject is chosen again, its script rules when the script is sent back to work). A revision of reasons alone
+the subject is chosen again, its script rules when the script is sent back to work; of 6, the size with the subject,
+the contest with the script, the craft reasons with the shot plan, the stills, the music or the edit). A revision of reasons alone
 brings no newer rule. A lock without the stamp was approved before 2026-11-24, and it
 keeps its plan: the planning rules added that day reach it only as warnings that start "advisory (this direction was
 approved before the planning rules of 2026-11-24, which it need not follow): ..." in plan-check, shot-check,
@@ -207,7 +230,8 @@ independent readers find the same major problem, the revision between them did n
 treatment cause is answered by re-planning: revise the chosen treatment (its movements, its structure and pace, or
 another treatment) and re-lock with `--revise`, keeping what works (the voice, the strongest material, the samples
 that landed); the script and what follows it are rebuilt from the new plan and read afresh. A duration cause is a
-length decision the user approves. A higher reader score does not close a major problem the reader still names.
+length decision the user approves. A kinder verdict from a later reader does not close a major problem that reader
+still names.
 
 ## 4. Beat direction: the treatment, moment by moment
 
@@ -254,6 +278,30 @@ it comes: a name, place or fact given once, long before, is planted with its sig
 it is and why it will matter) and re-anchored in the narration at the moment itself; a picture can reinforce that,
 never rescue a relation the words never make. Calling such a dependency a mystery is right only when the beat
 withholds it on purpose (`depends_on` with `withheld`); plan-check refuses it otherwise (03).
+
+**The first minute is chosen, not only written.** The opening carries the click and the first decision to stay, and
+the first one written is rarely the strongest the material allows. From the same material write two to four openings
+that begin somewhere genuinely different (another moment, another person, the question instead of the scene), each as
+about the first minute of narration (50 words or more) and what is on screen, with its `way_in`
+(`40-plans/video-NN/opening.json`, 07). The shelf goes with them: your title and thumbnail ideas among the titles a
+viewer would see beside this film (`shelf`; left out, it is the working promise among the titles `selection.coverage`
+found). `opening-packet --readers N` writes one blind packet per fresh reader (one to three, two by default), each
+with its own order and one viewer's stance: new to the subject, a regular of the genre, or half-attending.
+`opening-read` runs them (or one `static-cold-reader` per packet) and `opening-record` seals what they said: what each
+opening made them want, where attention slipped, what they now think the video is, which they would keep watching,
+which title they would click. That is evidence, never a vote. Decide in `decision`: which opening, why, what the
+readers said and what you did with it, what you keep from the others; then write the script's first lines from it
+(`plan-check` says when they no longer hold the opening that was read). A subject with truly one way in says why
+(`single_opening_why`, twelve words or more) and goes on.
+
+**The film on one page.** `run-sheet --run "RUN" --video NN` (its places to look also come with `plan-check`) lays the
+film out beat by beat on its clock: the words, names and numbers the ear has to catch, what the viewer is waiting for
+(`viewer_question`, optional on a beat: the question they carry through it), what the beat gives them (a key moment, a
+researched value for the first time, or one they were already given) and, once they exist, its pictures and its sound.
+Then the places to look, as facts: the longest stretches with no key moment and what the viewer is given in them, a
+question carried a long way, the beats with most for the ear, where the picture stands longest, beats made only of
+pictures already seen, key moments with no sound of their own. None is a verdict: a long quiet stretch can be the best
+of the film. Read the page as a viewer who owes the film nothing, and ask of each place whether they would miss it.
 
 **Boredom at its source.** When a passage loses attention, name why before changing anything: the viewer does not yet
 care about it; it arrives before its relevance is established; the same idea comes again without developing; background
@@ -356,8 +404,9 @@ These are craft principles. Each one says when it applies.
 - **Rhythm is a choice.** Hold a picture while it keeps giving; cut when it has given what it had. Read the references'
   shot lengths and moving share, then choose this film's rhythm for this story, beat by beat.
 - **Repetition:** a returning image is a callback when intended and wallpaper when not. `shot-check` lists prompts
-  that are nearly the same and long runs of one composition; the export's watch sheet shows the same picture coming
-  back.
+  that are nearly the same and long runs of one composition, and counts what the plan really shows (04): how many
+  pictures, how often and for how long one is seen again, the picture shown most, the longest a picture stands. The
+  export's watch sheet shows the same picture coming back.
 - **Simplicity before spectacle.** One clear image with a drawn annotation often teaches more than a spectacular
   one. A beautiful picture that adds nothing to the moment is decoration.
 - **Every shot says its job** (`new_thing` in the shot plan): what the viewer learns or feels from the picture that
@@ -372,7 +421,7 @@ These are craft principles. Each one says when it applies.
 
 1. **Your own pass.** Read the script aloud in your head with `writing_signals` beside you. Cut for length as a
    boredom pass: what a listener would drift through goes first; the vivid detail stays.
-2. **The cold read.** `review-packet --kind script`, then one fresh agent with only that file, then `review-record`.
+2. **The opening contest (§4), then the cold read.** `review-packet --kind script`, then one fresh agent with only that file, then `review-record`.
    Answer every finding: `revised` (with the lines), `kept` (minor only, with why) or `disputed` (with why). Then
    reconcile each key moment in the answers file (`reconcile`, 06): what it was planned to mean beside what the reader
    took from it, `same`, `different_but_valid` or `gap`; a gap counts as a major finding. A major

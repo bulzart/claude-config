@@ -38,15 +38,22 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" -
 # Own length: --mode own --minutes 18 (its references from the locked niche). A run made before niche discovery
 # (no niche_discovery in state.json) still matches labels: --niche "..." --story-form "..." or --cohort-id.
 # A locked length changes only on the user's approval: the same command with --revise "why" --user-approved
-# "<their own words>" (the old lock is kept in the new one's history; 03).
+# "<their own words>" (the old lock is kept in the new one's history; 03). A length the story set is the director's
+# to re-lock before narration is recorded: length --mode story --minutes N --revise "why".
 # Creative direction FIRST (10): 40-plans/video-01/direction.json (evidence, two or more approaches, strategy,
 # two to four treatments with sample moments), a blind read of the treatments, the decision, the lock.
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind treatment
 #   -> spawn ONE fresh agent: "Read only <packet> and follow it exactly." It writes the findings file.
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run "RUN" --video 1 --kind treatment
 #   -> answer every finding in reviews/treatment-r1-answers.json; write direction.json -> decision.
+#   -> where the story sets the length (03): lock the chosen treatment's own length now; tell the user the figure.
+python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 --mode story
 python "$HOME/.claude/static-studio/scripts/static_core.py" direction-lock --run "RUN" --video 1
 # Agent writes blueprint, beat-map (with each beat's direction), script and editorial-review from the treatment.
+# The opening contest (10 §4): opening.json holds two to four openings; one blind packet per fresh reader.
+python "$HOME/.claude/static-studio/scripts/static_core.py" opening-packet --run "RUN" --video 1 --readers 2
+python "$HOME/.claude/static-studio/scripts/static_core.py" opening-read --run "RUN" --video 1      # or one static-cold-reader agent per packet
+python "$HOME/.claude/static-studio/scripts/static_core.py" opening-record --run "RUN" --video 1    # then opening.json -> decision
 # The cold read: a fresh agent reads only the bare script.
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind script
 python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run "RUN" --video 1 --kind script
@@ -56,6 +63,8 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RU
 #      answer each entry there (hedged with the words quoted, or plain with why), then plan-check again (03).
 #   -> a script more than 15% above its first whole draft is asked what the added lines carry (never "the length"):
 #      plan-check --run "RUN" --video 1 --grew-for "the second depot move could not be followed without them"
+# The film on one page, beat by beat, and the places to look (reads the run; later also its pictures and sound):
+python "$HOME/.claude/static-studio/scripts/static_core.py" run-sheet --run "RUN" --video 1 --out "RUN/40-plans/video-01/run-sheet.md"
 # How the comparable narrators speak and pause (same yardstick later used on the voice):
 python "$HOME/.claude/static-studio/scripts/static_core.py" pace-profile --run "RUN" --video 1
 # Voice: five candidates described by the narrator this story needs (character, register, age,
@@ -101,6 +110,8 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" style-lock --run "RU
   --style-prompt "gouache illustration, warm muted palette" --departs-when "photorealistic, flat vector, neon" \
   --palette "#8A5A3C,#D9C7A3"
 python "$HOME/.claude/static-studio/scripts/static_core.py" shot-check --run "RUN" --video 1   # before stills; retime-shots refuses a failing plan
+# This film beside its models (10 §1): the picture plan now, the mix after sound-review, a finished file with --file.
+python "$HOME/.claude/static-studio/scripts/static_core.py" beside-models --run "RUN" --video 1 [--file "C:/videos/final.mp4"]
 # The same gate the image and music workers run before they load anything (free), and the direction each item carries out:
 python "$HOME/.claude/static-studio/scripts/static_core.py" media-check --job "RUN/60-visuals/video-01/stills-job.json" --kind stills
 # After a meaningful direction change (direction-lock --revise lists outdated_now): update each piece, or keep it on record:
@@ -471,7 +482,7 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
           "reasoning": "..."}],
        "runtime": {"progression": [{"adds": "the eerie photographs, then the question they raise", "material": ["M1"]},
                                    {"adds": "...", "material": ["M2", "M3"]}],
-                   "verdict": "sustains", "why": "...", "material_minutes": 9},
+                   "verdict": "sustains", "why": "...", "natural_minutes": [9, 12]},
        "payoff": {"shape": "builds_to", "rests_on": ["M1", "M3"], "why_substantial": "...", "needs_first": "...",
                   "worth_the_buildup": "..."},
        "feasibility": "..."},
@@ -493,6 +504,7 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
   },
   "evidence": {
     "references": ["V017", "V018", "V031"],
+    "models": ["V017", "V018"],
     "observations": [{"ref": "V017", "at": "04:00-05:00", "what": "the voice confides while the picture holds one face", "label": "O"}],
     "borrowed": [{"ref": "V031", "technique": "a cutaway drawing that builds up one layer at a time as each is named",
                   "not_taken": "its subject (a kitchen recipe) and what a cooking video assumes"}],
@@ -670,6 +682,33 @@ answer to "what do the added lines carry".
 written (or in the earlier line of the same beat named in `in_line`); a reworded line or a changed claim empties the
 entry and keeps the old answer under `superseded`.
 
+`40-plans/video-NN/opening.json` (the director writes it; 10 §4):
+
+```json
+{"candidates": [{"id": "O1", "way_in": "the frozen bird on the shore, before any explanation",
+                 "narration": "about the first minute as spoken, 50 words or more", "picture": "what is on screen through it"},
+                {"id": "O2", "way_in": "...", "narration": "...", "picture": "..."}],
+ "shelf": {"ours": [{"id": "P1", "title": "...", "thumbnail": "what the small picture shows"}],
+           "others": ["titles this film would sit beside"]},
+ "decision": {"opening": "O2", "why": "...", "readers": "what the readers said and what was done with it",
+              "taken_from_others": "...", "package": "P1"}}
+```
+
+Two to four `candidates`. Without a `shelf`, the working promise stands among the titles `selection.coverage` found. Each
+reader's answer is kept as a review record (`reviews/opening-r<N>.json`) and counts only for these exact openings. One
+way in only: `{"single_opening_why": "twelve words or more"}`.
+
+`40-plans/video-NN/craft-choices.json` (the director writes it; 10 §1): `{"choices": [{"measure": "seen_again_share",
+"why": "twelve words or more: what this film gains by doing what none of its models does"}]}`. The measures a reason
+is asked for are `pictures_per_min` (cuts a minute), `seen_again_share` (shots showing a picture seen before),
+`sound_under_voice_db` (the sound between the words) and `sound_moves_db` (how far that sound moves through the film),
+and only where the film lies outside every model. In `direction.json`, `evidence.models` (optional) names the
+references among `evidence.references` this film is read beside; left out, all of them are.
+
+`40-plans/video-NN/length-intent.json` (`length --mode story` writes it before a treatment is chosen): the user's choice
+that the story sets the length. The lock then carries `mode: "story"` and `story_size` (the treatment, its movements'
+minutes, the subject's own range).
+
 `70-edit/video-NN/sound-review.json` (sound-review writes it; `--out DIR` writes it there instead): `tracks_digest`
 (the build it measured), `speech_db`, `export` (the finished file measured, with its sha256), `placements` (each
 sound: `kind`, `file`, `start_s`, `end_s`, `under_voice_db` by its own file, `voice_over_it_share`, `in_the_clear_s`,
@@ -678,7 +717,9 @@ the finished file plays where no voice covers the sound, `under_voice_db`, besid
 ask for together, `project_asks_db`, and `differs_db`), `beds` (`music` and `ambience` apart, each with `plays`,
 `none_for_long`, `share_of_runtime`), `turns` (`ordinary_gap_s` and, for each chapter's first line and each
 key moment, `gap_s`), `pace`, `names` (each name with a use the transcript did not recognise: `uses`, `recognised`,
-`line`, `nearest_heard`, `say`), `holds_not_listened`, and `listening_items`. All of it is levels, times and
+`line`, `nearest_heard`, `say`), `holds_not_listened`, `listening_items`, `between_words` (what the whole mix plays
+in the voice's pauses, read as the references' gap level is: `pauses`, `gap_level_rel_speech_db`) and `music_alone`
+(`seconds`, `longest`, `under_voice_db_there`, `rises_when_alone_db`). All of it is levels, times and
 counts: no model listened and nothing in it says how the film sounds. The listening sheet beside the deliverable
 (`80-deliverables/video-NN/listening-sheet.md` and `.json`) is what the user answers; `human-review --answers` keeps
 their answers.
