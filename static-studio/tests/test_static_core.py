@@ -213,6 +213,7 @@ class StaticStudioTests(unittest.TestCase):
                     'what_happens':say(what),'why_it_matters':say(why),'reward':say(reward),
                     'strongest_material':[{'id':'M1','what':material,'certainty':'established','claims':[claim]}],
                     'runtime':{'progression':[{'adds':step,'material':['M1']}],'verdict':'sustains',
+                               'natural_minutes':[8,12],      # the story's own size (planning rules 6)
                                'why':say('each discovery opens the next, and the consequence fills the end')},
                     'feasibility':say('maps and period artifacts can show every step'),
                     'payoff':{'shape':'builds_to','rests_on':['M1'],'why_substantial':say('the viewer sees a quiet order decide a loud outcome'),
@@ -362,6 +363,8 @@ class StaticStudioTests(unittest.TestCase):
         lines=[{'id':f'L{i:03}','text':words+ ' changed.', 'pause_after_s':0} for i in range(1,53)]
         # Each line 27 spoken tokens x 52 = 1404: about 581 seconds at 145 wpm.
         save(vd/'script.json',{'language':'en','pace_wpm':145,'lines':lines,'tags_exception':TAG_EXCEPTION})
+        # one opening only (planning rules 6): the contest has its own tests (test_creative_pass)
+        save(vd/'opening.json',{'single_opening_why': 'a test fixture whose every line is the same plain sentence: no other way into it can be written'})
         beats=[{'id':f'B{i:02}','start_s':(i-1)*120, 'end_s':i*120,
                 'line_start':(i-1)*10+1 if i<5 else 41,
                 'line_end':i*10 if i<5 else 52,
@@ -2568,7 +2571,7 @@ class StaticStudioTests(unittest.TestCase):
         # sent back to re-plan: those checks become advisories. Its other checks stay as they are.
         vd=self.write_plan()
         lock=json.loads((vd/'direction-lock.json').read_text(encoding='utf-8'))
-        self.assertEqual(lock['planning_rules'],5)               # a new lock is stamped (5: the outward look, 2026-11-26)
+        self.assertEqual(lock['planning_rules'],6)               # a new lock is stamped (6: the creative pass, 2026-11-26)
         b=json.loads((vd/'blueprint.json').read_text(encoding='utf-8')); b.pop('audience_knows'); save(vd/'blueprint.json',b)
         self.assertTrue(any(x.startswith('blueprint_missing_audience_knows') for x in
                             cli('plan-check','--run',self.run,'--video',1,expected=None)['issues']))
@@ -5586,7 +5589,8 @@ class TopicDiscoveryTests(unittest.TestCase):
              'runtime': runtime if runtime is not None else {
                  'progression': [{'adds': f'what the viewer newly gets from {m["id"]}', 'material': [m['id']]}
                                  for m in mats if m.get('id')],
-                 'verdict': 'sustains', 'why': 'the question, its evidence and its consequence fill it without repeats'},
+                 'verdict': 'sustains', 'why': 'the question, its evidence and its consequence fill it without repeats',
+                 'natural_minutes': [8, 12]},
              'feasibility': 'stills, maps and drawings can show every step of it'}
         first = next((str(m.get('id')) for m in mats if isinstance(m, dict) and m.get('id')), None)
         c['payoff'] = {'shape': 'builds_to', 'rests_on': [first] if first and factual is not False else [],
@@ -6145,6 +6149,12 @@ class TopicPathTests(unittest.TestCase):
             sc_.setdefault('understood_as', f'{sc_.get("niche")} as the user asked for it: {sc_.get("user_words")}')
             sc_.setdefault('boundary', f'a subject outside {sc_.get("niche")}, told only with its techniques')
         sel = subject['selection']
+        ch0 = next(c for c in subject['candidates'] if str(c['id']) == str(sel['candidate']))
+        if isinstance(ch0.get('runtime'), dict) and 'natural_minutes' not in ch0['runtime']:
+            # the recorded exercises predate the story's own size (planning rules 6, 2026-11-26): a stand-in around this
+            # test's ten-minute lock lets the path go on; nobody judged the size of these subjects
+            ch0['runtime']['natural_minutes'] = [8, 12]
+            rep['predates_planning_rules_6'] = True
         if 'coverage' not in sel and 'promise' not in sel:
             # the recorded exercises predate the outward look and the working promise (planning rules 5, 2026-11-26):
             # as recorded they miss exactly those two and nothing else. A stand-in that says what it is lets the path
@@ -6239,6 +6249,7 @@ class TopicPathTests(unittest.TestCase):
             beats.append(beat)
         save(rp / 'claims.json', claims)
         save(vd / 'script.json', {'language': 'en', 'pace_wpm': 145, 'lines': lines, 'tags_exception': TAG_EXCEPTION})
+        save(vd / 'opening.json', {'single_opening_why': 'a test fixture whose every line is the same plain sentence: no other way into it can be written'})      # placeholder lines: one opening only
         save(vd / 'beat-map.json', {'target_length_s': 600, 'beats': beats})
         # the placeholder script's comprehension signals (the exercise's own hedge sentences, placed one per line by this
         # harness) classified as the editorial stage would: kept, since the harness, not a writer, put them there

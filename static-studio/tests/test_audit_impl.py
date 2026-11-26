@@ -480,7 +480,7 @@ class PlanningRules5Tests(base.StaticStudioTests):
         vd = self.write_plan()
         res = cli('plan-check', '--run', self.run, '--video', 1)
         self.assertTrue(res['ready'], res['issues'])
-        self.assertEqual(json.loads((vd / 'direction-lock.json').read_text(encoding='utf-8'))['planning_rules'], 5)
+        self.assertEqual(json.loads((vd / 'direction-lock.json').read_text(encoding='utf-8'))['planning_rules'], 6)
         size = json.loads((vd / 'script-size.json').read_text(encoding='utf-8'))
         self.assertEqual((size['first_complete_draft']['words'], size['first_complete_draft']['locked_s']), (1404, 600))
         self.assertEqual((res['script_size']['now_words'], res['script_size']['grew_pct']), (1404, 0.0))

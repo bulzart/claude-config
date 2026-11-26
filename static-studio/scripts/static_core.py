@@ -1390,22 +1390,64 @@ def normalize_refs(s):
     return [x.strip().upper() for x in (s or '').split(',') if x.strip()]
 
 
+def length_intent_path(vd):
+    return vd / 'length-intent.json'
+
+
+STORY_LENGTH_RULE = ('The story set this length. Before narration is recorded the director re-locks it to the story\'s '
+                     'real size, with the reason (kept in history); once narration exists, a new length is the user\'s '
+                     'decision.')
+
+
+def story_size_of(rd, video):
+    """What the story itself says about its length, from direction.json: the chosen treatment's movements added up,
+    the chosen subject's own range, and the narrators the decision's pacing calls relevant. None until a treatment
+    with movements is chosen."""
+    d = read_json(video_dir(rd, video) / 'direction.json')
+    t = chosen_treatment_of(d) if d else {}
+    mv = treatment_movements(t)
+    if not mv or any(m['minutes'] <= 0 for m in mv):
+        return None
+    subj = d.get('subject') if isinstance(d.get('subject'), dict) else {}
+    sel = subj.get('selection') if isinstance(subj.get('selection'), dict) else {}
+    ch = next((c for c in subj.get('candidates') or [] if isinstance(c, dict)
+               and str(c.get('id')) == str(sel.get('candidate'))), {})
+    dec = d.get('decision') if isinstance(d.get('decision'), dict) else {}
+    pac = dec.get('pacing') if isinstance(dec.get('pacing'), dict) else {}
+    nat = natural_minutes(ch.get('runtime'))
+    return {'treatment': str(t.get('id')), 'movements_minutes': round(sum(m['minutes'] for m in mv), 2),
+            'candidate': str(sel.get('candidate') or '') or None, 'natural_minutes': list(nat) if nat else None,
+            'pace_references': [str(r.get('ref') or '').strip().upper() for r in pac.get('references') or []
+                                if isinstance(r, dict) and r.get('relevant') is True and str(r.get('ref') or '').strip()]}
+
+
 def cmd_length(args):
     rd, st = run_folder(args)
     outdir = video_dir(rd, args.video)
     lockfile = outdir / 'length-lock.json'
     prev_lock = read_json(lockfile) if lockfile.exists() else None
     revise, approved = (getattr(args, 'revise', '') or '').strip(), (getattr(args, 'user_approved', '') or '').strip()
+    story = args.mode == 'story'
+    # A length the story set itself is the director's to re-lock while nothing is recorded: the user chose to let the
+    # story decide, and its real size is known once it is written. Every other change of a locked length is the
+    # user's decision, in their words.
+    own_relock = bool(story and prev_lock and prev_lock.get('mode') == 'story'
+                      and not media_present(rd, args.video, 'narration'))
     if prev_lock and not revise:
         error('Length already locked. Do not silently revise runtime.', {'file': str(lockfile),
-              'action': 'A new length is the user\'s decision: once they have approved it, length --revise "why" '
-                        '--user-approved "<their own words>" with the new --mode and its options (the old lock is '
-                        'kept in the new one\'s history); or a new video ID.'})
+              'action': ('The story set this length and nothing is recorded yet: re-lock it to the story\'s real size '
+                         'with length --mode story --minutes N --revise "why" (the old lock is kept in history).'
+                         if own_relock else
+                         'A new length is the user\'s decision: once they have approved it, length --revise "why" '
+                         '--user-approved "<their own words>" with the new --mode and its options (the old lock is '
+                         'kept in the new one\'s history); or a new video ID.')})
     if prev_lock:
         if n_words(revise) < MIN_NOTE_WORDS:
             error('Say why the length changes (--revise "...", five words or more).')
-        if n_words(approved) < 2:
-            error('A length revision needs the user\'s own approval, in their words (--user-approved "...").')
+        if n_words(approved) < 2 and not own_relock:
+            error('A length revision needs the user\'s own approval, in their words (--user-approved "..."). Only a '
+                  'length the story set itself (--mode story) is the director\'s to re-lock, and only before narration '
+                  'is recorded.')
     elif revise or approved:
         error('Nothing to revise: no length is locked for this video yet.')
     vids, cards, issues = card_set(rd)
@@ -1422,6 +1464,23 @@ def cmd_length(args):
     if niche_flow(st) and not nl:
         error("Lock the user's niche first: niche-evidence, the niche map, niche-check, then niche-lock with their "
               "pick (manual 01). The length's comparable references come from inside that niche.")
+    size = story_size_of(rd, args.video) if story else None
+    if story and size is None:
+        if prev_lock:
+            error('The chosen treatment has no movements to take a length from (direction.json).')
+        # The user's choice, on record before the subject is known: the story sets the length. The lock is made by
+        # this same command once a treatment is chosen.
+        write_json(length_intent_path(outdir), {'schema': SCHEMA, 'video': f'{int(args.video):02d}', 'mode': 'story',
+                                                'language': args.language, 'chosen_at': now()})
+        st['video_count'] = max(st.get('video_count', 0), int(args.video))
+        st['stage'] = 'planning'
+        write_json(rd / 'state.json', st)
+        emit({'ok': True, 'locked': False, 'mode': 'story', 'intent_file': str(length_intent_path(outdir)),
+              'next': 'Recorded: the story sets this video\'s length. Find the subject and state its own size '
+                      '(runtime.natural_minutes), write the treatments with their movements, have them read blind '
+                      'and decide; then run this command again and it locks the chosen treatment\'s own length. '
+                      'Tell the user the figure before any paid narration.'})
+        return
     if nl:
         members = [str(m.get('ref')) for m in nl.get('members') or [] if isinstance(m, dict) and m.get('ref') in vids]
         names = {str(nl.get('name') or '').strip().lower(), str(nl.get('niche_id') or '').strip().lower()}
@@ -1490,6 +1549,32 @@ def cmd_length(args):
         if max(durations) / min(durations) > 1.8:
             error('Standard cohort spans incompatible runtime families; select a narrower group.', durations)
         target = round(statistics.median(durations)/5)*5
+    elif story:
+        # The story's own length: the chosen treatment's movements, added up; a re-lock (the written script showed
+        # another size) names its minutes. The pace still comes from measured narration: the narrators the decision's
+        # pacing calls relevant, or the ones named here, from anywhere in the analysed references (a narrator's pace
+        # is a borrowed technique, weighed in decision.pacing).
+        if args.minutes is not None and not prev_lock:
+            error('The story\'s length comes from the chosen treatment\'s movements: give no --minutes on the first '
+                  'lock. (--minutes belongs to a re-lock, with --revise, once the written script shows its real size.)')
+        if args.minutes is not None and args.minutes <= 0:
+            error('--minutes must be more than zero.')
+        target = round((float(args.minutes) if args.minutes is not None else size['movements_minutes']) * 60 / 5) * 5
+        if not refs:
+            refs = [r for r in size['pace_references'] if r in vids]
+        if not refs:
+            error('The story sets the length; the pace still comes from measured narration. Name the narrators this '
+                  'narration follows (--refs), or mark them relevant in decision.pacing.')
+        if any(x not in vids for x in refs):
+            error('A pace reference must be an analysed reference of this run.', {'refs': refs})
+        family = {**family, **{r: vids[r] for r in refs}}
+        story_why = (getattr(args, 'why', '') or '').strip()
+        nat = size['natural_minutes']
+        if nat and not nat[0] <= target / 60 <= nat[1] and n_words(story_why) < MIN_NOTE_WORDS:
+            error('This length is outside the subject\'s own size as the direction judged it. One of the two is '
+                  'wrong: revise that one, or say why this length is right (--why "...").',
+                  {'length_minutes': round(target / 60, 2), 'natural_minutes': nat, 'treatment': size['treatment'],
+                   'movements_minutes': size['movements_minutes']})
     else:
         if args.minutes is None or args.minutes <= 0:
             error('Own length requires --minutes N')
@@ -1500,7 +1585,10 @@ def cmd_length(args):
             error('An own-length reference must still match the selected group.', refs)
     if target < st['min_longform_s']:
         error('Target is shorter than long-form minimum configured for this run',
-              {'target_s': target, 'minimum_s': st['min_longform_s']})
+              {'target_s': target, 'minimum_s': st['min_longform_s'],
+               **({'action': 'This story\'s own size is under the run\'s long-form minimum: choose another candidate '
+                             'or angle that carries a long-form video, or take the shorter film to the user. Never '
+                             'pad.'} if story else {})})
     computed_wpm, per_ref_wpm = compute_ref_wpm(rd, refs, family)
     if args.pace_wpm is not None and n_words(getattr(args, 'pace_why', '')) < 4:
         error('An explicit pace is a decision: say why this pace fits this narrator, niche and treatment (--pace-why).')
@@ -1568,6 +1656,19 @@ def cmd_length(args):
         lock.update({'revised_because': revise, 'approved_by_user': approved,
                      'history': (prev_lock.get('history') or []) + [{k: v for k, v in prev_lock.items()
                                                                      if k != 'history'}]})
+        if own_relock and not approved:
+            lock['revised_by'] = 'the director: the story sets this length and nothing was recorded yet'
+    if story:
+        # what the length was taken from, beside it: the treatment and its movements, the subject's own range, and on
+        # a re-lock the script it was measured from
+        words_now = sum(count_words(x.get('text', '')) for x in read_json(outdir / 'script.json').get('lines') or []
+                        if isinstance(x, dict))
+        lock['story_size'] = {k: size[k] for k in ('treatment', 'movements_minutes', 'candidate', 'natural_minutes')}
+        if story_why:
+            lock['story_size']['why'] = story_why
+        if prev_lock and words_now:
+            lock['story_size']['script_words'] = words_now
+        lock['rule'] = STORY_LENGTH_RULE
     write_json(lockfile, lock)
     st['selected_niche'] = effective_niche
     st['video_count'] = max(st.get('video_count', 0), int(args.video))
@@ -1585,9 +1686,13 @@ def cmd_length(args):
           'niche': effective_niche, 'story_form': effective_form, 'references': refs,
           'pace_wpm': pace_wpm, 'pace_wpm_source': pace_wpm_source, 'per_ref_wpm': per_ref_wpm,
           'pace_profile': pace_profile, 'target_words': target_words, 'target_words_speech_only': speech_only_words,
+          **({'story_size': lock['story_size']} if story else {}),
           'guidance': (f'Script, beat map, narration, timeline and export must respect this exact locked target. '
                        f'{wpm_note}. {words_note}plan-check forecasts the real length from the voice\'s own measured '
-                       'pace and gaps once its first part is measured.')})
+                       'pace and gaps once its first part is measured.'
+                       + (' The story set this length: when the first whole draft shows another size, re-lock to it '
+                          'before narration (length --mode story --minutes N --revise "why"); never pad or squeeze '
+                          'to keep a number. Tell the user the figure before any paid narration.' if story else ''))})
 
 
 TAG_RE = re.compile(r'\[([^\[\]]{1,160})\]')
@@ -3181,11 +3286,25 @@ def material_issues(prefix, items, known, factual, claims=None, ledger=None, str
     return out
 
 
+def natural_minutes(rt):
+    """A subject's own size, as the director judges it from its progression: (low, high) minutes it runs when it is
+    told well, neither stretched nor squeezed (runtime.natural_minutes). None when it is not two numbers in order. The
+    length follows this; nothing is ever written to reach a length."""
+    v = rt.get('natural_minutes') if isinstance(rt, dict) else None
+    if not isinstance(v, (list, tuple)) or len(v) != 2:
+        return None
+    try:
+        lo, hi = float(v[0]), float(v[1])
+    except (TypeError, ValueError):
+        return None
+    return (lo, hi) if 0 < lo <= hi else None
+
+
 def runtime_issues(cid, c):
-    """Whether a candidate's material can carry the locked length, as the director judges it: the progression of what
-    the viewer newly gets, each step resting on researched material, and a verdict with its reasons. Never a share of
-    minutes: six minutes of notes can hold ten when each step opens the next, fifteen may not when they repeat.
-    (issues, signals)."""
+    """Whether a candidate's material can carry a long-form video, and how long, as the director judges it: the
+    progression of what the viewer newly gets, each step resting on researched material, a verdict with its reasons,
+    and the story's own size as a range (natural_minutes). Never a share of minutes: six minutes of notes can hold ten
+    when each step opens the next, fifteen may not when they repeat. (issues, signals)."""
     out, sig = [], []
     rt = c.get('runtime') if isinstance(c.get('runtime'), dict) else {}
     tag = f'subject_candidate_{cid}_runtime'
@@ -3217,6 +3336,9 @@ def runtime_issues(cid, c):
         out.append(f'{tag}_needs_why_the_verdict')
     if verdict in ('short', 'uncertain') and n_words(rt.get('shortfall')) < 4:
         out.append(f'{tag}_{verdict}_needs_what_is_missing:shortfall')
+    if natural_minutes(rt) is None:
+        # the story's own size (planning rules 6): the length follows it, whoever sets the length
+        out.append(f'{tag}_needs_its_natural_size:natural_minutes_[low,high]_how_long_this_material_runs_when_told_well')
     return out, sig
 
 
@@ -3510,11 +3632,19 @@ def subject_issues(subj, sources_text='', locked_s=None, refs=(), locked_niche=N
         rt = ch.get('runtime') if isinstance(ch.get('runtime'), dict) else {}
         verdict = str(rt.get('verdict') or '').strip().lower()
         dec = subj.get('runtime_decision') if isinstance(subj.get('runtime_decision'), dict) else {}
-        if verdict in ('short', 'uncertain') and (str(dec.get('decided_by') or '').strip().lower() != 'user'
-                                                   or n_words(dec.get('user_words')) < 2
-                                                   or n_words(dec.get('decision')) < 4):
+        decided = (str(dec.get('decided_by') or '').strip().lower() == 'user' and n_words(dec.get('user_words')) >= 2
+                   and n_words(dec.get('decision')) >= 4)
+        if verdict in ('short', 'uncertain') and not decided:
             iss.append(f'subject_material_judged_{verdict}_for_the_locked_length:choose_another_candidate_or_angle_or_'
                        'record_the_users_decision_in_runtime_decision:never_pad')
+        # A length the user asked for (Standard, or their own minutes) beside the story's own size: outside the range
+        # the director gave, the mismatch is the user's to settle before a script is written to it (planning rules 6).
+        # A length the story set itself (length --mode story) is answered where it is locked, so none is passed here.
+        nat = natural_minutes(rt)
+        if nat and locked_s and not decided and not nat[0] * 60 <= float(locked_s) <= nat[1] * 60:
+            iss.append(f'subject_natural_size_{nat[0]:g}-{nat[1]:g}_min_is_not_the_locked_'
+                       f'{round(float(locked_s) / 60, 1):g}_min:choose_another_candidate_or_angle_or_record_the_users_'
+                       'decision_in_runtime_decision:never_pad_never_squeeze')
     vals = [v for v in subj.get('value_to_carry') or [] if isinstance(v, dict)]
     iss += value_issues(vals, ch)
     iss += payoff_value_issues(vals, ch)
@@ -3773,7 +3903,8 @@ def direction_facts(rd, video):
     if 'subject' in d or not lock_now:
         src_p = sources_path(rd, video)
         s_iss, s_warn = subject_issues(d.get('subject'), src_p.read_text(encoding='utf-8', errors='replace')
-                                       if src_p.is_file() else '', ll.get('target_length_s'), refs,
+                                       if src_p.is_file() else '',
+                                       None if ll.get('mode') == 'story' else ll.get('target_length_s'), refs,
                                        locked_niche_names(rd, ll) or None,
                                        read_json(claims_path(rd, video)))
         iss += s_iss
@@ -3878,6 +4009,7 @@ def direction_facts(rd, video):
     ll = read_json(video_dir(rd, int(video)) / 'length-lock.json')
     target_min = float(ll.get('target_length_s') or 0) / 60
     out['promise_timing'] = {}
+    sizes = {}
     for t in trs:
         tid = t.get('id')
         mv = treatment_movements(t)
@@ -3888,9 +4020,25 @@ def direction_facts(rd, video):
             iss.append(f'treatment_{tid}_never_marks_where_its_promise_is_delivered:movements[].promise')
         out['promise_timing'][str(tid)] = promise_timing(t)
         total = sum(m['minutes'] for m in mv)
+        sizes[str(tid)] = round(total, 2)
         if target_min and abs(total - target_min) > 0.2 * target_min:
             warn.append(f'treatment {tid}: its movements add up to {total:g} min for a {target_min:.1f}-min video: '
                         'is this how it unfolds over the locked length?')
+    # The story's own size (planning rules 6): the chosen subject's range, each treatment's own total and the length
+    # once it is locked, side by side. Facts for the director: where the chosen treatment runs outside the range, one
+    # of the two statements is wrong, and the decision says which (length_fit).
+    sel_ = subj_.get('selection') if isinstance(subj_.get('selection'), dict) else {}
+    ch_ = next((c for c in subj_.get('candidates') or [] if isinstance(c, dict)
+                and str(c.get('id')) == str(sel_.get('candidate'))), {})
+    nat = natural_minutes(ch_.get('runtime'))
+    out['story_size'] = {'natural_minutes': list(nat) if nat else None, 'treatments_minutes': sizes,
+                         'locked_minutes': round(target_min, 2) if target_min else None,
+                         'length_mode': ll.get('mode') or ('story, not locked yet' if read_json(
+                             length_intent_path(vd)).get('mode') == 'story' else None)}
+    mine = sizes.get(str(dec.get('treatment')))
+    if nat and mine and not nat[0] <= mine <= nat[1]:
+        warn.append(f'the chosen treatment runs about {mine:g} min and the subject\'s own size was judged '
+                    f'{nat[0]:g}-{nat[1]:g} min: one of the two is wrong; say which, and why, in decision.length_fit')
     # The chosen treatment keeps the opening's promise (how, and what the viewer gets while waiting for it), and its
     # telling is weighed against the references the length and the pace came from: a cohort shares a niche, not
     # necessarily this video's format, density or narration (storytelling brief, 2026-11-24).
@@ -5435,7 +5583,7 @@ def decision_problem(dec):
 # them (its lock carries no planning_rules) keeps the plan it was approved with: these checks are shown to it as
 # advisories, never as re-planning (the user, 2026-11-24). Safety and content, money, asset integrity and release
 # validation are never in this list: they hold for every run.
-PLANNING_RULES = 5
+PLANNING_RULES = 6
 NEW_PLANNING_RULES = re.compile(
     r'(direction_evidence_\w+?_is_outside_the_locked_niche'
     r'|chosen_approach_missing_exploration'
@@ -5481,7 +5629,17 @@ PLANNING_RULES_V5 = re.compile(
     r'|subject_selection_promise_'
     r'|script_grew_\d+pct_since_its_first_complete_draft'
     r'|key_lines_on_unconfirmed_claims_need_their_wording_answered)')
-PLANNING_RULES_ADDED = ((2, NEW_PLANNING_RULES), (3, PLANNING_RULES_V3), (4, PLANNING_RULES_V4), (5, PLANNING_RULES_V5))
+# The creative pass (PLANNING_RULES 6, 2026-11-26): the chosen subject states its own size and a length the user
+# asked for is weighed against it; the opening is chosen among several by fresh readers; where the picture plan or the
+# mix departs from the measured habits of the film's models, the departure has its reason. Accountable answers only:
+# none of them is a score or a threshold. Older directions see them as advisories.
+PLANNING_RULES_V6 = re.compile(
+    r'(subject_candidate_\w+?_runtime_needs_its_natural_size'
+    r'|subject_natural_size_'
+    r'|opening_contest_'
+    r'|craft_choice_)')
+PLANNING_RULES_ADDED = ((2, NEW_PLANNING_RULES), (3, PLANNING_RULES_V3), (4, PLANNING_RULES_V4), (5, PLANNING_RULES_V5),
+                        (6, PLANNING_RULES_V6))
 
 
 def planning_rules_of(rd, video):
@@ -5521,6 +5679,16 @@ def migrated_rule(issue, migration, chosen_treatment=None, chosen_candidate=None
             return False
         return bool(new_subject or sec(prefix=('subject.selection',))) if s.startswith('subject_selection_') \
             else remade('script')
+    # the creative pass (6) reaches an older direction whose subject was chosen again (its own size), whose script
+    # was sent back to work (its opening), or whose pictures or sound were made again (their craft choices)
+    if PLANNING_RULES_V6.match(s):
+        if int((migration or {}).get('to') or 0) < 6:
+            return False
+        if s.startswith('subject_'):
+            return bool(new_subject or sec(prefix=('subject.selection', 'subject.chosen')))
+        if s.startswith('opening_contest_'):
+            return remade('script')
+        return remade('shot-plan', 'stills', 'music', 'edit')
     # the storytelling rules (3) reach what a revision of an older direction touched
     if int((migration or {}).get('to') or 0) >= 3:
         m3 = re.match(r'treatment_(\w+?)_(?:needs_movements|never_marks_where_its_promise_is_delivered)', s)
@@ -6770,6 +6938,215 @@ def opening_facts(rd, video, lines, pace):
     return out, said
 
 
+# ---------------------------------------------------------------- the run sheet: the film on one page
+# The audit of 2026-11-26 found a slow middle of three and a half minutes that fourteen checks and thirteen reads had
+# passed: each looked at one thing, none at the film's course. The run sheet puts that course on one page, from what
+# the plan already holds: for every beat its time, how much the ear has to catch, what the viewer is waiting for, what
+# the beat gives, how many pictures carry it and what is heard. Under it, the few places worth a look. Facts only:
+# nothing is scored, no length of a stretch is right or wrong, and a quiet passage can be exactly what the film needs.
+def run_sheet_facts(rd, video):
+    """{basis, rows, look_at, totals} for one video; empty rows until a script and a beat map exist. Times are the
+    recorded narration's (with the edit's holds) once every line is measured, else a forecast at the planning pace."""
+    n = int(video)
+    vd = video_dir(rd, n)
+    lock = read_json(vd / 'length-lock.json')
+    script = read_json(vd / 'script.json')
+    lines = [l for l in script.get('lines') or [] if isinstance(l, dict)]
+    beats = [b for b in read_json(vd / 'beat-map.json').get('beats') or [] if isinstance(b, dict)]
+    out = {'basis': None, 'rows': [], 'look_at': [], 'totals': {}}
+    if not lines or not beats:
+        return out
+    ids = [str(l.get('id') or f'L{i + 1:03d}') for i, l in enumerate(lines)]
+    lang = str(script.get('language') or lock.get('language') or 'en')
+    pace = float(script.get('pace_wpm') or lock.get('pace_wpm') or 0) or 150.0
+    marks = edit_landmarks(rd, n)
+    measured = all((marks.get(i) or {}).get('start') is not None for i in ids)
+    if measured:
+        clock = {i: (float(marks[i]['start']), float(marks[i]['end'])) for i in ids}
+        held = bool(read_json(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json').get('holds'))
+        out['basis'] = 'the recorded narration' + (' with the edit\'s holds' if held else '')
+    else:
+        clock = line_clock(lines, pace)
+        out['basis'] = f'the planning pace ({pace:g} wpm), without holds: a forecast'
+    subj = read_json(vd / 'direction.json').get('subject')
+    vals = {str(v.get('id')): v for v in (subj.get('value_to_carry') if isinstance(subj, dict) else None) or []
+            if isinstance(v, dict)}
+    seen_names, names_by_line = set(), dict(script_names(lines, lang))
+    shots = [s for s in read_json(rd / '60-visuals' / f'video-{n:02d}' / 'shot-plan.json').get('shots') or []
+             if isinstance(s, dict)]
+    tracks = [t for t in read_json(rd / '70-edit' / f'video-{n:02d}' / 'timeline.json').get('audio_tracks') or []
+              if isinstance(t, dict) and t.get('kind') != 'narration' and t.get('start_s') is not None
+              and t.get('end_s') is not None] if measured else []
+    spans = []
+    for b in beats:
+        try:
+            mine = ids[int(b['line_start']) - 1:int(b['line_end'])]
+        except (KeyError, TypeError, ValueError):
+            mine = []
+        spans.append(mine)
+    rows = []
+    for k, (b, mine) in enumerate(zip(beats, spans)):
+        if not mine:
+            continue
+        nxt = next((s for s in spans[k + 1:] if s), None)
+        a, z = clock[mine[0]][0], (clock[nxt[0]][0] if nxt else clock[mine[-1]][1])
+        text = ' '.join(strip_tags(str(lines[ids.index(i)].get('text') or '')) for i in mine)
+        new = []
+        for i in mine:
+            for nm in names_by_line.get(i) or []:
+                if nm.lower() not in seen_names:
+                    seen_names.add(nm.lower())
+                    new.append(nm)
+        nums = len(NUMBER_WORDS.findall(text)) if lang.lower().startswith('en') else len(re.findall(r'\d[\d,.]*', text))
+        carried = [str(r).strip() for r in b.get('carries') or [] if str(r).strip() in vals]
+        km = str(b.get('key_moment')).strip() if is_key_moment(b) else None
+        gives = ([f'KEY MOMENT: {km}'] if km else []) + [str(vals[r].get('what') or r) for r in carried]
+        bid = str(b.get('id'))
+        mine_shots = [s for s in shots if str(s.get('beat_id')) == bid]
+        words = sum(count_words(lines[ids.index(i)].get('text', '')) for i in mine)
+        rows.append({'beat': bid, 'from_s': round(a, 1), 'to_s': round(z, 1), 'seconds': round(z - a, 1),
+                     'lines': f'{mine[0]}-{mine[-1]}', 'words': words,
+                     'words_per_min': round(words / ((z - a) / 60)) if z - a > 1 else None,
+                     'new_names': new, 'numbers': nums,
+                     'waits_for': str(b.get('viewer_question') or '').strip() or None,
+                     'gives': '; '.join(gives) or None, 'key_moment': km, 'carries': carried,
+                     'job': str(b.get('narrative_job') or '').strip()[:140] or None,
+                     'pictures': ({'planned': len(mine_shots),
+                                   'seen_before': sum(1 for s in mine_shots if s.get('reuses'))} if shots else None),
+                     'sound': (sorted({str(t.get('kind') or 'sound') for t in tracks
+                                       if float(t['start_s']) < z and float(t['end_s']) > a}) if measured and tracks
+                               else None),
+                     'sound_planned': str(b.get('sound_direction') or '').strip()[:100] or None})
+    out['rows'] = rows
+    if not rows:
+        return out
+    total = rows[-1]['to_s'] - rows[0]['from_s']
+    out['totals'] = {'beats': len(rows), 'seconds': round(total, 1),
+                     'key_moments': sum(1 for r in rows if r['key_moment']),
+                     'values_carried': len({v for r in rows for v in r['carries']}),
+                     'pictures_planned': sum(r['pictures']['planned'] for r in rows) if shots else None,
+                     'pictures_per_min': (round(sum(r['pictures']['planned'] for r in rows) / (total / 60), 1)
+                                          if shots and total > 0 else None)}
+    look = out['look_at']
+
+    def span_words(first, last):
+        return (f'{_mmss(first["from_s"])}-{_mmss(last["to_s"])} ({_mmss(last["to_s"] - first["from_s"])}, '
+                + (first['beat'] if first is last else f'{first["beat"]} to {last["beat"]}') + ')')
+    # 1. the longest stretch in which nothing is marked as a turn, a payoff or a researched value
+    if any(r['key_moment'] or r['carries'] for r in rows):
+        best, cur = None, []
+        for r in rows + [None]:
+            if r is not None and not (r['key_moment'] or r['carries']):
+                cur.append(r)
+                continue
+            if cur and (best is None or cur[-1]['to_s'] - cur[0]['from_s'] > best[-1]['to_s'] - best[0]['from_s']):
+                best = cur
+            cur = []
+        if best:
+            look.append('run sheet: the longest stretch with no key moment and no researched value carried is '
+                        + span_words(best[0], best[-1]) + ': what does a viewer get there that they did not have '
+                        'before, and would they miss it if it were gone?')
+    # 2. what the viewer is waiting for
+    noq = [r['beat'] for r in rows if not r['waits_for']]
+    if noq and len(noq) == len(rows):
+        look.append('run sheet: no beat says what the viewer is waiting for (beat map viewer_question): what do they '
+                    'want to know or see next at each point, and when do they get it?')
+    elif noq:
+        look.append('run sheet: no viewer question for ' + ', '.join(noq[:12]) + (' and more' if len(noq) > 12 else '')
+                    + ': what does the viewer want to know or see next there?')
+    run, longest = [], []
+    for r in rows + [None]:
+        if r is not None and r['waits_for'] and run and _same_words(r['waits_for']) == _same_words(run[-1]['waits_for']):
+            run.append(r)
+            continue
+        if len(run) > 1 and (not longest or run[-1]['to_s'] - run[0]['from_s'] > longest[-1]['to_s'] - longest[0]['from_s']):
+            longest = run
+        run = [r] if r is not None and r['waits_for'] else []
+    if longest:
+        look.append('run sheet: one question is kept for ' + span_words(longest[0], longest[-1])
+                    + f' ("{longest[0]["waits_for"][:90]}"): is it still alive at the end of that stretch, or has the '
+                    'viewer stopped asking?')
+    # 3. where the ear has most to catch
+    def load(r):
+        return (r['numbers'] + len(r['new_names'])) / max(r['seconds'] / 60, 0.25)
+    dense = [r for r in sorted(rows, key=load, reverse=True) if r['numbers'] + len(r['new_names']) > 0][:2]
+    if dense:
+        look.append('run sheet: most for the ear to catch in ' + '; '.join(
+            f'{r["beat"]} ({r["numbers"]} number(s), {len(r["new_names"])} new name(s) in {_mmss(r["seconds"])})'
+            for r in dense) + ': does the picture carry part of it, and does each number matter to the viewer?')
+    # 4. where the picture stands longest, and where nothing new is shown
+    if shots:
+        none = [r['beat'] for r in rows if not r['pictures']['planned']]
+        if none:
+            look.append('run sheet: no picture planned for ' + ', '.join(none))
+        with_p = [r for r in rows if r['pictures']['planned']]
+        if with_p:
+            slow = max(with_p, key=lambda r: r['seconds'] / r['pictures']['planned'])
+            look.append(f'run sheet: the picture stands longest in {slow["beat"]}: {slow["pictures"]["planned"]} '
+                        f'picture(s) over {_mmss(slow["seconds"])} (about '
+                        f'{round(slow["seconds"] / slow["pictures"]["planned"])} s each): what changes on screen while '
+                        'the words go on?')
+        stale = [r['beat'] for r in with_p if r['pictures']['seen_before'] == r['pictures']['planned']]
+        if stale:
+            look.append('run sheet: only pictures seen before in ' + ', '.join(stale)
+                        + ': is that a return the viewer will feel, or a film that has run out of pictures?')
+    # 5. key moments with nothing to hear but the voice (known once the timeline exists)
+    if measured and tracks:
+        bare = [r['beat'] for r in rows if r['key_moment'] and not r['sound']]
+        if bare:
+            look.append('run sheet: no music, ambience or effect over the key moment(s) ' + ', '.join(bare)
+                        + ': silence chosen, or sound forgotten?')
+    return out
+
+
+def run_sheet_markdown(facts, title=''):
+    """The run sheet as a page a person reads in a minute."""
+    def cell(s):
+        return str(s if s not in (None, '') else '').replace('|', '/').replace('\n', ' ')
+    head = ('| beat | time | length | words/min | new names | numbers | the viewer waits for | the beat gives '
+            '| pictures | sound |\n|---|---|---|---|---|---|---|---|---|---|\n')
+    body = ''
+    for r in facts.get('rows') or []:
+        pic = r.get('pictures')
+        pics = '' if pic is None else (f'{pic["planned"]}' + (f' ({pic["seen_before"]} seen before)' if pic['seen_before'] else ''))
+        snd = ', '.join(r['sound']) if r.get('sound') else ('none' if r.get('sound') == [] else
+                                                              (f'planned: {r["sound_planned"]}' if r.get('sound_planned') else ''))
+        body += ('| ' + ' | '.join(cell(x) for x in (
+            r['beat'], f'{_mmss(r["from_s"])}-{_mmss(r["to_s"])}', _mmss(r['seconds']), r.get('words_per_min'),
+            ', '.join(r['new_names'][:6]) + (f' +{len(r["new_names"]) - 6}' if len(r['new_names']) > 6 else ''),
+            r['numbers'] or '', r.get('waits_for'), r.get('gives') or (f'({r["job"]})' if r.get('job') else ''),
+            pics, snd)) + ' |\n')
+    t = facts.get('totals') or {}
+    return (f'# Run sheet{": " + title if title else ""}\n\nTimes: {facts.get("basis")}. '
+            f'{t.get("beats")} beats, {_mmss(t.get("seconds") or 0)}, {t.get("key_moments")} key moment(s)'
+            + (f', {t.get("pictures_planned")} pictures planned ({t.get("pictures_per_min")} a minute)'
+               if t.get('pictures_planned') is not None else '') + '.\n\n' + head + body
+            + '\n## Places to look (facts, never faults)\n\n'
+            + ('\n'.join('- ' + x.replace('run sheet: ', '', 1) for x in facts.get('look_at') or []) or '- none') + '\n')
+
+
+def cmd_run_sheet(args):
+    """The film on one page (run_sheet_facts). Reads only; --out FILE.md also writes the page there."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    facts = run_sheet_facts(rd, n)
+    if not facts['rows']:
+        error('No run sheet yet: it is read from the script and the beat map.')
+    vd = video_dir(rd, n)
+    title = read_json(vd / 'blueprint.json').get('title') or \
+        selection_promise(read_json(vd / 'direction.json')).get('working_title') or ''
+    page = run_sheet_markdown(facts, str(title))
+    out = Path(args.out).expanduser().resolve() if getattr(args, 'out', None) else None
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(page, encoding='utf-8')
+    emit({'ok': True, 'video': n, 'basis': facts['basis'], 'totals': facts['totals'], 'look_at': facts['look_at'],
+          'rows': facts['rows'], 'page': str(out) if out else None, **({} if out else {'page_text': page}),
+          'reading': 'Read it as an editor reads a cut list: follow what the viewer is waiting for down the page, and '
+                     'what each beat gives them. The places to look are facts, never faults: a long quiet stretch or '
+                     'a dense one can be exactly right. What you change, you change for the viewer, not for the sheet.'})
+
+
 def claim_wording_path(vd):
     return vd / 'claim-wording.json'
 
@@ -7031,16 +7408,23 @@ def plan_facts(rd, video):
     est = real if real is not None else (forecast if pace else None)
     if est is not None and lines and {'real_forecast_outside_export_tolerance',
                                       'script_forecast_misses_locked_length_by_over_8pct'} & set(issues):
+        mine = lock.get('mode') == 'story' and not media_present(rd, video, 'narration')
+        relock = ('re-lock to it (length --mode story --minutes N --revise "why"): the story sets this length and '
+                  'nothing is recorded yet, so that is yours to do')
         length_conflict = {
             'story_runs_s': est, 'locked_s': target, 'difference_s': round(est - target, 1),
             'what_to_do_first': (
-                'The script as written is the story\'s own size. Take that size to the user before adding anything: a '
-                'shorter length (length --revise --user-approved) is the first answer. Material is added only when the '
-                'film lacks something the viewer needs, which the direction names; never to reach a length.'
+                'The script as written is the story\'s own size. '
+                + (f'Before adding anything, {relock}. ' if mine else
+                   'Take that size to the user before adding anything: a shorter length (length --revise '
+                   '--user-approved) is the first answer. ')
+                + 'Material is added only when the film lacks something the viewer needs, which the direction names; '
+                  'never to reach a length.'
                 if est < target else
                 'The script runs longer than the lock. Cut what a listener would drift through first (the boredom '
-                'pass). If what is left still runs long, the longer length is the user\'s decision (length --revise '
-                '--user-approved); a strong passage is never cut only to fit.')}
+                'pass). If what is left still runs long, '
+                + (f'{relock}' if mine else 'the longer length is the user\'s decision (length --revise --user-approved)')
+                + '; a strong passage is never cut only to fit.')}
     script_size, grew = script_size_facts(vd, words)
     if grew:
         issues.append(grew)
@@ -7051,6 +7435,10 @@ def plan_facts(rd, video):
     opening, opening_said = opening_facts(rd, video, lines, pace)
     if opening_said:
         warnings.append(opening_said)
+    # the opening was chosen among several by fresh readers, or is the only one possible (planning rules 6)
+    contest = opening_state(rd, video, lines)
+    issues += contest['issues']
+    warnings += contest['warnings']
     # Held silence never stands in for story, and never makes the length. The content is the narration with the voice's
     # own gaps and its delivery tags; the silence is what the edit holds add plus what pause tags perform. When the
     # content alone falls short of the window and the silence is what reaches it, the length is being padded: blocked.
@@ -7168,8 +7556,14 @@ def plan_facts(rd, video):
                         "pace_wpm to it so one number is in use")
     if not review.exists():
         issues.append('editorial_review_missing')
+    # The film on one page: the few places worth a look before a reader, a voice or a picture is paid for (facts,
+    # never faults; `run-sheet` prints the whole page)
+    sheet = run_sheet_facts(rd, video) if lines else {'basis': None, 'look_at': [], 'totals': {}}
+    warnings += sheet['look_at']
     older_plan_advisory(rd, video, issues, warnings)
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'script_lines': len(lines),
+            'run_sheet': {'basis': sheet['basis'], 'totals': sheet['totals'], 'look_at': sheet['look_at'],
+                          'whole_page': 'run-sheet --run RUN --video NN'},
             'words': words, 'narration_pace_wpm': pace,
             'pace_sources': {'references_wpm': lock.get('pace_wpm'), 'references_overall_wpm': pp.get('overall_wpm'),
                              'script_wpm': script.get('pace_wpm'), 'voice_measured_wpm': measured.get('wpm'),
@@ -7189,6 +7583,8 @@ def plan_facts(rd, video):
                          'answers_needed': script_review.get('answers_needed') or {},
                          # when the reader knew what the video offers, beside the title's promise and the references
                          'opening': opening or None,
+                         # the opening contest: who would keep watching which opening, and which was chosen
+                         'opening_contest': contest['facts'] or None,
                          # key lines resting on claims the research did not confirm, and which still wait for an answer
                          'claim_wording': cw},
             'script_size': script_size, 'length_conflict': length_conflict,
@@ -12496,6 +12892,10 @@ def cmd_direction_lock(args):
     df = direction_facts(rd, n)
     if df['issues']:
         error('The creative direction is not complete yet.', df['issues'])
+    if not read_json(vd / 'length-lock.json'):
+        error('Lock the length before the direction: the story sets it (length --mode story takes the chosen '
+              'treatment\'s own size), or the user\'s own choice does (length --mode standard, or own).',
+              {'story_size': df.get('story_size')})
     lockp = vd / 'direction-lock.json'
     prev = read_json(lockp)
     if prev and prev.get('direction_sha256') == df['direction_sha256']:
@@ -12696,7 +13096,8 @@ Think about:
    rewards you, and a slow, quiet passage can be exactly right: say so. Write this in "promise". Note there too the
    first line by which you knew what this video was going to give you ("clear_at"): the point where you could have
    told a friend what it is and why to watch it.
-3. Your gut: would you keep watching, from 1 to 10, and why? (a viewer's gut, not a quality score)
+3. Would you have watched to the end? If not: the line where you would have stopped, and what would have kept you.
+   If so: the weakest stretch you sat through, and what carried you past it. (What you would do, not a score.)
 4. Where your attention dropped, and why: facts with no consequence for anyone, the same point made again, a list
    read aloud, a sentence pattern repeating, textbook register, explaining what you had already felt, exposition
    before you cared, background you were given before you knew why it mattered. Roughly how long each stretch felt.
@@ -12747,7 +13148,8 @@ Do not invent facts. If a fix needs a new fact, write "needs a sourced detail".
 Write your answer as JSON, and nothing else, to: {OUT}
 {{
   "reviewer": "fresh cold reader",
-  "verdict": {{"promise": "...", "delivered": "...", "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
+  "verdict": {{"promise": "...", "delivered": "...", "watched_to_end": "yes | no",
+              "would_stop_at": "<the line id where you would have stopped, or none>", "why": "..."}},
   "promise": {{"promised": "what the opening made you want, in your words",
               "clear_at": "the first line by which you knew what this video would give you, or never",
               "first_delivered": "the line where you first got it, or never",
@@ -12777,18 +13179,18 @@ short sample moments. The labels are
 random. You get nothing else, on purpose: read nothing else and change no file except the one you are asked to write.
 
 The video: {PREMISE}
-About {MINUTES} minutes, narrated over illustrated stills.
+{LENGTH}
 
-Judge them as a viewer choosing what to watch for {MINUTES} minutes, not by the best first 30 seconds:
+Judge them as a viewer choosing what to watch {FOR_LONG}, not by the best first 30 seconds:
 1. Which would you most want to watch to the end, and why?
 2. For each: where it would wear thin over a long video; what feels fresh; what feels like a template, or like
    any other video in this genre; whether the voice and the pictures feel like one idea.
-3. Which narrator would you enjoy for {MINUTES} minutes, and which would tire you (too flat, too theatrical,
+3. Which narrator would you enjoy {FOR_LONG}, and which would tire you (too flat, too theatrical,
    too cute, too much like a lecture)?
 4. Anything in a sample that breaks the house rules.
 5. From how each one unfolds: when would you first get what this video promises, what would you get before that,
    and would its middle hold you or leave you waiting? The samples are its best moments; the way it unfolds is the
-   rest of the video.
+   rest of the video.{SIZE_Q}
 
 Findings, the most important first: each names the treatment label, severity "major" (this treatment would not
 hold a long watch, or has a serious flaw) or "minor", the problem, why it matters to a viewer, and a suggestion.
@@ -12801,11 +13203,19 @@ Write your answer as JSON, and nothing else, to: {OUT}
   "reviewer": "fresh reader",
   "would_watch": "<the label you would most want to watch>",
   "why": "...",
-  "per_treatment": {{"A": "...", "B": "..."}},
+  "per_treatment": {{"A": "...", "B": "..."}},{SIZE_JSON}
   "findings": [{{"id": "F1", "severity": "major or minor", "treatment": "<label>", "problem": "...",
                  "viewer_impact": "...", "suggestion": "..."}}]
 }}
 """
+
+# With no length fixed yet (the story sets it), the reader is told so and asked about each treatment's own size.
+TREATMENT_LENGTH_OPEN = ('Narrated over illustrated stills. Its length is not fixed yet: each treatment says below how '
+                         'long it would run, and one that gives you the same in fewer minutes is not the lesser one.')
+TREATMENT_SIZE_QUESTION = ('\n6. Each one\'s own length: does it feel earned by what it would give you, or where would '
+                           'you want it shorter or longer? Write this in "length_feels".')
+TREATMENT_SIZE_JSON = ('\n  "length_feels": {{"A": "earned | too long: where | too short: what is missing", '
+                       '"B": "..."}},')
 
 TREATMENT_REQUEST = """
 ## What was asked for
@@ -12863,6 +13273,8 @@ you feel, on purpose: that comparison is made afterwards, from your account.
    Judge as a first-time viewer who knows nothing of the subject beyond this video, and who may be watching in a
    language that is not their first: a reason carried only by an idiom, a technical word or a verdict given after the
    fact may not reach them.
+13. Would you have watched to the end? If not: the moment you would have left, and what would have kept you. If so:
+   the weakest stretch you sat through, and what carried you past it. (What you would do, not a score.)
 
 Findings, the most important first, each with "at" as "mm:ss-mm:ss" (a problem that recurs: several, comma-
 separated), severity "major" (a viewer would likely leave, get lost or stop trusting it there) or "minor", the problem, what you think causes it (likely_cause: for
@@ -12876,7 +13288,8 @@ Write your answer as JSON, and nothing else, to: {OUT}
 {{
   "reviewer": "fresh final reviewer",
   "verdict": {{"delivered": "what the video promised early on, in your words, and whether it kept it",
-                "keep_watching_1_10": <your whole number from 1 to 10>, "why": "..."}},
+                "watched_to_end": "yes | no", "would_stop_at": "<mm:ss where you would have left, or none>",
+                "why": "..."}},
   "developments": [{{"at": "mm:ss-mm:ss", "what_happened": "...", "why_it_matters": "... (or: I could not tell)",
                     "would_be_different": "...", "learned_when": "before | at the moment | only afterwards | never",
                     "why_from": "the video | my own knowledge | unclear", "event": "clear | partly | unclear",
@@ -12917,8 +13330,10 @@ def cmd_review_packet(args):
             error('Answer every finding of the previous round first (revised with its lines, kept or disputed with a '
                   'reason), then ask for a fresh read.', {'round': last['_round'], 'open': open_ids})
     rnd = recs[-1][0]['_round'] + 1 if recs else 1
-    lock = read_json(vd / 'length-lock.json', required=True)
-    minutes = round(lock['target_length_s'] / 60)
+    # The treatments are compared before a length exists when the story sets it (length --mode story): each then shows
+    # its own size, and the reader says whether that length feels earned.
+    lock = read_json(vd / 'length-lock.json', required=kind != 'treatment')
+    minutes = round(lock['target_length_s'] / 60) if lock else None
     blue = read_json(vd / 'blueprint.json')
     # the title a reader "clicked": the blueprint's, else the working title chosen with the subject (selection.promise)
     title = blue.get('title') or (blue.get('title_options') or [None])[0] or \
@@ -12937,6 +13352,12 @@ def cmd_review_packet(args):
     if kind == 'script':
         if not read_json(vd / 'direction-lock.json'):
             error('Lock the creative direction first (direction-lock): the script is written from it, and read after it.')
+        if planning_rules_of(rd, n) >= 6:
+            contest = opening_state(rd, n)
+            if contest['issues']:
+                error('The opening is chosen among several by fresh readers before the whole script is read '
+                      '(opening.json, opening-packet, opening-record, then the decision), or opening.json says why '
+                      'only one opening is possible.', contest['issues'])
         script = read_json(vd / 'script.json', required=True)
         lines = script.get('lines') or []
         snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
@@ -12979,7 +13400,13 @@ def cmd_review_packet(args):
         sp = selection_promise(d)
         premise = str(blue.get('audience_promise') or '').strip() or ': '.join(
             x for x in (str(sp.get('working_title') or '').strip(), str(sp.get('viewer_expects') or '').strip()) if x)
-        text = _fill(TREATMENT_BRIEF, K=len(trs), PREMISE=premise or '(see the samples)', MINUTES=minutes,
+        open_length = minutes is None
+        text = _fill(TREATMENT_BRIEF, K=len(trs), PREMISE=premise or '(see the samples)',
+                     LENGTH=TREATMENT_LENGTH_OPEN if open_length else
+                     f'About {minutes} minutes, narrated over illustrated stills.',
+                     FOR_LONG='for as long as it runs' if open_length else f'for {minutes} minutes',
+                     SIZE_Q=TREATMENT_SIZE_QUESTION if open_length else '',
+                     SIZE_JSON=TREATMENT_SIZE_JSON if open_length else '',
                      HOUSE_RULES=HOUSE_RULES, OUT=out_path)
         # An exact topic or story: the reader also says whether each treatment is still a video about what was asked
         # (word overlap can't tell; a fresh reader can). Its "partly" or "no" becomes a finding the director answers.
@@ -13003,13 +13430,15 @@ def cmd_review_packet(args):
             # director's marks of where the promise is delivered: the reader judges that blind
             mv = treatment_movements(t)
             if mv:
-                text += '\n### How it unfolds\n' + ''.join(
+                whole = f' (about {sum(m["minutes"] for m in mv):g} min in all)' if open_length else ''
+                text += f'\n### How it unfolds{whole}\n' + ''.join(
                     f'- about {m["minutes"]:g} min: {m["what"]}\n' for m in mv)
             for m in SAMPLE_MOMENTS:
                 s = sample_of(t.get('samples'), m)
                 text += (f'\n### {sample_label(t.get("samples"), m)}\nWhat you see: {s.get("picture")}\n'
                          f'What you hear: {strip_tags(s.get("narration") or "")}\n')
-        meta.update({'subject_sha256': subject, 'labels': labels, **({'scope_request': request} if request else {})})
+        meta.update({'subject_sha256': subject, 'labels': labels, 'length_open': open_length,
+                     **({'scope_request': request} if request else {})})
     else:
         if not args.file:
             error('The final review reads a real export: give --file export.mp4.')
@@ -13156,6 +13585,14 @@ def cmd_review_read(args):
         error('The packet is gone (the temp folder was cleared): run review-packet again.', str(packet))
     if findings.exists() and not args.again:
         error('This round already has findings: review-record them (or --again to read afresh).', str(findings))
+    secs = run_fresh_reader(packet, iso, findings, args.timeout)
+    emit({'ok': True, 'kind': kind, 'round': rnd, 'findings_file': str(findings),
+          'seconds': secs, 'next': f'review-record --kind {kind}'})
+
+
+def run_fresh_reader(packet, iso, findings, timeout):
+    """One fresh reader as its own confined process (reader_command), started in the packet's isolated folder. Leaves
+    its output and the record of how it was confined beside the packet; returns the seconds it took."""
     cmd = reader_command(packet)
     if not cmd:
         error('No claude command found: spawn ONE agent of type static-cold-reader with the prompt "Read only '
@@ -13163,18 +13600,451 @@ def cmd_review_read(args):
     started = time.time()
     try:
         proc = subprocess.run(cmd, cwd=str(iso), capture_output=True, text=True, encoding='utf-8', errors='replace',
-                              timeout=args.timeout, stdin=subprocess.DEVNULL)
+                              timeout=timeout, stdin=subprocess.DEVNULL)
     except subprocess.TimeoutExpired:
-        error(f'The reader did not finish within {args.timeout} s.', str(iso))
+        error(f'The reader did not finish within {timeout} s.', str(iso))
     (iso / 'reader-output.txt').write_text((proc.stdout or '') + '\n' + (proc.stderr or ''), encoding='utf-8')
     if proc.returncode != 0 or not findings.is_file():
         error('The reader did not write its findings.', {'exit': proc.returncode,
                                                           'output_tail': ((proc.stdout or '') + (proc.stderr or ''))[-600:]})
+    secs = round(time.time() - started, 1)
     write_json(iso / 'review-read.json', {'route': 'review-read', 'confined_to': str(iso),
                                           'flags': [x for x in cmd[1:] if str(x).startswith('-')],
-                                          'seconds': round(time.time() - started, 1), 'at': now()})
-    emit({'ok': True, 'kind': kind, 'round': rnd, 'findings_file': str(findings),
-          'seconds': round(time.time() - started, 1), 'next': f'review-record --kind {kind}'})
+                                          'seconds': secs, 'at': now()})
+    return secs
+
+
+# ---------------------------------------------------------------- the opening contest (planning rules 6)
+# The audit of 2026-11-26: every other work studied was inside its subject within twelve seconds; the film's own
+# opening was the first one written, and nobody had compared it with another. Now two to four openings are written
+# from the same material and put, blind, in front of fresh readers, who say which they would keep watching and what
+# each makes them want; the titles the film would sit beside are shown with them. The readers' accounts are evidence:
+# the director decides and says why. No score and no count of votes decides anything.
+OPENING_STANCES = (
+    'You have never looked into this subject. You are browsing for something to watch tonight.',
+    'You often watch videos of this kind, and you have seen the well-known ones on this subject.',
+    'You clicked half by accident while doing something else, and you will leave at the first dull moment.')
+OPENING_KEPT_LOOK = 0.5    # under this share of the chosen opening's words in the script's first lines: a place to look
+
+OPENING_BRIEF = """# First impressions (blind)
+
+{STANCE}
+
+Nothing below is finished: these are plans on paper for a video narrated over illustrated stills. You get nothing
+else, on purpose: read nothing else and change no file except the one you are asked to write. Answer as you would
+act, not as a critic would write.
+{SHELF}
+## The opening
+
+Below are {K} ways the SAME video could begin: about its first minute, as the words you would hear and what you would
+see. Everything after it would be the same video. The labels are random.
+
+For each one:
+- what it makes you want to know or see next, in your own words ("nothing" is an answer);
+- where, if anywhere, your attention would slip, and why;
+- what you now think the video is, and what it will give you;
+- whether it sounds like every other video of its kind, or like this one only.
+
+Then: which one you would keep watching, and why; and what in the others you would not want to lose.
+
+{HOUSE_RULES} List anything that breaks them in "flags".
+
+Write your answer as JSON, and nothing else, to: {OUT}
+{{
+  "reviewer": "fresh reader",{SHELF_JSON}
+  "openings": {{"A": {{"wants_to_know": "...", "slips_at": "... (or: nowhere)", "thinks_it_is": "...",
+                      "like_every_other": "yes | partly | no, and why"}},
+               "B": {{"wants_to_know": "...", "slips_at": "...", "thinks_it_is": "...", "like_every_other": "..."}}}},
+  "keep_watching": "<the label you would keep watching>",
+  "why": "...",
+  "keep_from_others": "...",
+  "flags": []
+}}
+"""
+
+OPENING_SHELF = """
+## The shelf
+
+These titles would sit side by side in a list of videos, each with what its small picture shows where that is known.
+- For every entry: in a few words, what you would expect to get from it.
+- Which would you click first, second and third, and what made you?
+- Any you would never click, and why.
+
+{ENTRIES}
+"""
+
+OPENING_SHELF_JSON = """
+  "shelf": {{"expect": {{"1": "...", "2": "..."}}, "would_click": ["<entry numbers, first choice first>"],
+            "why": "...", "never": [{{"entry": "<number>", "why": "..."}}]}},"""
+
+OPENING_SHAPE = ('{"candidates": [{"id": "O1", "way_in": "what this opening starts from, and why", "narration": "about '
+                 'the first minute, as it would be spoken", "picture": "what is on screen through it"}, ... two to '
+                 'four], "shelf": {"ours": [{"id": "P1", "title": "...", "thumbnail": "what the small picture shows"}], '
+                 '"others": ["titles this film would sit beside"]}, "decision": {"opening": "O2", "why": "...", '
+                 '"readers": "what the readers said and what was done with it", "taken_from_others": "...", '
+                 '"package": "P1"}}  (or, when only one opening is possible: {"single_opening_why": "..."})')
+
+
+def opening_path(vd):
+    return vd / 'opening.json'
+
+
+def opening_candidates(doc):
+    return [c for c in (doc or {}).get('candidates') or [] if isinstance(c, dict)]
+
+
+def opening_sha(doc):
+    """The openings as a reader saw them: their words and pictures. A read counts for exactly these."""
+    return canonical_sha([{k: c.get(k) for k in ('id', 'narration', 'picture')} for c in opening_candidates(doc)])
+
+
+def opening_shelf(doc, direction):
+    """The shelf of the opening contest: our own packagings (opening.json shelf.ours [{id, title, thumbnail}], else the
+    working promise chosen with the subject) and the titles they would sit beside (shelf.others, else the titles the
+    outward look found: selection.coverage.exists[].title). ([ours], [others])."""
+    sh = doc.get('shelf') if isinstance((doc or {}).get('shelf'), dict) else {}
+
+    def entry(x):
+        if isinstance(x, dict):
+            return {'title': str(x.get('title') or '').strip(),
+                    'thumbnail': str(x.get('thumbnail') or x.get('thumbnail_idea') or '').strip()}
+        return {'title': str(x or '').strip(), 'thumbnail': ''}
+    ours = []
+    for i, x in enumerate(sh.get('ours') or [], 1):
+        e = entry(x)
+        if n_words(e['title']) >= 2:
+            ours.append({'id': str((x.get('id') if isinstance(x, dict) else '') or f'P{i}').strip(), **e})
+    if not ours:
+        sp = selection_promise(direction)
+        if n_words(sp.get('working_title')) >= 2:
+            ours = [{'id': 'P1', 'title': str(sp['working_title']).strip(),
+                     'thumbnail': str(sp.get('thumbnail_idea') or '').strip()}]
+    others = [entry(x) for x in sh.get('others') or []]
+    if not any(n_words(o['title']) >= 2 for o in others):
+        subj = (direction or {}).get('subject')
+        sel = subj.get('selection') if isinstance(subj, dict) and isinstance(subj.get('selection'), dict) else {}
+        cov = sel.get('coverage') if isinstance(sel.get('coverage'), dict) else {}
+        others = [entry({'title': x.get('title')}) for x in cov.get('exists') or [] if isinstance(x, dict)]
+    seen, out = {o['title'].lower() for o in ours}, []
+    for o in others:
+        if n_words(o['title']) >= 2 and o['title'].lower() not in seen:
+            seen.add(o['title'].lower())
+            out.append(o)
+    return ours, out
+
+
+def opening_issues(doc):
+    """The contest's entries (opening.json): two to four openings written from the same material, each as the words
+    heard and what is seen, with the way in it takes. Presence and shape only. (issues, warnings)."""
+    cands = opening_candidates(doc)
+    ids = [str(c.get('id') or '').strip() for c in cands]
+    if not 2 <= len(cands) <= 4 or len(set(ids)) != len(ids) or '' in ids:
+        return ['opening_contest_needs_2_to_4_openings_with_distinct_ids:candidates[{id,way_in,narration,picture}]'], []
+    out, warn = [], []
+    for c in cands:
+        cid = c.get('id')
+        if n_words(strip_tags(c.get('narration') or '')) < MIN_SAMPLE_WORDS:
+            out.append(f'opening_contest_{cid}_narration_under_{MIN_SAMPLE_WORDS}_words')
+        if n_words(c.get('picture')) < MIN_PICTURE_WORDS:
+            out.append(f'opening_contest_{cid}_picture_missing')
+        if n_words(c.get('way_in')) < 3:
+            out.append(f'opening_contest_{cid}_needs_its_way_in:what_this_opening_starts_from_and_why')
+    for i in range(len(cands)):
+        for j in range(i + 1, len(cands)):
+            sim = _jaccard(_content_tokens(cands[i].get('narration') or ''), _content_tokens(cands[j].get('narration') or ''))
+            if sim >= 0.6:
+                warn.append(f'openings {ids[i]} and {ids[j]} share {sim:.0%} of their vocabulary: are they two ways '
+                            'into the film, or one way in reworded?')
+    return out, warn
+
+
+def opening_reads(vd, sha):
+    """The recorded reads of exactly these openings, oldest first."""
+    return [r for r, _a in review_records(vd, 'opening') if r.get('subject_sha256') == sha]
+
+
+def opening_summary(reads, cands, ours):
+    """What the fresh readers said of the openings, side by side, for the director's decision: who would keep watching
+    which, what each opening made them want, where it lost them; and where our own titles stood on the shelf."""
+    per = {str(c.get('id')): [] for c in cands}
+    kept = {}
+    for r in reads:
+        rnd = r.get('_round') or r.get('round')
+        kept.setdefault(str(r.get('keep_watching_id')), []).append(rnd)
+        for cid, v in (r.get('openings') or {}).items():
+            if cid in per and isinstance(v, dict):
+                per[cid].append({'reader': rnd, **{k: v.get(k) for k in ('wants_to_know', 'slips_at', 'thinks_it_is',
+                                                                         'like_every_other')}})
+    shelf = {}
+    for o in ours or []:
+        rows = []
+        for r in reads:
+            sh = r.get('shelf') if isinstance(r.get('shelf'), dict) else {}
+            entries = sh.get('entries') if isinstance(sh.get('entries'), dict) else {}
+            num = next((k for k, e in entries.items() if isinstance(e, dict) and e.get('ours') == o['id']), None)
+            if num is None:
+                continue
+            clicks = [str(x) for x in sh.get('would_click') or []]
+            rows.append({'reader': r.get('_round') or r.get('round'),
+                         'clicked': clicks.index(num) + 1 if num in clicks else None, 'among': len(entries),
+                         'expects': (sh.get('expect') or {}).get(num),
+                         'never': next((x.get('why') for x in sh.get('never') or []
+                                        if isinstance(x, dict) and str(x.get('entry')) == num), None)})
+        if rows:
+            shelf[o['id']] = {'title': o['title'], 'readers': rows}
+    return {'readers': len(reads), 'kept_watching': kept, 'openings': per, 'shelf': shelf}
+
+
+def opening_state(rd, video, lines=None):
+    """Where the opening contest stands (planning rules 6): the entries exist, fresh readers have read exactly these,
+    and the director has decided with reasons; or one opening is the only one possible, and the file says why
+    (single_opening_why). Facts beside it: who would keep watching which, whether the chosen one is a reader's pick,
+    and how much of it the script's first lines still hold. {issues, warnings, facts}."""
+    vd = video_dir(rd, video)
+    doc = read_json(opening_path(vd))
+    out = {'issues': [], 'warnings': [], 'facts': {}}
+    iss, warn = out['issues'], out['warnings']
+    cands = opening_candidates(doc)
+    if not cands and n_words(doc.get('single_opening_why')) >= 2 * MIN_FIELD_WORDS:
+        warn.append('one opening only, no contest: ' + str(doc['single_opening_why']).strip())
+        out['facts'] = {'single_opening': True}
+        return out
+    if not cands:
+        iss.append('opening_contest_missing:write_2_to_4_openings_from_the_same_material_and_let_fresh_readers_choose_'
+                   '(opening.json,_opening-packet),_or_say_why_only_one_opening_is_possible_(single_opening_why)')
+        return out
+    c_iss, c_warn = opening_issues(doc)
+    iss += c_iss
+    warn += c_warn
+    if c_iss:
+        return out
+    reads = opening_reads(vd, opening_sha(doc))
+    if not reads:
+        iss.append('opening_contest_not_read:opening-packet,_a_fresh_reader_for_each_packet,_then_opening-record')
+        return out
+    ours, _others = opening_shelf(doc, read_json(vd / 'direction.json'))
+    summary = opening_summary(reads, cands, ours)
+    ids = [str(c.get('id')) for c in cands]
+    dec = doc.get('decision') if isinstance(doc.get('decision'), dict) else {}
+    chosen = str(dec.get('opening') or '').strip()
+    out['facts'] = {'readers': summary['readers'], 'kept_watching': summary['kept_watching'],
+                    'chosen': chosen or None, 'shelf': summary['shelf'] or None}
+    if chosen not in ids:
+        iss.append('opening_contest_not_decided:opening.json_decision{opening,why,readers}')
+        return out
+    if n_words(dec.get('why')) < MIN_FIELD_WORDS:
+        iss.append('opening_contest_decision_missing_why')
+    if n_words(dec.get('readers')) < MIN_FIELD_WORDS:
+        iss.append('opening_contest_decision_missing_readers:what_the_readers_said_and_what_was_done_with_it')
+    if chosen not in summary['kept_watching']:
+        warn.append(f'opening: the chosen opening {chosen} is not the one any reader would keep watching (they chose '
+                    + ', '.join(sorted(summary['kept_watching'])) + '): the decision says why')
+    if lines:
+        # the script still opens the way that was read? (its first lines, over as many words as the chosen opening)
+        ch = next(c for c in cands if str(c.get('id')) == chosen)
+        want = _content_tokens(ch.get('narration') or '')
+        size, head, got = n_words(strip_tags(ch.get('narration') or '')), [], 0
+        for l in lines:
+            head.append(str(l.get('text') or ''))
+            got += count_words(l.get('text', ''))
+            if got >= size:
+                break
+        share = len(want & _content_tokens(' '.join(head))) / len(want) if want else None
+        out['facts']['script_keeps_chosen_opening'] = round(share, 2) if share is not None else None
+        if share is not None and share < OPENING_KEPT_LOOK:
+            warn.append(f'opening: {share:.0%} of the chosen opening\'s words are in the script\'s first {len(head)} '
+                        'line(s). If the script now opens another way, that opening was never in front of a reader')
+    return out
+
+
+def cmd_opening_packet(args):
+    """The opening contest: one blind packet per fresh reader. Each reader gets the same openings under its own random
+    labels and order, its own stance (a newcomer, a regular of the kind, a distracted click), and the shelf of titles
+    the film would sit beside, ours unmarked among them. Nothing of the plan, the direction or the director's hopes."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    doc = read_json(opening_path(vd))
+    if not opening_candidates(doc):
+        error('No openings to compare yet: write opening.json first.', {'file': str(opening_path(vd)),
+                                                                        'shape': OPENING_SHAPE})
+    c_iss, c_warn = opening_issues(doc)
+    if c_iss:
+        error('The openings are not ready to be read.', c_iss)
+    if not read_json(vd / 'direction-lock.json'):
+        error('Lock the creative direction first (direction-lock): the openings are ways into the film that was chosen.')
+    d = read_json(vd / 'direction.json')
+    cands = {str(c['id']): c for c in opening_candidates(doc)}
+    ours, others = opening_shelf(doc, d)
+    sha = opening_sha(doc)
+    readers = max(1, min(int(args.readers or 2), len(OPENING_STANCES)))
+    folder = vd / 'reviews'
+    used = [int(m.group(1)) for p in (folder.glob('*opening-r*.json') if folder.is_dir() else [])
+            for m in [re.search(r'opening-r(\d+)', p.name)] if m]
+    last = max(used, default=0)
+    made = []
+    for k in range(1, readers + 1):
+        rnd = last + k
+
+        def mixed(key, rnd=rnd):
+            return hashlib.sha256(f'{sha}:{rnd}:{key}'.encode('utf-8')).hexdigest()
+        labels = {chr(65 + i): cid for i, cid in enumerate(sorted(cands, key=mixed))}
+        shelf = sorted([{'ours': x['id'], 'title': x['title'], 'thumbnail': x['thumbnail']} for x in ours] +
+                       [{'ours': None, 'title': x['title'], 'thumbnail': x['thumbnail']} for x in others],
+                       key=lambda x: mixed(x['title']))
+        entries = {str(i): x for i, x in enumerate(shelf, 1)} if len(shelf) >= 2 else {}
+        iso = Path(tempfile.gettempdir()) / 'static-studio-reads' / uuid.uuid4().hex[:16]
+        out_path = iso / 'findings.json'
+        shelf_text = OPENING_SHELF.replace('{ENTRIES}', '\n'.join(
+            f'{i}. "{x["title"]}"' + (f' (its picture: {x["thumbnail"]})' if x['thumbnail'] else '')
+            for i, x in entries.items())) if entries else ''
+        text = _fill(OPENING_BRIEF, STANCE=OPENING_STANCES[(k - 1) % len(OPENING_STANCES)], K=len(cands),
+                     HOUSE_RULES=HOUSE_RULES, SHELF_JSON=OPENING_SHELF_JSON if entries else '', OUT=out_path)
+        text = text.replace('{SHELF}', shelf_text)       # titles are the makers' own words: never run through _fill
+        for lab, cid in labels.items():
+            c = cands[cid]
+            text += (f'\n## Opening {lab}\nWhat you hear: {strip_tags(c.get("narration") or "")}\n'
+                     f'What you see: {c.get("picture")}\n')
+        iso.mkdir(parents=True, exist_ok=True)
+        folder.mkdir(parents=True, exist_ok=True)
+        packet = iso / 'packet.md'
+        packet.write_text(text, encoding='utf-8')
+        (folder / f'packet-opening-r{rnd}.md').write_text(text, encoding='utf-8')
+        write_json(folder / f'packet-opening-r{rnd}.json', {
+            'kind': 'opening', 'round': rnd, 'video': n, 'created_at': now(), 'findings_file': str(out_path),
+            'isolated_dir': str(iso), 'brief_version': BRIEF_VERSION, 'subject_sha256': sha, 'labels': labels,
+            'shelf': {i: {'ours': x['ours'], 'title': x['title']} for i, x in entries.items()},
+            'stance': OPENING_STANCES[(k - 1) % len(OPENING_STANCES)], 'packet': str(packet)})
+        made.append({'round': rnd, 'packet': str(packet), 'findings_file': str(out_path)})
+    emit({'ok': True, 'packets': made, 'openings': len(cands), 'shelf_entries': len(ours) + len(others),
+          'warnings': c_warn,
+          'next': 'Give each packet to its own fresh reader: opening-read (each as its own restricted process), or '
+                  'spawn one agent of type static-cold-reader per packet with no other context, its whole prompt: '
+                  '"Read only <packet> and follow it exactly." Never tell a reader which opening you prefer. Then '
+                  'opening-record.'})
+
+
+def cmd_opening_read(args):
+    """Run the fresh reader of every opening packet that has no answer yet, each as its own confined process."""
+    rd, st = run_folder(args)
+    vd = video_dir(rd, int(args.video))
+    folder = vd / 'reviews'
+    done = []
+    for mp in sorted(folder.glob('packet-opening-r*.json') if folder.is_dir() else []):
+        meta = read_json(mp)
+        findings = Path(meta.get('findings_file') or '')
+        if not meta.get('isolated_dir') or (folder / f'opening-r{meta.get("round")}.json').is_file() or findings.is_file():
+            continue
+        packet = Path(meta.get('packet') or Path(meta['isolated_dir']) / 'packet.md')
+        if not packet.is_file():
+            error('A packet is gone (the temp folder was cleared): run opening-packet again.', str(packet))
+        done.append({'round': meta.get('round'),
+                     'seconds': run_fresh_reader(packet, Path(meta['isolated_dir']), findings, args.timeout)})
+    emit({'ok': True, 'read': done, 'next': 'opening-record' if done else
+          'Nothing to read: every packet has its answer (opening-record), or none was made (opening-packet).'})
+
+
+def _opening_label(v, labels):
+    s = str(v or '').strip().upper()
+    if s in labels:
+        return s
+    m = re.search(r'\b([A-Z])\b', s)
+    return m.group(1) if m and m.group(1) in labels else None
+
+
+def _shelf_entry(v, shelf):
+    """A reader's reference to a shelf entry (its number, or its title written out) as the entry's number."""
+    s = str(v or '').strip()
+    num = re.sub(r'\D', '', s)
+    if num in shelf:
+        return num
+    low = s.strip('"\' ').lower()
+    return next((k for k, e in shelf.items() if str(e.get('title') or '').lower() == low), None)
+
+
+def opening_read_problems(raw, meta):
+    """Why a reader's answer does not follow the opening packet's format (empty: it does)."""
+    labels = meta.get('labels') or {}
+    out = []
+    if _opening_label(raw.get('keep_watching'), labels) is None:
+        out.append('"keep_watching" must be one of the packet\'s labels: ' + ', '.join(labels))
+    if n_words(raw.get('why')) < 4:
+        out.append('"why" is not told (why you would keep watching that one)')
+    ops = raw.get('openings') if isinstance(raw.get('openings'), dict) else {}
+    got = {(_opening_label(k, labels) or str(k)): v for k, v in ops.items()}
+    for lab in labels:
+        v = got.get(lab)
+        if not isinstance(v, dict) or n_words(v.get('wants_to_know')) < 1 or n_words(v.get('thinks_it_is')) < 2:
+            out.append(f'openings: {lab} needs "wants_to_know" and "thinks_it_is"')
+    shelf = meta.get('shelf') or {}
+    if shelf:
+        sh = raw.get('shelf') if isinstance(raw.get('shelf'), dict) else {}
+        clicks = sh.get('would_click') if isinstance(sh.get('would_click'), list) else []
+        if not clicks or any(_shelf_entry(x, shelf) is None for x in clicks):
+            out.append('shelf: "would_click" must list entries of the shelf by their numbers, first choice first')
+    return out
+
+
+def cmd_opening_record(args):
+    """Seal what each fresh reader said of the openings (their words are never edited; labels become the openings'
+    own ids), and show the reads side by side. The decision is the director's, written in opening.json."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    folder = vd / 'reviews'
+    doc = read_json(opening_path(vd))
+    recorded, waiting = [], []
+    for mp in sorted(folder.glob('packet-opening-r*.json') if folder.is_dir() else []):
+        meta = read_json(mp)
+        rnd = meta.get('round')
+        if (folder / f'opening-r{rnd}.json').is_file():
+            continue
+        given = bool(args.findings) and int(getattr(args, 'round', 0) or 0) == int(rnd or -1)
+        fpath = Path(args.findings).expanduser() if given else Path(meta.get('findings_file') or '')
+        if not fpath.is_file():
+            waiting.append(rnd)
+            continue
+        raw = read_json(fpath, required=True)
+        problems = opening_read_problems(raw, meta)
+        if problems:
+            error('A reader\'s answer does not follow the packet\'s format. Ask that reader to fix the format; never '
+                  'rewrite its judgement.', {'round': rnd, 'file': str(fpath), 'problems': problems})
+        labels, shelf = meta['labels'], meta.get('shelf') or {}
+        keep = _opening_label(raw.get('keep_watching'), labels)
+        ops = {(_opening_label(k, labels) or str(k)): v for k, v in (raw.get('openings') or {}).items()}
+        sh = raw.get('shelf') if isinstance(raw.get('shelf'), dict) else {}
+        iso_dir = meta.get('isolated_dir')
+        route = read_json(Path(iso_dir) / 'review-read.json') if iso_dir else {}
+        write_json(folder / f'opening-r{rnd}-findings.json', raw)        # the reader's answer as written, kept in the run
+        write_json(folder / f'opening-r{rnd}.json', {
+            'kind': 'opening', 'round': rnd, 'video': n, 'subject_sha256': meta.get('subject_sha256'),
+            'labels': labels, 'stance': meta.get('stance'), 'reviewer': raw.get('reviewer') or 'unstated',
+            'keep_watching': keep, 'keep_watching_id': labels[keep], 'why': raw.get('why'),
+            'keep_from_others': raw.get('keep_from_others'),
+            'openings': {labels[lab]: ops[lab] for lab in labels if isinstance(ops.get(lab), dict)},
+            'shelf': ({'entries': shelf, 'would_click': [_shelf_entry(x, shelf) for x in sh.get('would_click') or []],
+                       'why': sh.get('why'),
+                       'expect': {_shelf_entry(k, shelf) or str(k): v
+                                  for k, v in (sh.get('expect') or {}).items()} if isinstance(sh.get('expect'), dict) else {},
+                       'never': [{'entry': _shelf_entry(x.get('entry'), shelf), 'why': x.get('why')}
+                                 for x in sh.get('never') or [] if isinstance(x, dict)]} if shelf else None),
+            'flags': raw.get('flags') or [], 'findings_from': str(fpath), 'brief_version': meta.get('brief_version'),
+            'reader_route': ('review-read: a process whose file tools were confined to its own folder' if route else
+                             'an agent (static-cold-reader): Read and Write tools only, its packet outside the run; '
+                             'its file access is not confined'),
+            'reader_confined': bool(route), 'recorded_at': now()})
+        recorded.append(rnd)
+    reads = opening_reads(vd, opening_sha(doc))
+    ours, _others = opening_shelf(doc, read_json(vd / 'direction.json'))
+    summary = opening_summary(reads, opening_candidates(doc), ours)
+    flagged = [{'reader': r.get('_round'), 'flags': r.get('flags')} for r in reads if r.get('flags')]
+    emit({'ok': True, 'recorded': recorded, 'waiting_for_a_reader': waiting, 'summary': summary,
+          **({'house_rule_flags': flagged} if flagged else {}),
+          'next': ('Decide in opening.json -> "decision": {"opening": "<id>", "why": "...", "readers": "what the '
+                   'readers said and what was done with it", "taken_from_others": "...", "package": "<our title\'s '
+                   'id>"}. The readers\' accounts are evidence, not a vote: the decision is yours, and it says why. '
+                   'Then write the script from the chosen opening.' if reads else
+                   'No read of the current openings is on record yet.')})
 
 
 AT_RX = r'\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?(\s*,\s*\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?)*'
@@ -13186,7 +14056,10 @@ AT_RX = r'\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?(\s*,\s*\d{1,3}:\d{2}(\s*-\s*\d{1,
 # knowledge. Readers now name the developments that matter most and keep three judgements apart for each (what
 # happened / why it matters, from the video alone / whether it paid off); review-record turns a gap into a finding
 # answered like any other. Not every video needs danger or a twist: the reward is the video's own (10 §4, 06).
-BRIEF_VERSION = 6          # 6 (2026-11-26): the script reader also notes the line by which the video's offer was clear
+BRIEF_VERSION = 7          # 7 (2026-11-26, the creative pass): no 1-10 score; the reader says whether they would
+                           # have watched to the end and where they would have stopped; the treatment reader may
+                           # get no fixed length (the story sets it) and says whether each one's own length is earned.
+                           # 6 (2026-11-26): the script reader also notes the line by which the video's offer was clear
                            # ("clear_at"); the final reviewer gets the sound of the cut as measured facts; wording that
                            # assumed people and a story made neutral.
                            # 3: would_be_different, learned_when; 4 (audit 2026-11-23): the final reader is not told
@@ -13418,6 +14291,46 @@ def waiting_findings(p, taken):
                                    'cause: another order, another frame, a cut, stronger material; or dispute it.'),
                     'derived_from': {'waiting': w}})
     return out
+
+
+def stop_findings(kind, verdict, findings, order, taken):
+    """The reader's own word that they would have stopped watching, as a finding the director answers (brief 7, in
+    place of a 1-10 score): a reader who would have left names where; when none of their own major findings is about
+    that place, the statement is one. A reader who would have watched to the end: nothing."""
+    v = verdict if isinstance(verdict, dict) else {}
+    if not str(v.get('watched_to_end') or '').strip().lower().startswith('no'):
+        return []
+    where = str(v.get('would_stop_at') or '').strip()
+    majors = [f for f in findings or [] if isinstance(f, dict) and f.get('severity') == 'major']
+    k = 1
+    while f'X{k}' in taken:
+        k += 1
+    out = {'id': f'X{k}', 'severity': 'major',
+           'problem': ('The reader would have stopped watching' + (f' at {where}' if where else '')
+                       + f' (their words: "{str(v.get("why") or "").strip()}").'),
+           'likely_cause': 'what would have kept this reader watching is missing at that place',
+           'viewer_impact': 'a viewer who leaves here never reaches what the video builds to',
+           'suggestion': ('Find what makes a viewer leave there (nothing new, nothing at stake for anyone, too much '
+                          'at once, a promise still unmet) and fix that cause; or dispute it with the reason.'),
+           'derived_from': {'verdict': v}}
+    if kind == 'script':
+        mine = [x for x in re.findall(r'L\d+', where) if x in order]
+        if mine and any(set(mine) & set(expand_lines(f.get('lines'), order) or []) for f in majors if f.get('lines')):
+            return []
+        out['lines'] = mine[:1]
+    else:
+        def secs(s):
+            m_, s_ = s.split(':')
+            return int(m_) * 60 + int(s_)
+        t = re.search(r'\d{1,3}:\d{2}', where)
+        out['at'] = t.group(0) if t else '00:00'
+        if t:
+            for f in majors:
+                for a, b in re.findall(r'(\d{1,3}:\d{2})(?:\s*-\s*(\d{1,3}:\d{2}))?', str(f.get('at') or '')):
+                    lo, hi = secs(a), secs(b) if b else secs(a)
+                    if lo - 30 <= secs(t.group(0)) <= hi + 30:
+                        return []
+    return [out]
 
 
 def _finding_text(f, snap, order):
@@ -13736,6 +14649,8 @@ def cmd_review_record(args):
         derived += key_moment_findings(rd, vd, n, kind, devs, order, taken | {f['id'] for f in derived}, spans)
         if kind == 'script' and brief_v >= 5:
             derived += waiting_findings(raw.get('promise'), taken | {f['id'] for f in derived})
+        if brief_v >= 7:
+            derived += stop_findings(kind, raw.get('verdict'), findings, order, taken | {f['id'] for f in derived})
         findings = findings + derived
     if on_req:
         # "partly" or "no" on whether a treatment is still the video that was asked for: the director answers it
@@ -13791,7 +14706,8 @@ def cmd_review_record(args):
            'subject_sha256': meta['subject_sha256'], 'subject_snapshot': meta.get('subject_snapshot'),
            'holds_snapshot': meta.get('holds_snapshot'),
            'labels': meta.get('labels'), 'file': meta.get('file'), 'reviewer': raw.get('reviewer') or 'unstated',
-           'verdict': raw.get('verdict') or {k: raw.get(k) for k in ('would_watch', 'why', 'per_treatment') if k in raw},
+           'verdict': raw.get('verdict') or {k: raw.get(k) for k in ('would_watch', 'why', 'per_treatment',
+                                                                       'length_feels') if k in raw},
            'strongest': raw.get('strongest'), 'findings': findings, 'findings_sha256': canonical_sha(findings),
            'at_normalized': normalized, 'findings_from': str(fpath), 'findings_outside_reader_folder': outside,
            'reader_route': reader_route, 'reader_confined': bool(route), 'answer_rules': ANSWER_RULES,
@@ -14364,7 +15280,9 @@ def cmd_status(args):
     for i in range(1, n+1):
         vd = video_dir(rd, i)
         if not (vd / 'length-lock.json').exists():
-            videos[str(i)] = {'stage': 'not_locked'}
+            videos[str(i)] = ({'stage': 'planning', 'length': 'the story sets it: not locked yet (length --mode story '
+                                                              'again, once a treatment is chosen)'}
+                              if read_json(length_intent_path(vd)).get('mode') == 'story' else {'stage': 'not_locked'})
             continue
         plan = plan_facts(rd, i)
         audio = audio_facts(rd, i)
@@ -14757,7 +15675,9 @@ def main():
     p.add_argument('--refresh', action='store_true', help='the same niche, its members brought up to a revised map')
     p.set_defaults(func=cmd_niche_lock)
     p = sub.add_parser('length'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
-    p.add_argument('--mode', choices=['standard','own'], required=True); p.add_argument('--niche', default='')
+    p.add_argument('--mode', choices=['standard','own','story'], required=True); p.add_argument('--niche', default='')
+    p.add_argument('--why', default='', help='With --mode story: why this length is right when it is outside the '
+                   'subject\'s own size (runtime.natural_minutes)')
     p.add_argument('--story-form', default=''); p.add_argument('--cohort-id', default='')
     p.add_argument('--forms-why', default='', help='A cohort whose references mix story forms: why their lengths compare')
     p.add_argument('--pace-why', default='', help='Why an explicit --pace-wpm fits this narrator, niche and treatment')
@@ -14927,6 +15847,28 @@ def main():
     p.add_argument('--timeout', type=int, default=READER_TIMEOUT_S)
     p.add_argument('--again', action='store_true', help='Read afresh although this round already has findings')
     p.set_defaults(func=cmd_review_read)
+    p = sub.add_parser('run-sheet', help='The film on one page: per beat its time, what the ear has to catch, what '
+                       'the viewer waits for and gets, pictures and sound; and the places to look (reads only)')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--out', default='', help='Also write the page as Markdown to this file')
+    p.set_defaults(func=cmd_run_sheet)
+    p = sub.add_parser('opening-packet', help='The opening contest: one blind packet per fresh reader (2-4 openings '
+                       'written from the same material, and the titles the film would sit beside)')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--readers', type=int, default=2, help='How many fresh readers, 1 to 3: each gets its own packet, '
+                   'order and stance (default 2)')
+    p.set_defaults(func=cmd_opening_packet)
+    p = sub.add_parser('opening-read', help='Run the fresh reader of every unanswered opening packet as its own '
+                       'restricted process')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--timeout', type=int, default=READER_TIMEOUT_S)
+    p.set_defaults(func=cmd_opening_read)
+    p = sub.add_parser('opening-record', help='Seal what each fresh reader said of the openings and show the reads '
+                       'side by side')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--round', type=int, default=0, help='With --findings: the packet this answer file belongs to')
+    p.add_argument('--findings', default='', help='An answer file from elsewhere (default: the one each packet named)')
+    p.set_defaults(func=cmd_opening_record)
     p = sub.add_parser('shot-check', help='The shot plan as a visual argument, plus repetition signals')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--keep', default='', help='Beats changed since the last passing check: why their shots still fit '
