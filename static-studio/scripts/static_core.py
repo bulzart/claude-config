@@ -6351,6 +6351,12 @@ MIN_CRAFT_WORDS = 12          # a craft choice's reason is a sentence, as an ope
 TWO_SIDED = re.compile(r'split[- ]screen|\bdiptych\b', re.I)
 
 
+def shot_draws(s):
+    """True when the shot plan gives this shot a drawing or overlay of its own (diagram_or_overlay). On a still shown
+    before, the viewer then sees something new on a ground they know: a new picture, not the same one again."""
+    return str(s.get('diagram_or_overlay') or 'none').strip().lower() not in ('', 'none', 'false', '0')
+
+
 def model_measures(summary):
     """One measured film (an av-profile summary) as the MODEL_MEASURES it holds."""
     pic = summary.get('picture') if isinstance(summary.get('picture'), dict) else {}
@@ -6446,11 +6452,16 @@ def picture_plan_facts(rd, video):
         return str(s.get('id'))
     use, first_of_beat = {}, {}
     for s, a, d in rows:
-        u = use.setdefault(still_of(s), {'times': 0, 'seconds': 0.0})
+        u = use.setdefault(still_of(s), {'times': 0, 'seconds': 0.0, 'drawn': 0})
         u['times'] += 1
         u['seconds'] += d
+        u['drawn'] += 1 if shot_draws(s) else 0
         first_of_beat.setdefault(str(s.get('beat_id')), s)
-    again = [r for r in rows if r[0].get('reuses')]
+    # A return with a drawing of its own shows something new on a ground the viewer knows (the film of 2026-11-24
+    # used one sheet of paper under 22 different maps and cards): it is counted apart. The same picture again is a
+    # return with nothing new on it.
+    returns = [r for r in rows if r[0].get('reuses')]
+    again = [r for r in returns if not shot_draws(r[0])]
     top = max(use.items(), key=lambda kv: kv[1]['seconds'])
     longest = max(rows, key=lambda r: r[2])
     lengths = sorted(d for _, _, d in rows)
@@ -6459,15 +6470,16 @@ def picture_plan_facts(rd, video):
         prompt = str(s.get('frame_prompt') or s.get('prompt') or '')
         return ('split' in str(s.get('composition') or '').lower() or bool(TWO_SIDED.search(prompt))
                 or ('left half' in prompt.lower() and 'right half' in prompt.lower()))
-    bare = [str(s.get('id')) for s in shots if two_sided(s)
-            and str(s.get('diagram_or_overlay') or 'none').strip().lower() in ('', 'none', 'false', '0')]
+    bare = [str(s.get('id')) for s in shots if two_sided(s) and not shot_draws(s)]
     return {'basis': basis, 'shots': len(rows), 'stills': len(use), 'seconds': round(total, 1),
             'seen_again': {'shots': len(again), 'share_of_shots': round(len(again) / len(rows), 2),
-                           'share_of_time': round(sum(r[2] for r in again) / total, 2)},
+                           'share_of_time': round(sum(r[2] for r in again) / total, 2),
+                           'as_ground_for_a_drawing': len(returns) - len(again)},
             'most_shown': {'still': top[0], 'times': top[1]['times'], 'seconds': round(top[1]['seconds'], 1),
-                           'share_of_time': round(top[1]['seconds'] / total, 2)},
+                           'share_of_time': round(top[1]['seconds'] / total, 2), 'under_a_drawing': top[1]['drawn']},
             'longest': {'shot': str(longest[0].get('id')), 'seconds': round(longest[2], 1), 'from_s': round(longest[1], 1)},
-            'beats_opening_on_a_seen_picture': [b for b, s in first_of_beat.items() if s.get('reuses')],
+            'beats_opening_on_a_seen_picture': [b for b, s in first_of_beat.items()
+                                                if s.get('reuses') and not shot_draws(s)],
             'two_sided_with_nothing_drawn': bare,
             'measures': {'pictures_per_min': (len(rows) - 1) / (total / 60),
                          'picture_stands_s': statistics.median(lengths), 'longest_picture_s': lengths[-1],
@@ -6477,11 +6489,23 @@ def picture_plan_facts(rd, video):
 def picture_plan_words(pf):
     """picture_plan_facts as the one or two sentences a check shows."""
     sa, ms, lg = pf['seen_again'], pf['most_shown'], pf['longest']
+    ground = sa.get('as_ground_for_a_drawing') or 0
+    if sa['shots']:
+        again = (f'; {sa["shots"]} shot(s) show a picture seen before ({sa["share_of_shots"]:.0%} of the shots, '
+                 f'{sa["share_of_time"]:.0%} of the time)'
+                 + (f'; {ground} more return to a still as the ground of a drawing of their own' if ground else ''))
+    elif ground:
+        again = (f'; no picture returns with nothing new on it ({ground} return(s) to a still as the ground of a '
+                 'drawing of its own)')
+    else:
+        again = '; no picture returns'
+    drawn = ms.get('under_a_drawing') or 0
+    under = ('' if not drawn else ', each time under a drawing of its own' if drawn == ms['times']
+             else f', {drawn} of them under a drawing of its own')
     out = [f'pictures: {pf["stills"]} still(s) in {pf["shots"]} shot(s) over {_mmss(pf["seconds"])} on {pf["basis"]}'
-           + (f'; {sa["shots"]} shot(s) show a picture seen before ({sa["share_of_shots"]:.0%} of the shots, '
-              f'{sa["share_of_time"]:.0%} of the time)' if sa['shots'] else '; no picture returns')
+           + again
            + (f'; the still shown most is {ms["still"]}: {ms["times"]} times, {_mmss(ms["seconds"])} in all '
-              f'({ms["share_of_time"]:.0%} of the film)' if ms['times'] > 1 else '')
+              f'({ms["share_of_time"]:.0%} of the film){under}' if ms['times'] > 1 else '')
            + f'; the longest a picture stands is {lg["seconds"]:g} s ({lg["shot"]}, from {_mmss(lg["from_s"])})']
     if pf['beats_opening_on_a_seen_picture']:
         out.append('pictures: ' + ', '.join(pf['beats_opening_on_a_seen_picture'][:12]) + ' open(s) on a picture the '
@@ -6526,6 +6550,11 @@ def models_beside_facts(rd, video, export_file=None, sound=None):
     plan = picture_plan_facts(rd, n)
     before = dict(plan.get('measures') or {})
     basis = {k: 'planned: the shot plan on ' + plan['basis'] for k in before}
+    if 'seen_again_share' in basis:
+        # the plan counts returns with nothing new drawn on them; a finished file is read by its frames, where a
+        # drawing on a known ground can still read as the same picture: the two are not the same count
+        basis['seen_again_share'] = ('planned: returns with nothing new drawn on them (a finished file is read by its '
+                                     'frames, where a drawing on a ground seen before can still count)')
     nar = read_json(rd / '50-audio' / f'video-{n:02d}' / 'delivery.json').get('summary') or {}
     if nar.get('pauses_per_min') is not None:
         before['pauses_per_min'] = nar['pauses_per_min']
@@ -7330,7 +7359,8 @@ def run_sheet_facts(rd, video):
                      'gives': '; '.join(gives) or None, 'key_moment': km, 'carries': carried, 'given_before': again,
                      'job': str(b.get('narrative_job') or '').strip()[:140] or None,
                      'pictures': ({'planned': len(mine_shots),
-                                   'seen_before': sum(1 for s in mine_shots if s.get('reuses'))} if shots else None),
+                                   'seen_before': sum(1 for s in mine_shots
+                                                      if s.get('reuses') and not shot_draws(s))} if shots else None),
                      'sound': (sorted({str(t.get('kind') or 'sound') for t in tracks
                                        if float(t['start_s']) < z and float(t['end_s']) > a}) if measured and tracks
                                else None),

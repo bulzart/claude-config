@@ -525,6 +525,28 @@ class ModelsBesideTests(base.StaticStudioTests):
         self.assertIn('pictures: S3 set(s) two things side by side with nothing drawn on them', said)
         self.assertEqual((res['pictures']['stills'], res['pictures']['most_shown']['still'],
                           res['pictures']['most_shown']['times']), (4, 'S1', 2))
+        self.assertEqual((res['pictures']['seen_again']['as_ground_for_a_drawing'],
+                          res['pictures']['most_shown']['under_a_drawing']), (0, 0))
+        # A return that carries a drawing of its own shows something new on a ground the viewer knows: counted apart,
+        # never as the same picture again (the real film used one sheet of paper under 22 different drawings).
+        shots[3]['diagram_or_overlay'] = 'the map of the depots drawn on it, the second route in red'
+        save(self.run / '60-visuals/video-01/shot-plan.json', {'video': 1, 'shots': shots})
+        res = self.check(expected=None)
+        self.assertEqual(self.crafts(res), [])
+        pic = res['pictures']
+        self.assertEqual((pic['seen_again']['shots'], pic['seen_again']['as_ground_for_a_drawing'],
+                          pic['most_shown']['times'], pic['most_shown']['under_a_drawing'],
+                          pic['beats_opening_on_a_seen_picture']), (0, 1, 2, 1, []))
+        said = ' | '.join(res['warnings'])
+        self.assertIn('; no picture returns with nothing new on it (1 return(s) to a still as the ground of a drawing '
+                      'of its own); the still shown most is S1: 2 times, ', said)
+        self.assertIn('), 1 of them under a drawing of its own; the longest a picture stands', said)
+        self.assertNotIn('open(s) on a picture the viewer has already seen', said)
+        row = {r['measure']: r for r in core.models_beside_facts(self.run, 1)['rows']}['seen_again_share']
+        self.assertEqual(row['before_export'], 0.0)
+        self.assertTrue(row['before_basis'].startswith('planned: returns with nothing new drawn on them'))
+        shots[3].pop('diagram_or_overlay')
+        save(self.run / '60-visuals/video-01/shot-plan.json', {'video': 1, 'shots': shots})
         # a direction approved before these rules hears it as advice
         lock = read(vd / 'direction-lock.json')
         save(vd / 'direction-lock.json', {**lock, 'planning_rules': 5})
