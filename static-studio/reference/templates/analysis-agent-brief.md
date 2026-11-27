@@ -29,6 +29,10 @@ at once.
 
 ## Read first (once)
 
+0. `00-craft-core.md`, §1, §2 and §5: who these videos are made for (a viewer on YouTube) and the moves each desk
+   makes. Those moves are the craft you are looking for in each reference: where it does one well, where it misses
+   one, with the time. You work for the Research and Story desks; the bar for a card is *what does this video do,
+   moment by moment, that a viewer would miss if it were gone?*
 1. `01-reference-forensics.md` (whole): evidence discipline, the card, the notes, the content review.
 2. `07-schemas-and-examples.md`, the sections "Content review" and "Reference cards".
 3. `10-creative-direction.md` §1: read the references as films.
@@ -64,7 +68,11 @@ at once.
    Label every assertion `[O]` (observed at a timestamp, measurements included), `[I]` (inferred), `[U]` (unknown).
    No view counts or retention exist: never claim a hook "worked".
 5. Write `RUN/20-analysis/V###-notes.md`: the 3-6 most useful mechanisms with timestamps, what makes it *enjoyable*,
-   and where it loses the viewer (it will sag somewhere).
+   and where it loses the viewer (it will sag somewhere). Then two short craft readings, each from the transcript and
+   the sheets, with times: **the first minute, sentence by sentence** (what each sentence does for a viewer who has
+   just arrived from the title: promises, orients, gives, teases, delays; a few words each, the sentence located by
+   its first words, never quoted at length), and **the chain of questions** (the question each stretch leaves the
+   viewer holding, and where the video answers it; say where a stretch leaves none).
 6. Write the content review draft `RUN/20-analysis/content/V###-draft.json` (07's schema) and save it with
    `content-review --ref V### --file "RUN/20-analysis/content/V###-draft.json"`; fix and run again until it saves.
    Take out as little as keeps our videos within 02 and no less; safety (`kind: safety`) and the user's creative

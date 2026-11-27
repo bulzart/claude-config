@@ -12529,6 +12529,195 @@ def cmd_narration_measure(args):
          0 if not issues else 2)
 
 
+def _line_spans(raw, index):
+    """'L001,L060-L062' -> [(first, last, name)] as 1-based line numbers of this script."""
+    out = []
+    for tok in [x.strip() for x in str(raw or '').replace(';', ',').split(',') if x.strip()]:
+        ends = [x.strip() for x in tok.split('-') if x.strip()]
+        if len(ends) not in (1, 2) or any(e not in index for e in ends):
+            error('--lines names lines this script does not have (L001, or a run of lines as L060-L062).', tok)
+        a, b = index[ends[0]], index[ends[-1]]
+        if b < a:
+            error('A run of lines goes forward: L060-L062.', tok)
+        out.append((a, b, ends[0] if a == b else f'{ends[0]}-{ends[-1]}'))
+    return out
+
+
+def voice_sheet_text(facts):
+    """One sheet's facts as a few plain lines (the index a director reads beside the drawing)."""
+    rows = []
+    bits = [f"{facts['duration_s']:.1f} s", f"{facts['word_count']} words"]
+    if facts.get('speech_rate_wpm'):
+        bits.append(f"{facts['speech_rate_wpm']:.0f} wpm")
+    if facts.get('pitch_range_st') is not None:
+        bits.append(f"pitch range {facts['pitch_range_st']:.1f} st")
+    if facts.get('level_range_db') is not None:
+        bits.append(f"level range {facts['level_range_db']:.1f} dB")
+    rows.append('- Measured: ' + ', '.join(bits) + '.')
+    if facts.get('standouts'):
+        rows.append('- Words pushed most: ' + '; '.join(
+            f"\"{s['word']}\" ({', '.join(s['how']) or 'a little of each'})" for s in facts['standouts']) + '.')
+    else:
+        rows.append('- Words pushed most: none stands clearly above the others (an even delivery).')
+    if facts.get('pauses'):
+        rows.append('- Silences inside it: ' + '; '.join(f"{p['length_s']:.2f} s after \"{p['after']}\""
+                                                         for p in facts['pauses']) + '.')
+    else:
+        rows.append('- Silences inside it: none of 0.18 s or more.')
+    e = facts.get('ending') or {}
+    if e:
+        rows.append(f"- Ending: the last vowel {e['reads']} ({e['last_vowel_vs_stretch_st']:+.1f} st against the stretch).")
+    return rows
+
+
+def cmd_voice_sheet(args):
+    """How a stretch of narration was really spoken, drawn over its words (reads the recording; writes only its own
+    sheets): the pitch and the loudness every 10 ms, the silences with their lengths, the words that were pushed
+    (higher, louder or held longer than the words around them) and how the stretch ends. --video NN --lines
+    L001,L060-L062: lines of this video's measured narration, each beside what its beat asked for. --file a.mp3,b.mp3:
+    any audio (a take of a trial, a preview, a probe); several files are also stacked into one image, for reading
+    two takes of one line together. --out DIR writes the sheets there instead of into the run (for a look at an
+    earlier production, which is never written into). A sense for a director who cannot hear, never a verdict: which
+    take is better is still a person's ear, or the director's reasoned reading of the drawings, said as such."""
+    rd, st = run_folder(args)
+    av = _av()
+    n = int(args.video) if args.video else None
+    files = [x.strip() for x in str(args.file or '').split(',') if x.strip()]
+    if not files and not (n and args.lines):
+        error('Name lines of a measured narration (--video NN --lines L001,L060-L062) or audio files (--file a.mp3,b.mp3).')
+    register = None
+    if args.register:
+        try:
+            register = float(args.register)
+        except ValueError:
+            error('--register is the narrator\'s usual pitch in Hz (delivery.json summary.register_hz), e.g. 134.6.')
+    made = []
+    if files:
+        out_dir = Path(args.out).expanduser().resolve() if args.out else \
+            rd / '60-voice' / (f'video-{n:02d}' if n else 'shared') / 'voice-sheets'
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for f in files:
+            src = Path(f).expanduser().resolve()
+            if not src.is_file():
+                error('File not found', str(src))
+            tpath = src.with_suffix('.json')
+            tj = read_json(tpath) if tpath.is_file() else {}
+            if not tj.get('segments'):
+                tpath = out_dir / (src.stem + '.transcript.json')
+                if not tpath.is_file():
+                    transcribe(src, tpath, args.whisper_model, args.device, args.compute_type)
+                tj = read_json(tpath)
+            words = transcript_words(tj)
+            if not words:
+                error('Whisper heard no words in this file: nothing to draw.', str(src))
+            with tempfile.TemporaryDirectory() as tmp:
+                y = av._load_mono(av.extract_audio(src, Path(tmp) / 'sound.wav'))
+            facts = av.voice_sheet(y, words, words[0]['start_s'], words[-1]['end_s'], out_dir / (src.stem + '.png'),
+                                   src.name, ref_f0=register,
+                                   notes=[args.asked] if args.asked else [])
+            made.append({'name': src.stem, 'source': str(src), 'transcript': str(tpath),
+                         'said': ' '.join(w['text'].strip() for w in words), **facts})
+        if len(made) > 1 and not register:
+            # read together, takes share one zero line: the first file's own middle
+            register = made[0].get('own_middle_hz')
+    else:
+        vd = video_dir(rd, n)
+        folder = rd / '50-audio' / f'video-{n:02d}'
+        lines = read_json(vd / 'script.json', required=True).get('lines') or []
+        index = {str(r.get('id') or f'L{i + 1:03d}'): i + 1 for i, r in enumerate(lines)}
+        spans = _line_spans(args.lines, index)
+        lt, current, _ = line_times_state(rd, n)
+        rows = {int(r['index']): r for r in lt.get('lines') or [] if r.get('start_s') is not None}
+        if not rows:
+            error('This narration is not measured yet: run narration-measure first (it times every line).')
+        missing = [name for a, b, name in spans if any(k not in rows for k in range(a, b + 1))]
+        if missing:
+            error('These lines are not recorded and measured yet.', missing)
+        if register is None:
+            register = ((read_json(folder / 'delivery.json').get('summary') or {}).get('register_hz'))
+        beats = {str(b.get('id')): b for b in read_json(vd / 'beat-map.json').get('beats') or []}
+        lb = _line_beats(vd)
+        cap = _captions()
+        language = read_json(vd / 'length-lock.json').get('language') or 'en'
+        out_dir = Path(args.out).expanduser().resolve() if args.out else folder / 'voice-sheets'
+        out_dir.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory() as tmp:
+            y = av._load_mono(av.extract_audio(_narration_source(rd, n, tmp), Path(tmp) / 'sound.wav'))
+        ref_db = float(av.speech_level(av.level_frames(y)))
+        for a, b, name in spans:
+            words, marks = [], []
+            for k in range(a, b + 1):
+                r, text = rows[k], lines[k - 1].get('text') or ''
+                gap0 = (r.get('gap_span_s') or [None])[0]
+                end = max(r['end_s'], gap0) if gap0 is not None else r['end_s']
+                ws, prob = cap.line_words(text, r.get('word_times'), (r['start_s'], end), tokens_of, strip_tags,
+                                          language, line_token_map)       # the captions' own word times
+                if prob or not ws:              # no word times for this line: its words spread over its own span
+                    toks = strip_tags(text).split()
+                    step = (r['end_s'] - r['start_s']) / max(1, len(toks))
+                    ws = [{'w': tok, 's': r['start_s'] + i * step, 'e': r['start_s'] + (i + 1) * step}
+                          for i, tok in enumerate(toks)]
+                words += [{'start_s': float(w['s']), 'end_s': float(w['e']), 'text': w['w']} for w in ws
+                          if w.get('s') is not None and w.get('e') is not None]
+                if b > a:
+                    marks.append((float(rows[k]['start_s']), str(lines[k - 1].get('id') or f'L{k:03d}')))
+            beat = beats.get(lb.get(a) or '') or {}
+            tags = sorted({m.group(0) for k in range(a, b + 1) for m in TAG_RE.finditer(lines[k - 1].get('text') or '')})
+            notes = []
+            if beat.get('narration_direction'):
+                notes.append(f"Asked of beat {beat.get('id')}: {beat['narration_direction']}")
+            if tags:
+                notes.append('Cues sent with these lines: ' + ' '.join(tags))
+            if args.asked:
+                notes.append('Asked of this moment: ' + args.asked)
+            facts = av.voice_sheet(y, words, float(rows[a]['start_s']), float(rows[b]['end_s']), out_dir / f'{name}.png',
+                                   f'video-{n:02d}  {name}  ' + (f'beat {beat.get("id")}' if beat else ''),
+                                   ref_f0=register, ref_db=ref_db, notes=notes, marks=marks)
+            made.append({'name': name, 'beat': beat.get('id'), 'asked': beat.get('narration_direction'),
+                         'cues': tags, 'said': ' '.join(w['text'] for w in words), **facts})
+        if not current:
+            made.append({'name': '(note)', 'warning': 'line-times.json describes an earlier recording than the parts '
+                                                       'on disk: run narration-measure, then draw again.'})
+    sheets = [m['sheet'] for m in made if m.get('sheet')]
+    stacked = None
+    if files and len(sheets) > 1:
+        # one zero line for takes read together: redraw on the first file's middle when each had its own
+        if not args.register:
+            for m in made[1:]:
+                src = Path(m['source'])
+                words = transcript_words(read_json(m['transcript']))
+                with tempfile.TemporaryDirectory() as tmp:
+                    y = av._load_mono(av.extract_audio(src, Path(tmp) / 'sound.wav'))
+                m.update(av.voice_sheet(y, words, words[0]['start_s'], words[-1]['end_s'], m['sheet'], src.name,
+                                        ref_f0=register, notes=[args.asked] if args.asked else []))
+        stacked = av.stack_sheets(sheets, out_dir / 'takes-together.png')
+    md = ['# Voice sheets', '', av.VS_READING, '']
+    for m in made:
+        if not m.get('sheet'):
+            md += [f"> {m.get('warning')}", '']
+            continue
+        md += [f"## {m['name']}", '', f"Said: \"{m.get('said', '')}\"", '']
+        if m.get('asked'):
+            md.append(f"- Asked of its beat: {m['asked']}")
+        if m.get('cues'):
+            md.append('- Cues sent: ' + ' '.join(m['cues']))
+        md += voice_sheet_text(m) + [f"- Sheet: {m['sheet']}", '']
+    if stacked:
+        md += [f'All of them, one under another: {stacked}', '']
+    (out_dir / 'index.md').write_text('\n'.join(md) + '\n', encoding='utf-8')
+    write_json(out_dir / 'index.json', {'made_at': now(), 'register_hz': register, 'sheets': made,
+                                        'takes_together': stacked, 'reading': av.VS_READING})
+    emit({'ok': True, 'sheets': sheets, 'takes_together': stacked, 'index': str(out_dir / 'index.md'),
+          'summary': [{'name': m['name'], 'said': m.get('said'), 'asked': m.get('asked'),
+                       'facts': voice_sheet_text(m)} for m in made if m.get('sheet')],
+          'warnings': [m['warning'] for m in made if m.get('warning')],
+          'next': 'Look at each sheet beside what the moment asked for: does the word that should carry the line '
+                  'stand out, does the line breathe where the thought turns, does it land (or lift) at its end the way '
+                  'the moment wants? A line that does not do its job is recorded again and the takes read together '
+                  '(--file takeA.mp3,takeB.mp3). Say in the report that nobody heard it.',
+          'reading': av.VS_READING})
+
+
 def cmd_pace_profile(args):
     """Pace and pauses of the references (and, when measured, this video's narration) with one yardstick."""
     rd, st = run_folder(args)
@@ -16349,6 +16538,18 @@ def main():
                    'L105 or L105,L319, with --reason; kept until that part is re-recorded')
     p.add_argument('--reason', default='', help='Who listened and what they heard (for --confirm)')
     add_whisper_args(p); p.set_defaults(func=cmd_narration_measure)
+    p = sub.add_parser('voice-sheet', help='How a stretch of narration was really spoken, drawn over its words '
+                       '(pitch, loudness, silences, the words pushed, the ending): lines of the measured narration '
+                       'or any audio file (a take); reads only, writes its own sheets')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int)
+    p.add_argument('--lines', default='', help='L001,L060-L062: single lines or runs of lines, one sheet each')
+    p.add_argument('--file', default='', help='Audio files instead of lines (takes, previews), comma-separated; '
+                   'several are also stacked into one image')
+    p.add_argument('--asked', default='', help='What this moment asks of the voice (printed on the sheet)')
+    p.add_argument('--register', default='', help='The narrator\'s usual pitch in Hz (the zero line); default: '
+                   'delivery.json for lines, the first file\'s own middle for files')
+    p.add_argument('--out', default='', help='Write the sheets here instead of into the run')
+    add_whisper_args(p); p.set_defaults(func=cmd_voice_sheet)
     p = sub.add_parser('av-profile', help='Measured audiovisual evidence and watch sheets: references or this export')
     p.add_argument('--run', required=True); p.add_argument('--refs', default='')
     p.add_argument('--video', type=int); p.add_argument('--file', default='')

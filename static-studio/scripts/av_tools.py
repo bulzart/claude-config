@@ -1290,3 +1290,328 @@ def delivery(label, wav, words, spans=None, segments=None):
         out['spans'] = {k: {'start_s': _r(a), 'end_s': _r(b), **span_stats(words, audio, a, b, segments)}
                         for k, (a, b) in spans.items()}
     return out
+
+
+# ---------------------------------------------------------------- the voice sheet: how a stretch was really spoken
+# No agent here hears. A voice still has a shape that can be drawn: where the pitch lifts and lands, which words are
+# pushed (higher, louder or held longer than the words around them), where the silences fall and how the stretch ends.
+# The sheet draws that over the words, so a director reads a line the way an editor reads a waveform, and sets two
+# takes of one line beside each other by what each really did. It measures the sound; it does not hear it: warmth,
+# charm and whether a line is believable are not on the sheet.
+VS_PAD_S = 0.3               # sound shown before and after the stretch
+VS_ROW_S = 9.0               # seconds per drawn row (a longer stretch wraps onto more rows)
+VS_PX_PER_S = 170
+VS_PAUSE_S = 0.18            # a silence this long inside the stretch is drawn with its length
+VS_ST_LO, VS_ST_HI = -12.0, 14.0
+VS_DB_LO, VS_DB_HI = -36.0, 6.0
+VS_STANDOUT = 1.5            # a word this many (robust) deviations above the stretch's other words stands out
+VS_READING = ('A drawing of the sound, never a hearing of it. It shows where the pitch lifts and lands, which words '
+              'were pushed (higher, louder or held longer than the words around them), where the silences fall and '
+              'how the stretch ends, so a line can be read beside what its beat asked for and two takes beside each '
+              'other. Warmth, charm and whether a line is believable are not on it: those are a person\'s ear. Word '
+              'edges are Whisper\'s (about a tenth of a second loose), so a push shown on a small word beside a strong '
+              'one usually belongs to the strong one; a creaky or whispered sound has no readable pitch.')
+
+
+def syllables(word):
+    """A rough syllable count (groups of vowels; a figure counts by its digits): the yardstick for how long a word was
+    held. Rough on purpose: it only has to tell a held word from a quick one."""
+    w = str(word or '').lower()
+    letters = re.sub(r'[^a-z]', '', w)
+    if not letters:
+        digits = sum(ch.isdigit() for ch in w)
+        return max(1, round(digits * 1.6)) if digits else 1
+    n = len(re.findall(r'[aeiouy]+', letters))
+    if letters.endswith('e') and not letters.endswith(('le', 'ee', 'ie')) and n > 1:
+        n -= 1
+    return max(1, n)
+
+
+def _robust(vals, floor):
+    vs = [v for v in vals if v is not None]
+    if len(vs) < 4:
+        return None, None
+    med = statistics.median(vs)
+    mad = statistics.median([abs(v - med) for v in vs]) * 1.4826
+    return med, max(mad, floor)
+
+
+def voice_stretch(y, words, a, b, ref_f0=None, ref_db=None):
+    """What the voice did between a and b seconds of a mono 16 kHz signal y. The contours every 10 ms (pitch in
+    semitones from ref_f0, the narrator's usual, or from this stretch's own middle; level in dB from ref_db, the
+    narrator's speech level, or this stretch's), and for each word its pitch, level and length per syllable, with how
+    far each stands out from the other words of the stretch. words: [{'start_s', 'end_s', 'text'}] on the signal's
+    clock. Returns the facts and, under '_draw', the arrays the sheet is drawn from."""
+    np, librosa, _ = _audio_deps()
+    total = len(y) / SR
+    lo, hi = max(0.0, a - VS_PAD_S), min(total, b + VS_PAD_S)
+    seg = np.asarray(y[int(lo * SR):int(hi * SR)], dtype='float32')
+    if len(seg) < CADENCE_FRAME:
+        seg = np.pad(seg, (0, CADENCE_FRAME - len(seg)))
+    hop = int(SR * GAP_HOP_S)
+    f0, voiced, _ = librosa.pyin(seg, fmin=CADENCE_FMIN, fmax=CADENCE_FMAX, sr=SR, frame_length=CADENCE_FRAME,
+                                 hop_length=hop)
+    voiced = voiced & np.isfinite(f0)
+    lv = level_frames(seg)
+    n = min(len(f0), len(lv))
+    f0, voiced, lv = f0[:n], voiced[:n], lv[:n]
+    own_db = float(speech_level(lv))
+    ref_db = own_db if ref_db is None else float(ref_db)
+    loud = voiced & (lv >= ref_db - LOUD_VOWEL_UNDER_DB)
+    own = float(np.median(f0[loud])) if loud.any() else None
+    ref = float(ref_f0) if ref_f0 else own
+    st = np.full(n, np.nan)
+    if ref:
+        st[voiced] = 12 * np.log2(f0[voiced] / ref)
+    quiet = lv < ref_db - QUIET_UNDER_DB
+
+    def fr(t):
+        return int(round((float(t) - lo) / GAP_HOP_S))
+
+    rows = []
+    for w in words:
+        if float(w['end_s']) <= a - 0.05 or float(w['start_s']) >= b + 0.05:
+            continue
+        k0 = max(0, min(n - 1, fr(w['start_s'])))
+        k1 = max(k0 + 1, min(n, fr(w['end_s'])))
+        vl = [k for k in range(k0, k1) if loud[k]]
+        snd = [k for k in range(k0, k1) if not quiet[k]]        # Whisper's edges run into the silence: the sound only
+        dur = (snd[-1] - snd[0] + 1) * GAP_HOP_S if snd else max(0.0, float(w['end_s']) - float(w['start_s']))
+        syl = syllables(w['text'])
+        rows.append({'text': _clean(w['text']), 'start_s': _r(w['start_s'], 3), 'end_s': _r(w['end_s'], 3),
+                     'pitch_st': _r(float(np.median(st[vl])), 1) if vl and ref else None,
+                     'pitch_peak_st': _r(float(np.percentile(st[vl], 90)), 1) if vl and ref else None,
+                     'level_db': _r(float(np.percentile(lv[k0:k1], 75)) - ref_db, 1),
+                     'sound_s': _r(dur, 2), 'syllables': syl, 's_per_syllable': _r(dur / syl, 3)})
+    # how far each word stands out from the others of this stretch, on each of the three ways a word is pushed
+    mp, sp = _robust([r['pitch_peak_st'] for r in rows], 1.0)
+    ml, sl = _robust([r['level_db'] for r in rows], 1.5)
+    lens = [math.log2(r['s_per_syllable']) if r['s_per_syllable'] and r['s_per_syllable'] > 0 else None for r in rows]
+    md, sd = _robust(lens, 0.35)
+    for r, ln in zip(rows, lens):
+        z = {'pitch': _r((r['pitch_peak_st'] - mp) / sp, 1) if mp is not None and r['pitch_peak_st'] is not None else None,
+             'level': _r((r['level_db'] - ml) / sl, 1) if ml is not None and r['level_db'] is not None else None,
+             'length': _r((ln - md) / sd, 1) if md is not None and ln is not None else None}
+        r['stands_out'] = z
+        r['weight'] = _r(sum(max(0.0, v) for v in z.values() if v is not None), 1)
+    ranked = sorted([r for r in rows if (r['weight'] or 0) >= VS_STANDOUT], key=lambda r: -r['weight'])[:3]
+    standouts = []
+    for k, r in enumerate(ranked):
+        r['rank'] = k + 1
+        how = []
+        z = r['stands_out']
+        if (z.get('pitch') or 0) >= 1 and mp is not None:
+            how.append(f"{r['pitch_peak_st'] - mp:+.1f} st above the stretch's words")
+        if (z.get('level') or 0) >= 1 and ml is not None:
+            how.append(f"{r['level_db'] - ml:+.1f} dB louder")
+        if (z.get('length') or 0) >= 1 and md is not None:
+            how.append(f"held {2 ** (math.log2(r['s_per_syllable']) - md):.1f}x the usual length per syllable")
+        standouts.append({'rank': k + 1, 'word': r['text'], 'at_s': r['start_s'], 'weight': r['weight'], 'how': how})
+    # the silences inside the stretch, from the sound itself
+    pauses, k = [], max(0, fr(a))
+    end_k = min(n, fr(b))
+    while k < end_k:
+        if quiet[k]:
+            j = k
+            while j < end_k and quiet[j]:
+                j += 1
+            if (j - k) * GAP_HOP_S >= VS_PAUSE_S and k > fr(a) and j < end_k:
+                t0, t1 = lo + k * GAP_HOP_S, lo + j * GAP_HOP_S
+                before = [r for r in rows if (r['start_s'] + r['end_s']) / 2 <= t0 + 0.05]
+                pauses.append({'after': before[-1]['text'] if before else None, 'start_s': _r(t0, 2),
+                               'length_s': _r(t1 - t0, 2)})
+            k = j
+        else:
+            k += 1
+    in_k = [k for k in range(max(0, fr(a)), min(n, fr(b))) if loud[k]]
+    sts = st[in_k] if in_k and ref else np.array([])
+    ending = {}
+    if len(in_k) >= 8 and ref:
+        t_last = in_k[-1] * GAP_HOP_S
+        last = [k for k in in_k if k * GAP_HOP_S >= t_last - END_WINDOW_S]
+        ending = {'last_vowel_vs_stretch_st': _r(float(np.median(st[last]) - np.median(sts)), 1),
+                  'reads': 'falls' if np.median(st[last]) - np.median(sts) <= -1.5 else
+                           'rises' if np.median(st[last]) - np.median(sts) >= 1.5 else 'stays level'}
+    span = max(0.01, b - a)
+    spoken = sum(r['sound_s'] or 0 for r in rows)
+    facts = {'start_s': _r(a, 2), 'end_s': _r(b, 2), 'duration_s': _r(span, 2), 'words': rows,
+             'word_count': len(rows), 'speech_rate_wpm': _r(len(rows) / (span / 60), 0) if len(rows) >= 3 else None,
+             'syllables_per_s': _r(sum(r['syllables'] for r in rows) / spoken, 1) if spoken > 0.3 else None,
+             'pitch_range_st': _r(float(np.percentile(sts, 90) - np.percentile(sts, 10)), 1) if len(sts) >= 8 else None,
+             'pitch_low_st': _r(float(np.percentile(sts, 5)), 1) if len(sts) >= 8 else None,
+             'pitch_high_st': _r(float(np.percentile(sts, 95)), 1) if len(sts) >= 8 else None,
+             'level_range_db': _r(float(np.percentile(lv[in_k], 90) - np.percentile(lv[in_k], 10)), 1) if len(in_k) >= 8 else None,
+             'pauses': pauses, 'longest_pause_s': max([p['length_s'] for p in pauses], default=0.0),
+             'standouts': standouts, 'ending': ending,
+             'register_hz': _r(ref, 1), 'own_middle_hz': _r(own, 1), 'speech_level_dbfs': _r(ref_db, 1),
+             'reading': VS_READING}
+    facts['_draw'] = {'lo': lo, 'hi': hi, 'st': st, 'loud': loud, 'voiced': voiced, 'lv': lv - ref_db, 'quiet': quiet}
+    return facts
+
+
+def voice_sheet(y, words, a, b, out_path, title, ref_f0=None, ref_db=None, notes=(), marks=()):
+    """Draw one stretch as a sheet (PNG) and return its facts (voice_stretch, without the arrays). notes: lines printed
+    under the title (what the moment asked for). marks: [(t_s, label)] drawn as upright lines (where a script line
+    starts)."""
+    from PIL import Image, ImageDraw
+    facts = voice_stretch(y, words, a, b, ref_f0=ref_f0, ref_db=ref_db)
+    d = facts.pop('_draw')
+    lo, hi, st, loud, voiced, lv, quiet = d['lo'], d['hi'], d['st'], d['loud'], d['voiced'], d['lv'], d['quiet']
+    n = len(st)
+    ML, MR = 60, 24
+    row_w = int(VS_ROW_S * VS_PX_PER_S)
+    W = ML + row_w + MR
+    P_H, L_H, B_H, GAP = 190, 54, 60, 30
+    row_h = GAP + P_H + 6 + L_H + 4 + B_H
+    span_all = max(0.5, hi - lo)
+    nrows = max(1, int(round(span_all / VS_ROW_S)))     # a little over one row is squeezed into it, never a sliver
+    if span_all / nrows > VS_ROW_S * 1.35:
+        nrows += 1
+    row_s = max(span_all / nrows, VS_ROW_S * 0.5)       # a short line is drawn larger, up to twice
+    px_s = row_w / row_s
+    f_title, f_txt, f_small, f_word = _font(20), _font(14), _font(12), _font(15)
+    note_rows = []
+    for nt in notes:
+        note_rows += _wrap(str(nt), 200, 3)
+    head_h = 70 + 18 * len(note_rows) + 6
+    foot_h = 64
+    img = Image.new('RGB', (W, head_h + nrows * row_h + foot_h), (16, 16, 20))
+    dr = ImageDraw.Draw(img)
+    dr.text((ML, 10), str(title), fill=(240, 240, 240), font=f_title)
+    bits = [f"{facts['duration_s']:.1f} s", f"{facts['word_count']} words"]
+    if facts['speech_rate_wpm']:
+        bits.append(f"{facts['speech_rate_wpm']:.0f} wpm")
+    if facts['syllables_per_s']:
+        bits.append(f"{facts['syllables_per_s']:.1f} syllables/s while speaking")
+    if facts['pitch_range_st'] is not None:
+        bits.append(f"pitch range {facts['pitch_range_st']:.1f} st")
+    if facts['level_range_db'] is not None:
+        bits.append(f"level range {facts['level_range_db']:.1f} dB")
+    if facts['ending']:
+        bits.append(f"ending {facts['ending']['reads']} ({facts['ending']['last_vowel_vs_stretch_st']:+.1f} st)")
+    bits.append(f"{len(facts['pauses'])} silences" + (f" (longest {facts['longest_pause_s']:.2f} s)" if facts['pauses'] else ''))
+    dr.text((ML, 40), '   |   '.join(bits), fill=(200, 205, 215), font=f_txt)
+    for i, row in enumerate(note_rows):
+        dr.text((ML, 64 + 18 * i), row, fill=(170, 190, 170), font=f_txt)
+
+    def y_st(v):
+        v = min(VS_ST_HI, max(VS_ST_LO, v))
+        return (VS_ST_HI - v) / (VS_ST_HI - VS_ST_LO) * P_H
+
+    def y_db(v):
+        v = min(VS_DB_HI, max(VS_DB_LO, v))
+        return (VS_DB_HI - v) / (VS_DB_HI - VS_DB_LO) * L_H
+
+    for r_i in range(nrows):
+        t0 = lo + r_i * row_s
+        t1 = min(hi, t0 + row_s)
+        top = head_h + r_i * row_h + GAP
+        p_top, l_top = top, top + P_H + 6
+        b_top = l_top + L_H + 4
+
+        def x_of(t, t0=t0):
+            return ML + (t - t0) * px_s
+        x_end = x_of(t1)
+        dr.rectangle([ML, p_top, x_end, p_top + P_H], fill=(24, 24, 30))
+        dr.rectangle([ML, l_top, x_end, l_top + L_H], fill=(24, 24, 30))
+        # silences first, so everything else is drawn over them
+        for p in facts['pauses']:
+            pa, pb = p['start_s'], p['start_s'] + p['length_s']
+            if pb > t0 and pa < t1:
+                xa, xb = x_of(max(pa, t0)), x_of(min(pb, t1))
+                dr.rectangle([xa, p_top, xb, l_top + L_H], fill=(40, 42, 62))
+                if pa >= t0:
+                    dr.text((xa + 3, p_top + 3), f"{p['length_s']:.2f} s", fill=(150, 170, 255), font=f_small)
+        for v in (-12, -6, 0, 6, 12):
+            yy = p_top + y_st(v)
+            dr.line([ML, yy, x_end, yy], fill=(92, 92, 104) if v == 0 else (46, 46, 54), width=1)
+            dr.text((ML - 30, yy - 7), f'{v:+d}' if v else ' 0', fill=(150, 150, 160), font=f_small)
+        dr.text((6, p_top + 2), 'pitch', fill=(150, 150, 160), font=f_small)
+        dr.text((6, p_top + 16), '(st)', fill=(150, 150, 160), font=f_small)
+        yy = l_top + y_db(0)
+        dr.line([ML, yy, x_end, yy], fill=(70, 70, 82), width=1)
+        dr.text((6, l_top + 2), 'level', fill=(150, 150, 160), font=f_small)
+        dr.text((6, l_top + 16), '(dB)', fill=(150, 150, 160), font=f_small)
+        sec = int(math.ceil(t0 - 1e-6))
+        while sec <= t1 + 1e-6:
+            xx = x_of(sec)
+            dr.line([xx, p_top - 4, xx, p_top], fill=(120, 120, 130), width=1)
+            dr.text((xx - 16, p_top - 18), _mmss_tenths(sec)[:-2], fill=(130, 130, 140), font=f_small)
+            sec += 1
+        for (mt, label) in marks:
+            if t0 <= mt < t1:
+                xx = x_of(mt)
+                dr.line([xx, p_top, xx, l_top + L_H], fill=(110, 110, 150), width=1)
+                dr.text((xx + 3, p_top + P_H - 16), str(label), fill=(160, 160, 210), font=f_small)
+        k0 = max(0, int(round((t0 - lo) / GAP_HOP_S)))
+        k1 = min(n, int(round((t1 - lo) / GAP_HOP_S)))
+        # level: one bar every 10 ms
+        base = l_top + L_H
+        for k in range(k0, k1):
+            xx = x_of(lo + k * GAP_HOP_S)
+            dr.line([xx, l_top + y_db(float(lv[k])), xx, base], fill=(60, 150, 172),
+                    width=max(2, int(px_s * GAP_HOP_S) + 1))
+        # pitch: bright where the sound is a clear vowel, thin where it is soft or creaky
+        prev = None
+        for k in range(k0, k1):
+            if not voiced[k] or st[k] != st[k]:
+                prev = None
+                continue
+            pt = (x_of(lo + k * GAP_HOP_S), p_top + y_st(float(st[k])))
+            strong = bool(loud[k])
+            if prev is not None and abs(prev[2] - float(st[k])) < 5:
+                dr.line([prev[0], prev[1], pt[0], pt[1]], fill=(255, 198, 64) if strong else (132, 104, 60),
+                        width=3 if strong else 1)
+            else:
+                dr.ellipse([pt[0] - 1, pt[1] - 1, pt[0] + 1, pt[1] + 1], fill=(255, 198, 64) if strong else (132, 104, 60))
+            prev = (pt[0], pt[1], float(st[k]))
+        # the words, each under its own stretch of time
+        edge = [ML - 4, ML - 4]
+        for w in facts['words']:
+            ws, we = max(w['start_s'], t0), min(w['end_s'], t1)
+            if w['start_s'] >= t1 or w['start_s'] < t0:
+                continue
+            xa, xb = x_of(ws), x_of(we)
+            rank = w.get('rank')
+            col = (255, 132, 96) if rank else (214, 214, 220)
+            dr.line([xa, b_top + 3, max(xa + 2, xb - 2), b_top + 3], fill=col, width=3 if rank else 1)
+            dr.line([xa, b_top, xa, b_top + 6], fill=col, width=1)
+            label = w['text'] + (f' ({rank})' if rank else '')
+            tw = dr.textlength(label, font=f_word)
+            tx = max(ML, min(xa, x_end - tw))
+            lane = 0 if tx >= edge[0] + 6 else 1 if tx >= edge[1] + 6 else (0 if edge[0] <= edge[1] else 1)
+            tx = max(tx, edge[lane] + 6)
+            dr.text((tx, b_top + 10 + lane * 22), label, fill=col, font=f_word)
+            edge[lane] = tx + tw
+            if rank:
+                cx = (xa + xb) / 2
+                dr.polygon([(cx - 6, p_top + 2), (cx + 6, p_top + 2), (cx, p_top + 12)], fill=(255, 132, 96))
+    fy = head_h + nrows * row_h + 10
+    reg = f"0 = {facts['register_hz']:.0f} Hz" if facts.get('register_hz') else 'no clear pitch in this stretch'
+    legend = [f'Yellow: pitch in semitones from this narrator\'s usual ({reg}); thin = a soft or creaky sound, not reliable. '
+              'Blue: loudness against the speech level. Dark bands: silences, with their length.',
+              'Numbered words in red: the ones pushed most (higher, louder or held longer than the words around them). '
+              'A drawing of the sound, not a hearing of it: warmth and belief are a person\'s ear.']
+    for i, row in enumerate(legend):
+        dr.text((ML, fy + 20 * i), row, fill=(140, 140, 150), font=f_small)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(out_path)
+    facts['sheet'] = str(out_path)
+    return facts
+
+
+def stack_sheets(paths, out_path):
+    """Several sheets one under another in one image (two takes of one line, read together)."""
+    from PIL import Image
+    ims = [Image.open(p).convert('RGB') for p in paths]
+    W = max(im.width for im in ims)
+    out = Image.new('RGB', (W, sum(im.height for im in ims) + 8 * (len(ims) - 1)), (70, 70, 80))
+    yy = 0
+    for im in ims:
+        out.paste(im, (0, yy))
+        yy += im.height + 8
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out.save(out_path)
+    return str(out_path)

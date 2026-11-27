@@ -3,7 +3,9 @@
 The director's job is to decide how *this* story is told, heard and seen, so that a viewer enjoys every minute of it.
 Not "what does this niche usually do", but "what would make this subject, for this audience, at this length, a
 pleasure to watch". Evidence informs that decision; nothing here is a formula. Every example below is an example,
-from one kind of video, not a rule for any niche.
+from one kind of video, not a rule for any niche. Who decides, for whom and to what standard is manual 00 (the desks,
+the YouTube viewer, the creative loop): sit there while you decide; this manual says how each decision is worked out,
+recorded and put in front of fresh eyes.
 
 The code around this stage checks only that the process happened: the evidence was measured, real alternatives were
 written, an independent reader saw them, the decision was locked before the script, every reviewer finding got an
@@ -321,8 +323,11 @@ what the viewer should understand or discover here; the narrator's attitude to i
 the rhythm of the talk (quick and conversational, slow and plain, one long sentence then a short one); whether the
 words alone carry the feeling, which they usually should; whether one delivery tag would genuinely change something
 the writing can't; and how the voice sits with the picture and the sound (stepping back while a map explains, carrying
-a moment the picture only hints at). More expressive is not better: a calm, thoughtful beat can be the one people
-remember, and a restrained line often lands harder than a dramatic one.
+a moment the picture only hints at). Give the narrator a verb for the beat (confide, warn, tease, marvel, deadpan,
+let go) and name the one word that carries it. Neither more expressive nor more restrained is better in itself: decide
+what this beat's delivery is for, and make it differ from the beats around it where the story changes (contrast holds
+a listener; one careful tone throughout is wallpaper). A calm, thoughtful beat can be the one people remember, when
+it is a choice.
 
 The narrator is chosen for the treatment, per video (05, `voice-pick`): the voice that can be this narrator for this
 whole film, never one assumed for the subject or the niche. Its stability is chosen for the narrator too (steadier, or
@@ -407,8 +412,10 @@ These are craft principles. Each one says when it applies.
   that are nearly the same and long runs of one composition, and counts what the plan really shows (04): how many
   pictures, how often and for how long one is seen again, the picture shown most, the longest a picture stands. The
   export's watch sheet shows the same picture coming back.
-- **Simplicity before spectacle.** One clear image with a drawn annotation often teaches more than a spectacular
-  one. A beautiful picture that adds nothing to the moment is decoration.
+- **Clarity and wonder, each where it serves.** An explanation wants the clearest picture (one clear image with a
+  drawn annotation often teaches more than a spectacular one). A moment of scale, arrival or awe wants a picture
+  worth stopping for. A beautiful picture that adds nothing to the moment is decoration, and a plain one at a moment
+  that deserved wonder is a reward withheld.
 - **Every shot says its job** (`new_thing` in the shot plan): what the viewer learns or feels from the picture that
   the narration didn't give them.
 - **Show the relationship.** When the words state a cause, a comparison, a route or a plan, the picture shows how the
