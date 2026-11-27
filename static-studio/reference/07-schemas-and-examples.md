@@ -10,6 +10,8 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" doctor
 python "$HOME/.claude/static-studio/scripts/static_core.py" init --references "C:/videos/references" --slug history
 # Copy the returned RUN path; the following examples use literal RUN as a placeholder.
 python "$HOME/.claude/static-studio/scripts/static_core.py" scan --run "RUN"
+# A large folder: work from about fifteen of its videos (01, "The working set"); the others are set aside, not deleted.
+python "$HOME/.claude/static-studio/scripts/static_core.py" reference-set --run "RUN" --keep V001,V004,V007 --why "what the choice rests on"
 python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" --dry-run
 python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" --whisper-model medium
 # Watch the references as films: measurements + one watch sheet per minute (frames with their words).
@@ -220,6 +222,11 @@ Create `20-analysis/cards/V001.json` for every unique video in `00-inventory/ref
 `settings` used, `total_load`, and `batches` `[{agent: "r1-a1", refs: [{ref, duration_s, watch_sheets, shot_sheets,
 transcript_words, inspect_candidates, load}], load, minutes, brief, todo, spawn_prompt}]`, with `balance` and
 `not_measured_yet`. No subject, niche or format appears in a plan.
+
+`00-inventory/reference-set.json` (written by `reference-set`, 01 "The working set"): `set_aside` `{V###: {file,
+why}}`, `why`, `decided_by` (`user` with `user_words`, or `director`), `decided_at`, `references_at_decision` and
+`history` (each earlier choice). A reference added by a later `scan` is in the working set. The niche evidence then
+carries `set_aside` (the ids) and covers the working set only.
 
 `20-analysis/niche-evidence.json` and `.md` (written by `niche-evidence`): `references` in reference order, each
 `{ref, file, card, language, subject{niches, editorial_summary, title_promise}, format{story_form, hook},

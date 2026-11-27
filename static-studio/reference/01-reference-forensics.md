@@ -4,6 +4,28 @@
 
 A reference folder may contain formats you recognise and ones you don't. Treat **every video as its own narrative system**—analyse it fully before imposing any category on it. Categories emerge from the evidence; they are not assigned from a predefined list. Study genuinely comparable cohorts once categories have been discovered. The objective is transferable knowledge about *audience experience*, not a copyable outline. A user-found viral video is a strong creative reference, not proof that a specific zoom or hook caused its views.
 
+## The working set: how many references a run reads
+
+Reading a reference well costs real time and tokens: frames and a transcript in `prepare`, measurements and sheets,
+then an agent's whole analysis. A large folder read whole can cost more than the video it serves. When the folder
+holds more than about fifteen videos, the run works from about fifteen of them (the owner's instruction, 27 Nov
+2026), unless the user asks for every one or names another number. Choose right after `scan` and before `prepare`, so
+nothing is made for the others:
+
+- From what is known before any analysis: each file's title and length (the inventory) and, where they can be read,
+  its public figures (views and date: what was clicked and shown, label `[M]`, never what was watched).
+- For range, never for one favourite: several different audiences, each with two or three references where the
+  folder allows (a niche needs members, a Standard length needs a pair that compares), long-form before shorts, and
+  inside one audience the references that were carried furthest.
+- `reference-set --run "RUN" --keep V001,V004,... --why "what the choice rests on"` (with `--user-words "..."` when
+  the number or the choice is the user's) records it in `00-inventory/reference-set.json`. From then on `prepare`,
+  `analysis-plan`, `niche-evidence`, `niche-check` and the content record's state see the working set only; a
+  reference set aside is in no niche and is cited nowhere. Nothing is deleted: `--all` or a new `--keep` brings
+  references back, and `reference-set --run "RUN"` shows the set as it stands.
+
+The niches are then the niches of the working set: say so when presenting them, with how many references were set
+aside.
+
 ## Intake, audio and visual coverage
 
 Use `static_core.py init`, `scan`, `prepare --dry-run`, then `prepare`. Never skip Whisper merely because speech is present in auto-captions; `prepare --skip-whisper` needs `--reason`, since a reference without its words loses its pace, its pauses and what is said where. Faster-Whisper with word timestamps, VAD, and original source audio creates `10-media/V###/transcript.json` plus `.txt` (when available). Repair/annotate uncertain names, numerals, quotes, jokes, irony, tonal delivery and sound-only context. Whisper is **an imperfect observation aid**, not an authority on dialogue. For silent clips, mark no audio; for a failed transcribe mark *unknown/unprocessed*, not “no speech.”

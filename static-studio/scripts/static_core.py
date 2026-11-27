@@ -319,8 +319,8 @@ def cmd_clone(args):
                'analysis_fps': ANALYSIS_FPS, 'analysis_sampler': ANALYSIS_SAMPLER})
     write_json(rd/'state.json', st)
     # the niches the source run discovered are about the same references (the pick is not: the clone picks again)
-    for oldrel in ['00-inventory/references.json', '20-analysis/cohorts/index.json', '20-analysis/niche-map.json',
-                   '20-analysis/niche-evidence.json', '20-analysis/niche-evidence.md']:
+    for oldrel in ['00-inventory/references.json', REFERENCE_SET, '20-analysis/cohorts/index.json',
+                   '20-analysis/niche-map.json', '20-analysis/niche-evidence.json', '20-analysis/niche-evidence.md']:
         old = src/oldrel
         if old.is_file():
             target = rd/oldrel; target.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(old, target)
@@ -583,8 +583,9 @@ def cmd_prepare(args):
     rd, st = run_folder(args)
     inv = read_json(rd / '00-inventory/references.json', required=True)
     ids = set(args.ids.split(',')) if args.ids else None
+    aside = set_aside_refs(rd)
     chosen = [v for v in inv['items'] if v.get('kind') == 'video' and not v.get('duplicate_of')
-              and (ids is None or v['id'] in ids)]
+              and (v['id'] in ids if ids is not None else v['id'] not in aside)]
     if not chosen:
         error('No matching unique reference videos. Run scan first.')
     fps = run_analysis_fps(st)
@@ -693,9 +694,28 @@ def cmd_prepare(args):
     emit({'ok': not failures, 'processed': results, 'failed': failures}, 2 if failures else 0)
 
 
+REFERENCE_SET = '00-inventory/reference-set.json'
+
+
+def set_aside_refs(rd):
+    """The references this run leaves out of its work ({id: why}): `reference-set` writes them when the user or the
+    director takes only some of the references folder. The choice lives beside the inventory, not in it, so a rescan
+    keeps it and a reference added later is in the working set. A reference set aside is not prepared, analysed,
+    placed in a niche or cited; nothing of it is deleted."""
+    d = read_json(Path(rd) / REFERENCE_SET)
+    aside = d.get('set_aside') if isinstance(d, dict) else None
+    if not isinstance(aside, dict):
+        return {}
+    return {str(k).strip().upper(): str((v or {}).get('why') or '') if isinstance(v, dict) else str(v or '')
+            for k, v in aside.items()}
+
+
 def cards_inventory(rd):
+    """The run's working references ({id: row}): the unique videos of the inventory, without those set aside."""
     inv = read_json(rd / '00-inventory/references.json', required=True)
-    vids = {x['id']: x for x in inv.get('items', []) if x.get('kind') == 'video' and not x.get('duplicate_of')}
+    aside = set_aside_refs(rd)
+    vids = {x['id']: x for x in inv.get('items', []) if x.get('kind') == 'video' and not x.get('duplicate_of')
+            and x['id'] not in aside}
     return vids
 
 
@@ -901,7 +921,9 @@ def cmd_analysis_plan(args):
         want = normalize_refs(args.ids)
         unknown = [v for v in want if v not in vids]
         if unknown:
-            error('Unknown reference IDs', unknown)
+            aside = set_aside_refs(rd)
+            error('Unknown reference IDs' if not any(v in aside for v in unknown) else
+                  'These references are not in the working set (set aside by reference-set, or unknown)', unknown)
     elif args.all:
         want = sorted(vids)
     else:
@@ -1076,6 +1098,68 @@ def niche_evidence_facts(rd, st):
     return rows, {k: v for k, v in missing.items() if v}, shas
 
 
+def cmd_reference_set(args):
+    """Which references of the folder this run works from. --keep V001,V005 (the others are set aside), --aside
+    V002,V003 (these are set aside, the others stay) or --all (every reference back in); with none of them, the set
+    as it stands. A choice says why (--why) and whose it is (--user-words quotes the user; without it the choice is
+    the director's). Nothing is deleted: a reference set aside keeps its files and whatever analysis it already has,
+    and comes back with --all or a new --keep."""
+    rd, st = run_folder(args)
+    inv = read_json(rd / '00-inventory/references.json', required=True)
+    vids = {x['id']: x for x in inv.get('items', []) if x.get('kind') == 'video' and not x.get('duplicate_of')}
+    path = rd / REFERENCE_SET
+    cur = read_json(path) or {}
+    given = [k for k, v in (('--keep', args.keep), ('--aside', args.aside), ('--all', args.all)) if v]
+    if len(given) > 1:
+        error('Give one of --keep, --aside or --all', given)
+    if not given:
+        aside = set_aside_refs(rd)
+        working = sorted(v for v in vids if v not in aside)
+        states = {v: ref_analysis_state(rd, v) for v in working}
+        emit({'ok': True, 'references': len(vids), 'working': working,
+              'set_aside': {k: v for k, v in sorted(aside.items()) if k in vids},
+              'analysed': sorted(v for v, s in states.items() if all(s.values())),
+              'still_to_analyse': sorted(v for v, s in states.items() if not all(s.values())),
+              'why': cur.get('why'), 'decided_by': cur.get('decided_by'), 'user_words': cur.get('user_words'),
+              'file': str(path) if cur else None})
+        return
+    if n_words(args.why) < 4:
+        error('Say what the choice rests on: --why "..." (a few words or more)')
+    if args.all:
+        aside_ids = []
+    else:
+        named = normalize_refs(args.keep or args.aside)
+        unknown = [v for v in named if v not in vids]
+        if unknown:
+            error('Unknown reference IDs', unknown)
+        aside_ids = sorted(v for v in vids if v not in named) if args.keep else sorted(set(named))
+    if len(aside_ids) >= len(vids):
+        error('A run needs at least one reference in its working set')
+    lock = read_json(rd / '20-analysis' / 'niche-lock.json')
+    locked = sorted({str(m_.get('ref') or '').strip().upper() for m_ in lock.get('members') or []
+                     if isinstance(m_, dict)} & set(aside_ids))
+    if locked:
+        error('These references are members of the locked niche, which keeps its members: set others aside, or '
+              'start another run', locked)
+    why = args.why.strip()
+    words = (args.user_words or '').strip()
+    rec = {'schema': 'reference-set-v1', 'references_at_decision': len(vids),
+           'set_aside': {v: {'file': vids[v].get('relative_path'), 'why': why} for v in aside_ids},
+           'why': why, 'decided_by': 'user' if words else 'director',
+           **({'user_words': words} if words else {}), 'decided_at': now(),
+           'history': list(cur.get('history') or []) + ([{
+               'set_aside': sorted(cur.get('set_aside') or {}), 'why': cur.get('why'),
+               'decided_by': cur.get('decided_by'), 'decided_at': cur.get('decided_at')}] if cur else [])}
+    write_json(path, rec)
+    working = sorted(v for v in vids if v not in aside_ids)
+    states = {v: ref_analysis_state(rd, v) for v in working}
+    emit({'ok': True, 'file': str(path), 'working': working, 'set_aside': aside_ids,
+          'analysed': sorted(v for v, s in states.items() if all(s.values())),
+          'still_to_analyse': sorted(v for v, s in states.items() if not all(s.values())),
+          'next': 'prepare, analysis-plan, niche-evidence and niche-check now see the working set only; a niche map '
+                  'written before this choice is checked again (a member set aside is an issue).'})
+
+
 def cmd_niche_evidence(args):
     rd, st = run_folder(args)
     rows, missing, shas = niche_evidence_facts(rd, st)
@@ -1087,9 +1171,14 @@ def cmd_niche_evidence(args):
                          'content'],
           'reading': 'Evidence, not groups: each dimension is listed apart. A niche is what the audience comes for; '
                      'a format, a look or a voice that several references share is not a niche by itself.'}
+    aside = sorted(set_aside_refs(rd))
+    if aside:
+        ev['set_aside'] = aside
     write_json(niche_evidence_path(rd), ev)
     md = rd / '20-analysis' / 'niche-evidence.md'
-    md.write_text(evidence_markdown(rows, missing) + '\n', encoding='utf-8')
+    md.write_text(evidence_markdown(rows, missing) + ('\n\nSet aside for this run (`reference-set`): not analysed '
+                  'here, in no niche, cited nowhere: ' + ', '.join(aside) + '.' if aside else '') + '\n',
+                  encoding='utf-8')
     emit({'ok': not missing, 'evidence': str(niche_evidence_path(rd)), 'markdown': str(md),
           'references': len(rows), 'evidence_sha256': canonical_sha(ev), 'not_complete': missing,
           'next': 'Read the markdown, open the cards you need, write 20-analysis/niche-map.json (manual 01 and 07), '
@@ -1186,7 +1275,8 @@ def niche_check_facts(rd, st, m=None):
         for x in mem:
             r = str(x.get('ref') or '').strip().upper()
             if r not in vids:
-                iss.append(f'niche_{nid}_member_is_not_a_reference_of_this_run:{r}')
+                iss.append(f'niche_{nid}_member_is_' + ('set_aside_(reference-set)' if r in set_aside_refs(rd)
+                                                        else 'not_a_reference_of_this_run') + f':{r}')
                 continue
             if r not in cards:
                 iss.append(f'niche_{nid}_member_has_no_card:{r}')
@@ -2636,6 +2726,8 @@ def cmd_content_review(args):
     rows = {x['id']: x for x in inv.get('items') or [] if x.get('kind') == 'video' and not x.get('duplicate_of')}
     if args.status:
         refs = {}
+        aside = set_aside_refs(rd)
+        rows = {k: v for k, v in rows.items() if k not in aside}
         for ref in rows:
             d = read_json(content_review_path(rd, ref))
             if not d:
@@ -6975,8 +7067,9 @@ def inventory_videos(rd):
     """The run's reference videos ({id: row}) as cards_inventory reads them, or {} when the run has no inventory: the
     pacing facts and checks are facts, and a missing inventory never stops the command that asked for them."""
     inv = read_json(rd / '00-inventory/references.json')
+    aside = set_aside_refs(rd)
     return {x['id']: x for x in inv.get('items') or [] if isinstance(x, dict) and x.get('id')
-            and x.get('kind') == 'video' and not x.get('duplicate_of')}
+            and x.get('kind') == 'video' and not x.get('duplicate_of') and x['id'] not in aside}
 
 
 def pacing_pool(rd, known):
@@ -16018,6 +16111,7 @@ def cmd_status(args):
     emit({'ok': True, 'run': str(rd), 'stage': st.get('stage'), **moved, 'selected_niche': st.get('selected_niche'),
           'selected_niche_id': st.get('selected_niche_id'), 'niche_discovery': st.get('niche_discovery'),
           'reference_videos': len([x for x in inv.get('items', []) if x.get('kind') == 'video']),
+          **({'references_set_aside': sorted(set_aside_refs(rd))} if set_aside_refs(rd) else {}),
           'videos': videos})
 
 
@@ -16383,6 +16477,14 @@ def main():
     p.add_argument('--dry-run', action='store_true'); p.add_argument('--replace-why', default='',
                    help='plan again references the latest plan still has in analysis, and why')
     p.set_defaults(func=cmd_analysis_plan)
+    p = sub.add_parser('reference-set', help='Which references of the folder this run works from: --keep, --aside '
+                       'or --all with --why; with none, the set as it stands (00-inventory/reference-set.json)')
+    p.add_argument('--run', required=True); p.add_argument('--keep', help='work from these references only')
+    p.add_argument('--aside', help='set these references aside, keep the others')
+    p.add_argument('--all', action='store_true', help='every reference back in the working set')
+    p.add_argument('--why', default='', help='what the choice rests on')
+    p.add_argument('--user-words', default='', help="the user's own words, when the choice is theirs")
+    p.set_defaults(func=cmd_reference_set)
     p = sub.add_parser('niche-evidence', help='Every analysed reference with each dimension apart, in reference '
                        'order, no batch or grouping shown (20-analysis/niche-evidence.json and .md)')
     p.add_argument('--run', required=True); p.set_defaults(func=cmd_niche_evidence)
