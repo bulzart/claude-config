@@ -54,6 +54,26 @@ def load_mono(path):
     return np.frombuffer(raw, dtype=np.float32).astype(np.float64)
 
 
+SMALL_SPEAKER_HZ = 200.0     # a phone or a laptop speaker gives almost nothing under this
+SMALL_SPEAKER_SHARE = 0.05   # a sound with less of its energy above it than this plays there as near silence
+
+
+def small_speaker_share(path, hz=SMALL_SPEAKER_HZ, first_s=120.0):
+    """Share (0..1) of a sound file's energy that lies above hz, read on its first two minutes; None when the file
+    has no sound to read. A low tone or a rumble can measure loud and still be silence on the speaker most viewers
+    hear a film on: a held tone built on 55 and 110 Hz carried the whole second half of a film and its held silences,
+    and a bought 'steam hiss' was nine tenths rumble under 40 Hz (2026-11-28)."""
+    np = _np()
+    y = load_mono(path)[:int(SR * first_s)]
+    if len(y) < SR // 10:
+        return None
+    spec = np.abs(np.fft.rfft(y)) ** 2
+    total = float(spec.sum())
+    if total <= 0:
+        return None
+    return round(float(spec[np.fft.rfftfreq(len(y), 1.0 / SR) >= hz].sum()) / total, 3)
+
+
 def levels(y):
     """Level in dB of every 50 ms."""
     np = _np()

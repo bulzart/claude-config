@@ -6563,7 +6563,39 @@ def picture_plan_facts(rd, video):
         return ('split' in str(s.get('composition') or '').lower() or bool(TWO_SIDED.search(prompt))
                 or ('left half' in prompt.lower() and 'right half' in prompt.lower()))
     bare = [str(s.get('id')) for s in shots if two_sided(s) and not shot_draws(s)]
+
+    # The longest unbroken stretch on one picture, counting its returns and the stills edited from it by reference
+    # (the frame stays, one thing changes). Shot by shot such a stretch looks varied (each has a drawing of its own);
+    # a viewer sees one picture. The only major finding of the first full film's final review was 36 s of this
+    # that every per-shot count had passed (2026-11-28).
+    def family(s):
+        seen = set()
+        while str(s.get('id')) not in seen:
+            seen.add(str(s.get('id')))
+            nxt = s.get('reuses') or next((r for r in (s.get('refs') or []) if str(r) in by_id), None)
+            if not nxt or str(nxt) not in by_id:
+                break
+            s = by_id[str(nxt)]
+        return str(s.get('id'))
+    # A glance away of under five seconds does not end the stretch when the film comes straight back (the seconds
+    # counted are those on the picture itself).
+    fams = [family(s) for s, _, _ in rows]
+    run, best = None, None
+    for k, (s, a, d) in enumerate(rows):
+        fam = fams[k]
+        if run and run['family'] == fam:
+            run['seconds'] += d
+            run['shots'].append(str(s.get('id')))
+        elif run and d < 5.0 and k + 1 < len(rows) and fams[k + 1] == run['family']:
+            continue                                   # the glance: neither counted nor an end
+        else:
+            run = {'family': fam, 'seconds': d, 'shots': [str(s.get('id'))], 'from_s': a}
+        if len(run['shots']) > 1 and (best is None or run['seconds'] > best['seconds']):
+            best = {**run, 'shots': list(run['shots'])}
+    stretch = ({'shots': best['shots'], 'seconds': round(best['seconds'], 1), 'from_s': round(best['from_s'], 1)}
+               if best else None)
     return {'basis': basis, 'shots': len(rows), 'stills': len(use), 'seconds': round(total, 1),
+            'longest_on_one_picture': stretch,
             'seen_again': {'shots': len(again), 'share_of_shots': round(len(again) / len(rows), 2),
                            'share_of_time': round(sum(r[2] for r in again) / total, 2),
                            'as_ground_for_a_drawing': len(returns) - len(again)},
@@ -6599,6 +6631,12 @@ def picture_plan_words(pf):
            + (f'; the still shown most is {ms["still"]}: {ms["times"]} times, {_mmss(ms["seconds"])} in all '
               f'({ms["share_of_time"]:.0%} of the film){under}' if ms['times'] > 1 else '')
            + f'; the longest a picture stands is {lg["seconds"]:g} s ({lg["shot"]}, from {_mmss(lg["from_s"])})']
+    st = pf.get('longest_on_one_picture')
+    if st and st['seconds'] >= 25:
+        out.append(f'pictures: {st["shots"][0]}-{st["shots"][-1]} ({len(st["shots"])} shots, {st["seconds"]:g} s from '
+                   f'{_mmss(st["from_s"])}) stay on one picture, counting its returns and the stills edited from it: '
+                   'a build the viewer follows step by step, or half a minute with nothing new to look at? Where the '
+                   'words there are abstract (figures, studies, a list), give each idea its own picture')
     if pf['beats_opening_on_a_seen_picture']:
         out.append('pictures: ' + ', '.join(pf['beats_opening_on_a_seen_picture'][:12]) + ' open(s) on a picture the '
                    'viewer has already seen: a return they will feel, or the start of a part with nothing new to show?')
@@ -10362,13 +10400,21 @@ def timeline_facts(rd, video):
             elif bed in ('dips', 'swells'):
                 # What the bed's own file does there. A swell is baked into the file (bed-levels with a lift), so it
                 # can be read back; the music's own writing moves the level too, so ears still decide.
-                move = None
-                try:
-                    cover = next(t for t in beds if float(t['start_s']) <= a + 0.05 and float(t['end_s']) >= b - 0.05)
-                    move = _audio_review().level_move({**cover, 'file': _run_file(rd, cover.get('file'))}, a, b,
-                                                      q=90 if bed == 'swells' else 50)
-                except (StopIteration, ImportError, OSError, ValueError, KeyError, TypeError, RuntimeError):
-                    pass
+                # Several beds can lie under one silence (a room tone under the music): the move is carried by any
+                # one of them, so every covering bed is measured and the largest move in the decided direction
+                # counts. Measuring only the first one read a baked swell as missing when the first was the tone.
+                moves = []
+                for cover in beds:
+                    if not (float(cover['start_s']) <= a + 0.05 and float(cover['end_s']) >= b - 0.05):
+                        continue
+                    try:
+                        m_ = _audio_review().level_move({**cover, 'file': _run_file(rd, cover.get('file'))}, a, b,
+                                                        q=90 if bed == 'swells' else 50)
+                    except (ImportError, OSError, ValueError, KeyError, TypeError, RuntimeError):
+                        m_ = None
+                    if m_ is not None:
+                        moves.append(m_)
+                move = (max(moves) if bed == 'swells' else min(moves)) if moves else None
                 where = f'{p["after_line"]}: the bed {bed} at {_mmss(a)}-{_mmss(nxt)}'
                 if move is None:
                     warnings.append(where + ': a volume move the read-back does not carry; listen there')
@@ -16361,6 +16407,40 @@ def cmd_sound_review(args):
                     'moment where the music is meant to be heard, and does the voice leave it room? (a held silence the '
                     'music carries, music that enters before the words or plays on after the last; bed-levels then '
                     'lifts the bed there)')
+    # A bed that plays far louder under the words than the level it was baked for. bed-levels sets the gain from the
+    # file's integrated loudness, which reads a noise or a sparse sound (steam, wind, a crackle) wrong: a hiss asked
+    # for 17 dB under the voice played 5 dB under it across 21 s of narration, and only a reviewer's question about
+    # the sound list found it (2026-11-28).
+    asked = {}
+    for t in read_json(rd / '70-edit' / f'video-{n:02d}' / 'bed-levels.json').get('tracks') or []:
+        baked = (t.get('baked') or {}).get('file') if isinstance(t, dict) else None
+        if baked and t.get('target_under_speech_db') is not None:
+            asked[Path(str(baked).replace('\\', '/')).name.lower()] = float(t['target_under_speech_db'])
+    for p in ps:
+        if p.get('unreadable') or p.get('under_voice_db') is None or not (p.get('voice_over_it_share') or 0):
+            continue
+        want = asked.get(Path(str(p.get('file') or '').replace('\\', '/')).name.lower())   # a baked copy's own name
+        if want is not None and want - p['under_voice_db'] >= 6:
+            look.append(f'{Path(str(p["file"])).name} was baked to sit {want:g} dB under the voice and plays '
+                        f'{p["under_voice_db"]:g} dB under it at {_mmss(p["start_s"])}-{_mmss(p["end_s"])}, with the '
+                        'voice over it: the gain was set from the file\'s overall loudness, which misreads a noise or '
+                        'a sparse sound. Bake it again lower by the difference (bed-levels), then measure again')
+    # A placed sound that a small speaker cannot play: nearly all of its energy lies under 200 Hz. It measures as a
+    # bed and is silence on a phone, so a part it carries alone, or a held silence it fills, is bare voice there.
+    seen = set()
+    for p in ps:
+        src = str(p.get('file') or '')
+        name = Path(src.replace('\\', '/')).name
+        if not src or name.lower() in seen or not Path(src).is_file():
+            continue
+        seen.add(name.lower())
+        share = ar.small_speaker_share(src)
+        if share is not None and share < ar.SMALL_SPEAKER_SHARE:
+            look.append(f'{name}: {share * 100:.0f}% of its energy lies above {ar.SMALL_SPEAKER_HZ:g} Hz, so on a phone or '
+                        'a laptop speaker it plays as near silence, and whatever it carries alone (a part with no music, '
+                        'a held silence) is bare voice there. Give it something a small speaker can play (overtones '
+                        'from 220 Hz up for a tone, a real hiss for steam), or decide that it is only felt on large '
+                        'speakers and let another sound carry the moment')
     # The mix beside the film's models, by the project's own files and in the finished file when it is measured
     beside = models_beside_facts(rd, n, f, sound=facts.get('between_words'))
     heard = [r for r in beside['rows'] if r['measure'] not in PICTURE_MEASURES]

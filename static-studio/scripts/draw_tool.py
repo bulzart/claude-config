@@ -1725,6 +1725,21 @@ def cmd_preview(args):
         base.alpha_composite(frame)
         tw = int(args.width)
         tile = base.convert('RGB').resize((tw, round(tw * ch / cw)), Image.Resampling.LANCZOS)
+        if getattr(args, 'grid', False):
+            # The still's own tenths, moved by its framing at this moment: a position is read straight off the
+            # sheet into the spec (element positions are fractions of the still). Guessed positions were wrong on
+            # nearly every still of the first film that placed its drawings before looking.
+            st = still_state({**spec, 'framing_applied': False}, t) if \
+                spec.get('still_motion') or spec.get('still_framing') else None
+            gs, gx, gy = st if st else (1.0, 0.0, 0.0)
+            g = ImageDraw.Draw(tile, 'RGBA')
+            for i in range(1, 10):
+                px = (0.5 + (i / 10 - 0.5) * gs + gx / 2) * tile.width
+                py = (0.5 + (i / 10 - 0.5) * gs - gy / 2) * tile.height
+                g.line([(px, 0), (px, tile.height)], fill=(255, 235, 60, 80), width=1)
+                g.line([(0, py), (tile.width, py)], fill=(255, 235, 60, 80), width=1)
+                g.text((px + 2, tile.height - 13), str(i), fill=(255, 235, 60, 235))
+                g.text((tile.width - 9, py - 12), str(i), fill=(255, 235, 60, 235))
         d = ImageDraw.Draw(tile)
         lab = f't={t:.2f}s'
         d.rectangle([0, 0, 8 + 9 * len(lab), 20], fill=(0, 0, 0))
@@ -2360,6 +2375,8 @@ if __name__ == '__main__':
     p.add_argument('--width', type=int, default=640, help='width of each tile')
     p.add_argument('--cols', type=int, default=3)
     p.add_argument('--supersample', type=int, default=None)
+    p.add_argument('--grid', action='store_true', help='draw the still\'s own tenths (1-9) over each tile, moved by '
+                   'the still\'s framing, so a position can be read off the sheet into the spec')
     p.set_defaults(func=cmd_preview)
     p = sub.add_parser('texts', help='the words the drawing shows, with their sizes, places and times')
     p.add_argument('--spec', required=True)
