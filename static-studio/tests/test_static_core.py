@@ -4015,6 +4015,23 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('about 1.5 s with no voice, after "...',text)
         self.assertIn('road ahead tonight.", before "Line 4 tells',text)
         self.assertNotIn(HELD['pause_purpose'],text)
+        # What moves in the silence is named by the kind of bed that plays across it, never 'music' by default
+        # (2026-11-28: a held tone was called 'the music' and a reader reported the sound list as contradicting it).
+        cli('hold-decide','--run',self.run,'--video',1,'--line','L003','--stage','narration','--total',1.5,'--bed','swells',
+            '--reason','the tone rises under the map so the silence is carried')
+        cli('retime-shots','--run',self.run,'--video',1)
+        sp=self.run/'70-edit'/'video-01'/'sound-placements.json'
+        save(sp,{'beds':[{'id':'tone','file':'tone.wav','at':0.0,'end':60.0,'kind':'ambience'}],'sfx':[]})
+        text=Path(cli('review-packet','--run',self.run,'--video',1,'--kind','final','--file',exp)['packet']).read_text(encoding='utf-8')
+        self.assertIn('(the ambience swells)',text); self.assertNotIn('(the music swells)',text)
+        save(sp,{'beds':[{'id':'tone','file':'tone.wav','at':0.0,'end':60.0,'kind':'ambience'},
+                         {'id':'P1','file':'p1.wav','at':0.0,'end':60.0,'kind':'music'}],'sfx':[]})
+        text=Path(cli('review-packet','--run',self.run,'--video',1,'--kind','final','--file',exp)['packet']).read_text(encoding='utf-8')
+        self.assertIn('(the music swells)',text)
+        core=self.load_core()
+        self.assertEqual(core.held_bed_words('stops',[{'kind':'music','start_s':5,'end_s':6}],10,12),
+                         ' (the background sound stops)')
+        self.assertEqual(core.held_bed_words('',[],0,1),'')
 
     # ---------------------------------------------------------------- transitions into and out of a held silence
     def test_how_a_line_lands_and_the_next_begins_is_measured(self):

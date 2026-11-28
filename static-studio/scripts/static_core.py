@@ -14140,6 +14140,21 @@ def _mmss(t):
     return f'{t // 60:02d}:{t % 60:02d}'
 
 
+def held_bed_words(bed, beds, a, z):
+    """How the final packet names what the sound does in a held silence: the decided move (enters, stops, continues,
+    dips, swells) said of the kind of bed that plays across that silence (music or ambience), the words the packet's
+    sound list uses. beds: [{kind, start_s, end_s}]. 2026-11-28: every row said 'the music swells' while the bed was the
+    ground's tone, and a reader reported the sound list (no music there) as contradicting it."""
+    if not bed:
+        return ''
+    if bed == 'none':
+        return ' (no music or ambience)'
+    kinds = {str(b.get('kind') or '') for b in beds or [] if isinstance(b, dict) and b.get('start_s') is not None
+             and b.get('end_s') is not None and float(b['start_s']) < z and float(b['end_s']) > a}
+    what = 'the music' if 'music' in kinds else 'the ambience' if 'ambience' in kinds else 'the background sound'
+    return f' ({what} {bed})'
+
+
 def cmd_review_packet(args):
     """The bare material for ONE fresh reviewer (an agent spawned with nothing but this file): the script for a
     cold read, the treatments' samples for a blind comparison, or the export's watch sheets for the final review.
@@ -14295,6 +14310,14 @@ def cmd_review_packet(args):
         script_lines = read_json(vd / 'script.json').get('lines') or []
         line_text = {str(r.get('id') or f'L{i + 1:03d}'): strip_tags(r.get('text') or '') for i, r in enumerate(script_lines)}
         order_ids = list(line_text)
+        # what plays across each silence, by kind: the sound review's placements (the packet's own sound list), else
+        # the run's sound placements file
+        beds_by_kind = [p for p in read_json(sound_review_path(rd, n)).get('placements') or []
+                        if isinstance(p, dict) and p.get('kind') in ('music', 'ambience')]
+        if not beds_by_kind:
+            sp = read_json(rd / '70-edit' / f'video-{n:02d}' / 'sound-placements.json')
+            beds_by_kind = [{'kind': b.get('kind') or 'music', 'start_s': b.get('at'), 'end_s': b.get('end')}
+                            for b in sp.get('beds') or [] if isinstance(b, dict)]
         shift, held_rows = 0.0, []
         for h in sorted(plan.get('holds') or [], key=lambda x: x['at_audio_s']):
             if h.get('kind') == 'script':
@@ -14302,10 +14325,11 @@ def cmd_review_packet(args):
                 k = order_ids.index(lid) if lid in order_ids else -1
                 after = line_text[order_ids[k + 1]] if 0 <= k < len(order_ids) - 1 else '(the end)'
                 bed = (h.get('transition') or {}).get('bed')
-                held_rows.append(f'- {_mmss(h["at_audio_s"] + shift)}: about '
+                at_edit = h['at_audio_s'] + shift
+                held_rows.append(f'- {_mmss(at_edit)}: about '
                                  f'{h.get("resulting_gap_s") or h.get("expected_gap_s") or h["hold_s"]:.1f} s with no '
                                  f'voice, after "...{line_text.get(lid, "")[-70:]}", before "{after[:60]}..."'
-                                 + (f' (the music {bed})' if bed and bed != 'none' else ' (no music)' if bed else ''))
+                                 + held_bed_words(bed, beds_by_kind, at_edit, at_edit + float(h.get('hold_s') or 0)))
             shift += float(h.get('hold_s') or 0)
         text += ('\n## Held silences in this cut\n' + ('\n'.join(held_rows) if held_rows else
                  '- none: every pause is the voice\'s own') + '\n')
