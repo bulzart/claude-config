@@ -1782,7 +1782,10 @@ def cmd_length(args):
                        'pace and gaps once its first part is measured.'
                        + (' The story set this length: when the first whole draft shows another size, re-lock to it '
                           'before narration (length --mode story --minutes N --revise "why"); never pad or squeeze '
-                          'to keep a number. Tell the user the figure before any paid narration.' if story else ''))})
+                          'to keep a number. Tell the user the figure before any paid narration.' if story else '')
+                       + (' This replaces an earlier lock: write the revised script first (the lock records its '
+                          'words), then give the beat map its times for the new length; until then plan-check says '
+                          'beat_map_target_differs_from_locked_length.' if prev_lock else ''))})
 
 
 TAG_RE = re.compile(r'\[([^\[\]]{1,160})\]')
@@ -14359,7 +14362,13 @@ def cmd_review_packet(args):
              'matters_because': (b.get('significance') or {}).get('matters_because')}
             for b, lo, hi in key_moment_spans(rd, vd, n, kind, list((meta.get('subject_snapshot') or {}).keys()))]
     write_json(folder / f'packet-{kind}-r{rnd}.json', {**meta, 'packet': str(packet)})
+    # The director's own self-audit comes before a stranger's read (03): a first cold read with no editorial review
+    # spends a reader on what the author could have found alone (seen on a full film, 2026-11-27).
+    before = ([f'no editorial-review.md yet: write your own self-audit of the script before its first cold read '
+               '(03), so the reader is spent on what you could not see yourself']
+              if kind == 'script' and rnd == 1 and not (vd / 'editorial-review.md').is_file() else [])
     emit({'ok': True, 'kind': kind, 'round': rnd, 'packet': str(packet), 'findings_file': str(out_path),
+          **({'before_the_read': before} if before else {}),
           'next': ('Run review-read --kind ' + kind + ' (the reader as its own restricted process), or spawn ONE fresh '
                    'agent of type static-cold-reader (it can only Read and Write the paths it is given) with no other '
                    'context, its whole prompt: "Read only ' + str(packet) + ' and follow it exactly." Do not add your '
@@ -15565,7 +15574,9 @@ def cmd_review_record(args):
                 a['recurrence'] = {'recurs_of': '', 'root_cause': '', 'scope': ''}
             return a
         doc = {'answers': {str(f['id']): blank(f) for f in findings},
-               'how': 'action: revised (script: list the lines changed) | kept (minor only) | disputed; '
+               'how': 'action: revised (script: list the lines changed, by the numbers the reader saw or by their '
+                      'numbers in the script as it now stands: both are read; a passage that was cut is named by the '
+                      'numbers the reader saw, and a line that is new by its number now) | kept (minor only) | disputed; '
                       'kept and disputed need a reason in note. A major finding is revised or disputed. A revised '
                       'finding about what a development means or pays (S, K) names its cause: '
                       + ' | '.join(SIGNIFICANCE_CAUSES) + ' (other: say which). A major finding of a later round says '
@@ -15598,7 +15609,9 @@ def cmd_review_record(args):
           'next': ('Answer every finding in the answers file and make the revisions. ' +
                    (f'Major findings: after revising, a fresh round-{rnd + 1} read of the new version is required '
                     '(review-packet again, a NEW agent).' if need_more else
-                    'No further read is required by the process; another one is always allowed.'))})
+                    'No further read is required by the process as the text now stands; another one is always '
+                    'allowed. A later change to a line this reader\'s verdict rested on brings one back (plan-check '
+                    'then says so), unless revision_notes says its meaning is unchanged.'))})
 
 
 def cmd_shot_check(args):

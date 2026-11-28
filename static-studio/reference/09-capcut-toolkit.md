@@ -51,7 +51,7 @@ It writes, in `RUN/70-edit/video-NN/capcut/`: `build-plan.json` (every clip with
 
 ## The sound placements file (for `capcut-build`)
 
-`RUN/70-edit/video-NN/sound-placements.json` holds every bed and sound effect as decided (manual 05, "Music and layered sound"):
+`RUN/70-edit/video-NN/sound-placements.json` holds every bed and sound effect as decided (manual 05, "Music and layered sound"); on a film with many cues the director's kit writes it and `capcut-images.json` below from short scripts in `RUN/workbench/` (`Sound.bake()`, `Framing.write()`: manual 04, "The director's kit"):
 
 ```json
 {"beds": [
